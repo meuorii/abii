@@ -8,7 +8,7 @@ Abii is an Active Recall Learning Web App.
 
 - Node.js 20.9 or newer
 - npm
-- A MongoDB connection (local MongoDB or MongoDB Atlas) when database features are added
+- MongoDB running locally or a MongoDB Atlas connection string
 
 ## Setup
 
@@ -20,18 +20,13 @@ Abii is an Active Recall Learning Web App.
 
 2. Create your local environment file:
 
-   ```bash
-   cp .env.local.example .env.local
-   ```
-
-   On Windows PowerShell, use:
-
    ```powershell
    Copy-Item .env.local.example .env.local
    ```
 
-3. Edit `.env.local` and set your own values for `MONGODB_URI` and `AUTH_SECRET`.
-   Never commit `.env.local` or expose these values to client-side code.
+   (On macOS/Linux, use `cp .env.local.example .env.local`.)
+
+3. Edit `.env.local` and set `MONGODB_URI` and `AUTH_SECRET`. The default MongoDB URI is suitable only when MongoDB is installed and running on your computer. Never commit `.env.local`, prefix database secrets with `NEXT_PUBLIC_`, or read them in client components.
 
 4. Start the development server:
 
@@ -39,7 +34,40 @@ Abii is an Active Recall Learning Web App.
    npm run dev
    ```
 
-5. Open http://localhost:3000.
+5. Open http://localhost:3000/design-system for the design-system demo.
+
+## Checking the database connection locally
+
+The app does not connect to MongoDB just by opening a page yet; database features and pages are intentionally not part of this phase. To verify the connection, create a temporary file named `scripts/check-db.ts` and run it with a TypeScript runner if you have one installed, or use the simple JavaScript check below after dependencies are installed.
+
+Create `scripts/check-db.mjs`:
+
+```js
+import mongoose from "mongoose";
+import "dotenv/config";
+
+const uri = process.env.MONGODB_URI;
+if (!uri) throw new Error("MONGODB_URI is missing from .env.local");
+
+try {
+  await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+  await mongoose.connection.db.admin().ping();
+  console.log("MongoDB connection successful.");
+} catch (error) {
+  console.error("MongoDB connection failed:", error.message);
+  process.exitCode = 1;
+} finally {
+  await mongoose.disconnect();
+}
+```
+
+Install `dotenv` for this optional script with `npm install -D dotenv`, then run:
+
+```bash
+node --env-file=.env.local scripts/check-db.mjs
+```
+
+Alternatively, once a server-side feature calls `connectToDatabase()`, that helper can be checked with `await connectToDatabase()` and `await mongoose.connection.db.admin().ping()` in server-side code. Do not add database credentials to client-side code.
 
 ## Available checks
 
@@ -51,28 +79,12 @@ npm run build
 
 ## Folder structure
 
-- `app/` — App Router pages, layout, global styles, and the design-system demo
-- `components/ui/` — reusable design-system components
-- `lib/` — server-side utilities such as the MongoDB connection
-- `models/` — Mongoose models (added in a later phase)
-- `actions/` — server actions (added in a later phase)
+- `app/` — App Router pages, layout, styles, and design-system demo
+- `components/ui/` — reusable UI components
+- `lib/mongodb.ts` — server-only MongoDB connection helper with a shared promise/connection cache
+- `models/` — server-only Mongoose models
+- `actions/` — reserved for future server actions
 
-## Design system demo
+## Scope
 
-Run the development server and open http://localhost:3000/design-system to view
-the palette, buttons, cards, form controls, progress bar, flashcard, navigation,
-mascot placeholders, and loading/error/empty states.
-
-## Phase 1 and Phase 2 scope
-
-The starter includes the initial Next.js App Router setup, TypeScript, Tailwind
-CSS, a branded home page, environment-variable example, a reusable MongoDB
-connection helper, and reusable design-system components. Authentication and
-study features are intentionally not implemented yet.
-
-
-## Phase 3: Mascot artwork
-
-The reusable `Mascot` component is in `components/ui/mascot.tsx`. Put your existing Abii images in `public/mascot/` using the exact filenames in `public/mascot/README.md`: `welcome.png`, `correct.png`, `wrong.png`, `review-reminder.png`, `complete.png`, and `empty.png`. For example, the welcome image is stored at `public/mascot/welcome.png` and is used in code as `/mascot/welcome.png`.
-
-The screenshot of your Downloads folder shows the six image names, but the actual image files were not included as individual project assets in the upload. Until you copy them into `public/mascot/`, the component displays a neutral fallback. The demo at `/design-system` shows all six states.
+This phase adds only the database connection helper and data models. It does not implement pages, registration, login, authorization, or study workflows. Future database operations must verify that the authenticated user owns each subject, flashcard, and review record; schema references alone do not enforce ownership.
