@@ -8,9 +8,10 @@ export default function HomePage() {
           </span>
           <span className="text-2xl font-extrabold tracking-tight text-[#2F2930]">abii<span className="text-[#FF6F96]">.</span></span>
         </a>
-        <span className="rounded-full border border-[#E8E2E5] px-4 py-2 text-sm font-medium text-[#756B72]">
-          Your study space
-        </span>
+        <nav className="flex items-center gap-3" aria-label="Account">
+          <a href="/login" className="rounded-xl px-4 py-2 text-sm font-semibold text-[#756B72] hover:text-[#E9577D]">Sign in</a>
+          <a href="/register" className="rounded-xl bg-[#FF6F96] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#E9577D]">Get started</a>
+        </nav>
       </header>
 
       <section className="mx-auto grid min-h-[72vh] w-full max-w-6xl items-center gap-12 px-6 pb-16 pt-8 sm:px-10 md:grid-cols-[1.15fr_0.85fr]">
@@ -27,9 +28,7 @@ export default function HomePage() {
             what you remember, and give tricky topics another try.
           </p>
           <div className="mt-9 flex flex-wrap items-center gap-4">
-            <span className="rounded-2xl bg-[#FF6F96] px-6 py-3.5 font-bold text-white shadow-[0_8px_20px_rgba(255,111,150,0.22)]">
-              Your learning journey starts here
-            </span>
+            <a href="/register" className="rounded-2xl bg-[#FF6F96] px-6 py-3.5 font-bold text-white shadow-[0_8px_20px_rgba(255,111,150,0.22)] transition hover:bg-[#E9577D]">Start learning</a>
             <span className="text-sm text-[#756B72]">A little practice goes a long way.</span>
           </div>
         </div>

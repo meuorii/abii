@@ -88,3 +88,28 @@ npm run build
 ## Scope
 
 This phase adds only the database connection helper and data models. It does not implement pages, registration, login, authorization, or study workflows. Future database operations must verify that the authenticated user owns each subject, flashcard, and review record; schema references alone do not enforce ownership.
+
+## Authentication (Phase 5)
+
+Authentication uses a small custom implementation with **`jose`** for signed sessions and **`bcryptjs`** for password hashing. The session is a seven-day, signed JWT stored in an `HttpOnly`, `SameSite=Strict` cookie; the cookie is `Secure` in production. `AUTH_SECRET` must be a random secret at least 32 characters long. Keep it only in `.env.local` / deployment environment variables.
+
+1. Install dependencies with `npm install`.
+2. Copy `.env.local.example` to `.env.local`, set `MONGODB_URI`, and replace `AUTH_SECRET` with a random 32+ character secret (for example, `openssl rand -base64 32`).
+3. Start MongoDB locally or use a MongoDB Atlas URI.
+4. Run `npm run dev` and visit `/register`, then `/login` and `/dashboard`.
+
+Registration is `POST /api/auth/register`; login is `POST /api/auth/login`; logout is `POST /api/auth/logout`. Server code should use `getCurrentUser()` from `lib/auth/session.ts` to resolve the user from the trusted session. Do not accept a user ID from form data as proof of identity. For every private data query or mutation, filter by the authenticated user's ID as well as the requested document ID.
+
+The middleware protects `/dashboard`, `/subjects`, `/review`, and `/settings` route trees. Add any future private route prefix to `middleware.ts`. The dashboard is a small protected placeholder for this phase; study features are not included.
+
+### Manual authentication checks
+
+- **Registration:** create an account with a valid name, email, and password of 8–128 characters; it should redirect to the dashboard.
+- **Email normalization:** register with mixed-case or surrounding spaces in the email, then try signing in with the normalized email.
+- **Duplicate registration:** repeat registration with the same email; it should show a friendly generic message, not expose account data.
+- **Validation:** try a malformed email, blank name, and password shorter than 8 characters; each should be rejected.
+- **Login:** valid credentials should open `/dashboard`; wrong email or password should show the same generic credential error.
+- **Logout:** select **Log out**, then manually visit `/dashboard`; it should redirect to `/login`.
+- **Unauthenticated access:** in a private/incognito browser window, visit `/dashboard`, `/subjects`, `/review`, or `/settings`; each should redirect to `/login`.
+
+No test suite or live MongoDB connection was available to execute here. Run `npm install`, `npm run typecheck`, `npm run lint`, and `npm run build` locally to complete verification. The authentication routes require MongoDB to be reachable.

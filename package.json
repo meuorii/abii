@@ -13,7 +13,9 @@
     "mongoose": "^8.19.1",
     "next": "^15.5.4",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "bcryptjs": "^3.0.2",
+    "jose": "^6.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.18.6",
