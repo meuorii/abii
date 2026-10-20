@@ -51,9 +51,15 @@ function ReviewLoadError() {
   );
 }
 
-export default async function ReviewPage() {
+type PageProps = { searchParams: Promise<{ subjectId?: string | string[] }> };
+
+export default async function ReviewPage({ searchParams }: PageProps) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const params = await searchParams;
+  const subjectId = Array.isArray(params.subjectId) ? params.subjectId[0] : params.subjectId;
+  if (subjectId) redirect(`/review/setup?subjectId=${encodeURIComponent(subjectId)}`);
 
   const firstName = user.name.trim().split(/\s+/)[0] || "there";
   let loadFailed = false;
@@ -195,3 +201,4 @@ export default async function ReviewPage() {
     </AppShell>
   );
 }
+
