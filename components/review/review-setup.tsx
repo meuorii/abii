@@ -153,8 +153,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
                   <span className="mt-2 flex flex-wrap gap-1" aria-label="Question type completion">
                     {QUIZ_TYPES.map((quizType) => {
                       const completed = item.cards > 0 && item.typeMastery[quizType] === item.cards;
-                      const shortLabel = quizType === "multiple-choice" ? "MC" : quizType === "identification" ? "ID" : "T/F";
-                      return <span key={quizType} title={`${QUIZ_TYPE_LABELS[quizType]}: ${item.typeMastery[quizType]}/${item.cards} cards completed`} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${completed ? "bg-[#E4F7EC] text-[#207A4B]" : "bg-[#F5F1F3] text-[#7B6D75]"}`}>{completed ? "✓" : "○"} {shortLabel} {item.typeMastery[quizType]}/{item.cards}</span>;
+                      return <span key={quizType} title={`${QUIZ_TYPE_LABELS[quizType]}: ${item.typeMastery[quizType]}/${item.cards} cards completed`} aria-label={`${QUIZ_TYPE_LABELS[quizType]} ${completed ? "complete" : "not complete"}: ${item.typeMastery[quizType]}/${item.cards}`} className={`inline-flex h-7 w-7 items-center justify-center rounded-full border ${completed ? "border-[#F7C6D6] bg-[#FFF0F5] text-[#D94675]" : "border-[#E7E7EB] bg-[#F3F3F5] text-[#A0A0AA]"}`}><TypeIcon type={quizType} className="h-3.5 w-3.5" /></span>;
                     })}
                   </span>
                 </span>
@@ -182,7 +181,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
                       const completedCount = subjectId === ALL_SUBJECTS ? allTypeMastery[t] : selectedSubject?.typeMastery[t] ?? 0;
                       const cardCount = subjectId === ALL_SUBJECTS ? totalCards : selectedSubject?.flashcardCount ?? 0;
                       const isComplete = cardCount > 0 && completedCount === cardCount;
-                      return <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isComplete ? "bg-[#E4F7EC] text-[#207A4B]" : "bg-[#F5F1F3] text-[#7B6D75]"}`}>{isComplete ? "Completed" : `${completedCount}/${cardCount}`}</span>;
+                      return <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isComplete ? "bg-[#FFF0F5] text-[#D94675]" : "bg-[#F3F3F5] text-[#A0A0AA]"}`}>{isComplete ? "✓" : "○"}</span>;
                     })()}
                   </span>
                 </span>

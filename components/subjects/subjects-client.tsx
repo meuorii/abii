@@ -4,12 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { QUIZ_TYPES, QUIZ_TYPE_LABELS, type QuizType } from "@/lib/quiz/types";
+import { TypeIcon } from "@/components/review/review-setup";
 
 export type SubjectItem = {
   id: string;
   name: string;
   flashcardCount: number;
   progress: number;
+  masteredCount: number;
+  typeMastery: Record<QuizType, number>;
 };
 
 const subjectIconChoices = ["▦", "⚗", "▤", "◈", "✿", "⌘"];
@@ -176,18 +180,31 @@ export function SubjectsClient({ initialSubjects }: { initialSubjects: SubjectIt
                   <div className="flex min-w-0 items-start gap-3">
                     <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FFF0F5] text-[22px] text-[#E9577D]">{subjectIcon(subject.name)}</span>
                     <span className="min-w-0 flex-1 pt-1">
-                      <span className="block truncate text-[15px] font-semibold text-[#2F2930]">{subject.name}</span>
+                      <span className="flex min-w-0 items-start justify-between gap-2">
+                        <span className="min-w-0 truncate text-[15px] font-semibold text-[#2F2930]">{subject.name}</span>
+                        {subject.flashcardCount > 0 && subject.masteredCount === subject.flashcardCount && <span title="Mastered" aria-label="Mastered" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-2 py-1 text-[10px] font-bold text-[#D94675]">✓ Mastered</span>}
+                      </span>
                       <span className="mt-1.5 block text-xs text-[#8192A1]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "flashcard" : "flashcards"}</span>
                     </span>
                     <span aria-hidden="true" className="pt-1 text-lg leading-none text-[#7C91A3] transition-colors group-hover:text-[#E9577D]">›</span>
                   </div>
                   <div className="mt-5 flex items-center gap-3">
-                    <div role="progressbar" aria-label={`${subject.name} reviewed at least once`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={subject.progress} className="h-[7px] min-w-0 flex-1 overflow-hidden rounded-full bg-[#F0F1F4]">
-                      <div className="h-full rounded-full bg-[#F0789A] transition-[width]" style={{ width: `${subject.progress}%` }} />
+                    <div role="progressbar" aria-label={`${subject.name} mastery progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={subject.progress} className="h-[7px] min-w-0 flex-1 overflow-hidden rounded-full bg-[#F0F1F4]">
+                      <div className="h-full rounded-full bg-[#E9577D] transition-[width]" style={{ width: `${subject.progress}%` }} />
                     </div>
                     <span className="w-9 text-right text-xs font-semibold tabular-nums text-[#657B8E]">{subject.progress}%</span>
                   </div>
-                  <span className="sr-only">Progress is the percentage of flashcards reviewed at least once.</span>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[11px] text-[#8192A1]">{subject.masteredCount}/{subject.flashcardCount} cards mastered</span>
+
+                  </div>
+                  <div className="mt-2 flex items-center gap-2" aria-label={`${subject.name} question type completion`}>
+                    {QUIZ_TYPES.map((type) => {
+                      const done = subject.flashcardCount > 0 && subject.typeMastery[type] === subject.flashcardCount;
+                      return <span key={type} title={`${QUIZ_TYPE_LABELS[type]}: ${subject.typeMastery[type]}/${subject.flashcardCount} cards complete`} aria-label={`${QUIZ_TYPE_LABELS[type]} ${done ? "complete" : "not complete"}`} className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-[11px] font-bold ${done ? "border-[#F7C6D6] bg-[#FFF0F5] text-[#D94675]" : "border-[#E7E7EB] bg-[#F3F3F5] text-[#A0A0AA]"}`}><TypeIcon type={type} className="h-3.5 w-3.5" /></span>;
+                    })}
+                  </div>
+                  <span className="sr-only">Progress is the percentage of flashcards mastered across all three question types.</span>
                 </Link>
               </li>
             ))}
@@ -205,3 +222,4 @@ export function SubjectsClient({ initialSubjects }: { initialSubjects: SubjectIt
     </>
   );
 }
+

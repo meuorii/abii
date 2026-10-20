@@ -3,11 +3,13 @@
 import Image from "next/image";
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { QUIZ_TYPES, QUIZ_TYPE_LABELS, type QuizType } from "@/lib/quiz/types";
+import { TypeIcon } from "@/components/review/review-setup";
 
 type FlashcardItem = { id: string; question: string; answer: string; hint: string; favorite: boolean; reviewed: boolean };
 export type SubjectDetailData = {
-  id: string; name: string; flashcardCount: number; reviewedCount: number; dueCount: number;
-  progress: number; correctCount: number; wrongCount: number; cards: FlashcardItem[];
+  id: string; name: string; flashcardCount: number; reviewedCount: number; masteredCount: number; dueCount: number;
+  progress: number; typeMastery: Record<QuizType, number>; correctCount: number; wrongCount: number; cards: FlashcardItem[];
 };
 type Tab = "flashcards" | "progress" | "settings";
 
@@ -172,7 +174,9 @@ export function SubjectDetailClient({ initialData }: { initialData: SubjectDetai
             <div className="mt-3 space-y-2">
               <StatRow icon="▤" value={String(data.flashcardCount)} label="Total Flashcards" />
               <StatRow icon="◷" value={String(data.dueCount)} label="Due for Review" />
-              <div className="rounded-xl bg-[#FFF7F9] p-3"><div className="flex items-center gap-2"><IconCircle>↻</IconCircle><div><p className="text-sm font-bold text-[#2F2930]">{data.progress}%</p><p className="text-[11px] text-[#71869A]">Subject Progress</p></div></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#EDEFF2]"><div className="h-full rounded-full bg-[#F0789A]" style={{ width: `${data.progress}%` }} /></div></div>
+              <div className="rounded-xl bg-[#FFF7F9] p-3"><div className="flex items-center gap-2"><IconCircle>✓</IconCircle><div><p className="text-sm font-bold text-[#2F2930]">{data.progress}%</p><p className="text-[11px] text-[#71869A]">Mastery Progress</p></div></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#EDEFF2]"><div className="h-full rounded-full bg-[#E9577D]" style={{ width: `${data.progress}%` }} /></div><p className="mt-2 text-[10px] text-[#71869A]">{data.masteredCount}/{data.flashcardCount} cards mastered</p></div>
+              <div className="flex flex-wrap gap-2" aria-label="Question type completion status">{QUIZ_TYPES.map((type) => { const count = data.typeMastery[type] ?? 0; const done = data.flashcardCount > 0 && count === data.flashcardCount; return <span key={type} title={`${QUIZ_TYPE_LABELS[type]}: ${count}/${data.flashcardCount} cards complete`} aria-label={`${QUIZ_TYPE_LABELS[type]} ${done ? "complete" : "not complete"}`} className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-[11px] font-bold ${done ? "border-[#F7C6D6] bg-[#FFF0F5] text-[#D94675]" : "border-[#E7E7EB] bg-[#F3F3F5] text-[#A0A0AA]"}`}><TypeIcon type={type} className="h-3.5 w-3.5" /></span>; })}</div>
+              
             </div>
           </section>
           <section className="rounded-[17px] border border-[#F5DDE5] bg-[#FFF5F8] p-4">
@@ -183,8 +187,8 @@ export function SubjectDetailClient({ initialData }: { initialData: SubjectDetai
       </div>}
 
       {tab === "progress" && <section aria-labelledby="progress-heading" className="space-y-4"><div><h2 id="progress-heading" className="text-lg font-bold tracking-[-0.035em] text-[#173B52]">Study Progress</h2><p className="mt-1 text-sm text-[#71869A]">A clear view of how much of this subject you’ve practiced.</p></div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric title="Total flashcards" value={data.flashcardCount} detail="Cards in this subject"/><Metric title="Reviewed cards" value={data.reviewedCount} detail="Reviewed at least once"/><Metric title="Due for review" value={data.dueCount} detail="Ready for another practice"/><Metric title="Completion" value={`${data.progress}%`} detail="Reviewed at least once"/></div>
-        <div className="rounded-[18px] border border-[#E8E2E5] bg-white p-5 sm:p-6"><div className="flex items-center justify-between gap-4"><div><h3 className="font-bold text-[#2F2930]">Subject completion</h3><p className="mt-1 text-sm text-[#71869A]">{data.reviewedCount} of {data.flashcardCount} cards have review history.</p></div><span className="text-xl font-bold text-[#E9577D]">{data.progress}%</span></div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[#F0F1F4]"><div className="h-full rounded-full bg-[#F0789A] transition-[width]" style={{ width: `${data.progress}%` }} /></div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl bg-[#EAF8F0] p-4"><p className="text-xs text-[#4F7D62]">Correct review results</p><p className="mt-1 text-2xl font-bold text-[#35664B]">{data.correctCount}</p></div><div className="rounded-xl bg-[#FFF1F1] p-4"><p className="text-xs text-[#A45D6B]">Incorrect review results</p><p className="mt-1 text-2xl font-bold text-[#A43E5C]">{data.wrongCount}</p></div></div></div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric title="Total flashcards" value={data.flashcardCount} detail="Cards in this subject"/><Metric title="Reviewed cards" value={data.reviewedCount} detail="Reviewed at least once"/><Metric title="Due for review" value={data.dueCount} detail="Ready for another practice"/><Metric title="Mastered cards" value={`${data.masteredCount}/${data.flashcardCount}`} detail="All three types, 3 correct in a row"/></div>
+        <div className="rounded-[18px] border border-[#E8E2E5] bg-white p-5 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-4"><div><h3 className="font-bold text-[#2F2930]">Mastery completion</h3><p className="mt-1 text-sm text-[#71869A]">{data.masteredCount} of {data.flashcardCount} cards mastered across all three question types.</p></div>{data.flashcardCount > 0 && data.masteredCount === data.flashcardCount && <span className="inline-flex items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-3 py-1.5 text-xs font-bold text-[#D94675]">✓ Mastered</span>}</div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[#F0F1F4]"><div className="h-full rounded-full bg-[#E9577D] transition-[width]" style={{ width: `${data.progress}%` }} /></div><div className="mt-4 flex flex-wrap gap-3" aria-label="Question type mastery status">{QUIZ_TYPES.map((type) => { const count = data.typeMastery[type] ?? 0; const done = data.flashcardCount > 0 && count === data.flashcardCount; return <span key={type} title={`${QUIZ_TYPE_LABELS[type]}: ${count}/${data.flashcardCount} cards complete`} aria-label={`${QUIZ_TYPE_LABELS[type]} ${done ? "complete" : "not complete"}`} className={`inline-flex h-9 min-w-9 items-center justify-center rounded-full border px-2 text-sm font-bold ${done ? "border-[#F7C6D6] bg-[#FFF0F5] text-[#D94675]" : "border-[#E7E7EB] bg-[#F3F3F5] text-[#A0A0AA]"}`}><TypeIcon type={type} className="h-3.5 w-3.5" /></span>; })}</div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl bg-[#EAF8F0] p-4"><p className="text-xs text-[#4F7D62]">Correct review results</p><p className="mt-1 text-2xl font-bold text-[#35664B]">{data.correctCount}</p></div><div className="rounded-xl bg-[#FFF1F1] p-4"><p className="text-xs text-[#A45D6B]">Incorrect review results</p><p className="mt-1 text-2xl font-bold text-[#A43E5C]">{data.wrongCount}</p></div></div></div>
       </section>}
 
       {tab === "settings" && <section aria-labelledby="settings-heading" className="max-w-2xl space-y-4"><div><h2 id="settings-heading" className="text-lg font-bold tracking-[-0.035em] text-[#173B52]">Subject Settings</h2><p className="mt-1 text-sm text-[#71869A]">Manage the name and data for this subject.</p></div>
@@ -202,3 +206,4 @@ function StatRow({ icon, value, label }: { icon: string; value: string; label: s
 function Metric({ title, value, detail }: { title: string; value: number | string; detail: string }) {
   return <div className="rounded-[17px] border border-[#E8E2E5] bg-white p-4"><p className="text-xs font-medium text-[#71869A]">{title}</p><p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-[#173B52]">{value}</p><p className="mt-1 text-[11px] text-[#8192A1]">{detail}</p></div>;
 }
+

@@ -6,8 +6,9 @@ import { SubjectsClient, type SubjectItem } from "@/components/subjects/subjects
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
-import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
+import { getSubjectMastery } from "@/lib/quiz/service";
+import { QUIZ_TYPES, type QuizType } from "@/lib/quiz/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,41 +34,29 @@ export default async function SubjectsPage() {
   try {
     await connectToDatabase();
     const userId = user._id;
-    const [subjectDocs, cards] = await Promise.all([
+    const [subjectDocs, cards, mastery] = await Promise.all([
       Subject.find({ userId }).select("_id name").sort({ name: 1 }).lean(),
       Flashcard.find({ userId }).select("_id subjectId").lean(),
+      getSubjectMastery(userId),
     ]);
 
-    const cardIds = cards.map((card) => card._id);
-    const reviews = cardIds.length
-      ? await ReviewRecord.find({ userId, flashcardId: { $in: cardIds } })
-          .select("flashcardId reviewedAt createdAt")
-          .sort({ reviewedAt: -1, createdAt: -1 })
-          .lean()
-      : [];
-
-    const reviewedCardIds = new Set(reviews.map((review) => String(review.flashcardId)));
     const counts = new Map<string, number>();
-    const reviewedCounts = new Map<string, Set<string>>();
     for (const card of cards) {
       const subjectId = String(card.subjectId);
       counts.set(subjectId, (counts.get(subjectId) ?? 0) + 1);
-      if (reviewedCardIds.has(String(card._id))) {
-        const set = reviewedCounts.get(subjectId) ?? new Set<string>();
-        set.add(String(card._id));
-        reviewedCounts.set(subjectId, set);
-      }
     }
 
     subjects = subjectDocs.map((subject) => {
       const id = String(subject._id);
       const flashcardCount = counts.get(id) ?? 0;
-      const reviewedCount = reviewedCounts.get(id)?.size ?? 0;
+      const masteredCount = mastery.bySubject.get(id) ?? 0;
       return {
         id,
         name: subject.name,
         flashcardCount,
-        progress: flashcardCount === 0 ? 0 : Math.round((reviewedCount / flashcardCount) * 100),
+        masteredCount,
+        typeMastery: mastery.byTypeBySubject.get(id) ?? (Object.fromEntries(QUIZ_TYPES.map((type) => [type, 0])) as Record<QuizType, number>),
+        progress: flashcardCount === 0 ? 0 : Math.round((masteredCount / flashcardCount) * 100),
       };
     });
   } catch (error) {
@@ -117,3 +106,4 @@ export default async function SubjectsPage() {
     </AppShell>
   );
 }
+

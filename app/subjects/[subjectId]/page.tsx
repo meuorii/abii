@@ -9,6 +9,8 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
+import { getSubjectMastery } from "@/lib/quiz/service";
+import { QUIZ_TYPES, type QuizType } from "@/lib/quiz/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +28,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
   const subject = await Subject.findOne({ _id: subjectId, userId: user._id }).select("_id name").lean();
   if (!subject) notFound();
 
+  const mastery = await getSubjectMastery(user._id);
   const cards = await Flashcard.find({ userId: user._id, subjectId: subject._id })
     .select("_id question answer hint favorite createdAt")
     .sort({ createdAt: -1 })
@@ -52,13 +55,17 @@ export default async function SubjectDetailPage({ params }: PageProps) {
   }).length;
   const correctCount = reviews.filter((review) => review.result === "correct").length;
   const wrongCount = reviews.filter((review) => review.result === "wrong").length;
-  const progress = cards.length ? Math.round((reviewedIds.size / cards.length) * 100) : 0;
+  const masteredCount = mastery.bySubject.get(String(subject._id)) ?? 0;
+  const typeMastery = mastery.byTypeBySubject.get(String(subject._id)) ?? (Object.fromEntries(QUIZ_TYPES.map((type) => [type, 0])) as Record<QuizType, number>);
+  const progress = cards.length ? Math.round((masteredCount / cards.length) * 100) : 0;
 
   const data: SubjectDetailData = {
     id: String(subject._id),
     name: subject.name,
     flashcardCount: cards.length,
     reviewedCount: reviewedIds.size,
+    masteredCount,
+    typeMastery,
     dueCount,
     progress,
     correctCount,
@@ -89,9 +96,10 @@ export default async function SubjectDetailPage({ params }: PageProps) {
               <div className="flex items-center gap-3">
                 <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#FFE0E9] text-xl text-[#E9577D] sm:h-12 sm:w-12">▤</span>
                 <div className="min-w-0">
-                  <h1 className="truncate text-xl font-bold tracking-[-0.04em] text-[#2F2930] sm:text-2xl">{subject.name}</h1>
-                  <p className="mt-1 text-[11px] text-[#6E8497] sm:text-xs">{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"} <span className="mx-1.5">·</span> {progress}% reviewed</p>
-                  <div className="mt-2 h-1.5 w-32 overflow-hidden rounded-full bg-white/90 sm:w-48"><div className="h-full rounded-full bg-[#F0789A]" style={{ width: `${progress}%` }} /></div>
+                  <div className="flex items-center gap-2"><h1 className="truncate text-xl font-bold tracking-[-0.04em] text-[#2F2930] sm:text-2xl">{subject.name}</h1>{cards.length > 0 && masteredCount === cards.length && <span title="Mastered" aria-label="Mastered" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-2 py-1 text-[10px] font-bold text-[#D94675]">✓ Mastered</span>}</div>
+                  <p className="mt-1 text-[11px] text-[#6E8497] sm:text-xs">{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"} <span className="mx-1.5">·</span> {progress}% mastered</p>
+                  <div className="mt-2 h-1.5 w-32 overflow-hidden rounded-full bg-white/90 sm:w-48"><div className="h-full rounded-full bg-[#E9577D]" style={{ width: `${progress}%` }} /></div>
+                  
                 </div>
               </div>
               <h2 id="subject-hero-title" className="mt-5 max-w-[420px] text-[clamp(1.45rem,2.5vw,2rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#173B52]">One card at a time,<br /><span className="text-[#E9577D]">one step closer.</span></h2>
@@ -109,3 +117,4 @@ export default async function SubjectDetailPage({ params }: PageProps) {
     </AppShell>
   );
 }
+

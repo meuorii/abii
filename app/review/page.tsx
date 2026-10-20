@@ -74,6 +74,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
   let correctCount = 0;
   let wrongCount = 0;
   let streak = 0;
+  let masteryTotal = 0;
 
   try {
     await connectToDatabase();
@@ -88,6 +89,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
     ]);
 
     totalCards = cards.length;
+    masteryTotal = mastery.all;
     const cardIds = cards.map((card) => card._id);
     const records = (cardIds.length
       ? await ReviewRecord.find({ userId, flashcardId: { $in: cardIds } })
@@ -149,12 +151,11 @@ export default async function ReviewPage({ searchParams }: PageProps) {
       .map((subject) => {
         const id = String(subject._id);
         const flashcardCount = cardsBySubject.get(id) ?? 0;
-        const reviewedCount = reviewedBySubject.get(id)?.size ?? 0;
         return {
           id,
           name: subject.name,
           flashcardCount,
-          progress: flashcardCount ? Math.round((reviewedCount / flashcardCount) * 100) : 0,
+          progress: flashcardCount ? Math.round(((mastery.bySubject.get(id) ?? 0) / flashcardCount) * 100) : 0,
           lastReviewedAt: latestSubjectActivity.get(id) ?? 0,
           mastered: mastery.bySubject.get(id) ?? 0,
           typeMastery: mastery.byTypeBySubject.get(id) ?? (Object.fromEntries(QUIZ_TYPES.map((type) => [type, 0])) as Record<QuizType, number>),
@@ -193,6 +194,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
             firstName={firstName}
             subjects={subjects}
             totalCards={totalCards}
+            totalMastered={masteryTotal}
             dueCount={dueCount}
             reviewedUniqueCount={reviewedUniqueCount}
             reviewedTodayUnique={reviewedTodayUnique}
