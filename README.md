@@ -1,26 +1,28 @@
-# Abii — Phase 7: Premium Landing Page
+# Abii — Phase 8: Dashboard
 
-## Files
-- `app/page.tsx` — replaces the starter home page with the public landing page.
-- Uses the existing palette values: white, `#FFF7F9`, `#FFE8EF`, `#FF9FBA`, `#FF6F96`, `#E9577D`, `#C65380`, `#2F2930`, `#756B72`, and `#E8E2E5`.
+## Included file
+- `app/dashboard/page.tsx` — replaces the Phase 6 dashboard with an authenticated, MongoDB-backed dashboard.
 
-## Mascot asset
-The hero expects the supplied existing Abii welcome image at:
+## What it does
+- Gets the signed-in user from `getCurrentUser()` on the server.
+- Loads only subjects and flashcards owned by that user.
+- Shows each subject's real flashcard count.
+- Counts cards due now from the most recent review record for each card. Cards never reviewed are treated as ready to study.
+- Handles empty subjects/cards and database errors without displaying database details to the user.
+- Uses the existing `AppShell` and Abii design palette. No dependency changes.
 
-`public/mascot/welcome.png`
+## Routes used
+- Add Subject / View all: `/subjects`
+- Start Review: `/review`
+- Favorites: `/favorites`
+- Subject card: `/subjects/[subjectId]`
 
-The Phase 3 mascot component documentation uses this path. Keep the original artwork unchanged. If your actual welcome image is currently saved elsewhere, copy that exact file to `public/mascot/welcome.png` (or update the `src` in `app/page.tsx` to match its current public path). The image is rendered with `object-contain` so it will not be stretched or cropped.
+The `/review` and `/subjects/[subjectId]` routes need to exist in your project for those actions to open fully implemented screens. This phase does not create those features. The Add Subject action links to the existing Subjects area because the create-subject form is outside this phase.
 
-## Routes
-- Primary Get Started buttons link to `/register`.
-- Log in buttons link to `/login`.
+## Install
+Copy `app/dashboard/page.tsx` into the matching path in your existing project, replacing the old dashboard page.
 
-These match the authentication paths used by the existing Abii auth layout and should be checked against your local route files.
-
-## Apply
-Merge the included `app/page.tsx` into the root of your existing Next.js project. No dependencies, database changes, or authentication changes are included.
-
-## Verify
+## Checks
 Run:
 ```bash
 npm run lint
@@ -28,6 +30,10 @@ npm run typecheck
 npm run build
 npm run dev
 ```
-Then visit `/` and test both links. Check desktop, tablet, and mobile widths and confirm the image at `/mascot/welcome.png` loads.
 
-I have not run the checks against your local project or verified the browser layout, because the full current project and actual local mascot assets were not available in this working folder. This package contains only the landing page file and instructions.
+Test with:
+1. An account with no subjects or flashcards: the dashboard should show a welcoming empty state and zero due cards.
+2. An account with subjects and cards: subject counts should match MongoDB; cards never reviewed or whose latest `nextReviewAt` is in the past should count as due.
+3. A signed-out browser: `/dashboard` should redirect to `/login`.
+
+I couldn't run the app against your local MongoDB or browser sessions in this environment, so these integration tests remain for you to perform locally.
