@@ -67,7 +67,7 @@ function Completion({ session, summary, firstName, onAgain, againBusy, againErro
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#C65380]">Review complete</p>
           <h1 id="done-title" className="mt-2 text-2xl font-bold tracking-[-0.04em] text-[#173B55] sm:text-3xl">{summary.mastered === summary.cards ? `Great job, ${firstName}! Every card is mastered.` : `Nice work, ${firstName}!`}</h1>
           <p className="mt-2 text-sm text-[#6C879C]">{session.subjectName} · {QUIZ_TYPE_LABELS[session.type]}</p>
-          <p className="mt-1 text-xs text-[#7890A4]">A card is mastered after {session.masteryTarget} correct answers in a row. A wrong answer resets its progress, so keep coming back to keep them sharp.</p>
+          <p className="mt-1 text-xs text-[#7890A4]">Complete {session.masteryTarget} correct answers in a row for this quiz type. Each type has its own streak; a wrong answer resets that type’s progress. Complete Multiple Choice, Identification, and True or False to master a card.</p>
           <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {stats.map((s) => (
               <div key={s.label} className="rounded-xl border border-[#F1DDE4] bg-white px-3 py-3"><dt className="text-[11px] font-medium text-[#7890A4]">{s.label}</dt><dd className="mt-1 text-xl font-bold tabular-nums text-[#153B56]">{s.value}</dd></div>
@@ -281,7 +281,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         setSelectedTruth(null);
         setText("");
         setHintOpen(false);
-        setRoundNotice(`Round ${round}: these cards aren’t mastered yet. A card is mastered after ${target} correct answers in a row, and a wrong answer resets it.`);
+        setRoundNotice(`Round ${round}: these cards still need ${target} consecutive correct answers in ${QUIZ_TYPE_LABELS[initial.type]}. A wrong answer resets this quiz type’s streak.`);
         return;
       }
       if (data.summary) setSummary(data.summary);
@@ -477,3 +477,4 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
     </div>
   );
 }
+

@@ -19,8 +19,9 @@ export const SESSION_TTL_HOURS = 24;
 export const MAX_TYPED_ANSWER_LENGTH = 500;
 
 /**
- * A card is "mastered" after this many correct answers in a row (counted across all sessions,
- * from saved review records). A wrong answer resets the card's streak to 0. A review session
- * keeps cycling the not-yet-mastered cards until every card reaches this streak.
+ * A card completes an individual quiz type after this many consecutive correct answers
+ * in that type. Each type has its own streak; a wrong answer resets only that type's streak.
+ * A card is fully mastered after reaching this target in all three quiz types.
  */
 export const MASTERY_STREAK = 3;
+

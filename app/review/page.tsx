@@ -8,6 +8,8 @@ import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { ReviewOverview, type ReviewSubjectItem } from "@/components/review/review-overview";
+import { getSubjectMastery } from "@/lib/quiz/service";
+import { QUIZ_TYPES, type QuizType } from "@/lib/quiz/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -79,9 +81,10 @@ export default async function ReviewPage({ searchParams }: PageProps) {
     const now = new Date();
     const todayStart = utcDayStart(now);
     const tomorrowStart = new Date(todayStart.getTime() + 86_400_000);
-    const [subjectDocs, cards] = await Promise.all([
+    const [subjectDocs, cards, mastery] = await Promise.all([
       Subject.find({ userId }).select("_id name").lean(),
       Flashcard.find({ userId }).select("_id subjectId").lean(),
+      getSubjectMastery(userId),
     ]);
 
     totalCards = cards.length;
@@ -153,6 +156,8 @@ export default async function ReviewPage({ searchParams }: PageProps) {
           flashcardCount,
           progress: flashcardCount ? Math.round((reviewedCount / flashcardCount) * 100) : 0,
           lastReviewedAt: latestSubjectActivity.get(id) ?? 0,
+          mastered: mastery.bySubject.get(id) ?? 0,
+          typeMastery: mastery.byTypeBySubject.get(id) ?? (Object.fromEntries(QUIZ_TYPES.map((type) => [type, 0])) as Record<QuizType, number>),
         };
       })
       .filter((subject) => subject.flashcardCount > 0 || subject.name)
@@ -201,4 +206,5 @@ export default async function ReviewPage({ searchParams }: PageProps) {
     </AppShell>
   );
 }
+
 

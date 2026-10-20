@@ -134,40 +134,73 @@ function resultFor(q: StoredQuestionDoc, type: QuizType): QuestionResult {
  * Correct-in-a-row streak per flashcard, from saved review records (newest first).
  * A wrong answer ends the streak. Cards with no records have streak 0.
  */
-export async function computeStreaks(userId: Types.ObjectId | string, flashcardIds?: string[]): Promise<Map<string, number>> {
+export async function computeStreaks(userId: Types.ObjectId | string, flashcardIds: string[] | undefined, type: QuizType): Promise<Map<string, number>> {
   await connectToDatabase();
   const filter: Record<string, unknown> = { userId };
   if (flashcardIds) filter.flashcardId = { $in: flashcardIds.filter((id) => isValidObjectId(id)).map((id) => new Types.ObjectId(id)) };
-  const records = await ReviewRecord.find(filter).select("flashcardId result reviewedAt").sort({ reviewedAt: -1, _id: -1 }).lean();
+  // Keep streaks independent by question type so a perfect Multiple Choice round
+  // cannot accidentally complete Identification or True or False.
+  filter.questionType = type;
+  const records = await ReviewRecord.find(filter).select("flashcardId result reviewedAt questionType").sort({ reviewedAt: -1, _id: -1 }).lean();
   const streaks = new Map<string, number>();
   const ended = new Set<string>();
   for (const record of records) {
     const id = String(record.flashcardId);
-    if (ended.has(id)) continue;
+    const key = `${id}:${type}`;
+    if (ended.has(key)) continue;
     if (record.result === "correct") streaks.set(id, (streaks.get(id) ?? 0) + 1);
-    else ended.add(id);
+    else ended.add(key);
   }
   return streaks;
 }
 
-/** Mastered-card counts per subject, for the setup page. */
+/** Mastery progress per subject and question type, for the setup and review pages. */
 export async function getSubjectMastery(userId: Types.ObjectId | string) {
   const cards = await Flashcard.find({ userId }).select("_id subjectId").lean();
-  const streaks = await computeStreaks(userId);
+  const records = await ReviewRecord.find({ userId })
+    .select("flashcardId result reviewedAt questionType")
+    .sort({ reviewedAt: -1, _id: -1 })
+    .lean();
+
+  const streakByType = new Map<QuizType, Map<string, number>>();
+  for (const type of QUIZ_TYPES) {
+    const streaks = new Map<string, number>();
+    const ended = new Set<string>();
+    for (const record of records) {
+      if (record.questionType !== type) continue;
+      const id = String(record.flashcardId);
+      if (ended.has(id)) continue;
+      if (record.result === "correct") streaks.set(id, (streaks.get(id) ?? 0) + 1);
+      else ended.add(id);
+    }
+    streakByType.set(type, streaks);
+  }
+
   const bySubject = new Map<string, number>();
+  const byTypeBySubject = new Map<string, Record<QuizType, number>>();
+  const allByType = Object.fromEntries(QUIZ_TYPES.map((type) => [type, 0])) as Record<QuizType, number>;
   let all = 0;
   for (const card of cards) {
-    if ((streaks.get(String(card._id)) ?? 0) >= MASTERY_STREAK) {
-      bySubject.set(String(card.subjectId), (bySubject.get(String(card.subjectId)) ?? 0) + 1);
+    const id = String(card._id);
+    const subjectId = String(card.subjectId);
+    const typeCounts = byTypeBySubject.get(subjectId) ?? Object.fromEntries(QUIZ_TYPES.map((type) => [type, 0])) as Record<QuizType, number>;
+    const masteredTypes = QUIZ_TYPES.filter((type) => (streakByType.get(type)?.get(id) ?? 0) >= MASTERY_STREAK);
+    for (const type of masteredTypes) {
+      typeCounts[type] += 1;
+      allByType[type] += 1;
+    }
+    byTypeBySubject.set(subjectId, typeCounts);
+    if (masteredTypes.length === QUIZ_TYPES.length) {
+      bySubject.set(subjectId, (bySubject.get(subjectId) ?? 0) + 1);
       all += 1;
     }
   }
-  return { bySubject, all };
+  return { bySubject, byTypeBySubject, allByType, all };
 }
 
-/** card position (origin) -> current streak, for the progress UI. */
+/** Current consecutive-correct streak for cards in this session's selected quiz type. */
 export async function sessionMastery(userId: Types.ObjectId | string, session: SessionDoc): Promise<Map<string, number>> {
-  return computeStreaks(userId, [...new Set(session.questions.map((q) => String(q.flashcardId)))]);
+  return computeStreaks(userId, [...new Set(session.questions.map((q) => String(q.flashcardId)))], session.type);
 }
 
 export function summarize(session: SessionDoc, streaks?: Map<string, number>): QuizSummary {
@@ -355,3 +388,4 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
   if (!fresh || fresh.status !== "completed") return fail(500, "We couldn’t finish this review. Please try again.");
   return { ok: true as const, done: true as const, summary: summarize(fresh, streaks) };
 }
+

@@ -82,7 +82,10 @@ export type SetupSubject = {
   id: string;
   name: string;
   flashcardCount: number;
-  /** Cards in this subject that are mastered (streak reached). */
+  /** Cards that completed all three quiz types. */
   mastered: number;
+  /** Cards that completed the 3-correct streak for each individual quiz type. */
+  typeMastery: Record<QuizType, number>;
   eligible: Record<QuizType, number>;
 };
+

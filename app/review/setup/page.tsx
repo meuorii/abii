@@ -25,6 +25,7 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
   let allEligible = Object.fromEntries(QUIZ_TYPES.map((t) => [t, 0])) as Record<QuizType, number>;
   let totalCards = 0;
   let allMastered = 0;
+  let allTypeMastery = Object.fromEntries(QUIZ_TYPES.map((t) => [t, 0])) as Record<QuizType, number>;
   let loadFailed = false;
 
   try {
@@ -37,6 +38,7 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
       getSubjectMastery(userId),
     ]);
     allMastered = mastery.all;
+    allTypeMastery = mastery.allByType;
     totalCards = cards.length;
     const cardCounts = new Map<string, number>();
     for (const card of cards) cardCounts.set(String(card.subjectId), (cardCounts.get(String(card.subjectId)) ?? 0) + 1);
@@ -48,6 +50,7 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
         name: subject.name,
         flashcardCount: cardCounts.get(id) ?? 0,
         mastered: mastery.bySubject.get(id) ?? 0,
+        typeMastery: mastery.byTypeBySubject.get(id) ?? (Object.fromEntries(QUIZ_TYPES.map((t) => [t, 0])) as Record<QuizType, number>),
         eligible: counts.bySubject.get(id) ?? (Object.fromEntries(QUIZ_TYPES.map((t) => [t, 0])) as Record<QuizType, number>),
       };
     });
@@ -64,9 +67,11 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
         allEligible={allEligible}
         totalCards={totalCards}
         allMastered={allMastered}
+        allTypeMastery={allTypeMastery}
         initialSubjectId={requested && subjects.some((s) => s.id === requested) ? requested : null}
         loadFailed={loadFailed}
       />
     </AppShell>
   );
 }
+

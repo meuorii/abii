@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { QUIZ_TYPES, QUIZ_TYPE_LABELS, type QuizType } from "@/lib/quiz/types";
 
 export type ReviewSubjectItem = {
   id: string;
@@ -6,6 +7,8 @@ export type ReviewSubjectItem = {
   flashcardCount: number;
   progress: number;
   lastReviewedAt: number;
+  mastered: number;
+  typeMastery: Record<QuizType, number>;
 };
 
 type Props = {
@@ -94,7 +97,14 @@ export function ReviewOverview({ firstName, subjects, totalCards, dueCount, revi
 
     <section aria-labelledby="recent-subjects-title">
       <div className="mb-4 flex items-end justify-between gap-3"><div className="flex items-start gap-3"><span className="mt-1 text-[#FF5B8B]"><Icon name="book" /></span><div><h2 id="recent-subjects-title" className="text-lg font-bold tracking-tight text-[#153B56] sm:text-xl">Recent Subjects</h2><p className="mt-0.5 text-xs text-[#6C879C] sm:text-sm">Continue where you left off.</p></div></div><Link href="/subjects" className="shrink-0 text-xs font-semibold text-[#E9577D] hover:text-[#C93E68] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">View all <span aria-hidden="true">→</span></Link></div>
-      {subjects.length ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">{subjects.map((subject) => <Link key={subject.id} href={`/subjects/${subject.id}`} className="group min-w-0 rounded-2xl border border-[#E8EAF0] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#F0B6C9] hover:shadow-[0_5px_16px_rgba(47,41,48,0.04)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2"><div className="flex items-center gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF0F5] text-xl text-[#FF5B8B]">{subjectSymbol(subject.name)}</span><div className="min-w-0 flex-1"><h3 className="truncate text-sm font-bold text-[#153B56]">{subject.name}</h3><p className="mt-1 text-xs text-[#7890A4]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "card" : "cards"}</p></div><span className="text-lg text-[#7190A6] transition group-hover:translate-x-0.5 group-hover:text-[#E9577D]" aria-hidden="true">›</span></div><div className="mt-4"><ProgressBar value={subject.progress} label={`${subject.name} reviewed-card progress`} /></div></Link>)}</div> : <div className="rounded-2xl border border-dashed border-[#E9D9E0] bg-white px-5 py-8 text-center"><p className="font-semibold text-[#153B56]">No subjects yet</p><p className="mt-1 text-sm text-[#7890A4]">Create a subject to start organizing your flashcards.</p><Link href="/subjects" className="mt-4 inline-flex rounded-full bg-[#FF477D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#E9577D]">Go to My Subjects →</Link></div>}
+      {subjects.length ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">{subjects.map((subject) => <Link key={subject.id} href={`/subjects/${subject.id}`} className="group min-w-0 rounded-2xl border border-[#E8EAF0] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#F0B6C9] hover:shadow-[0_5px_16px_rgba(47,41,48,0.04)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2"><div className="flex items-center gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF0F5] text-xl text-[#FF5B8B]">{subjectSymbol(subject.name)}</span><div className="min-w-0 flex-1"><h3 className="truncate text-sm font-bold text-[#153B56]">{subject.name}</h3><p className="mt-1 text-xs text-[#7890A4]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "card" : "cards"}</p></div><span className="text-lg text-[#7190A6] transition group-hover:translate-x-0.5 group-hover:text-[#E9577D]" aria-hidden="true">›</span></div><div className="mt-4"><ProgressBar value={subject.progress} label={`${subject.name} reviewed-card progress`} /></div><div className="mt-3 flex flex-wrap gap-1" aria-label={`${subject.name} quiz-type mastery`}>
+          {QUIZ_TYPES.map((type) => {
+            const done = subject.flashcardCount > 0 && subject.typeMastery[type] === subject.flashcardCount;
+            const label = type === "multiple-choice" ? "MC" : type === "identification" ? "ID" : "T/F";
+            return <span key={type} title={`${QUIZ_TYPE_LABELS[type]}: ${subject.typeMastery[type]}/${subject.flashcardCount} cards completed`} className={`rounded-full px-2 py-1 text-[10px] font-semibold ${done ? "bg-[#E4F7EC] text-[#207A4B]" : "bg-[#F5F1F3] text-[#7B6D75]"}`}>{done ? "✓" : "○"} {label} {subject.typeMastery[type]}/{subject.flashcardCount}</span>;
+          })}
+          {subject.mastered === subject.flashcardCount && subject.flashcardCount > 0 && <span className="rounded-full bg-[#E4F7EC] px-2 py-1 text-[10px] font-bold text-[#207A4B]">✓ Mastered</span>}
+        </div></Link>)}</div> : <div className="rounded-2xl border border-dashed border-[#E9D9E0] bg-white px-5 py-8 text-center"><p className="font-semibold text-[#153B56]">No subjects yet</p><p className="mt-1 text-sm text-[#7890A4]">Create a subject to start organizing your flashcards.</p><Link href="/subjects" className="mt-4 inline-flex rounded-full bg-[#FF477D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#E9577D]">Go to My Subjects →</Link></div>}
     </section>
 
     <section aria-labelledby="review-progress-title" className="rounded-2xl border border-[#E8EAF0] bg-white p-4 sm:p-5">
@@ -106,3 +116,4 @@ export function ReviewOverview({ firstName, subjects, totalCards, dueCount, revi
     </section>
   </div>;
 }
+

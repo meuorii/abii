@@ -19,6 +19,7 @@ type Props = {
   allEligible: Record<QuizType, number>;
   totalCards: number;
   allMastered: number;
+  allTypeMastery: Record<QuizType, number>;
   initialSubjectId: string | null;
   loadFailed: boolean;
 };
@@ -50,7 +51,7 @@ function unavailableReason(type: QuizType) {
   return "True or False needs flashcards with a question and a short answer (120 characters or fewer).";
 }
 
-export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allMastered, initialSubjectId, loadFailed }: Props) {
+export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allMastered, allTypeMastery, initialSubjectId, loadFailed }: Props) {
   const router = useRouter();
   const [subjectId, setSubjectId] = useState<string | null>(initialSubjectId);
   const [type, setType] = useState<QuizType | null>(null);
@@ -137,7 +138,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
       <section aria-labelledby="choose-subject">
         <h2 id="choose-subject" className="text-base font-bold tracking-tight text-[#153B56] sm:text-lg"><span className="mr-2 text-[#E9577D]">1</span>Choose a subject</h2>
         <div role="radiogroup" aria-labelledby="choose-subject" className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {[{ id: ALL_SUBJECTS, name: "All Subjects", symbol: "◎", count: Math.max(...QUIZ_TYPES.map((t) => allEligible[t])), cards: totalCards, mastered: allMastered }, ...subjects.map((s) => ({ id: s.id, name: s.name, symbol: subjectSymbol(s.name), count: eligibleSubjectTotal(s), cards: s.flashcardCount, mastered: s.mastered }))].map((item) => {
+          {[{ id: ALL_SUBJECTS, name: "All Subjects", symbol: "◎", count: Math.max(...QUIZ_TYPES.map((t) => allEligible[t])), cards: totalCards, mastered: allMastered, typeMastery: allTypeMastery }, ...subjects.map((s) => ({ id: s.id, name: s.name, symbol: subjectSymbol(s.name), count: eligibleSubjectTotal(s), cards: s.flashcardCount, mastered: s.mastered, typeMastery: s.typeMastery }))].map((item) => {
             const selected = subjectId === item.id;
             return (
               <button key={item.id} type="button" role="radio" aria-checked={selected} onClick={() => { setSubjectId(item.id); setError(""); }} className={`flex min-h-[72px] min-w-0 items-center gap-3 rounded-2xl border p-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${selected ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}>
@@ -147,7 +148,14 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
                   <span className="mt-0.5 block text-xs text-[#7890A4]">{item.cards} {item.cards === 1 ? "flashcard" : "flashcards"} · up to {item.count} {item.count === 1 ? "question" : "questions"}</span>
                   <span className="mt-1.5 flex items-center gap-2" aria-label={`${item.mastered} of ${item.cards} cards mastered`}>
                     <span className="h-1.5 w-20 overflow-hidden rounded-full bg-[#F3E9ED]"><span className="block h-full rounded-full bg-[#FF6F96]" style={{ width: `${item.cards ? Math.round((item.mastered / item.cards) * 100) : 0}%` }} /></span>
-                    <span className="text-[11px] font-medium text-[#C65380]">{item.mastered === item.cards && item.cards > 0 ? "Subject mastered" : `${item.mastered}/${item.cards} mastered`}</span>
+                    <span className="text-[11px] font-medium text-[#C65380]">{item.mastered === item.cards && item.cards > 0 ? "Mastered · all 3 types" : `${item.mastered}/${item.cards} mastered`}</span>
+                  </span>
+                  <span className="mt-2 flex flex-wrap gap-1" aria-label="Question type completion">
+                    {QUIZ_TYPES.map((quizType) => {
+                      const completed = item.cards > 0 && item.typeMastery[quizType] === item.cards;
+                      const shortLabel = quizType === "multiple-choice" ? "MC" : quizType === "identification" ? "ID" : "T/F";
+                      return <span key={quizType} title={`${QUIZ_TYPE_LABELS[quizType]}: ${item.typeMastery[quizType]}/${item.cards} cards completed`} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${completed ? "bg-[#E4F7EC] text-[#207A4B]" : "bg-[#F5F1F3] text-[#7B6D75]"}`}>{completed ? "✓" : "○"} {shortLabel} {item.typeMastery[quizType]}/{item.cards}</span>;
+                    })}
                   </span>
                 </span>
                 <span aria-hidden="true" className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${selected ? "border-[#E9577D] bg-[#E9577D] text-white" : "border-[#D9D2D6] text-transparent"}`}>✓</span>
@@ -159,6 +167,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
 
       <section aria-labelledby="choose-type">
         <h2 id="choose-type" className="text-base font-bold tracking-tight text-[#153B56] sm:text-lg"><span className="mr-2 text-[#E9577D]">2</span>Choose a quiz type</h2>
+        <p className="mt-1 text-xs leading-5 text-[#7890A4]">Each question type has its own 3-correct-answer streak. Complete all three types to earn the <span className="font-semibold text-[#207A4B]">Mastered</span> indicator.</p>
         <div role="radiogroup" aria-labelledby="choose-type" className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
           {QUIZ_TYPES.map((t) => {
             const selected = type === t;
@@ -167,7 +176,15 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
               <button key={t} type="button" role="radio" aria-checked={selected} onClick={() => { setType(t); setError(""); }} className={`flex min-h-[132px] min-w-0 flex-col items-start gap-3 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${selected ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}>
                 <span className="flex w-full items-center justify-between">
                   <span className={`flex h-11 w-11 items-center justify-center rounded-full ${selected ? "bg-[#FF6F96] text-white" : "bg-[#FFE8EF] text-[#E9577D]"}`}><TypeIcon type={t} /></span>
-                  {n !== null && <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${n > 0 ? "bg-white text-[#C65380]" : "bg-[#F4F1F3] text-[#8B7C84]"}`}>{n} {n === 1 ? "question" : "questions"}</span>}
+                  <span className="flex flex-wrap items-center justify-end gap-1.5">
+                    {n !== null && <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${n > 0 ? "bg-white text-[#C65380]" : "bg-[#F4F1F3] text-[#8B7C84]"}`}>{n} {n === 1 ? "question" : "questions"}</span>}
+                    {subjectId && (() => {
+                      const completedCount = subjectId === ALL_SUBJECTS ? allTypeMastery[t] : selectedSubject?.typeMastery[t] ?? 0;
+                      const cardCount = subjectId === ALL_SUBJECTS ? totalCards : selectedSubject?.flashcardCount ?? 0;
+                      const isComplete = cardCount > 0 && completedCount === cardCount;
+                      return <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isComplete ? "bg-[#E4F7EC] text-[#207A4B]" : "bg-[#F5F1F3] text-[#7B6D75]"}`}>{isComplete ? "Completed" : `${completedCount}/${cardCount}`}</span>;
+                    })()}
+                  </span>
                 </span>
                 <span>
                   <span className="block text-sm font-bold text-[#153B56]">{QUIZ_TYPE_LABELS[t]}</span>
@@ -200,3 +217,4 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
     </div>
   );
 }
+
