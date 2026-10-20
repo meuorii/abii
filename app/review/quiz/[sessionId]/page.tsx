@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { QuizSession } from "@/components/review/quiz-session";
 import { getCurrentUser } from "@/lib/auth/session";
-import { loadSession, toPublicSession } from "@/lib/quiz/service";
+import { loadSession, sessionMastery, toPublicSession } from "@/lib/quiz/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export default async function QuizSessionPage({ params }: PageProps) {
   let session = null;
   try {
     const doc = await loadSession(user._id, sessionId);
-    session = doc ? toPublicSession(doc) : null;
+    session = doc ? toPublicSession(doc, await sessionMastery(user._id, doc)) : null;
   } catch (error) {
     console.error("Quiz session could not be loaded.", error);
   }

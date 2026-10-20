@@ -65,9 +65,9 @@ function Completion({ session, summary, firstName, onAgain, againBusy, againErro
         <Mascot state="complete" size="lg" />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#C65380]">Review complete</p>
-          <h1 id="done-title" className="mt-2 text-2xl font-bold tracking-[-0.04em] text-[#173B55] sm:text-3xl">Great job, {firstName}! Every card is answered correctly.</h1>
+          <h1 id="done-title" className="mt-2 text-2xl font-bold tracking-[-0.04em] text-[#173B55] sm:text-3xl">{summary.mastered === summary.cards ? `Great job, ${firstName}! Every card is mastered.` : `Nice work, ${firstName}!`}</h1>
           <p className="mt-2 text-sm text-[#6C879C]">{session.subjectName} · {QUIZ_TYPE_LABELS[session.type]}</p>
-          <p className="mt-1 text-xs text-[#7890A4]">Getting every card right once is a good step, not mastery. Come back to review again; your spaced reviews will bring these cards back.</p>
+          <p className="mt-1 text-xs text-[#7890A4]">A card is mastered after {session.masteryTarget} correct answers in a row. A wrong answer resets its progress, so keep coming back to keep them sharp.</p>
           <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {stats.map((s) => (
               <div key={s.label} className="rounded-xl border border-[#F1DDE4] bg-white px-3 py-3"><dt className="text-[11px] font-medium text-[#7890A4]">{s.label}</dt><dd className="mt-1 text-xl font-bold tabular-nums text-[#153B56]">{s.value}</dd></div>
@@ -90,6 +90,10 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const [questions, setQuestions] = useState(initial.questions);
   const total = questions.length;
   const [roundNotice, setRoundNotice] = useState("");
+  const [mastery, setMastery] = useState<Record<number, number>>(initial.mastery);
+  const [autoNext, setAutoNext] = useState(false);
+  const [autoSeconds, setAutoSeconds] = useState(3);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [results, setResults] = useState<Record<number, QuestionResult>>(initial.results);
   const [index, setIndex] = useState(() => {
     const first = questions.findIndex((q) => !initial.results[q.index]);
@@ -105,6 +109,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const [againBusy, setAgainBusy] = useState(false);
   const [againError, setAgainError] = useState("");
   const busyRef = useRef(false);
+  const nextRef = useRef<() => void>(() => {});
   const inputRef = useRef<HTMLInputElement>(null);
 
   const question = questions[index];
@@ -113,18 +118,65 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const correctCount = Object.values(results).filter((r) => r.correct).length;
   const incorrectCount = answeredCount - correctCount;
   const isLast = index >= total - 1;
-  const latestByCard = new Map<number, boolean>();
-  for (const q of questions) {
-    const res = results[q.index];
-    if (res) latestByCard.set(q.cardIndex, res.correct);
-    else if (!latestByCard.has(q.cardIndex)) latestByCard.set(q.cardIndex, false);
-  }
-  const masteredCount = [...latestByCard.values()].filter(Boolean).length;
-  const cardTotal = latestByCard.size;
+  const target = initial.masteryTarget;
+  const cardIndexes = [...new Set(questions.map((q) => q.cardIndex))];
+  const cardTotal = cardIndexes.length;
+  const masteredCount = cardIndexes.filter((c) => (mastery[c] ?? 0) >= target).length;
+  const currentStreak = question ? Math.min(mastery[question.cardIndex] ?? 0, target) : 0;
   const currentRound = question?.round ?? 1;
   const typeLabel = QUIZ_TYPE_LABELS[initial.type];
   const hasResult = Boolean(result);
   const questionType = question?.type;
+
+  const autoDelay = result?.correct ? autoSeconds : autoSeconds * 2;
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("abii-auto-next");
+      if (saved) {
+        const parsed = JSON.parse(saved) as { on?: boolean; seconds?: number };
+        if (typeof parsed.on === "boolean") setAutoNext(parsed.on);
+        if (parsed.seconds && [2, 3, 5].includes(parsed.seconds)) setAutoSeconds(parsed.seconds);
+      }
+    } catch {
+      /* storage unavailable: keep defaults */
+    }
+  }, []);
+
+  function saveAuto(on: boolean, seconds: number) {
+    setAutoNext(on);
+    setAutoSeconds(seconds);
+    try {
+      window.localStorage.setItem("abii-auto-next", JSON.stringify({ on, seconds }));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  useEffect(() => {
+    nextRef.current = next;
+  });
+
+  // Auto-next: after an answer is shown, advance on its own. Wrong answers get twice as long to read.
+  useEffect(() => {
+    if (!autoNext || !hasResult || summary) {
+      setCountdown(null);
+      return;
+    }
+    let remaining = autoDelay;
+    setCountdown(remaining);
+    const timer = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearInterval(timer);
+        setCountdown(null);
+        nextRef.current();
+      } else {
+        setCountdown(remaining);
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [autoNext, hasResult, index, autoDelay, summary]);
 
   useEffect(() => {
     if (questionType === "identification" && !hasResult) inputRef.current?.focus();
@@ -180,13 +232,14 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
     setError("");
     try {
       const response = await fetch(`/api/quiz/${initial.id}/answer`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ questionIndex: question.index, ...payload }) });
-      const data = (await response.json().catch(() => ({}))) as { result?: QuestionResult; error?: string };
+      const data = (await response.json().catch(() => ({}))) as { result?: QuestionResult; mastery?: Record<number, number>; error?: string };
       if (!response.ok || !data.result) {
         setError(data.error || "We couldn’t save that answer. Please try again.");
         return;
       }
       const saved = data.result;
       setResults((current) => ({ ...current, [question.index]: saved }));
+      if (data.mastery) setMastery(data.mastery);
     } catch {
       setError("You seem to be offline. Check your connection and try again.");
     } finally {
@@ -222,12 +275,13 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         const round = nextQuestions[first >= 0 ? first : 0]?.round ?? 2;
         setQuestions(nextQuestions);
         setResults(nextResults);
+        setMastery(data.session.mastery);
         setIndex(first >= 0 ? first : 0);
         setSelectedOption(null);
         setSelectedTruth(null);
         setText("");
         setHintOpen(false);
-        setRoundNotice(`Round ${round}: let’s try the ones you missed again. This review is complete only when every card is answered correctly.`);
+        setRoundNotice(`Round ${round}: these cards aren’t mastered yet. A card is mastered after ${target} correct answers in a row, and a wrong answer resets it.`);
         return;
       }
       if (data.summary) setSummary(data.summary);
@@ -311,6 +365,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         <section aria-labelledby="question-heading" className="order-2 min-w-0 rounded-2xl border border-[#E8EAF0] bg-white p-4 sm:p-6 lg:order-none lg:col-start-1 lg:row-start-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-[#6C879C]" aria-live="polite">Question <span className="font-bold text-[#153B56]">{index + 1}</span> of <span className="font-bold text-[#153B56]">{total}</span></p>
+            <span className="inline-flex items-center gap-1" aria-label={`Card mastery ${currentStreak} of ${target}`} title="Correct in a row for this card"><span className="mr-1 text-[11px] text-[#8B7C84]">Mastery</span>{Array.from({ length: target }).map((_, i) => <span key={i} className={`h-2 w-2 rounded-full ${i < currentStreak ? "bg-[#FF6F96]" : "bg-[#F3E9ED]"}`} />)}</span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1DDE4] bg-[#FFF7F9] px-3 py-1 text-xs font-medium text-[#C65380]"><TypeIcon type={initial.type} className="h-3.5 w-3.5" />{currentRound > 1 ? `Retry · ${typeLabel}` : typeLabel}</span>
           </div>
           {roundNotice && currentRound > 1 && <p role="status" className="mt-3 rounded-xl border border-[#F1DDE4] bg-[#FFF7F9] px-3.5 py-3 text-sm text-[#6C4A58]">{roundNotice}</p>}
@@ -369,6 +424,22 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
               </div>
             )}
 
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#F1DDE4] bg-[#FFFAFC] px-3.5 py-2.5 text-xs text-[#6C4A58]">
+              <label className="flex cursor-pointer items-center gap-2 font-semibold">
+                <input type="checkbox" checked={autoNext} onChange={(e) => saveAuto(e.target.checked, autoSeconds)} className="h-4 w-4 accent-[#E9577D]" />
+                Auto-next
+              </label>
+              <label className="flex items-center gap-2">
+                <span className="text-[#8B7C84]">after</span>
+                <select value={autoSeconds} onChange={(e) => saveAuto(autoNext, Number(e.target.value))} disabled={!autoNext} className="rounded-lg border border-[#E8E2E5] bg-white px-2 py-1 text-xs disabled:opacity-50">
+                  <option value={2}>2s</option>
+                  <option value={3}>3s</option>
+                  <option value={5}>5s</option>
+                </select>
+              </label>
+              <span className="text-[#8B7C84]">{autoNext ? "Wrong answers wait twice as long. Turn off to pause." : "Or press Next Question yourself."}</span>
+            </div>
+
             {error && <p role="alert" className="rounded-xl border border-[#F0C7D3] bg-[#FFF1F1] px-3.5 py-3 text-sm text-[#A43E5C]">{error}</p>}
 
             <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
@@ -378,7 +449,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
                 )}
               </div>
               {result ? (
-                <button type="button" onClick={next} disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#FF477D] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 sm:min-h-11">{busy ? "Finishing…" : isLast ? "Finish Review" : "Next Question"}{!busy && <span aria-hidden="true">→</span>}</button>
+                <button type="button" onClick={next} disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#FF477D] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 sm:min-h-11">{busy ? "Finishing…" : `${isLast ? "Finish Round" : "Next Question"}${countdown !== null ? ` (${countdown})` : ""}`}{!busy && <span aria-hidden="true">→</span>}</button>
               ) : (
                 <button type="submit" disabled={!canSubmit} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#FF477D] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">{busy ? "Checking…" : question.type === "identification" ? "Submit Answer" : "Check Answer"}{!busy && <span aria-hidden="true">→</span>}</button>
               )}

@@ -6,7 +6,7 @@ import { QuizSession } from "@/models/QuizSession";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { buildQuestionForCard, buildQuestions, isEligible, shuffle, isUsableCard, prepareCard, type PreparedCard } from "./builder";
-import { MAX_TYPED_ANSWER_LENGTH, SESSION_TTL_HOURS } from "./config";
+import { MASTERY_STREAK, MAX_TYPED_ANSWER_LENGTH, SESSION_TTL_HOURS } from "./config";
 import { normalizeText, sanitizeTyped } from "./normalize";
 import { computeNextReviewAt } from "./schedule";
 import {
@@ -130,14 +130,56 @@ function resultFor(q: StoredQuestionDoc, type: QuizType): QuestionResult {
   return { ...base, selectedTruth: correct ? Boolean(q.truth) : !q.truth };
 }
 
-export function summarize(session: SessionDoc): QuizSummary {
+/**
+ * Correct-in-a-row streak per flashcard, from saved review records (newest first).
+ * A wrong answer ends the streak. Cards with no records have streak 0.
+ */
+export async function computeStreaks(userId: Types.ObjectId | string, flashcardIds?: string[]): Promise<Map<string, number>> {
+  await connectToDatabase();
+  const filter: Record<string, unknown> = { userId };
+  if (flashcardIds) filter.flashcardId = { $in: flashcardIds.filter((id) => isValidObjectId(id)).map((id) => new Types.ObjectId(id)) };
+  const records = await ReviewRecord.find(filter).select("flashcardId result reviewedAt").sort({ reviewedAt: -1, _id: -1 }).lean();
+  const streaks = new Map<string, number>();
+  const ended = new Set<string>();
+  for (const record of records) {
+    const id = String(record.flashcardId);
+    if (ended.has(id)) continue;
+    if (record.result === "correct") streaks.set(id, (streaks.get(id) ?? 0) + 1);
+    else ended.add(id);
+  }
+  return streaks;
+}
+
+/** Mastered-card counts per subject, for the setup page. */
+export async function getSubjectMastery(userId: Types.ObjectId | string) {
+  const cards = await Flashcard.find({ userId }).select("_id subjectId").lean();
+  const streaks = await computeStreaks(userId);
+  const bySubject = new Map<string, number>();
+  let all = 0;
+  for (const card of cards) {
+    if ((streaks.get(String(card._id)) ?? 0) >= MASTERY_STREAK) {
+      bySubject.set(String(card.subjectId), (bySubject.get(String(card.subjectId)) ?? 0) + 1);
+      all += 1;
+    }
+  }
+  return { bySubject, all };
+}
+
+/** card position (origin) -> current streak, for the progress UI. */
+export async function sessionMastery(userId: Types.ObjectId | string, session: SessionDoc): Promise<Map<string, number>> {
+  return computeStreaks(userId, [...new Set(session.questions.map((q) => String(q.flashcardId)))]);
+}
+
+export function summarize(session: SessionDoc, streaks?: Map<string, number>): QuizSummary {
   const total = session.questions.length;
   const answered = session.questions.filter((q) => q.answered).length;
   const correct = session.questions.filter((q) => q.answered && q.correct).length;
   const incorrect = answered - correct;
   const latest = latestByCard(session);
   const cards = latest.size;
-  const mastered = [...latest.values()].filter((q) => q.answered && q.correct).length;
+  const mastered = streaks
+    ? [...latest.values()].filter((q) => (streaks.get(String(q.flashcardId)) ?? 0) >= MASTERY_STREAK).length
+    : [...latest.values()].filter((q) => q.answered && q.correct).length;
   const firstTryCorrect = session.questions.filter((q) => (q.round ?? 1) === 1 && q.answered && q.correct).length;
   const rounds = session.questions.reduce((max, q) => Math.max(max, q.round ?? 1), 1);
   return { total, answered, correct, incorrect, accuracy: answered ? Math.round((correct / answered) * 100) : 0, cards, mastered, firstTryCorrect, rounds };
@@ -151,7 +193,7 @@ function latestByCard(session: SessionDoc): Map<number, StoredQuestionDoc> {
 }
 
 /** Browser-safe view of a session. Answer keys appear only for questions already submitted. */
-export function toPublicSession(session: SessionDoc): PublicSession {
+export function toPublicSession(session: SessionDoc, streaks?: Map<string, number>): PublicSession {
   const questions: PublicQuestion[] = session.questions.map((q, index) => ({
     index,
     type: session.type,
@@ -166,6 +208,10 @@ export function toPublicSession(session: SessionDoc): PublicSession {
   session.questions.forEach((q, index) => {
     if (q.answered) results[index] = resultFor(q, session.type);
   });
+  const mastery: Record<number, number> = {};
+  session.questions.forEach((q, i) => {
+    mastery[q.origin ?? i] = streaks?.get(String(q.flashcardId)) ?? 0;
+  });
   return {
     id: String(session._id),
     subjectId: session.subjectId ? String(session.subjectId) : null,
@@ -174,8 +220,10 @@ export function toPublicSession(session: SessionDoc): PublicSession {
     status: session.status,
     questions,
     results,
-    summary: session.status === "completed" ? summarize(session) : null,
+    summary: session.status === "completed" ? summarize(session, streaks) : null,
     cardTotal: latestByCard(session).size,
+    mastery,
+    masteryTarget: MASTERY_STREAK,
   };
 }
 
@@ -200,7 +248,7 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   const q = session.questions[index];
 
   // Repeated request for an answered question: return the saved result, record nothing.
-  if (q.answered) return { ok: true as const, duplicate: true, result: resultFor(q, session.type), progress: summarize(session) };
+  if (q.answered) return { ok: true as const, duplicate: true, result: resultFor(q, session.type), progress: summarize(session), mastery: toPublicSession(session, await sessionMastery(userId, session)).mastery };
 
   let correct: boolean;
   const set: Record<string, unknown> = {};
@@ -237,7 +285,7 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   if (claimed.modifiedCount === 0) {
     const fresh = await loadSession(userId, sessionId);
     if (fresh?.questions[index]?.answered) {
-      return { ok: true as const, duplicate: true, result: resultFor(fresh.questions[index], fresh.type), progress: summarize(fresh) };
+      return { ok: true as const, duplicate: true, result: resultFor(fresh.questions[index], fresh.type), progress: summarize(fresh), mastery: toPublicSession(fresh, await sessionMastery(userId, fresh)).mastery };
     }
     return fail(409, "This answer could not be saved. Please try again.");
   }
@@ -264,7 +312,8 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
 
   const fresh = await loadSession(userId, sessionId);
   if (!fresh) return fail(404, "This quiz session has expired or could not be found.");
-  return { ok: true as const, duplicate: false, result: resultFor(fresh.questions[index], fresh.type), progress: summarize(fresh) };
+  const streaks = await sessionMastery(userId, fresh);
+  return { ok: true as const, duplicate: false, result: resultFor(fresh.questions[index], fresh.type), progress: summarize(fresh), mastery: toPublicSession(fresh, streaks).mastery };
 }
 
 export async function finishSession(userId: Types.ObjectId | string, sessionId: string) {
@@ -272,34 +321,37 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
   if (!session) return fail(404, "This quiz session has expired or could not be found.");
   if (session.questions.some((q) => !q.answered)) return fail(409, "Answer every question before finishing.");
 
+  let streaks = await sessionMastery(userId, session);
+
   if (session.status === "active") {
-    // A review is only complete when every card has been answered correctly.
-    // Cards whose latest answer is wrong come back in a new retry round.
-    const missed = [...latestByCard(session).entries()].filter(([, q]) => !q.correct);
-    if (missed.length > 0) {
+    // A review is complete only when every card has reached the mastery streak.
+    // Cards that are not mastered yet come back in a new round (wrong answers reset the streak).
+    const pending = [...latestByCard(session).entries()].filter(([, q]) => (streaks.get(String(q.flashcardId)) ?? 0) < MASTERY_STREAK);
+    if (pending.length > 0) {
       const usable = await loadUsableCards(userId);
       const byId = new Map(usable.map((c) => [c.id, c]));
       const round = session.questions.reduce((max, q) => Math.max(max, q.round ?? 1), 1) + 1;
-      const retry = shuffle(missed).flatMap(([origin, q]) => {
+      const next = shuffle(pending).flatMap(([origin, q]) => {
         const card = byId.get(String(q.flashcardId));
         const built = card ? buildQuestionForCard(card, usable, session.type) : null;
         return built ? [{ ...built, flashcardId: new Types.ObjectId(built.flashcardId), round, origin, answered: false }] : [];
       });
-      if (retry.length > 0) {
+      if (next.length > 0) {
         const n = session.questions.length;
         // Guard: only one concurrent finish can append this round.
         await QuizSession.updateOne(
           { _id: session._id, userId, status: "active", [`questions.${n}`]: { $exists: false } },
-          { $push: { questions: { $each: retry } } },
+          { $push: { questions: { $each: next } } },
         );
         const fresh = await loadSession(userId, sessionId);
         if (!fresh) return fail(404, "This quiz session has expired or could not be found.");
-        return { ok: true as const, done: false as const, session: toPublicSession(fresh) };
+        streaks = await sessionMastery(userId, fresh);
+        return { ok: true as const, done: false as const, session: toPublicSession(fresh, streaks) };
       }
     }
     await QuizSession.updateOne({ _id: session._id, userId, status: "active" }, { $set: { status: "completed", completedAt: new Date() } });
   }
   const fresh = await loadSession(userId, sessionId);
   if (!fresh || fresh.status !== "completed") return fail(500, "We couldn’t finish this review. Please try again.");
-  return { ok: true as const, done: true as const, summary: summarize(fresh) };
+  return { ok: true as const, done: true as const, summary: summarize(fresh, streaks) };
 }

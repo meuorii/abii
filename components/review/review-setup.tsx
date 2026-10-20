@@ -18,6 +18,7 @@ type Props = {
   subjects: SetupSubject[];
   allEligible: Record<QuizType, number>;
   totalCards: number;
+  allMastered: number;
   initialSubjectId: string | null;
   loadFailed: boolean;
 };
@@ -49,7 +50,7 @@ function unavailableReason(type: QuizType) {
   return "True or False needs flashcards with a question and a short answer (120 characters or fewer).";
 }
 
-export function ReviewSetup({ firstName, subjects, allEligible, totalCards, initialSubjectId, loadFailed }: Props) {
+export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allMastered, initialSubjectId, loadFailed }: Props) {
   const router = useRouter();
   const [subjectId, setSubjectId] = useState<string | null>(initialSubjectId);
   const [type, setType] = useState<QuizType | null>(null);
@@ -136,7 +137,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, init
       <section aria-labelledby="choose-subject">
         <h2 id="choose-subject" className="text-base font-bold tracking-tight text-[#153B56] sm:text-lg"><span className="mr-2 text-[#E9577D]">1</span>Choose a subject</h2>
         <div role="radiogroup" aria-labelledby="choose-subject" className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {[{ id: ALL_SUBJECTS, name: "All Subjects", symbol: "◎", count: Math.max(...QUIZ_TYPES.map((t) => allEligible[t])), cards: totalCards }, ...subjects.map((s) => ({ id: s.id, name: s.name, symbol: subjectSymbol(s.name), count: eligibleSubjectTotal(s), cards: s.flashcardCount }))].map((item) => {
+          {[{ id: ALL_SUBJECTS, name: "All Subjects", symbol: "◎", count: Math.max(...QUIZ_TYPES.map((t) => allEligible[t])), cards: totalCards, mastered: allMastered }, ...subjects.map((s) => ({ id: s.id, name: s.name, symbol: subjectSymbol(s.name), count: eligibleSubjectTotal(s), cards: s.flashcardCount, mastered: s.mastered }))].map((item) => {
             const selected = subjectId === item.id;
             return (
               <button key={item.id} type="button" role="radio" aria-checked={selected} onClick={() => { setSubjectId(item.id); setError(""); }} className={`flex min-h-[72px] min-w-0 items-center gap-3 rounded-2xl border p-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${selected ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}>
@@ -144,6 +145,10 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, init
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-bold text-[#153B56]">{item.name}</span>
                   <span className="mt-0.5 block text-xs text-[#7890A4]">{item.cards} {item.cards === 1 ? "flashcard" : "flashcards"} · up to {item.count} {item.count === 1 ? "question" : "questions"}</span>
+                  <span className="mt-1.5 flex items-center gap-2" aria-label={`${item.mastered} of ${item.cards} cards mastered`}>
+                    <span className="h-1.5 w-20 overflow-hidden rounded-full bg-[#F3E9ED]"><span className="block h-full rounded-full bg-[#FF6F96]" style={{ width: `${item.cards ? Math.round((item.mastered / item.cards) * 100) : 0}%` }} /></span>
+                    <span className="text-[11px] font-medium text-[#C65380]">{item.mastered === item.cards && item.cards > 0 ? "Subject mastered" : `${item.mastered}/${item.cards} mastered`}</span>
+                  </span>
                 </span>
                 <span aria-hidden="true" className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${selected ? "border-[#E9577D] bg-[#E9577D] text-white" : "border-[#D9D2D6] text-transparent"}`}>✓</span>
               </button>

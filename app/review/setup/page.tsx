@@ -3,7 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { ReviewSetup } from "@/components/review/review-setup";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
-import { getEligibilityCounts } from "@/lib/quiz/service";
+import { getEligibilityCounts, getSubjectMastery } from "@/lib/quiz/service";
 import { QUIZ_TYPES, type QuizType, type SetupSubject } from "@/lib/quiz/types";
 import { Flashcard } from "@/models/Flashcard";
 import { Subject } from "@/models/Subject";
@@ -24,16 +24,19 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
   let subjects: SetupSubject[] = [];
   let allEligible = Object.fromEntries(QUIZ_TYPES.map((t) => [t, 0])) as Record<QuizType, number>;
   let totalCards = 0;
+  let allMastered = 0;
   let loadFailed = false;
 
   try {
     await connectToDatabase();
     const userId = user._id;
-    const [subjectDocs, cards, counts] = await Promise.all([
+    const [subjectDocs, cards, counts, mastery] = await Promise.all([
       Subject.find({ userId }).select("_id name").sort({ name: 1 }).lean(),
       Flashcard.find({ userId }).select("_id subjectId").lean(),
       getEligibilityCounts(userId),
+      getSubjectMastery(userId),
     ]);
+    allMastered = mastery.all;
     totalCards = cards.length;
     const cardCounts = new Map<string, number>();
     for (const card of cards) cardCounts.set(String(card.subjectId), (cardCounts.get(String(card.subjectId)) ?? 0) + 1);
@@ -44,6 +47,7 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
         id,
         name: subject.name,
         flashcardCount: cardCounts.get(id) ?? 0,
+        mastered: mastery.bySubject.get(id) ?? 0,
         eligible: counts.bySubject.get(id) ?? (Object.fromEntries(QUIZ_TYPES.map((t) => [t, 0])) as Record<QuizType, number>),
       };
     });
@@ -59,6 +63,7 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
         subjects={subjects}
         allEligible={allEligible}
         totalCards={totalCards}
+        allMastered={allMastered}
         initialSubjectId={requested && subjects.some((s) => s.id === requested) ? requested : null}
         loadFailed={loadFailed}
       />

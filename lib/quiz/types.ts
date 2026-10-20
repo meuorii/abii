@@ -72,11 +72,17 @@ export type PublicSession = {
   results: Record<number, QuestionResult>;
   summary: QuizSummary | null;
   cardTotal: number;
+  /** Correct-in-a-row count per card (keyed by cardIndex). */
+  mastery: Record<number, number>;
+  /** Streak needed for a card to count as mastered. */
+  masteryTarget: number;
 };
 
 export type SetupSubject = {
   id: string;
   name: string;
   flashcardCount: number;
+  /** Cards in this subject that are mastered (streak reached). */
+  mastered: number;
   eligible: Record<QuizType, number>;
 };

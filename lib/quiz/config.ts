@@ -17,3 +17,10 @@ export const SESSION_TTL_HOURS = 24;
 
 /** Maximum length accepted for a typed Identification answer. */
 export const MAX_TYPED_ANSWER_LENGTH = 500;
+
+/**
+ * A card is "mastered" after this many correct answers in a row (counted across all sessions,
+ * from saved review records). A wrong answer resets the card's streak to 0. A review session
+ * keeps cycling the not-yet-mastered cards until every card reaches this streak.
+ */
+export const MASTERY_STREAK = 3;
