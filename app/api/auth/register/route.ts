@@ -23,7 +23,13 @@ export async function POST(request: Request) {
     const existing = await User.exists({ email: values.email });
     if (existing) return NextResponse.json({ message: "We couldn't create your account with those details. Try signing in or use another email." }, { status: 409 });
     const passwordHash = await bcrypt.hash(values.password, 12);
-    const user = await User.create({ name: values.name, email: values.email, passwordHash });
+    const user = await User.create({
+      name: values.name,
+      email: values.email,
+      passwordHash,
+      profileImage: null,
+      profileImagePublicId: null,
+    });
     await createSession(user.id);
     return NextResponse.json({ message: "Account created." }, { status: 201 });
   } catch (error) {

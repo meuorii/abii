@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 
 const desktopNavigation = [
@@ -51,6 +51,8 @@ function Brand({ compact = false }: { compact?: boolean }) {
 export function AppShell({ children, userName }: AppShellProps) {
   const pathname = usePathname();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [profileImage, setProfileImage] = useState("");
+  useEffect(() => { let active = true; fetch("/api/account/profile-picture").then((response) => response.ok ? response.json() : null).then((data) => { if (active && data?.profileImage) setProfileImage(data.profileImage); }).catch(() => {}); return () => { active = false; }; }, []);
   const firstLetter = userName?.trim().charAt(0).toUpperCase() || "A";
 
   return (
@@ -113,7 +115,7 @@ export function AppShell({ children, userName }: AppShellProps) {
                   onClick={() => setProfileMenuOpen((open) => !open)}
                   className="flex min-h-10 items-center gap-2.5 rounded-full px-1.5 py-1 text-left transition-colors hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFE0E9] text-sm font-semibold text-[#D94E7B]">{firstLetter}</span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FFE0E9] text-sm font-semibold text-[#D94E7B]">{profileImage ? <img src={profileImage} alt="" className="h-full w-full object-cover" /> : firstLetter}</span>
                   <span className="hidden max-w-[150px] truncate text-xs font-medium text-[#657B8E] sm:block">{userName || "Abii learner"}</span>
                   <span aria-hidden="true" className="hidden text-sm text-[#8292A0] sm:block">⌄</span>
                 </button>

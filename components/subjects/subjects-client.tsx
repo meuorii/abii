@@ -114,9 +114,13 @@ function AddSubjectModal({ onClose, onCreated }: { onClose: () => void; onCreate
   );
 }
 
-export function SubjectsClient({ initialSubjects }: { initialSubjects: SubjectItem[] }) {
+export function SubjectsClient({ initialSubjects, initialLayout = "grid" }: { initialSubjects: SubjectItem[]; initialLayout?: "grid" | "list" }) {
   const router = useRouter();
   const [subjects, setSubjects] = useState(initialSubjects);
+  const [layout, setLayout] = useState<"grid" | "list">(initialLayout);
+
+  useEffect(() => { setLayout(initialLayout); }, [initialLayout]);
+  useEffect(() => { setSubjects(initialSubjects); }, [initialSubjects]);
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [notice, setNotice] = useState("");
@@ -173,36 +177,31 @@ export function SubjectsClient({ initialSubjects }: { initialSubjects: SubjectIt
             <button type="button" onClick={() => setQuery("")} className="mt-4 rounded-lg px-3 py-2 text-sm font-semibold text-[#C65380] hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Clear search</button>
           </div>
         ) : (
-          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+          <ul className={layout === "grid" ? "grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3" : "flex flex-col gap-3"}>
             {filteredSubjects.map((subject) => (
               <li key={subject.id}>
-                <Link href={`/subjects/${subject.id}`} aria-label={`Open ${subject.name}`} className="group flex min-h-[148px] flex-col justify-between rounded-[17px] border border-[#E8E2E5] bg-white p-4 transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[#E8B0C2] hover:shadow-[0_8px_24px_rgba(47,41,48,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:p-5">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FFF0F5] text-[22px] text-[#E9577D]">{subjectIcon(subject.name)}</span>
-                    <span className="min-w-0 flex-1 pt-1">
-                      <span className="flex min-w-0 items-start justify-between gap-2">
-                        <span className="min-w-0 truncate text-[15px] font-semibold text-[#2F2930]">{subject.name}</span>
-                        {subject.flashcardCount > 0 && subject.masteredCount === subject.flashcardCount && <span title="Mastered" aria-label="Mastered" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-2 py-1 text-[10px] font-bold text-[#D94675]">✓ Mastered</span>}
-                      </span>
-                      <span className="mt-1.5 block text-xs text-[#8192A1]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "flashcard" : "flashcards"}</span>
-                    </span>
-                    <span aria-hidden="true" className="pt-1 text-lg leading-none text-[#7C91A3] transition-colors group-hover:text-[#E9577D]">›</span>
-                  </div>
-                  <div className="mt-5 flex items-center gap-3">
-                    <div role="progressbar" aria-label={`${subject.name} mastery progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={subject.progress} className="h-[7px] min-w-0 flex-1 overflow-hidden rounded-full bg-[#F0F1F4]">
-                      <div className="h-full rounded-full bg-[#E9577D] transition-[width]" style={{ width: `${subject.progress}%` }} />
+                {layout === "grid" ? (
+                  <Link href={`/subjects/${subject.id}`} aria-label={`Open ${subject.name}`} className="group flex min-h-[148px] flex-col justify-between rounded-[17px] border border-[#E8E2E5] bg-white p-4 transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[#E8B0C2] hover:shadow-[0_8px_24px_rgba(47,41,48,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:p-5">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FFF0F5] text-[22px] text-[#E9577D]">{subjectIcon(subject.name)}</span>
+                      <span className="min-w-0 flex-1 pt-1">
+                        <span className="flex min-w-0 items-start justify-between gap-2"><span className="min-w-0 truncate text-[15px] font-semibold text-[#2F2930]">{subject.name}</span>{subject.flashcardCount > 0 && subject.masteredCount === subject.flashcardCount && <span title="Mastered" aria-label="Mastered" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-2 py-1 text-[10px] font-bold text-[#D94675]">✓ Mastered</span>}</span>
+                        <span className="mt-1.5 block text-xs text-[#8192A1]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "flashcard" : "flashcards"}</span>
+                      </span><span aria-hidden="true" className="pt-1 text-lg leading-none text-[#7C91A3] transition-colors group-hover:text-[#E9577D]">›</span>
                     </div>
-                    <span className="w-9 text-right text-xs font-semibold tabular-nums text-[#657B8E]">{subject.progress}%</span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[11px] text-[#8192A1]">{subject.masteredCount}/{subject.flashcardCount} cards mastered</span>
-
-                  </div>
-                  <div className="mt-2 flex items-center gap-2" aria-label={`${subject.name} question type completion`}>
-                    <MasteryPills progress={subject.typeMastery} className="flex flex-wrap gap-1" />
-                  </div>
-                  <span className="sr-only">Progress is the percentage of flashcards mastered across every applicable question type and Mixed / Random.</span>
-                </Link>
+                    <div className="mt-5 flex items-center gap-3"><div role="progressbar" aria-label={`${subject.name} mastery progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={subject.progress} className="h-[7px] min-w-0 flex-1 overflow-hidden rounded-full bg-[#F0F1F4]"><div className="h-full rounded-full bg-[#E9577D] transition-[width]" style={{ width: `${subject.progress}%` }} /></div><span className="w-9 text-right text-xs font-semibold tabular-nums text-[#657B8E]">{subject.progress}%</span></div>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><span className="text-[11px] text-[#8192A1]">{subject.masteredCount}/{subject.flashcardCount} cards mastered</span></div>
+                    <div className="mt-2 flex items-center gap-2" aria-label={`${subject.name} question type completion`}><MasteryPills progress={subject.typeMastery} className="flex flex-wrap gap-1" /></div>
+                    <span className="sr-only">Progress is the percentage of flashcards mastered across every applicable question type and Mixed / Random.</span>
+                  </Link>
+                ) : (
+                  <Link href={`/subjects/${subject.id}`} aria-label={`Open ${subject.name}`} className="group grid grid-cols-1 items-center gap-4 rounded-[17px] border border-[#E8E2E5] bg-white p-4 transition-[border-color,box-shadow] hover:border-[#E8B0C2] hover:shadow-[0_8px_24px_rgba(47,41,48,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:grid-cols-[minmax(0,1.2fr)_minmax(180px,1fr)_auto] sm:gap-5 sm:px-5">
+                    <div className="flex min-w-0 items-center gap-3"><span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF0F5] text-[21px] text-[#E9577D]">{subjectIcon(subject.name)}</span><span className="min-w-0 flex-1"><span className="flex items-center gap-2"><span className="truncate text-[15px] font-semibold text-[#2F2930]">{subject.name}</span>{subject.flashcardCount > 0 && subject.masteredCount === subject.flashcardCount && <span className="shrink-0 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-2 py-1 text-[10px] font-bold text-[#D94675]">✓ Mastered</span>}</span><span className="mt-1 block text-xs text-[#8192A1]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "flashcard" : "flashcards"} · {subject.masteredCount}/{subject.flashcardCount} mastered</span></span></div>
+                    <div className="min-w-0"><div className="mb-2 flex items-center justify-between gap-3"><span className="text-xs text-[#8192A1]">Mastery progress</span><span className="text-xs font-semibold tabular-nums text-[#657B8E]">{subject.progress}%</span></div><div role="progressbar" aria-label={`${subject.name} mastery progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={subject.progress} className="h-[7px] overflow-hidden rounded-full bg-[#F0F1F4]"><div className="h-full rounded-full bg-[#E9577D] transition-[width]" style={{ width: `${subject.progress}%` }} /></div><div className="mt-2"><MasteryPills progress={subject.typeMastery} className="flex flex-wrap gap-1" /></div></div>
+                    <span aria-hidden="true" className="hidden text-xl text-[#7C91A3] transition-colors group-hover:text-[#E9577D] sm:block">›</span>
+                    <span className="sr-only">Progress is the percentage of flashcards mastered across every applicable question type and Mixed / Random.</span>
+                  </Link>
+                )}
               </li>
             ))}
             {!query.trim() && <li>
@@ -219,5 +218,3 @@ export function SubjectsClient({ initialSubjects }: { initialSubjects: SubjectIt
     </>
   );
 }
-
-

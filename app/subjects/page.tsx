@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
 import { Subject } from "@/models/Subject";
+import { User } from "@/models/User";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { emptyTypeProgress } from "@/lib/quiz/types";
 
@@ -30,15 +31,19 @@ export default async function SubjectsPage() {
 
   let subjects: SubjectItem[] = [];
   let loadFailed = false;
+  let preferredLayout: "grid" | "list" = "grid";
 
   try {
     await connectToDatabase();
     const userId = user._id;
-    const [subjectDocs, cards, mastery] = await Promise.all([
+    const [subjectDocs, cards, mastery, userSettings] = await Promise.all([
       Subject.find({ userId }).select("_id name").sort({ name: 1 }).lean(),
       Flashcard.find({ userId }).select("_id subjectId").lean(),
       getSubjectMastery(userId),
+      User.findById(userId).select("settings.subjectLayout").lean(),
     ]);
+
+    preferredLayout = userSettings?.settings?.subjectLayout === "list" ? "list" : "grid";
 
     const counts = new Map<string, number>();
     for (const card of cards) {
@@ -101,10 +106,8 @@ export default async function SubjectsPage() {
             </div>
           </div>
         </section>
-        {loadFailed ? <SubjectLoadError /> : <SubjectsClient initialSubjects={subjects} />}
+        {loadFailed ? <SubjectLoadError /> : <SubjectsClient initialSubjects={subjects} initialLayout={preferredLayout} />}
       </div>
     </AppShell>
   );
 }
-
-
