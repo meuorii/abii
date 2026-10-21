@@ -1,5 +1,7 @@
+
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -37,13 +39,32 @@ function Brand({ compact = false }: { compact?: boolean }) {
     <Link
       href="/dashboard"
       aria-label="Abii dashboard"
-      className={`flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${compact ? "gap-2" : "flex-col items-start gap-1"}`}
+      className={`flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${
+        compact ? "gap-2" : "flex-col items-start gap-1"
+      }`}
     >
       <span className="flex items-center gap-2.5">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFE8EF] text-[25px] leading-none text-[#E9577D]" aria-hidden="true">♡</span>
-        <span className="text-[29px] font-extrabold leading-none tracking-[-0.07em] text-[#E9577D]">Abii</span>
+        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FFE8EF]">
+          <Image
+            src="/abii-head.png"
+            alt="Abii mascot"
+            width={40}
+            height={40}
+            priority
+            className="h-full w-full object-contain"
+          />
+        </span>
+
+        <span className="text-[29px] font-extrabold leading-none tracking-[-0.07em] text-[#E9577D]">
+          Abii
+        </span>
       </span>
-      {!compact && <span className="pl-[48px] text-[10px] leading-4 text-[#8B7C84]">Learn a little, remember a lot.</span>}
+
+      {!compact && (
+        <span className="pl-[48px] text-[10px] leading-4 text-[#8B7C84]">
+          Learn a little, remember a lot.
+        </span>
+      )}
     </Link>
   );
 }
@@ -52,7 +73,24 @@ export function AppShell({ children, userName }: AppShellProps) {
   const pathname = usePathname();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [profileImage, setProfileImage] = useState("");
-  useEffect(() => { let active = true; fetch("/api/account/profile-picture").then((response) => response.ok ? response.json() : null).then((data) => { if (active && data?.profileImage) setProfileImage(data.profileImage); }).catch(() => {}); return () => { active = false; }; }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/account/profile-picture")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (active && data?.profileImage) {
+          setProfileImage(data.profileImage);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const firstLetter = userName?.trim().charAt(0).toUpperCase() || "A";
 
   return (
@@ -63,9 +101,13 @@ export function AppShell({ children, userName }: AppShellProps) {
             <Brand />
           </div>
 
-          <nav aria-label="Main navigation" className="flex-1 space-y-1 px-3">
+          <nav
+            aria-label="Main navigation"
+            className="flex-1 space-y-1 px-3"
+          >
             {desktopNavigation.map((item) => {
               const active = isActive(pathname, item.href);
+
               return (
                 <Link
                   key={item.href}
@@ -77,7 +119,13 @@ export function AppShell({ children, userName }: AppShellProps) {
                       : "text-[#6F8293] hover:bg-[#FFF4F7] hover:text-[#2F2930]"
                   }`}
                 >
-                  <span aria-hidden="true" className="flex w-5 items-center justify-center text-[20px] leading-none">{item.icon}</span>
+                  <span
+                    aria-hidden="true"
+                    className="flex w-5 items-center justify-center text-[20px] leading-none"
+                  >
+                    {item.icon}
+                  </span>
+
                   <span>{item.label}</span>
                 </Link>
               );
@@ -86,9 +134,14 @@ export function AppShell({ children, userName }: AppShellProps) {
 
           <div className="pointer-events-none relative mt-auto h-[110px] overflow-hidden px-5 pb-5 pt-2">
             <p className="relative z-10 text-[11px] leading-[1.65] text-[#8B9BAA]">
-              <span className="mb-1 block text-base leading-none text-[#FF9FBA]">♥</span>
-              Small steps,<br />big progress!
+              <span className="mb-1 block text-base leading-none text-[#FF9FBA]">
+                ♥
+              </span>
+              Small steps,
+              <br />
+              big progress!
             </p>
+
             <div className="absolute -bottom-8 -left-5 h-20 w-40 rounded-[50%] bg-[#FFF0F5]" />
             <div className="absolute -bottom-10 left-16 h-20 w-28 rounded-[50%] bg-[#FFF0F5]" />
           </div>
@@ -96,7 +149,10 @@ export function AppShell({ children, userName }: AppShellProps) {
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <header className="relative z-20 flex h-[76px] shrink-0 items-center justify-between border-b border-[#F4EDF0] bg-white px-4 sm:px-6 lg:justify-end lg:px-8">
-            <div className="lg:hidden"><Brand compact /></div>
+            <div className="lg:hidden">
+              <Brand compact />
+            </div>
+
             <div className="flex items-center gap-3 sm:gap-4">
               <button
                 type="button"
@@ -106,7 +162,12 @@ export function AppShell({ children, userName }: AppShellProps) {
                 <span aria-hidden="true">♧</span>
                 <span className="absolute right-[7px] top-[6px] h-[6px] w-[6px] rounded-full bg-[#FF6F96] ring-2 ring-white" />
               </button>
-              <span className="hidden h-7 w-px bg-[#E8E2E5] sm:block" aria-hidden="true" />
+
+              <span
+                className="hidden h-7 w-px bg-[#E8E2E5] sm:block"
+                aria-hidden="true"
+              />
+
               <div className="relative">
                 <button
                   type="button"
@@ -115,10 +176,30 @@ export function AppShell({ children, userName }: AppShellProps) {
                   onClick={() => setProfileMenuOpen((open) => !open)}
                   className="flex min-h-10 items-center gap-2.5 rounded-full px-1.5 py-1 text-left transition-colors hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FFE0E9] text-sm font-semibold text-[#D94E7B]">{profileImage ? <img src={profileImage} alt="" className="h-full w-full object-cover" /> : firstLetter}</span>
-                  <span className="hidden max-w-[150px] truncate text-xs font-medium text-[#657B8E] sm:block">{userName || "Abii learner"}</span>
-                  <span aria-hidden="true" className="hidden text-sm text-[#8292A0] sm:block">⌄</span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FFE0E9] text-sm font-semibold text-[#D94E7B]">
+                    {profileImage ? (
+                      <img
+                        src={profileImage}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      firstLetter
+                    )}
+                  </span>
+
+                  <span className="hidden max-w-[150px] truncate text-xs font-medium text-[#657B8E] sm:block">
+                    {userName || "Abii learner"}
+                  </span>
+
+                  <span
+                    aria-hidden="true"
+                    className="hidden text-sm text-[#8292A0] sm:block"
+                  >
+                    ⌄
+                  </span>
                 </button>
+
                 {profileMenuOpen && (
                   <div className="absolute right-0 top-full mt-2 w-48 rounded-xl border border-[#E8E2E5] bg-white p-2 shadow-lg">
                     <Link
@@ -128,30 +209,48 @@ export function AppShell({ children, userName }: AppShellProps) {
                     >
                       Profile
                     </Link>
-                    <div className="px-1 pt-1"><LogoutButton /></div>
+
+                    <div className="px-1 pt-1">
+                      <LogoutButton />
+                    </div>
                   </div>
                 )}
               </div>
             </div>
           </header>
 
-          <main aria-label="Dashboard content" className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-white pb-20 lg:pb-0">
+          <main
+            aria-label="Dashboard content"
+            className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-white pb-20 lg:pb-0"
+          >
             {children}
           </main>
 
-          <nav aria-label="Mobile bottom navigation" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[#E8E2E5] bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),4px)] pt-1 backdrop-blur lg:hidden">
+          <nav
+            aria-label="Mobile bottom navigation"
+            className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[#E8E2E5] bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),4px)] pt-1 backdrop-blur lg:hidden"
+          >
             {mobileNavigation.map((item) => {
               const active = isActive(pathname, item.href);
+
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E9577D] ${
-                    active ? "text-[#E9577D]" : "text-[#7F91A1] hover:bg-[#FFF7F9]"
+                    active
+                      ? "text-[#E9577D]"
+                      : "text-[#7F91A1] hover:bg-[#FFF7F9]"
                   }`}
                 >
-                  <span aria-hidden="true" className="text-[20px] leading-5">{item.icon}</span>
+                  <span
+                    aria-hidden="true"
+                    className="text-[20px] leading-5"
+                  >
+                    {item.icon}
+                  </span>
+
                   <span>{item.label}</span>
                 </Link>
               );

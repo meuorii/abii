@@ -7,9 +7,17 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast-provider";
 import { TypeIcon } from "@/components/review/review-setup";
 import { Mascot } from "@/components/ui/mascot";
-import { QUIZ_TYPE_LABELS, type PublicSession, type QuestionResult, type QuizSummary } from "@/lib/quiz/types";
+import { PageLoadingSkeleton } from "@/components/ui/page-loading-skeleton";
+import { QUIZ_TYPE_LABELS, type PublicSession, type QuestionResult, type QuizSummary, type QuizType } from "@/lib/quiz/types";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
+
+/** Show the interaction mode; Items is a flashcard format, not a separate quiz mode. */
+function questionTypeLabel(type: QuizType): string {
+  if (type === "enumeration-identification") return `Items · ${QUIZ_TYPE_LABELS.identification}`;
+  if (type === "enumeration-multiple-choice") return `Items · ${QUIZ_TYPE_LABELS["multiple-choice"]}`;
+  return QUIZ_TYPE_LABELS[type];
+}
 
 function CheckIcon() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>;
@@ -186,6 +194,10 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
     if (questionType === "identification" && !hasResult) inputRef.current?.focus();
     if (questionType === "enumeration-identification" && !hasResult) itemRefs.current[0]?.focus();
   }, [index, questionType, hasResult]);
+
+  if (busy && result && isLast && !summary) {
+    return <PageLoadingSkeleton variant="finish" withShell={false} />;
+  }
 
   if (summary) {
     return (
@@ -399,7 +411,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-[#6C879C]" aria-live="polite">Question <span className="font-bold text-[#153B56]">{index + 1}</span> of <span className="font-bold text-[#153B56]">{total}</span></p>
             <span className="inline-flex items-center gap-1" aria-label={`Card mastery ${currentStreak} of ${target}`} title="Correct in a row for this card"><span className="mr-1 text-[11px] text-[#8B7C84]">Mastery</span>{Array.from({ length: target }).map((_, i) => <span key={i} className={`h-2 w-2 rounded-full ${i < currentStreak ? "bg-[#FF6F96]" : "bg-[#F3E9ED]"}`} />)}</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1DDE4] bg-[#FFF7F9] px-3 py-1 text-xs font-medium text-[#C65380]"><TypeIcon type={question.type} className="h-3.5 w-3.5" />{currentRound > 1 ? `Retry · ${QUIZ_TYPE_LABELS[question.type]}` : QUIZ_TYPE_LABELS[question.type]}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1DDE4] bg-[#FFF7F9] px-3 py-1 text-xs font-medium text-[#C65380]"><TypeIcon type={question.type} className="h-3.5 w-3.5" />{currentRound > 1 ? `Retry · ${questionTypeLabel(question.type)}` : questionTypeLabel(question.type)}</span>
           </div>
           {roundNotice && currentRound > 1 && <p role="status" className="mt-3 rounded-xl border border-[#F1DDE4] bg-[#FFF7F9] px-3.5 py-3 text-sm text-[#6C4A58]">{roundNotice}</p>}
 

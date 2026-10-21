@@ -26,7 +26,7 @@ type Props = {
   loadFailed: boolean;
 };
 
-export function TypeIcon({ type, className = "h-6 w-6" }: { type: QuizMode; className?: string }) {
+export function TypeIcon({ type, className = "h-6 w-6" }: { type: QuizMode | import("@/lib/quiz/types").QuizType; className?: string }) {
   const shared = { className, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true as const };
   if (type === "multiple-choice") {
     return <svg {...shared}><circle cx="5" cy="6" r="1.6" /><circle cx="5" cy="12" r="1.6" /><circle cx="5" cy="18" r="1.6" /><path d="M10 6h10M10 12h10M10 18h10" /></svg>;
