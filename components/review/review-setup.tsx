@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useToast } from "@/components/ui/toast-provider";
 import { useRouter } from "next/navigation";
 import {
   ALL_SUBJECTS,
@@ -84,10 +85,21 @@ function unavailableReason(type: QuizMode) {
 
 export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allMastered, allTypeMastery, initialSubjectId, loadFailed }: Props) {
   const router = useRouter();
+  const { toast } = useToast();
   const [subjectId, setSubjectId] = useState<string | null>(initialSubjectId);
   const [type, setType] = useState<QuizMode | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (loadFailed) {
+      toast({ kind: "error", title: "Review options couldn’t load", message: "Check your connection, then try again." });
+    } else if (subjects.length === 0) {
+      toast({ kind: "info", title: "No subjects yet", message: "Create a subject and add flashcards before starting a quiz." });
+    } else if (totalCards === 0) {
+      toast({ kind: "info", title: "No flashcards yet", message: "Add flashcards to your subjects before starting a quiz." });
+    }
+  }, [loadFailed, subjects.length, totalCards, toast]);
 
   const selectedSubject = subjectId && subjectId !== ALL_SUBJECTS ? subjects.find((s) => s.id === subjectId) ?? null : null;
   const countsFor = (id: string | null): Record<QuizMode, number> | null =>
@@ -106,13 +118,18 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
       const response = await fetch("/api/quiz/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subjectId, type }) });
       const data = (await response.json().catch(() => ({}))) as { sessionId?: string; error?: string };
       if (!response.ok || !data.sessionId) {
-        setError(data.error || "We couldn’t start your quiz. Please try again.");
+        const message = data.error || "We couldn’t start your quiz. Please try again.";
+        setError(message);
+        toast({ kind: "error", title: "Couldn’t start quiz", message });
         setStarting(false);
         return;
       }
+      toast({ kind: "success", title: "Quiz ready", message: "Your review session is starting." });
       router.push(`/review/quiz/${data.sessionId}`);
     } catch {
-      setError("You seem to be offline. Check your connection and try again.");
+      const message = "You seem to be offline. Check your connection and try again.";
+      setError(message);
+      toast({ kind: "error", title: "Connection hiccup", message });
       setStarting(false);
     }
   }
@@ -198,7 +215,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
             const selected = type === t;
             const n = counts ? counts[t] : null;
             return (
-              <button key={t} type="button" role="radio" aria-checked={selected} onClick={() => { setType(t); setError(""); }} className={`flex min-h-[132px] min-w-0 flex-col items-start gap-3 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${selected ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}>
+              <button key={t} type="button" role="radio" aria-checked={selected} onClick={() => { setType(t); setError(""); if (subjectId && counts && counts[t] === 0) toast({ kind: "error", title: "No eligible flashcards", message: `There are no cards ready for ${QUIZ_TYPE_LABELS[t]} in ${subjectLabel ?? "this subject"}. Choose another quiz type or update your flashcards.` }); }} className={`flex min-h-[132px] min-w-0 flex-col items-start gap-3 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${selected ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}>
                 <span className="flex w-full items-center justify-between">
                   <span className={`flex h-11 w-11 items-center justify-center rounded-full ${selected ? "bg-[#FF6F96] text-white" : "bg-[#FFE8EF] text-[#E9577D]"}`}><TypeIcon type={t} /></span>
                   <span className="flex flex-wrap items-center justify-end gap-1.5">

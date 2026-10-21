@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast-provider";
 
 type Mode = "login" | "register";
 type FieldErrors = Partial<Record<"name" | "email" | "password", string>>;
@@ -17,6 +18,7 @@ function EyeIcon({ visible }: { visible: boolean }) {
 
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,13 +33,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
     event.preventDefault();
     setBusy(true); setMessage(""); setErrors({});
     if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) {
-      setErrors({ email: "Enter a valid email address." }); setBusy(false); return;
+      setErrors({ email: "Enter a valid email address." }); toast({ kind: "error", title: "Check your email", message: "Enter a valid email address to continue." }); setBusy(false); return;
     }
     if (isRegister && name.trim().length < 2) {
-      setErrors({ name: "Please enter your name (at least 2 characters)." }); setBusy(false); return;
+      setErrors({ name: "Please enter your name (at least 2 characters)." }); toast({ kind: "error", title: "Name needed", message: "Enter your name using at least 2 characters." }); setBusy(false); return;
     }
     if (password.length < (isRegister ? 8 : 1)) {
-      setErrors({ password: isRegister ? "Use at least 8 characters." : "Enter your password." }); setBusy(false); return;
+      setErrors({ password: isRegister ? "Use at least 8 characters." : "Enter your password." }); toast({ kind: "error", title: "Check your password", message: isRegister ? "Use at least 8 characters." : "Enter your password to sign in." }); setBusy(false); return;
     }
     try {
       const response = await fetch(`/api/auth/${mode}`, {
@@ -47,13 +49,17 @@ export function AuthForm({ mode }: { mode: Mode }) {
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         setMessage(result.message || "We couldn't sign you in just now. Check your details and try again.");
-        setErrors(result.errors || {}); return;
+        setErrors(result.errors || {});
+        toast({ kind: "error", title: isRegister ? "Account not created" : "Sign-in failed", message: result.message || "Please check your details and try again." });
+        return;
       }
+      toast({ kind: "success", title: isRegister ? "Welcome to Abii!" : "Welcome back!", message: isRegister ? "Your account is ready. Let’s start learning." : "You’ve signed in successfully." });
       const next = new URLSearchParams(window.location.search).get("next");
       router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
       router.refresh();
     } catch {
       setMessage("We couldn't connect just now. Please try again in a moment.");
+      toast({ kind: "error", title: "Connection problem", message: "Please check your connection and try again." });
     } finally { setBusy(false); }
   }
 
@@ -90,3 +96,4 @@ export function AuthForm({ mode }: { mode: Mode }) {
     </form>
   );
 }
+

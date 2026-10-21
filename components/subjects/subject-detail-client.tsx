@@ -5,8 +5,9 @@ import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { TypeProgress } from "@/lib/quiz/types";
 import { MasteryPills } from "@/components/review/review-setup";
+import { useToast } from "@/components/ui/toast-provider";
 
-type FlashcardItem = { id: string; flashcardType: "standard" | "items"; question: string; answer: string; hint: string; favorite: boolean; reviewed: boolean };
+type FlashcardItem = { id: string; question: string; answer: string; hint: string; favorite: boolean; reviewed: boolean };
 export type SubjectDetailData = {
   id: string; name: string; flashcardCount: number; reviewedCount: number; masteredCount: number; dueCount: number;
   progress: number; typeMastery: TypeProgress; correctCount: number; wrongCount: number; cards: FlashcardItem[];
@@ -14,7 +15,7 @@ export type SubjectDetailData = {
 type Tab = "flashcards" | "progress" | "settings";
 
 function AddFlashcardModal({ subjectName, onClose, onCreated }: { subjectName: string; onClose: () => void; onCreated: (card: FlashcardItem) => void }) {
-  const [flashcardType, setFlashcardType] = useState<"standard" | "items">("standard");
+  const { toast } = useToast();
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [hint, setHint] = useState("");
@@ -26,6 +27,7 @@ function AddFlashcardModal({ subjectName, onClose, onCreated }: { subjectName: s
     event.preventDefault();
     if (!question.trim() || !answer.trim()) {
       setError("Add both a question and an answer to continue.");
+      toast({ kind: "error", title: "Question and answer required", message: "Fill in both fields before saving this flashcard." });
       return;
     }
     setSaving(true);
@@ -33,12 +35,12 @@ function AddFlashcardModal({ subjectName, onClose, onCreated }: { subjectName: s
     try {
       const response = await fetch(`/api/subjects/${encodeURIComponent(window.location.pathname.split("/").at(-1) || "")}/flashcards`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ flashcardType, question, answer, hint }),
+        body: JSON.stringify({ question, answer, hint }),
       });
       const result = await response.json() as { card?: FlashcardItem; error?: string };
-      if (!response.ok || !result.card) { setError(result.error || "We couldn’t save your flashcard."); return; }
+      if (!response.ok || !result.card) { const message = result.error || "We couldn’t save your flashcard."; setError(message); toast({ kind: "error", title: "Couldn’t save flashcard", message }); return; }
       onCreated(result.card);
-    } catch { setError("You seem to be offline. Check your connection and try again."); }
+    } catch { setError("You seem to be offline. Check your connection and try again."); toast({ kind: "error", title: "Connection problem", message: "Your flashcard wasn’t saved. Check your connection and try again." }); }
     finally { setSaving(false); }
   }
 
@@ -58,21 +60,13 @@ function AddFlashcardModal({ subjectName, onClose, onCreated }: { subjectName: s
         </div>
         <form onSubmit={submit} className="space-y-4 p-5 sm:space-y-5 sm:p-7">
           <div>
-            <label htmlFor="flashcard-type" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Flashcard Type</label>
-            <select id="flashcard-type" value={flashcardType} onChange={(event) => setFlashcardType(event.target.value === "items" ? "items" : "standard")} className="h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3.5 text-sm text-[#2F2930] outline-none focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20">
-              <option value="standard">Standard — one answer</option>
-              <option value="items">Items — list of answers</option>
-            </select>
-            <p className="mt-1 text-xs leading-5 text-[#8192A1]">Items answers should contain 2 to 10 distinct entries separated by commas, semicolons, or new lines.</p>
-          </div>
-          <div>
             <label htmlFor="flashcard-question" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Question <span className="text-[#E9577D]">*</span></label>
             <textarea ref={questionRef} autoFocus id="flashcard-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={2000} rows={3} placeholder="Write a question you want to remember..." className="w-full resize-y rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-3 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20" required />
             <p className="mt-1 text-right text-[11px] text-[#9A8C93]">{question.length}/2000</p>
           </div>
           <div>
-            <label htmlFor="flashcard-answer" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">{flashcardType === "items" ? "Items / List of Answers" : "Answer"} <span className="text-[#E9577D]">*</span></label>
-            <textarea id="flashcard-answer" value={answer} onChange={(event) => setAnswer(event.target.value)} maxLength={flashcardType === "items" ? 400 : 5000} rows={3} placeholder={flashcardType === "items" ? "Enter one item per line, or separate items with commas..." : "Write the correct answer..."} className="w-full resize-y rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-3 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20" required />
+            <label htmlFor="flashcard-answer" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Answer <span className="text-[#E9577D]">*</span></label>
+            <textarea id="flashcard-answer" value={answer} onChange={(event) => setAnswer(event.target.value)} maxLength={5000} rows={3} placeholder="Write the correct answer..." className="w-full resize-y rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-3 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20" required />
           </div>
           <div>
             <label htmlFor="flashcard-hint" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Hint <span className="font-normal text-[#9A8C93]">(optional)</span></label>
@@ -103,6 +97,7 @@ export function SubjectDetailClient({ initialData }: { initialData: SubjectDetai
   const [newName, setNewName] = useState(initialData.name);
   const [savingSettings, setSavingSettings] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
 
   const filteredCards = useMemo(() => data.cards.filter((card) => `${card.question} ${card.hint}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())), [data.cards, query]);
 
@@ -110,23 +105,25 @@ export function SubjectDetailClient({ initialData }: { initialData: SubjectDetai
     setData((current) => ({ ...current, cards: [card, ...current.cards], flashcardCount: current.flashcardCount + 1, dueCount: current.dueCount + 1 }));
     setModalOpen(false);
     setNotice("Flashcard added to your subject.");
+    toast({ kind: "success", title: "Flashcard created", message: "Your new question has been added to this subject." });
     setQuery("");
     router.refresh();
   }
 
   async function saveName(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!newName.trim()) { setError("Subject name can’t be empty."); return; }
+    if (!newName.trim()) { setError("Subject name can’t be empty."); toast({ kind: "error", title: "Subject name required", message: "Enter a subject name before saving." }); return; }
     setSavingSettings(true); setError(""); setNotice("");
     try {
       const response = await fetch(`/api/subjects/${data.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newName.trim() }) });
       const result = await response.json() as { name?: string; error?: string };
-      if (!response.ok || !result.name) { setError(result.error || "Could not update the subject."); return; }
+      if (!response.ok || !result.name) { const message = result.error || "Could not update the subject."; setError(message); toast({ kind: "error", title: "Couldn’t update subject", message }); return; }
       setData((current) => ({ ...current, name: result.name! }));
       setNewName(result.name);
       setNotice("Subject name updated.");
+      toast({ kind: "success", title: "Subject updated", message: "Your subject name has been saved." });
       router.refresh();
-    } catch { setError("Could not connect. Please try again."); }
+    } catch { setError("Could not connect. Please try again."); toast({ kind: "error", title: "Connection problem", message: "Your changes weren’t saved. Please try again." }); }
     finally { setSavingSettings(false); }
   }
 
@@ -137,10 +134,11 @@ export function SubjectDetailClient({ initialData }: { initialData: SubjectDetai
     try {
       const response = await fetch(`/api/subjects/${data.id}`, { method: "DELETE" });
       const result = await response.json() as { error?: string };
-      if (!response.ok) { setError(result.error || "Could not delete the subject."); return; }
+      if (!response.ok) { const message = result.error || "Could not delete the subject."; setError(message); toast({ kind: "error", title: "Couldn’t delete subject", message }); return; }
+      toast({ kind: "success", title: "Subject deleted", message: `${data.name} and its flashcards were deleted.` });
       router.push("/subjects");
       router.refresh();
-    } catch { setError("Could not connect. Please try again."); }
+    } catch { setError("Could not connect. Please try again."); toast({ kind: "error", title: "Connection problem", message: "The subject wasn’t deleted. Please try again." }); }
     finally { setSavingSettings(false); }
   }
 
@@ -171,7 +169,7 @@ export function SubjectDetailClient({ initialData }: { initialData: SubjectDetai
             <button type="button" onClick={() => setModalOpen(true)} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#FF6F96] px-5 text-sm font-semibold text-white hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2">＋ Add Flashcard</button>
           </div> : filteredCards.length === 0 ? <div className="rounded-2xl border border-dashed border-[#E8E2E5] bg-white px-5 py-10 text-center"><p className="font-semibold text-[#2F2930]">No flashcards match “{query.trim()}”.</p><p className="mt-1 text-sm text-[#756B72]">Try another search or clear the field.</p><button type="button" onClick={() => setQuery("")} className="mt-3 text-sm font-semibold text-[#C65380] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Clear search</button></div> : <ul className="overflow-hidden rounded-[17px] border border-[#E8E2E5] bg-white">
             {filteredCards.map((card, index) => <li key={card.id} className={`flex min-w-0 items-center gap-3 px-3 py-3 sm:gap-3.5 sm:px-4 ${index ? "border-t border-[#F0EDF0]" : ""}`}>
-              <IconCircle>{"Aa"}</IconCircle><div className="min-w-0 flex-1"><p className="line-clamp-2 text-xs font-medium leading-5 text-[#294A60] sm:text-sm">{card.question}</p><p className="mt-1 text-[10px] text-[#8B9BAA]">{card.flashcardType === "items" ? "Items flashcard" : "Standard flashcard"}{card.reviewed ? " · Reviewed" : " · Not reviewed yet"}</p></div>
+              <IconCircle>{"Aa"}</IconCircle><div className="min-w-0 flex-1"><p className="line-clamp-2 text-xs font-medium leading-5 text-[#294A60] sm:text-sm">{card.question}</p><p className="mt-1 text-[10px] text-[#8B9BAA]">Identification{card.reviewed ? " · Reviewed" : " · Not reviewed yet"}</p></div>
               <a href={`/review?subjectId=${data.id}&flashcardId=${card.id}`} className="inline-flex min-h-8 shrink-0 items-center justify-center rounded-full border border-[#F7D9E3] bg-[#FFF7F9] px-3 text-[11px] font-semibold text-[#E9577D] transition-colors hover:bg-[#FFE8EF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Review</a><a href={`/review?subjectId=${data.id}&flashcardId=${card.id}`} aria-label={`Review ${card.question}`} className="hidden text-lg text-[#8B9BAA] hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] sm:block">›</a>
             </li>)}
           </ul>}
@@ -215,5 +213,6 @@ function StatRow({ icon, value, label }: { icon: string; value: string; label: s
 function Metric({ title, value, detail }: { title: string; value: number | string; detail: string }) {
   return <div className="rounded-[17px] border border-[#E8E2E5] bg-white p-4"><p className="text-xs font-medium text-[#71869A]">{title}</p><p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-[#173B52]">{value}</p><p className="mt-1 text-[11px] text-[#8192A1]">{detail}</p></div>;
 }
+
 
 

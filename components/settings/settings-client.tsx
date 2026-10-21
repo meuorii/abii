@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { useToast } from "@/components/ui/toast-provider";
 
 type Preferences = { targetSubjects: number; defaultLandingPage: string; subjectLayout: "grid" | "list" };
 type InitialUser = { name: string; email: string; profileImage: string; createdAt: string; settings?: Partial<Preferences> | null };
@@ -21,6 +22,7 @@ function SectionCard({ icon, title, description, children }: { icon: string; tit
 function InlineNotice({ notice }: { notice: Notice }) { if (!notice) return null; return <p role={notice.kind === "error" ? "alert" : "status"} className={`mt-3 rounded-xl px-3.5 py-2.5 text-sm ${notice.kind === "error" ? "bg-[#FFF1F1] text-[#B84352]" : "bg-[#EAF8F0] text-[#28734A]"}`}>{notice.text}</p>; }
 
 export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
+  const { toast } = useToast();
   const [preferences, setPreferences] = useState<Preferences>(() => ({ ...defaultPreferences, ...(initialUser.settings ?? {}) }));
   const [profile, setProfile] = useState({ name: initialUser.name, email: initialUser.email });
   const [profileImage, setProfileImage] = useState(initialUser.profileImage);
@@ -30,7 +32,22 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState("");
   const [notices, setNotices] = useState<NoticeMap>({});
-  function setNoticeFor(key: NoticeKey, value: Notice) { setNotices((previous) => ({ ...previous, [key]: value })); }
+  function setNoticeFor(key: NoticeKey, value: Notice) {
+    setNotices((previous) => ({ ...previous, [key]: value }));
+    if (!value) return;
+    const titles: Record<NoticeKey, string> = {
+      preferences: "Study preferences",
+      profile: "Account details",
+      photo: "Profile photo",
+      password: "Password",
+      export: "Data export",
+      history: "Study history",
+      materials: "Study materials",
+      account: "Account",
+      logout: "Log out",
+    };
+    toast({ kind: value.kind, title: `${titles[key]} ${value.kind === "success" ? "updated" : "failed"}`, message: value.text });
+  }
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [deleteAccountText, setDeleteAccountText] = useState("");
 
@@ -154,7 +171,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
             </form>
           </div>
           <div className="mt-3 rounded-xl border border-[#F0E9EC] p-3.5 sm:p-4"><h3 className="text-sm font-semibold text-[#18384D]">Change Password</h3><p className="mt-1 text-xs leading-5 text-[#6E879A]">Use your current password to set a new one. You’ll need to log in again afterward.</p><form onSubmit={changePassword} className="mt-3 space-y-3"><div><label htmlFor="currentPassword" className="text-xs font-semibold text-[#18384D]">Current password</label><input id="currentPassword" type="password" autoComplete="current-password" required value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} className={inputClass} /></div><div><label htmlFor="newPassword" className="text-xs font-semibold text-[#18384D]">New password</label><input id="newPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className={inputClass} /></div><div><label htmlFor="confirmPassword" className="text-xs font-semibold text-[#18384D]">Confirm new password</label><input id="confirmPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className={inputClass} /></div><div className="flex justify-end"><button type="submit" disabled={saving !== ""} className={secondaryButton}>{saving === "password" ? "Updating…" : "Change Password"}</button></div></form></div>
-          <div className="mt-3 flex flex-col gap-3 rounded-xl border border-[#F0E9EC] p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4"><div><h3 className="text-sm font-semibold text-[#18384D]">Log Out</h3><p className="mt-1 text-xs leading-5 text-[#6E879A]">End your current Abii session on this browser.</p></div><button type="button" disabled={saving !== ""} onClick={async () => { setSaving("logout"); try { await request("/api/auth/logout", "POST"); window.location.href = "/login"; } catch (error) { setNoticeFor("logout", { kind: "error", text: error instanceof Error ? error.message : "Could not log out." }); setSaving(""); } }} className={secondaryButton}>{saving === "logout" ? "Logging out…" : "Log Out"}</button></div>
+          <div className="mt-3 flex flex-col gap-3 rounded-xl border border-[#F0E9EC] p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4"><div><h3 className="text-sm font-semibold text-[#18384D]">Log Out</h3><p className="mt-1 text-xs leading-5 text-[#6E879A]">End your current Abii session on this browser.</p></div><button type="button" disabled={saving !== ""} onClick={async () => { setSaving("logout"); try { await request("/api/auth/logout", "POST"); setNoticeFor("logout", { kind: "success", text: "You have been logged out." }); window.setTimeout(() => { window.location.href = "/login"; }, 650); } catch (error) { setNoticeFor("logout", { kind: "error", text: error instanceof Error ? error.message : "Could not log out." }); setSaving(""); } }} className={secondaryButton}>{saving === "logout" ? "Logging out…" : "Log Out"}</button></div>
           <div className="mt-3 rounded-xl border border-[#F0C7D3] bg-[#FFFBFC] p-3.5 sm:p-4"><h3 className="text-sm font-semibold text-[#B8435D]">Delete Account</h3><p className="mt-1 text-xs leading-5 text-[#876A73]">Permanently delete your account, subjects, flashcards, review history, and study sessions. This cannot be undone.</p><label htmlFor="deleteAccountConfirm" className="mt-3 block text-xs font-semibold text-[#754B55]">Type DELETE to confirm</label><input id="deleteAccountConfirm" value={deleteAccountText} onChange={(event) => setDeleteAccountText(event.target.value)} className={inputClass} placeholder="DELETE" autoComplete="off" /><button type="button" disabled={saving !== "" || deleteAccountText !== "DELETE"} onClick={() => { if (window.confirm("Permanently delete your Abii account and all associated data? This cannot be undone.")) void runAction("account", "/api/account", "DELETE", { confirmation: "DELETE" }); }} className={dangerButton + " mt-3"}>{saving === "account" ? "Deleting account…" : "Delete Account"}</button></div>
         </SectionCard>
         <section className="relative overflow-hidden rounded-2xl border border-[#F8E4EB] bg-gradient-to-r from-[#FFF7F9] to-[#FFF0F4] p-5 sm:p-6"><div className="relative z-10 max-w-[65%]"><p className="text-sm font-semibold text-[#18384D]">Your data matters.</p><p className="mt-1.5 text-xs leading-5 text-[#6E879A]">Your study materials and learning history belong to you. Export or remove your data whenever you need.</p></div><div className="pointer-events-none absolute -bottom-3 -right-2 h-28 w-28 opacity-90"><Image src="/dashboard-hero/settings.png" alt="" fill sizes="112px" className="object-contain object-bottom" /></div></section>

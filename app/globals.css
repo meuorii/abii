@@ -56,6 +56,3 @@ textarea {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  [class*="animate-[abii-toast-in"] { animation: none !important; }
-}

@@ -1,11 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import type { TypeProgress } from "@/lib/quiz/types";
-import { MasteryPills } from "@/components/review/review-setup";
+import { useRouter } from "next/navigation";
 
 export type SubjectItem = {
   id: string;
@@ -16,97 +14,135 @@ export type SubjectItem = {
   typeMastery: TypeProgress;
 };
 
-const subjectIconChoices = ["▦", "⚗", "▤", "◈", "✿", "⌘"];
+type SubjectLayout = "grid" | "list";
 
-function subjectIcon(name: string) {
-  const normalized = name.toLowerCase();
-  if (normalized.includes("math")) return "▦";
-  if (normalized.includes("sci")) return "⚗";
-  if (normalized.includes("english") || normalized.includes("language")) return "▤";
-  if (normalized.includes("history")) return "✿";
-  if (normalized.includes("filipino")) return "◈";
-  return subjectIconChoices[name.length % subjectIconChoices.length];
-}
+type SubjectsClientProps = {
+  initialSubjects: SubjectItem[];
+  initialLayout: SubjectLayout;
+};
 
-function AddSubjectModal({ onClose, onCreated }: { onClose: () => void; onCreated: (subject: SubjectItem) => void }) {
+function AddSubjectModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (subject: SubjectItem) => void;
+}) {
   const [name, setName] = useState("");
-  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState("");
+  const router = useRouter();
 
-  useEffect(() => {
-    inputRef.current?.focus();
-    function handleKey(event: KeyboardEvent) {
-      if (event.key === "Escape" && !saving) onClose();
-    }
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose, saving]);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setError("Enter a subject name to continue.");
-      inputRef.current?.focus();
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      setError("Please enter a subject name.");
       return;
     }
+
     setSaving(true);
     setError("");
+
     try {
       const response = await fetch("/api/subjects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed }),
+        body: JSON.stringify({ name: trimmedName }),
       });
-      const result = (await response.json()) as { subject?: SubjectItem; error?: string };
-      if (!response.ok || !result.subject) {
-        setError(result.error || "We couldn’t create that subject. Please try again.");
-        return;
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data?.error || data?.message || "Could not create subject.");
       }
-      onCreated(result.subject);
-    } catch {
-      setError("You seem to be offline. Check your connection and try again.");
+
+      const raw = data?.subject ?? data?.data?.subject ?? data;
+      const subjectId = String(raw?.id ?? raw?._id ?? "");
+      if (!subjectId) {
+        throw new Error("The subject was created, but its details could not be loaded. Please refresh.");
+      }
+
+      onCreated({
+        id: subjectId,
+        name: String(raw?.name ?? trimmedName),
+        flashcardCount: Number(raw?.flashcardCount ?? 0),
+        progress: Number(raw?.progress ?? 0),
+        masteredCount: Number(raw?.masteredCount ?? 0),
+        typeMastery: raw?.typeMastery ?? { "multiple-choice": { done: 0, total: 0 }, identification: { done: 0, total: 0 }, "true-false": { done: 0, total: 0 }, random: { done: 0, total: 0 } },
+      });
+      router.refresh();
+      onClose();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Something went wrong. Please try again.");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-[#2F2930]/35 p-4 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
-      <section role="dialog" aria-modal="true" aria-labelledby="add-subject-title" className="relative my-auto w-full max-w-[460px] overflow-hidden rounded-[24px] border border-[#F0DCE3] bg-white shadow-[0_24px_80px_rgba(47,41,48,0.2)]">
-        <div className="relative overflow-hidden border-b border-[#F4E7EC] bg-[#FFF7F9] px-6 pb-5 pt-6 sm:px-7">
-          <button type="button" onClick={onClose} disabled={saving} aria-label="Close dialog" className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full text-xl text-[#756B72] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] disabled:opacity-50">×</button>
-          <div className="relative z-10 max-w-[70%]">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#C65380]">GROW YOUR LIBRARY</p>
-            <h2 id="add-subject-title" className="mt-2 text-2xl font-semibold tracking-[-0.045em] text-[#2F2930]">Add a subject</h2>
-            <p className="mt-2 text-sm leading-5 text-[#756B72]">Give your study cards a home. You can add flashcards next.</p>
-          </div>
-          <div className="pointer-events-none absolute -bottom-3 right-1 h-[142px] w-[142px] opacity-90">
-            <Image src="/dashboard-hero/my-subjects.png" alt="" fill sizes="142px" className="object-contain object-bottom" />
-          </div>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-5 p-6 sm:p-7">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#2F2930]/35 p-4 backdrop-blur-[2px]"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !saving) onClose();
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-subject-title"
+        className="w-full max-w-md rounded-3xl border border-[#F1DFE5] bg-white p-6 shadow-xl sm:p-7"
+      >
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <label htmlFor="subject-name" className="mb-2 block text-sm font-semibold text-[#2F2930]">Subject name</label>
-            <input
-              ref={inputRef}
-              id="subject-name"
-              name="name"
-              value={name}
-              onChange={(event) => { setName(event.target.value); if (error) setError(""); }}
-              maxLength={100}
-              autoComplete="off"
-              placeholder="e.g. Biology, World History"
-              aria-invalid={Boolean(error)}
-              aria-describedby={error ? "subject-form-error" : "subject-name-hint"}
-              className="min-h-12 w-full rounded-xl border border-[#E8DDE2] bg-white px-4 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A79AA1] hover:border-[#D9B9C5] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20"
-            />
-            {error ? <p id="subject-form-error" role="alert" className="mt-2 text-sm text-[#B83F68]">{error}</p> : <p id="subject-name-hint" className="mt-2 text-xs text-[#8A7D84]">Choose a name that’s easy to recognize.</p>}
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#C65380]">Build your study space</p>
+            <h2 id="add-subject-title" className="mt-2 text-xl font-bold tracking-tight text-[#2F2930]">
+              Add a subject
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-[#756B72]">Keep related flashcards together in one place.</p>
           </div>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button type="button" onClick={onClose} disabled={saving} className="min-h-11 rounded-xl border border-[#E8E2E5] px-5 text-sm font-semibold text-[#756B72] transition-colors hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] disabled:opacity-50">Cancel</button>
-            <button type="submit" disabled={saving} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6F96] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60">{saving ? "Creating…" : "Create subject"}<span aria-hidden="true">→</span></button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            aria-label="Close dialog"
+            className="rounded-full p-2 text-[#756B72] transition hover:bg-[#FFF0F5] hover:text-[#2F2930] disabled:opacity-50"
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <label htmlFor="subject-name" className="block text-sm font-semibold text-[#2F2930]">
+            Subject name
+          </label>
+          <input
+            id="subject-name"
+            autoFocus
+            maxLength={80}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="e.g. Biology"
+            className="min-h-12 w-full rounded-xl border border-[#E8E2E5] bg-white px-4 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A49AA0] focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/15"
+          />
+          {error ? <p role="alert" className="text-sm text-[#C65363]">{error}</p> : null}
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="min-h-11 rounded-xl border border-[#E8E2E5] px-4 text-sm font-semibold text-[#756B72] transition hover:bg-[#FFF7F9] disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="min-h-11 rounded-xl bg-[#FF6F96] px-5 text-sm font-semibold text-white transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? "Creating..." : "Create subject"}
+            </button>
           </div>
         </form>
       </section>
@@ -114,107 +150,224 @@ function AddSubjectModal({ onClose, onCreated }: { onClose: () => void; onCreate
   );
 }
 
-export function SubjectsClient({ initialSubjects, initialLayout = "grid" }: { initialSubjects: SubjectItem[]; initialLayout?: "grid" | "list" }) {
-  const router = useRouter();
-  const [subjects, setSubjects] = useState(initialSubjects);
-  const [layout, setLayout] = useState<"grid" | "list">(initialLayout);
+const masteryIndicators = [
+  { key: "multiple-choice", label: "Multiple Choice" },
+  { key: "identification", label: "Identification" },
+  { key: "true-false", label: "True or False" },
+  { key: "random", label: "Mixed / Random" },
+] as const;
 
-  useEffect(() => { setLayout(initialLayout); }, [initialLayout]);
-  useEffect(() => { setSubjects(initialSubjects); }, [initialSubjects]);
+function QuestionTypeIcon({
+  type,
+  className = "h-4 w-4",
+}: {
+  type: (typeof masteryIndicators)[number]["key"];
+  className?: string;
+}) {
+  const shared = {
+    className,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true as const,
+  };
+
+  if (type === "multiple-choice") {
+    return (
+      <svg {...shared}>
+        <circle cx="5" cy="6" r="1.6" />
+        <circle cx="5" cy="12" r="1.6" />
+        <circle cx="5" cy="18" r="1.6" />
+        <path d="M10 6h10M10 12h10M10 18h10" />
+      </svg>
+    );
+  }
+
+  if (type === "identification") {
+    return (
+      <svg {...shared}>
+        <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17l-1 3Z" />
+        <path d="m14 8 3 3" />
+      </svg>
+    );
+  }
+
+  if (type === "true-false") {
+    return (
+      <svg {...shared}>
+        <circle cx="8" cy="12" r="5" />
+        <path d="m6 12 1.6 1.6L10 10.5M16 9l4 4M20 9l-4 4" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...shared}>
+      <path d="M4 7h3c4 0 5 10 9 10h4M4 17h3c1.6 0 2.7-1.2 3.6-2.8M13.4 9.2C14.3 8 15.2 7 17 7h3" />
+      <path d="m18 4 2 3-2 3M18 14l2 3-2 3" />
+    </svg>
+  );
+}
+
+function TypeMasteryIndicators({ mastery }: { mastery: TypeProgress }) {
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Mastery by question type">
+      {masteryIndicators.map(({ key, label }) => {
+        const progress = mastery?.[key];
+        const done = progress?.done ?? 0;
+        const total = progress?.total ?? 0;
+        const complete = total > 0 && done >= total;
+
+        return (
+          <span
+            key={key}
+            title={`${label}: ${done} of ${total} mastered`}
+            aria-label={`${label}: ${done} of ${total} mastered`}
+            className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${
+              complete
+                ? "border-[#F7C6D6] bg-[#FFF0F5] text-[#D94675]"
+                : "border-[#E7E7EB] bg-[#F3F3F5] text-[#A0A0AA]"
+            }`}
+          >
+            <QuestionTypeIcon type={key} className="h-4 w-4" />
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClientProps) {
+  const [subjects, setSubjects] = useState<SubjectItem[]>(initialSubjects);
   const [query, setQuery] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [layout, setLayout] = useState<SubjectLayout>(initialLayout);
   const [notice, setNotice] = useState("");
+  const router = useRouter();
 
   const filteredSubjects = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase();
-    if (!normalized) return subjects;
-    return subjects.filter((subject) => subject.name.toLocaleLowerCase().includes(normalized));
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return subjects;
+    return subjects.filter((subject) => subject.name.toLowerCase().includes(normalizedQuery));
   }, [subjects, query]);
 
   function handleCreated(subject: SubjectItem) {
-    setSubjects((current) => [...current, subject].sort((a, b) => a.name.localeCompare(b.name)));
-    setQuery("");
-    setModalOpen(false);
-    setNotice(`${subject.name} was added.`);
-    router.refresh();
+    setSubjects((current) => {
+      if (current.some((item) => item.id === subject.id)) return current;
+      return [...current, subject].sort((a, b) => a.name.localeCompare(b.name));
+    });
+    setNotice(`“${subject.name}” was created successfully.`);
+    window.setTimeout(() => setNotice(""), 3500);
   }
 
   return (
     <>
-      <section aria-labelledby="my-subjects-heading">
-        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <section aria-label="Manage subjects" className="space-y-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.17em] text-[#9A7C89]">YOUR LIBRARY</p>
-            <h2 id="my-subjects-heading" className="mt-1 text-2xl font-semibold tracking-[-0.045em] text-[#2F2930]">My Subjects <span className="ml-1 align-middle text-sm font-medium tracking-normal text-[#9A8C93]">{subjects.length}</span></h2>
+            <h2 className="text-xl font-bold tracking-tight text-[#2F2930]">All subjects</h2>
+            <p className="mt-1 text-sm text-[#756B72]">
+              {subjects.length} {subjects.length === 1 ? "subject" : "subjects"} to organize your learning.
+            </p>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <div className="relative min-w-0 flex-1 sm:w-[230px]">
-              <label htmlFor="subject-search" className="sr-only">Search subjects</label>
-              <span aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-base text-[#8B9BAA]">⌕</span>
-              <input id="subject-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search subjects..." className="h-11 w-full rounded-full border border-[#E8E2E5] bg-white pl-10 pr-4 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20" />
-            </div>
-            <button type="button" onClick={() => { setNotice(""); setModalOpen(true); }} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#FF6F96] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2"><span aria-hidden="true" className="text-lg leading-none">＋</span> Add Subject</button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-[#FF6F96] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:self-auto"
+          >
+            <span aria-hidden="true" className="text-lg leading-none">+</span>
+            Add subject
+          </button>
         </div>
 
-        {notice && <p role="status" className="mb-4 rounded-xl border border-[#CFE8D8] bg-[#EAF8F0] px-4 py-3 text-sm text-[#35664B]">{notice}</p>}
+        {notice ? (
+          <p role="status" className="rounded-xl border border-[#CDE9D8] bg-[#EAF8F0] px-4 py-3 text-sm font-medium text-[#286747]">
+            {notice}
+          </p>
+        ) : null}
 
-        {subjects.length === 0 ? (
-          <div className="relative overflow-hidden rounded-[22px] border border-dashed border-[#E8C8D3] bg-[#FFFCFD] px-5 py-8 sm:px-8 sm:py-10">
-            <div className="mx-auto max-w-xl text-center">
-              <div className="relative mx-auto h-32 w-32 sm:h-40 sm:w-40">
-                <Image src="/dashboard-hero/my-subjects.png" alt="Abii is ready to help you get started" fill sizes="160px" className="object-contain" />
-              </div>
-              <h3 className="mt-2 text-xl font-semibold tracking-[-0.035em] text-[#2F2930]">Your first subject starts here.</h3>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#756B72]">Add a subject to begin creating flashcards and building your knowledge.</p>
-              <button type="button" onClick={() => setModalOpen(true)} className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#FF6F96] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2"><span aria-hidden="true">＋</span> Add Subject</button>
-            </div>
-          </div>
-        ) : filteredSubjects.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#E8E2E5] bg-white px-5 py-12 text-center">
-            <p className="text-base font-semibold text-[#2F2930]">No subjects match “{query.trim()}”.</p>
-            <p className="mt-2 text-sm text-[#756B72]">Try a different name or clear your search.</p>
-            <button type="button" onClick={() => setQuery("")} className="mt-4 rounded-lg px-3 py-2 text-sm font-semibold text-[#C65380] hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Clear search</button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="relative block min-w-0 flex-1">
+            <span className="sr-only">Search subjects</span>
+            <span aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9B9097]">⌕</span>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search subjects..."
+              className="min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white pl-10 pr-4 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A49AA0] focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/10"
+            />
+          </label>
+
+        </div>
+
+        {filteredSubjects.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#E8D7DE] bg-white px-5 py-12 text-center sm:px-8">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF0F5] text-2xl" aria-hidden="true">📚</div>
+            <h3 className="mt-4 text-base font-bold text-[#2F2930]">
+              {query.trim() ? "No matching subjects" : "Your study space starts here"}
+            </h3>
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[#756B72]">
+              {query.trim()
+                ? "Try another search term or clear your search."
+                : "Create your first subject to keep your flashcards organized."}
+            </p>
+            {query.trim() ? (
+              <button type="button" onClick={() => setQuery("")} className="mt-4 text-sm font-semibold text-[#D94F7B] hover:underline">
+                Clear search
+              </button>
+            ) : (
+              <button type="button" onClick={() => setIsModalOpen(true)} className="mt-4 rounded-xl bg-[#FF6F96] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#E9577D]">
+                Add your first subject
+              </button>
+            )}
           </div>
         ) : (
-          <ul className={layout === "grid" ? "grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3" : "flex flex-col gap-3"}>
+          <div className={layout === "grid" ? "grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3" : "flex flex-col gap-3"}>
             {filteredSubjects.map((subject) => (
-              <li key={subject.id}>
-                {layout === "grid" ? (
-                  <Link href={`/subjects/${subject.id}`} aria-label={`Open ${subject.name}`} className="group flex min-h-[148px] flex-col justify-between rounded-[17px] border border-[#E8E2E5] bg-white p-4 transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[#E8B0C2] hover:shadow-[0_8px_24px_rgba(47,41,48,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:p-5">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FFF0F5] text-[22px] text-[#E9577D]">{subjectIcon(subject.name)}</span>
-                      <span className="min-w-0 flex-1 pt-1">
-                        <span className="flex min-w-0 items-start justify-between gap-2"><span className="min-w-0 truncate text-[15px] font-semibold text-[#2F2930]">{subject.name}</span>{subject.flashcardCount > 0 && subject.masteredCount === subject.flashcardCount && <span title="Mastered" aria-label="Mastered" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-2 py-1 text-[10px] font-bold text-[#D94675]">✓ Mastered</span>}</span>
-                        <span className="mt-1.5 block text-xs text-[#8192A1]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "flashcard" : "flashcards"}</span>
-                      </span><span aria-hidden="true" className="pt-1 text-lg leading-none text-[#7C91A3] transition-colors group-hover:text-[#E9577D]">›</span>
-                    </div>
-                    <div className="mt-5 flex items-center gap-3"><div role="progressbar" aria-label={`${subject.name} mastery progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={subject.progress} className="h-[7px] min-w-0 flex-1 overflow-hidden rounded-full bg-[#F0F1F4]"><div className="h-full rounded-full bg-[#E9577D] transition-[width]" style={{ width: `${subject.progress}%` }} /></div><span className="w-9 text-right text-xs font-semibold tabular-nums text-[#657B8E]">{subject.progress}%</span></div>
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><span className="text-[11px] text-[#8192A1]">{subject.masteredCount}/{subject.flashcardCount} cards mastered</span></div>
-                    <div className="mt-2 flex items-center gap-2" aria-label={`${subject.name} question type completion`}><MasteryPills progress={subject.typeMastery} className="flex flex-wrap gap-1" /></div>
-                    <span className="sr-only">Progress is the percentage of flashcards mastered across every applicable question type and Mixed / Random.</span>
-                  </Link>
-                ) : (
-                  <Link href={`/subjects/${subject.id}`} aria-label={`Open ${subject.name}`} className="group grid grid-cols-1 items-center gap-4 rounded-[17px] border border-[#E8E2E5] bg-white p-4 transition-[border-color,box-shadow] hover:border-[#E8B0C2] hover:shadow-[0_8px_24px_rgba(47,41,48,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:grid-cols-[minmax(0,1.2fr)_minmax(180px,1fr)_auto] sm:gap-5 sm:px-5">
-                    <div className="flex min-w-0 items-center gap-3"><span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF0F5] text-[21px] text-[#E9577D]">{subjectIcon(subject.name)}</span><span className="min-w-0 flex-1"><span className="flex items-center gap-2"><span className="truncate text-[15px] font-semibold text-[#2F2930]">{subject.name}</span>{subject.flashcardCount > 0 && subject.masteredCount === subject.flashcardCount && <span className="shrink-0 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-2 py-1 text-[10px] font-bold text-[#D94675]">✓ Mastered</span>}</span><span className="mt-1 block text-xs text-[#8192A1]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "flashcard" : "flashcards"} · {subject.masteredCount}/{subject.flashcardCount} mastered</span></span></div>
-                    <div className="min-w-0"><div className="mb-2 flex items-center justify-between gap-3"><span className="text-xs text-[#8192A1]">Mastery progress</span><span className="text-xs font-semibold tabular-nums text-[#657B8E]">{subject.progress}%</span></div><div role="progressbar" aria-label={`${subject.name} mastery progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={subject.progress} className="h-[7px] overflow-hidden rounded-full bg-[#F0F1F4]"><div className="h-full rounded-full bg-[#E9577D] transition-[width]" style={{ width: `${subject.progress}%` }} /></div><div className="mt-2"><MasteryPills progress={subject.typeMastery} className="flex flex-wrap gap-1" /></div></div>
-                    <span aria-hidden="true" className="hidden text-xl text-[#7C91A3] transition-colors group-hover:text-[#E9577D] sm:block">›</span>
-                    <span className="sr-only">Progress is the percentage of flashcards mastered across every applicable question type and Mixed / Random.</span>
-                  </Link>
-                )}
-              </li>
+              <Link
+                key={subject.id}
+                href={`/subjects/${subject.id}`}
+                className={`group block rounded-2xl border border-[#F0E5E9] bg-white transition duration-200 hover:-translate-y-0.5 hover:border-[#F3C4D3] hover:shadow-[0_8px_28px_rgba(92,49,66,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${
+                  layout === "grid" ? "p-5 sm:p-6" : "p-4 sm:flex sm:items-center sm:gap-5 sm:p-5"
+                }`}
+              >
+                <div className={`flex min-w-0 items-start gap-3 ${layout === "list" ? "sm:flex-1" : ""}`}>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFF0F5] text-lg text-[#D85E86] transition group-hover:bg-[#FFE5EE]" aria-hidden="true">
+                    ▤
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate font-bold text-[#2F2930] group-hover:text-[#C65380]">{subject.name}</h3>
+                    <p className="mt-1 text-sm text-[#756B72]">
+                      {subject.flashcardCount} {subject.flashcardCount === 1 ? "flashcard" : "flashcards"}
+                    </p>
+                  </div>
+                  <span className="mt-1 text-[#B5A7AE] transition group-hover:translate-x-0.5 group-hover:text-[#D85E86]" aria-hidden="true">↗</span>
+                </div>
+
+                <div className={`${layout === "grid" ? "mt-5" : "mt-4 sm:mt-0 sm:w-[42%] sm:max-w-xs"}`}>
+                  <div className="mb-2 flex items-center justify-between gap-3 text-xs">
+                    <span className="font-medium text-[#756B72]">Mastery progress</span>
+                    <span className="font-bold tabular-nums text-[#2F2930]">{Math.max(0, Math.min(100, subject.progress))}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-[#F5E9ED]" role="progressbar" aria-label={`${subject.name} mastery progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(100, subject.progress))}>
+                    <div className="h-full rounded-full bg-[#F28BA9] transition-[width] duration-300" style={{ width: `${Math.max(0, Math.min(100, subject.progress))}%` }} />
+                  </div>
+                  <p className="mt-2 text-xs text-[#8A7E85]">{subject.masteredCount} mastered</p>
+                  <TypeMasteryIndicators mastery={subject.typeMastery} />
+                </div>
+              </Link>
             ))}
-            {!query.trim() && <li>
-              <button type="button" onClick={() => setModalOpen(true)} className="flex min-h-[148px] w-full flex-col items-center justify-center rounded-[17px] border border-dashed border-[#E8B8C8] bg-[#FFFCFD] p-5 text-center transition-colors hover:border-[#E9577D] hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2">
-                <span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFE8EF] text-2xl leading-none text-[#E9577D]">＋</span>
-                <span className="mt-3 text-sm font-semibold text-[#2F2930]">Add a new subject</span>
-                <span className="mt-1 text-xs text-[#8192A1]">Expand your learning journey.</span>
-              </button>
-            </li>}
-          </ul>
+          </div>
         )}
       </section>
-      {modalOpen && <AddSubjectModal onClose={() => setModalOpen(false)} onCreated={handleCreated} />}
+
+      {isModalOpen ? (
+        <AddSubjectModal onClose={() => setIsModalOpen(false)} onCreated={handleCreated} />
+      ) : null}
     </>
   );
 }
+

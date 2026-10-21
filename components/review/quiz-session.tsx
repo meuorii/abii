@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast-provider";
-import { playAbiiSound } from "@/lib/sounds";
 import { TypeIcon } from "@/components/review/review-setup";
 import { Mascot } from "@/components/ui/mascot";
 import { QUIZ_TYPE_LABELS, type PublicSession, type QuestionResult, type QuizSummary } from "@/lib/quiz/types";
@@ -211,13 +210,18 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       const response = await fetch("/api/quiz/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subjectId: initial.subjectId ?? "all", type: initial.type }) });
       const data = (await response.json().catch(() => ({}))) as { sessionId?: string; error?: string };
       if (!response.ok || !data.sessionId) {
-        setAgainError(data.error || "We couldn’t start a new review. Please try again.");
+        const message = data.error || "We couldn’t start a new review. Please try again.";
+        setAgainError(message);
+        toast({ kind: "error", title: "Couldn’t start review again", message });
         setAgainBusy(false);
         return;
       }
+      toast({ kind: "success", title: "New review started", message: "Your flashcards are ready." });
       router.push(`/review/quiz/${data.sessionId}`);
     } catch {
-      setAgainError("You seem to be offline. Check your connection and try again.");
+      const message = "You seem to be offline. Check your connection and try again.";
+      setAgainError(message);
+      toast({ kind: "error", title: "Connection hiccup", message });
       setAgainBusy(false);
     }
   }
@@ -254,10 +258,8 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       setResults((current) => ({ ...current, [question.index]: saved }));
       if (data.mastery) setMastery(data.mastery);
       if (saved.correct) {
-        playAbiiSound("correct");
         toast({ kind: "success", title: "That’s correct! ✨", message: "Nice recall. Keep that streak going!" });
       } else {
-        playAbiiSound("wrong");
         toast({ kind: "info", title: "Not quite — keep learning!", message: "Take a look at the answer, then try again next round." });
       }
     } catch {
@@ -287,7 +289,9 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       const response = await fetch(`/api/quiz/${initial.id}/finish`, { method: "POST" });
       const data = (await response.json().catch(() => ({}))) as { summary?: QuizSummary; retry?: boolean; session?: PublicSession; error?: string };
       if (!response.ok || (!data.summary && !(data.retry && data.session))) {
-        setError(data.error || "We couldn’t finish this review. Please try again.");
+        const message = data.error || "We couldn’t finish this review. Please try again.";
+        setError(message);
+        toast({ kind: "error", title: "Couldn’t finish review", message });
         return;
       }
       if (data.retry && data.session) {
@@ -305,15 +309,17 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         setItemAnswers([]);
         setHintOpen(false);
         setRoundNotice(`Round ${round}: these cards still need ${target} consecutive correct answers in ${QUIZ_TYPE_LABELS[initial.type]}. A wrong answer resets this quiz type’s streak.`);
+        toast({ kind: "info", title: `Round ${round} started`, message: "Keep going — these cards need a little more practice." });
         return;
       }
       if (data.summary) {
         setSummary(data.summary);
-        playAbiiSound("complete");
         toast({ kind: "success", title: "Review complete! 🎉", message: `You finished ${data.summary.cards} cards. Great work showing up to study!` });
       }
     } catch {
-      setError("You seem to be offline. Check your connection and try again.");
+      const message = "You seem to be offline. Check your connection and try again.";
+      setError(message);
+      toast({ kind: "error", title: "Connection hiccup", message });
     } finally {
       busyRef.current = false;
       setBusy(false);
