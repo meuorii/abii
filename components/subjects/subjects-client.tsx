@@ -4,8 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { QUIZ_TYPES, QUIZ_TYPE_LABELS, type QuizType } from "@/lib/quiz/types";
-import { TypeIcon } from "@/components/review/review-setup";
+import type { TypeProgress } from "@/lib/quiz/types";
+import { MasteryPills } from "@/components/review/review-setup";
 
 export type SubjectItem = {
   id: string;
@@ -13,7 +13,7 @@ export type SubjectItem = {
   flashcardCount: number;
   progress: number;
   masteredCount: number;
-  typeMastery: Record<QuizType, number>;
+  typeMastery: TypeProgress;
 };
 
 const subjectIconChoices = ["▦", "⚗", "▤", "◈", "✿", "⌘"];
@@ -199,12 +199,9 @@ export function SubjectsClient({ initialSubjects }: { initialSubjects: SubjectIt
 
                   </div>
                   <div className="mt-2 flex items-center gap-2" aria-label={`${subject.name} question type completion`}>
-                    {QUIZ_TYPES.map((type) => {
-                      const done = subject.flashcardCount > 0 && subject.typeMastery[type] === subject.flashcardCount;
-                      return <span key={type} title={`${QUIZ_TYPE_LABELS[type]}: ${subject.typeMastery[type]}/${subject.flashcardCount} cards complete`} aria-label={`${QUIZ_TYPE_LABELS[type]} ${done ? "complete" : "not complete"}`} className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-[11px] font-bold ${done ? "border-[#F7C6D6] bg-[#FFF0F5] text-[#D94675]" : "border-[#E7E7EB] bg-[#F3F3F5] text-[#A0A0AA]"}`}><TypeIcon type={type} className="h-3.5 w-3.5" /></span>;
-                    })}
+                    <MasteryPills progress={subject.typeMastery} className="flex flex-wrap gap-1" />
                   </div>
-                  <span className="sr-only">Progress is the percentage of flashcards mastered across all three question types.</span>
+                  <span className="sr-only">Progress is the percentage of flashcards mastered across every applicable question type and Mixed / Random.</span>
                 </Link>
               </li>
             ))}
@@ -222,4 +219,5 @@ export function SubjectsClient({ initialSubjects }: { initialSubjects: SubjectIt
     </>
   );
 }
+
 

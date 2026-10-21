@@ -10,7 +10,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!user) return NextResponse.json({ error: "Please sign in to continue." }, { status: 401 });
   const { sessionId } = await params;
 
-  let body: { questionIndex?: unknown; selectedIndex?: unknown; answer?: unknown; truth?: unknown };
+  let body: { questionIndex?: unknown; selectedIndex?: unknown; answer?: unknown; answers?: unknown; truth?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -26,3 +26,4 @@ export async function POST(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "We couldn’t save that answer. Please try again." }, { status: 500 });
   }
 }
+

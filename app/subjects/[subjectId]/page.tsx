@@ -10,7 +10,7 @@ import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { getSubjectMastery } from "@/lib/quiz/service";
-import { QUIZ_TYPES, type QuizType } from "@/lib/quiz/types";
+import { emptyTypeProgress } from "@/lib/quiz/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,7 +30,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
 
   const mastery = await getSubjectMastery(user._id);
   const cards = await Flashcard.find({ userId: user._id, subjectId: subject._id })
-    .select("_id question answer hint favorite createdAt")
+    .select("_id flashcardType question answer hint favorite createdAt")
     .sort({ createdAt: -1 })
     .lean();
   const cardIds = cards.map((card) => card._id);
@@ -56,7 +56,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
   const correctCount = reviews.filter((review) => review.result === "correct").length;
   const wrongCount = reviews.filter((review) => review.result === "wrong").length;
   const masteredCount = mastery.bySubject.get(String(subject._id)) ?? 0;
-  const typeMastery = mastery.byTypeBySubject.get(String(subject._id)) ?? (Object.fromEntries(QUIZ_TYPES.map((type) => [type, 0])) as Record<QuizType, number>);
+  const typeMastery = mastery.byTypeBySubject.get(String(subject._id)) ?? emptyTypeProgress();
   const progress = cards.length ? Math.round((masteredCount / cards.length) * 100) : 0;
 
   const data: SubjectDetailData = {
@@ -72,6 +72,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
     wrongCount,
     cards: cards.map((card) => ({
       id: String(card._id),
+      flashcardType: card.flashcardType === "items" ? "items" as const : "standard" as const,
       question: card.question,
       answer: card.answer,
       hint: card.hint ?? "",
@@ -117,4 +118,5 @@ export default async function SubjectDetailPage({ params }: PageProps) {
     </AppShell>
   );
 }
+
 

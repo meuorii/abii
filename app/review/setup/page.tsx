@@ -4,7 +4,7 @@ import { ReviewSetup } from "@/components/review/review-setup";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { getEligibilityCounts, getSubjectMastery } from "@/lib/quiz/service";
-import { QUIZ_TYPES, type QuizType, type SetupSubject } from "@/lib/quiz/types";
+import { QUIZ_MODES, emptyTypeProgress, type QuizMode, type SetupSubject } from "@/lib/quiz/types";
 import { Flashcard } from "@/models/Flashcard";
 import { Subject } from "@/models/Subject";
 
@@ -22,10 +22,10 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
   const firstName = user.name.trim().split(/\s+/)[0] || "there";
 
   let subjects: SetupSubject[] = [];
-  let allEligible = Object.fromEntries(QUIZ_TYPES.map((t) => [t, 0])) as Record<QuizType, number>;
+  let allEligible = Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>;
   let totalCards = 0;
   let allMastered = 0;
-  let allTypeMastery = Object.fromEntries(QUIZ_TYPES.map((t) => [t, 0])) as Record<QuizType, number>;
+  let allTypeMastery = emptyTypeProgress();
   let loadFailed = false;
 
   try {
@@ -50,8 +50,8 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
         name: subject.name,
         flashcardCount: cardCounts.get(id) ?? 0,
         mastered: mastery.bySubject.get(id) ?? 0,
-        typeMastery: mastery.byTypeBySubject.get(id) ?? (Object.fromEntries(QUIZ_TYPES.map((t) => [t, 0])) as Record<QuizType, number>),
-        eligible: counts.bySubject.get(id) ?? (Object.fromEntries(QUIZ_TYPES.map((t) => [t, 0])) as Record<QuizType, number>),
+        typeMastery: mastery.byTypeBySubject.get(id) ?? emptyTypeProgress(),
+        eligible: counts.bySubject.get(id) ?? (Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>),
       };
     });
   } catch (error) {
@@ -74,4 +74,5 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
     </AppShell>
   );
 }
+
 

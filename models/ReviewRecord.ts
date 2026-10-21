@@ -1,12 +1,7 @@
 import "server-only";
 import mongoose, { Schema, type InferSchemaType, type Model } from "mongoose";
 
-export const QUESTION_TYPES = [
-  "identification",
-  "multiple-choice",
-  "true-false",
-  "fill-in-the-blank",
-] as const;
+export const QUESTION_TYPES = ["identification", "multiple-choice", "true-false", "random"] as const;
 
 const reviewRecordSchema = new Schema(
   {
@@ -58,7 +53,13 @@ reviewRecordSchema.index(
   { name: "review_owner_card_next_review" },
 );
 
+// Drop a stale cached model (dev hot reload) whose enum lacks the newer question types.
+if (mongoose.models.ReviewRecord && !(mongoose.models.ReviewRecord.schema.path("questionType") as unknown as { enumValues?: string[] }).enumValues?.includes("random")) {
+  delete mongoose.models.ReviewRecord;
+}
+
 export type ReviewRecordDocument = InferSchemaType<typeof reviewRecordSchema>;
 export const ReviewRecord: Model<ReviewRecordDocument> =
   (mongoose.models.ReviewRecord as Model<ReviewRecordDocument> | undefined) ??
   mongoose.model<ReviewRecordDocument>("ReviewRecord", reviewRecordSchema);
+

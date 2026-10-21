@@ -3,17 +3,18 @@
 import Image from "next/image";
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { QUIZ_TYPES, QUIZ_TYPE_LABELS, type QuizType } from "@/lib/quiz/types";
-import { TypeIcon } from "@/components/review/review-setup";
+import type { TypeProgress } from "@/lib/quiz/types";
+import { MasteryPills } from "@/components/review/review-setup";
 
-type FlashcardItem = { id: string; question: string; answer: string; hint: string; favorite: boolean; reviewed: boolean };
+type FlashcardItem = { id: string; flashcardType: "standard" | "items"; question: string; answer: string; hint: string; favorite: boolean; reviewed: boolean };
 export type SubjectDetailData = {
   id: string; name: string; flashcardCount: number; reviewedCount: number; masteredCount: number; dueCount: number;
-  progress: number; typeMastery: Record<QuizType, number>; correctCount: number; wrongCount: number; cards: FlashcardItem[];
+  progress: number; typeMastery: TypeProgress; correctCount: number; wrongCount: number; cards: FlashcardItem[];
 };
 type Tab = "flashcards" | "progress" | "settings";
 
 function AddFlashcardModal({ subjectName, onClose, onCreated }: { subjectName: string; onClose: () => void; onCreated: (card: FlashcardItem) => void }) {
+  const [flashcardType, setFlashcardType] = useState<"standard" | "items">("standard");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [hint, setHint] = useState("");
@@ -32,7 +33,7 @@ function AddFlashcardModal({ subjectName, onClose, onCreated }: { subjectName: s
     try {
       const response = await fetch(`/api/subjects/${encodeURIComponent(window.location.pathname.split("/").at(-1) || "")}/flashcards`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, answer, hint }),
+        body: JSON.stringify({ flashcardType, question, answer, hint }),
       });
       const result = await response.json() as { card?: FlashcardItem; error?: string };
       if (!response.ok || !result.card) { setError(result.error || "We couldn’t save your flashcard."); return; }
@@ -57,13 +58,21 @@ function AddFlashcardModal({ subjectName, onClose, onCreated }: { subjectName: s
         </div>
         <form onSubmit={submit} className="space-y-4 p-5 sm:space-y-5 sm:p-7">
           <div>
+            <label htmlFor="flashcard-type" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Flashcard Type</label>
+            <select id="flashcard-type" value={flashcardType} onChange={(event) => setFlashcardType(event.target.value === "items" ? "items" : "standard")} className="h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3.5 text-sm text-[#2F2930] outline-none focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20">
+              <option value="standard">Standard — one answer</option>
+              <option value="items">Items — list of answers</option>
+            </select>
+            <p className="mt-1 text-xs leading-5 text-[#8192A1]">Items answers should contain 2 to 10 distinct entries separated by commas, semicolons, or new lines.</p>
+          </div>
+          <div>
             <label htmlFor="flashcard-question" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Question <span className="text-[#E9577D]">*</span></label>
             <textarea ref={questionRef} autoFocus id="flashcard-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={2000} rows={3} placeholder="Write a question you want to remember..." className="w-full resize-y rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-3 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20" required />
             <p className="mt-1 text-right text-[11px] text-[#9A8C93]">{question.length}/2000</p>
           </div>
           <div>
-            <label htmlFor="flashcard-answer" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Answer <span className="text-[#E9577D]">*</span></label>
-            <textarea id="flashcard-answer" value={answer} onChange={(event) => setAnswer(event.target.value)} maxLength={5000} rows={3} placeholder="Write the correct answer..." className="w-full resize-y rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-3 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20" required />
+            <label htmlFor="flashcard-answer" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">{flashcardType === "items" ? "Items / List of Answers" : "Answer"} <span className="text-[#E9577D]">*</span></label>
+            <textarea id="flashcard-answer" value={answer} onChange={(event) => setAnswer(event.target.value)} maxLength={flashcardType === "items" ? 400 : 5000} rows={3} placeholder={flashcardType === "items" ? "Enter one item per line, or separate items with commas..." : "Write the correct answer..."} className="w-full resize-y rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-3 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20" required />
           </div>
           <div>
             <label htmlFor="flashcard-hint" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Hint <span className="font-normal text-[#9A8C93]">(optional)</span></label>
@@ -162,7 +171,7 @@ export function SubjectDetailClient({ initialData }: { initialData: SubjectDetai
             <button type="button" onClick={() => setModalOpen(true)} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#FF6F96] px-5 text-sm font-semibold text-white hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2">＋ Add Flashcard</button>
           </div> : filteredCards.length === 0 ? <div className="rounded-2xl border border-dashed border-[#E8E2E5] bg-white px-5 py-10 text-center"><p className="font-semibold text-[#2F2930]">No flashcards match “{query.trim()}”.</p><p className="mt-1 text-sm text-[#756B72]">Try another search or clear the field.</p><button type="button" onClick={() => setQuery("")} className="mt-3 text-sm font-semibold text-[#C65380] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Clear search</button></div> : <ul className="overflow-hidden rounded-[17px] border border-[#E8E2E5] bg-white">
             {filteredCards.map((card, index) => <li key={card.id} className={`flex min-w-0 items-center gap-3 px-3 py-3 sm:gap-3.5 sm:px-4 ${index ? "border-t border-[#F0EDF0]" : ""}`}>
-              <IconCircle>{"Aa"}</IconCircle><div className="min-w-0 flex-1"><p className="line-clamp-2 text-xs font-medium leading-5 text-[#294A60] sm:text-sm">{card.question}</p><p className="mt-1 text-[10px] text-[#8B9BAA]">Identification{card.reviewed ? " · Reviewed" : " · Not reviewed yet"}</p></div>
+              <IconCircle>{"Aa"}</IconCircle><div className="min-w-0 flex-1"><p className="line-clamp-2 text-xs font-medium leading-5 text-[#294A60] sm:text-sm">{card.question}</p><p className="mt-1 text-[10px] text-[#8B9BAA]">{card.flashcardType === "items" ? "Items flashcard" : "Standard flashcard"}{card.reviewed ? " · Reviewed" : " · Not reviewed yet"}</p></div>
               <a href={`/review?subjectId=${data.id}&flashcardId=${card.id}`} className="inline-flex min-h-8 shrink-0 items-center justify-center rounded-full border border-[#F7D9E3] bg-[#FFF7F9] px-3 text-[11px] font-semibold text-[#E9577D] transition-colors hover:bg-[#FFE8EF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Review</a><a href={`/review?subjectId=${data.id}&flashcardId=${card.id}`} aria-label={`Review ${card.question}`} className="hidden text-lg text-[#8B9BAA] hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] sm:block">›</a>
             </li>)}
           </ul>}
@@ -175,7 +184,7 @@ export function SubjectDetailClient({ initialData }: { initialData: SubjectDetai
               <StatRow icon="▤" value={String(data.flashcardCount)} label="Total Flashcards" />
               <StatRow icon="◷" value={String(data.dueCount)} label="Due for Review" />
               <div className="rounded-xl bg-[#FFF7F9] p-3"><div className="flex items-center gap-2"><IconCircle>✓</IconCircle><div><p className="text-sm font-bold text-[#2F2930]">{data.progress}%</p><p className="text-[11px] text-[#71869A]">Mastery Progress</p></div></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#EDEFF2]"><div className="h-full rounded-full bg-[#E9577D]" style={{ width: `${data.progress}%` }} /></div><p className="mt-2 text-[10px] text-[#71869A]">{data.masteredCount}/{data.flashcardCount} cards mastered</p></div>
-              <div className="flex flex-wrap gap-2" aria-label="Question type completion status">{QUIZ_TYPES.map((type) => { const count = data.typeMastery[type] ?? 0; const done = data.flashcardCount > 0 && count === data.flashcardCount; return <span key={type} title={`${QUIZ_TYPE_LABELS[type]}: ${count}/${data.flashcardCount} cards complete`} aria-label={`${QUIZ_TYPE_LABELS[type]} ${done ? "complete" : "not complete"}`} className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-[11px] font-bold ${done ? "border-[#F7C6D6] bg-[#FFF0F5] text-[#D94675]" : "border-[#E7E7EB] bg-[#F3F3F5] text-[#A0A0AA]"}`}><TypeIcon type={type} className="h-3.5 w-3.5" /></span>; })}</div>
+              <MasteryPills progress={data.typeMastery} className="flex flex-wrap gap-2" />
               
             </div>
           </section>
@@ -187,8 +196,8 @@ export function SubjectDetailClient({ initialData }: { initialData: SubjectDetai
       </div>}
 
       {tab === "progress" && <section aria-labelledby="progress-heading" className="space-y-4"><div><h2 id="progress-heading" className="text-lg font-bold tracking-[-0.035em] text-[#173B52]">Study Progress</h2><p className="mt-1 text-sm text-[#71869A]">A clear view of how much of this subject you’ve practiced.</p></div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric title="Total flashcards" value={data.flashcardCount} detail="Cards in this subject"/><Metric title="Reviewed cards" value={data.reviewedCount} detail="Reviewed at least once"/><Metric title="Due for review" value={data.dueCount} detail="Ready for another practice"/><Metric title="Mastered cards" value={`${data.masteredCount}/${data.flashcardCount}`} detail="All three types, 3 correct in a row"/></div>
-        <div className="rounded-[18px] border border-[#E8E2E5] bg-white p-5 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-4"><div><h3 className="font-bold text-[#2F2930]">Mastery completion</h3><p className="mt-1 text-sm text-[#71869A]">{data.masteredCount} of {data.flashcardCount} cards mastered across all three question types.</p></div>{data.flashcardCount > 0 && data.masteredCount === data.flashcardCount && <span className="inline-flex items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-3 py-1.5 text-xs font-bold text-[#D94675]">✓ Mastered</span>}</div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[#F0F1F4]"><div className="h-full rounded-full bg-[#E9577D] transition-[width]" style={{ width: `${data.progress}%` }} /></div><div className="mt-4 flex flex-wrap gap-3" aria-label="Question type mastery status">{QUIZ_TYPES.map((type) => { const count = data.typeMastery[type] ?? 0; const done = data.flashcardCount > 0 && count === data.flashcardCount; return <span key={type} title={`${QUIZ_TYPE_LABELS[type]}: ${count}/${data.flashcardCount} cards complete`} aria-label={`${QUIZ_TYPE_LABELS[type]} ${done ? "complete" : "not complete"}`} className={`inline-flex h-9 min-w-9 items-center justify-center rounded-full border px-2 text-sm font-bold ${done ? "border-[#F7C6D6] bg-[#FFF0F5] text-[#D94675]" : "border-[#E7E7EB] bg-[#F3F3F5] text-[#A0A0AA]"}`}><TypeIcon type={type} className="h-3.5 w-3.5" /></span>; })}</div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl bg-[#EAF8F0] p-4"><p className="text-xs text-[#4F7D62]">Correct review results</p><p className="mt-1 text-2xl font-bold text-[#35664B]">{data.correctCount}</p></div><div className="rounded-xl bg-[#FFF1F1] p-4"><p className="text-xs text-[#A45D6B]">Incorrect review results</p><p className="mt-1 text-2xl font-bold text-[#A43E5C]">{data.wrongCount}</p></div></div></div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric title="Total flashcards" value={data.flashcardCount} detail="Cards in this subject"/><Metric title="Reviewed cards" value={data.reviewedCount} detail="Reviewed at least once"/><Metric title="Due for review" value={data.dueCount} detail="Ready for another practice"/><Metric title="Mastered cards" value={`${data.masteredCount}/${data.flashcardCount}`} detail="Every type + Random, 3 correct in a row"/></div>
+        <div className="rounded-[18px] border border-[#E8E2E5] bg-white p-5 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-4"><div><h3 className="font-bold text-[#2F2930]">Mastery completion</h3><p className="mt-1 text-sm text-[#71869A]">{data.masteredCount} of {data.flashcardCount} cards mastered across every applicable question type and Mixed / Random.</p></div>{data.flashcardCount > 0 && data.masteredCount === data.flashcardCount && <span className="inline-flex items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-3 py-1.5 text-xs font-bold text-[#D94675]">✓ Mastered</span>}</div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[#F0F1F4]"><div className="h-full rounded-full bg-[#E9577D] transition-[width]" style={{ width: `${data.progress}%` }} /></div><MasteryPills progress={data.typeMastery} size="md" className="mt-4 flex flex-wrap gap-3" /><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl bg-[#EAF8F0] p-4"><p className="text-xs text-[#4F7D62]">Correct review results</p><p className="mt-1 text-2xl font-bold text-[#35664B]">{data.correctCount}</p></div><div className="rounded-xl bg-[#FFF1F1] p-4"><p className="text-xs text-[#A45D6B]">Incorrect review results</p><p className="mt-1 text-2xl font-bold text-[#A43E5C]">{data.wrongCount}</p></div></div></div>
       </section>}
 
       {tab === "settings" && <section aria-labelledby="settings-heading" className="max-w-2xl space-y-4"><div><h2 id="settings-heading" className="text-lg font-bold tracking-[-0.035em] text-[#173B52]">Subject Settings</h2><p className="mt-1 text-sm text-[#71869A]">Manage the name and data for this subject.</p></div>
@@ -206,4 +215,5 @@ function StatRow({ icon, value, label }: { icon: string; value: string; label: s
 function Metric({ title, value, detail }: { title: string; value: number | string; detail: string }) {
   return <div className="rounded-[17px] border border-[#E8E2E5] bg-white p-4"><p className="text-xs font-medium text-[#71869A]">{title}</p><p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-[#173B52]">{value}</p><p className="mt-1 text-[11px] text-[#8192A1]">{detail}</p></div>;
 }
+
 

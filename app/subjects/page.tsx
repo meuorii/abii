@@ -8,7 +8,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
 import { Subject } from "@/models/Subject";
 import { getSubjectMastery } from "@/lib/quiz/service";
-import { QUIZ_TYPES, type QuizType } from "@/lib/quiz/types";
+import { emptyTypeProgress } from "@/lib/quiz/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,7 +55,7 @@ export default async function SubjectsPage() {
         name: subject.name,
         flashcardCount,
         masteredCount,
-        typeMastery: mastery.byTypeBySubject.get(id) ?? (Object.fromEntries(QUIZ_TYPES.map((type) => [type, 0])) as Record<QuizType, number>),
+        typeMastery: mastery.byTypeBySubject.get(id) ?? emptyTypeProgress(),
         progress: flashcardCount === 0 ? 0 : Math.round((masteredCount / flashcardCount) * 100),
       };
     });
@@ -106,4 +106,5 @@ export default async function SubjectsPage() {
     </AppShell>
   );
 }
+
 

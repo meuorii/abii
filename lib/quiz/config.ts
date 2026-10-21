@@ -21,7 +21,21 @@ export const MAX_TYPED_ANSWER_LENGTH = 500;
 /**
  * A card completes an individual quiz type after this many consecutive correct answers
  * in that type. Each type has its own streak; a wrong answer resets only that type's streak.
- * A card is fully mastered after reaching this target in all three quiz types.
+ * A card is fully mastered after reaching this target in every quiz type that applies to it
+ * AND in Mixed / Random mode.
  */
 export const MASTERY_STREAK = 3;
 
+
+
+/** Enumeration: answers are split into items by newline, ";" or ",". Needs at least this many items. */
+export const ENUM_MIN_ITEMS = 2;
+export const ENUM_MAX_ITEMS = 10;
+/** Enumeration answers may be longer than a normal answer because they hold several items. */
+export const MAX_ENUM_ANSWER_LENGTH = 400;
+/** Longest single item accepted when typing an enumeration entry. */
+export const MAX_ENUM_ITEM_LENGTH = 120;
+/** Enumeration (Identification): false = any order is accepted (default); true = items must be in card order. */
+export const ENUM_ORDER_MATTERS = false;
+/** Number of list options shown in Enumeration (Multiple Choice). */
+export const ENUM_MC_OPTION_COUNT = 4;

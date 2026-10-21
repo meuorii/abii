@@ -9,7 +9,7 @@ import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { ReviewOverview, type ReviewSubjectItem } from "@/components/review/review-overview";
 import { getSubjectMastery } from "@/lib/quiz/service";
-import { QUIZ_TYPES, type QuizType } from "@/lib/quiz/types";
+import { emptyTypeProgress } from "@/lib/quiz/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -158,7 +158,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
           progress: flashcardCount ? Math.round(((mastery.bySubject.get(id) ?? 0) / flashcardCount) * 100) : 0,
           lastReviewedAt: latestSubjectActivity.get(id) ?? 0,
           mastered: mastery.bySubject.get(id) ?? 0,
-          typeMastery: mastery.byTypeBySubject.get(id) ?? (Object.fromEntries(QUIZ_TYPES.map((type) => [type, 0])) as Record<QuizType, number>),
+          typeMastery: mastery.byTypeBySubject.get(id) ?? emptyTypeProgress(),
         };
       })
       .filter((subject) => subject.flashcardCount > 0 || subject.name)
@@ -208,5 +208,6 @@ export default async function ReviewPage({ searchParams }: PageProps) {
     </AppShell>
   );
 }
+
 
 

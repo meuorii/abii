@@ -5,22 +5,28 @@ import { Flashcard } from "@/models/Flashcard";
 import { QuizSession } from "@/models/QuizSession";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
-import { buildQuestionForCard, buildQuestions, isEligible, shuffle, isUsableCard, prepareCard, type PreparedCard } from "./builder";
-import { MASTERY_STREAK, MAX_TYPED_ANSWER_LENGTH, SESSION_TTL_HOURS } from "./config";
+import { buildQuestionForCard, buildQuestions, eligibleTypes, isEligible, shuffle, isUsableCard, prepareCard, type PreparedCard } from "./builder";
+import { ENUM_MAX_ITEMS, ENUM_ORDER_MATTERS, MASTERY_STREAK, MAX_ENUM_ITEM_LENGTH, MAX_TYPED_ANSWER_LENGTH, SESSION_TTL_HOURS } from "./config";
 import { normalizeText, sanitizeTyped } from "./normalize";
 import { computeNextReviewAt } from "./schedule";
 import {
   ALL_SUBJECTS,
-  QUIZ_TYPES,
-  isQuizType,
+  QUIZ_MODES,
+  emptyTypeProgress,
+  isQuizMode,
   type PublicQuestion,
   type PublicSession,
   type QuestionResult,
+  type QuizMode,
   type QuizSummary,
   type QuizType,
+  type TypeProgress,
 } from "./types";
 
 type StoredQuestionDoc = {
+  type?: QuizType | null;
+  expectedItems?: string[] | null;
+  userAnswers?: string[] | null;
   flashcardId: Types.ObjectId;
   prompt: string;
   hint?: string | null;
@@ -43,23 +49,49 @@ type SessionDoc = {
   userId: Types.ObjectId;
   subjectId?: Types.ObjectId | null;
   subjectName: string;
-  type: QuizType;
+  type: QuizMode;
   status: "active" | "completed";
   questions: StoredQuestionDoc[];
 };
+
+/** The individual type of a stored question (sessions created before Mixed mode have no per-question type). */
+function questionType(q: StoredQuestionDoc, session: SessionDoc): QuizType {
+  if (q.type) return q.type;
+  return session.type === "random" ? "identification" : session.type;
+}
+
+/** Grades an enumeration answer. Partial lists are incorrect. */
+function gradeEnumeration(expected: string[], typed: string[]) {
+  if (ENUM_ORDER_MATTERS) {
+    const itemCorrect = typed.map((t, i) => i < expected.length && normalizeText(t) === normalizeText(expected[i]));
+    return {
+      correct: typed.length === expected.length && itemCorrect.every(Boolean),
+      itemCorrect,
+      missing: expected.filter((_, i) => !itemCorrect[i] || i >= typed.length),
+    };
+  }
+  const remaining = expected.map((item) => ({ item, key: normalizeText(item) }));
+  const itemCorrect = typed.map((t) => {
+    const at = remaining.findIndex((r) => r.key === normalizeText(t));
+    if (at === -1) return false;
+    remaining.splice(at, 1);
+    return true;
+  });
+  return { correct: itemCorrect.every(Boolean) && remaining.length === 0, itemCorrect, missing: remaining.map((r) => r.item) };
+}
 
 export type ServiceError = { ok: false; status: number; message: string };
 const fail = (status: number, message: string): ServiceError => ({ ok: false, status, message });
 
 /** All of a user's usable cards, prepared for quiz generation. Always scoped to the owner. */
 export async function loadUsableCards(userId: Types.ObjectId | string): Promise<PreparedCard[]> {
-  const cards = await Flashcard.find({ userId }).select("_id subjectId question answer hint").lean();
+  const cards = await Flashcard.find({ userId }).select("_id subjectId flashcardType question answer hint").lean();
   return cards.map(prepareCard).filter(isUsableCard);
 }
 
 export async function startSession(userId: Types.ObjectId | string, subjectParam: unknown, typeParam: unknown) {
-  if (!isQuizType(typeParam)) return fail(400, "Choose a valid quiz type.");
-  const type: QuizType = typeParam;
+  if (!isQuizMode(typeParam)) return fail(400, "Choose a valid quiz type.");
+  const type: QuizMode = typeParam;
   if (typeof subjectParam !== "string") return fail(400, "Choose a subject.");
 
   await connectToDatabase();
@@ -95,12 +127,12 @@ export async function startSession(userId: Types.ObjectId | string, subjectParam
 /** Counts of eligible questions per subject (and for "all") and quiz type, using the same rules as the builder. */
 export async function getEligibilityCounts(userId: Types.ObjectId | string) {
   const usable = await loadUsableCards(userId);
-  const empty = () => Object.fromEntries(QUIZ_TYPES.map((t) => [t, 0])) as Record<QuizType, number>;
+  const empty = () => Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>;
   const all = empty();
-  const bySubject = new Map<string, Record<QuizType, number>>();
+  const bySubject = new Map<string, Record<QuizMode, number>>();
   for (const card of usable) {
     const counts = bySubject.get(card.subjectId) ?? empty();
-    for (const type of QUIZ_TYPES) {
+    for (const type of QUIZ_MODES) {
       if (isEligible(card, type, usable)) {
         counts[type] += 1;
         all[type] += 1;
@@ -117,16 +149,26 @@ function explanationFor(q: StoredQuestionDoc, type: QuizType): string {
       ? `That statement is true. The flashcard answer is “${q.expectedAnswer}”.`
       : `That statement is false. The correct answer is “${q.expectedAnswer}”.`;
   }
+  if (type === "enumeration-identification" || type === "enumeration-multiple-choice") {
+    return `The complete list is: ${(q.expectedItems ?? []).join(", ")}.`;
+  }
   return `The correct answer is “${q.expectedAnswer}”.`;
 }
 
-function resultFor(q: StoredQuestionDoc, type: QuizType): QuestionResult {
+function resultFor(q: StoredQuestionDoc, session: SessionDoc): QuestionResult {
+  const type = questionType(q, session);
   const correct = Boolean(q.correct);
   const base: QuestionResult = { correct, correctAnswer: q.expectedAnswer, explanation: explanationFor(q, type) };
-  if (type === "multiple-choice") {
+  if (type === "multiple-choice" || type === "enumeration-multiple-choice") {
     return { ...base, selectedIndex: q.selectedIndex ?? undefined, correctIndex: q.correctIndex ?? undefined };
   }
   if (type === "identification") return { ...base, userAnswer: q.userAnswer ?? undefined };
+  if (type === "enumeration-identification") {
+    const expected = q.expectedItems ?? [];
+    const typed = q.userAnswers ?? [];
+    const graded = gradeEnumeration(expected, typed);
+    return { ...base, userAnswers: typed, correctItems: expected, itemCorrect: graded.itemCorrect, missingItems: graded.missing };
+  }
   return { ...base, selectedTruth: correct ? Boolean(q.truth) : !q.truth };
 }
 
@@ -134,7 +176,7 @@ function resultFor(q: StoredQuestionDoc, type: QuizType): QuestionResult {
  * Correct-in-a-row streak per flashcard, from saved review records (newest first).
  * A wrong answer ends the streak. Cards with no records have streak 0.
  */
-export async function computeStreaks(userId: Types.ObjectId | string, flashcardIds: string[] | undefined, type: QuizType): Promise<Map<string, number>> {
+export async function computeStreaks(userId: Types.ObjectId | string, flashcardIds: string[] | undefined, type: QuizMode): Promise<Map<string, number>> {
   await connectToDatabase();
   const filter: Record<string, unknown> = { userId };
   if (flashcardIds) filter.flashcardId = { $in: flashcardIds.filter((id) => isValidObjectId(id)).map((id) => new Types.ObjectId(id)) };
@@ -154,43 +196,52 @@ export async function computeStreaks(userId: Types.ObjectId | string, flashcardI
   return streaks;
 }
 
-/** Mastery progress per subject and question type, for the setup and review pages. */
+/**
+ * Mastery progress per subject and mode, for the setup, review and subject pages.
+ * A mode only counts for cards it applies to (e.g. Enumeration only for list answers).
+ * A card is mastered when it has the streak in every mode that applies to it AND in Mixed / Random mode.
+ */
 export async function getSubjectMastery(userId: Types.ObjectId | string) {
-  const cards = await Flashcard.find({ userId }).select("_id subjectId").lean();
+  const usable = await loadUsableCards(userId);
   const records = await ReviewRecord.find({ userId })
     .select("flashcardId result reviewedAt questionType")
     .sort({ reviewedAt: -1, _id: -1 })
     .lean();
 
-  const streakByType = new Map<QuizType, Map<string, number>>();
-  for (const type of QUIZ_TYPES) {
+  const streakByMode = new Map<QuizMode, Map<string, number>>();
+  for (const mode of QUIZ_MODES) {
     const streaks = new Map<string, number>();
     const ended = new Set<string>();
     for (const record of records) {
-      if (record.questionType !== type) continue;
+      if (record.questionType !== mode) continue;
       const id = String(record.flashcardId);
       if (ended.has(id)) continue;
       if (record.result === "correct") streaks.set(id, (streaks.get(id) ?? 0) + 1);
       else ended.add(id);
     }
-    streakByType.set(type, streaks);
+    streakByMode.set(mode, streaks);
   }
 
   const bySubject = new Map<string, number>();
-  const byTypeBySubject = new Map<string, Record<QuizType, number>>();
-  const allByType = Object.fromEntries(QUIZ_TYPES.map((type) => [type, 0])) as Record<QuizType, number>;
+  const byTypeBySubject = new Map<string, TypeProgress>();
+  const allByType = emptyTypeProgress();
   let all = 0;
-  for (const card of cards) {
-    const id = String(card._id);
-    const subjectId = String(card.subjectId);
-    const typeCounts = byTypeBySubject.get(subjectId) ?? Object.fromEntries(QUIZ_TYPES.map((type) => [type, 0])) as Record<QuizType, number>;
-    const masteredTypes = QUIZ_TYPES.filter((type) => (streakByType.get(type)?.get(id) ?? 0) >= MASTERY_STREAK);
-    for (const type of masteredTypes) {
-      typeCounts[type] += 1;
-      allByType[type] += 1;
+  for (const card of usable) {
+    const subjectId = card.subjectId;
+    const progress = byTypeBySubject.get(subjectId) ?? emptyTypeProgress();
+    const applicable: QuizMode[] = [...eligibleTypes(card, usable), "random"];
+    let complete = true;
+    for (const mode of applicable) {
+      const done = (streakByMode.get(mode)?.get(card.id) ?? 0) >= MASTERY_STREAK;
+      progress[mode].total += 1;
+      allByType[mode].total += 1;
+      if (done) {
+        progress[mode].done += 1;
+        allByType[mode].done += 1;
+      } else complete = false;
     }
-    byTypeBySubject.set(subjectId, typeCounts);
-    if (masteredTypes.length === QUIZ_TYPES.length) {
+    byTypeBySubject.set(subjectId, progress);
+    if (complete) {
       bySubject.set(subjectId, (bySubject.get(subjectId) ?? 0) + 1);
       all += 1;
     }
@@ -229,17 +280,18 @@ function latestByCard(session: SessionDoc): Map<number, StoredQuestionDoc> {
 export function toPublicSession(session: SessionDoc, streaks?: Map<string, number>): PublicSession {
   const questions: PublicQuestion[] = session.questions.map((q, index) => ({
     index,
-    type: session.type,
+    type: questionType(q, session),
     round: q.round ?? 1,
     cardIndex: q.origin ?? index,
     prompt: q.prompt,
     hint: q.hint ?? null,
-    ...(session.type === "multiple-choice" ? { options: q.options ?? [] } : {}),
-    ...(session.type === "true-false" ? { statement: q.statement ?? "" } : {}),
+    ...(["multiple-choice", "enumeration-multiple-choice"].includes(questionType(q, session)) ? { options: q.options ?? [] } : {}),
+    ...(questionType(q, session) === "true-false" ? { statement: q.statement ?? "" } : {}),
+    ...(questionType(q, session) === "enumeration-identification" ? { itemCount: q.expectedItems?.length ?? 0 } : {}),
   }));
   const results: Record<number, QuestionResult> = {};
   session.questions.forEach((q, index) => {
-    if (q.answered) results[index] = resultFor(q, session.type);
+    if (q.answered) results[index] = resultFor(q, session);
   });
   const mastery: Record<number, number> = {};
   session.questions.forEach((q, i) => {
@@ -267,7 +319,7 @@ export async function loadSession(userId: Types.ObjectId | string, sessionId: st
   return (session as unknown as SessionDoc | null) ?? null;
 }
 
-type AnswerInput = { questionIndex: unknown; selectedIndex?: unknown; answer?: unknown; truth?: unknown };
+type AnswerInput = { questionIndex?: unknown; selectedIndex?: unknown; answer?: unknown; answers?: unknown; truth?: unknown };
 
 export async function submitAnswer(userId: Types.ObjectId | string, sessionId: string, input: AnswerInput) {
   const session = await loadSession(userId, sessionId);
@@ -281,26 +333,35 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   const q = session.questions[index];
 
   // Repeated request for an answered question: return the saved result, record nothing.
-  if (q.answered) return { ok: true as const, duplicate: true, result: resultFor(q, session.type), progress: summarize(session), mastery: toPublicSession(session, await sessionMastery(userId, session)).mastery };
+  if (q.answered) return { ok: true as const, duplicate: true, result: resultFor(q, session), progress: summarize(session), mastery: toPublicSession(session, await sessionMastery(userId, session)).mastery };
 
   let correct: boolean;
   const set: Record<string, unknown> = {};
   const prefix = `questions.${index}`;
 
-  if (session.type === "multiple-choice") {
+  const qType = questionType(q, session);
+  if (qType === "multiple-choice" || qType === "enumeration-multiple-choice") {
     const sel = input.selectedIndex;
     if (typeof sel !== "number" || !Number.isInteger(sel) || sel < 0 || sel >= (q.options?.length ?? 0)) {
-      return fail(400, "Choose one of the answer options.");
+      return fail(400, qType === "multiple-choice" ? "Choose one of the answer options." : "Choose one of the lists.");
     }
     correct = sel === q.correctIndex;
     set[`${prefix}.selectedIndex`] = sel;
-  } else if (session.type === "identification") {
+  } else if (qType === "identification") {
     if (typeof input.answer !== "string") return fail(400, "Type your answer first.");
     const typed = sanitizeTyped(input.answer, MAX_TYPED_ANSWER_LENGTH).trim();
     if (!typed) return fail(400, "Type your answer first.");
     // Exact match after normalization only. No substring or fuzzy matching.
     correct = normalizeText(typed) === normalizeText(q.expectedAnswer);
     set[`${prefix}.userAnswer`] = typed;
+  } else if (qType === "enumeration-identification") {
+    if (!Array.isArray(input.answers) || input.answers.length > ENUM_MAX_ITEMS * 2 || input.answers.some((a) => typeof a !== "string")) {
+      return fail(400, "Type the items of the list first.");
+    }
+    const typed = (input.answers as string[]).map((a) => sanitizeTyped(a, MAX_ENUM_ITEM_LENGTH).trim()).filter(Boolean);
+    if (typed.length === 0) return fail(400, "Type at least one item first.");
+    correct = gradeEnumeration(q.expectedItems ?? [], typed).correct;
+    set[`${prefix}.userAnswers`] = typed;
   } else {
     if (typeof input.truth !== "boolean") return fail(400, "Choose True or False.");
     correct = input.truth === Boolean(q.truth);
@@ -318,7 +379,7 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   if (claimed.modifiedCount === 0) {
     const fresh = await loadSession(userId, sessionId);
     if (fresh?.questions[index]?.answered) {
-      return { ok: true as const, duplicate: true, result: resultFor(fresh.questions[index], fresh.type), progress: summarize(fresh), mastery: toPublicSession(fresh, await sessionMastery(userId, fresh)).mastery };
+      return { ok: true as const, duplicate: true, result: resultFor(fresh.questions[index], fresh), progress: summarize(fresh), mastery: toPublicSession(fresh, await sessionMastery(userId, fresh)).mastery };
     }
     return fail(409, "This answer could not be saved. Please try again.");
   }
@@ -329,6 +390,7 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
       userId,
       flashcardId: q.flashcardId,
       result: resultValue,
+      // Mixed / Random answers are recorded under "random" so that mode keeps its own streak.
       questionType: session.type,
       reviewedAt: now,
       nextReviewAt: computeNextReviewAt(resultValue, now),
@@ -337,7 +399,7 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
     // Undo the claim so the learner can retry and no answer is lost or scored without a record.
     await QuizSession.updateOne(
       { _id: session._id, userId },
-      { $set: { [`${prefix}.answered`]: false }, $unset: { [`${prefix}.correct`]: "", [`${prefix}.selectedIndex`]: "", [`${prefix}.userAnswer`]: "", [`${prefix}.answeredAt`]: "" } },
+      { $set: { [`${prefix}.answered`]: false }, $unset: { [`${prefix}.correct`]: "", [`${prefix}.selectedIndex`]: "", [`${prefix}.userAnswer`]: "", [`${prefix}.userAnswers`]: "", [`${prefix}.answeredAt`]: "" } },
     );
     console.error("Unable to save review record.", error);
     return fail(500, "We couldn’t save that answer. Please try again.");
@@ -346,7 +408,7 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   const fresh = await loadSession(userId, sessionId);
   if (!fresh) return fail(404, "This quiz session has expired or could not be found.");
   const streaks = await sessionMastery(userId, fresh);
-  return { ok: true as const, duplicate: false, result: resultFor(fresh.questions[index], fresh.type), progress: summarize(fresh), mastery: toPublicSession(fresh, streaks).mastery };
+  return { ok: true as const, duplicate: false, result: resultFor(fresh.questions[index], fresh), progress: summarize(fresh), mastery: toPublicSession(fresh, streaks).mastery };
 }
 
 export async function finishSession(userId: Types.ObjectId | string, sessionId: string) {
@@ -388,4 +450,5 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
   if (!fresh || fresh.status !== "completed") return fail(500, "We couldn’t finish this review. Please try again.");
   return { ok: true as const, done: true as const, summary: summarize(fresh, streaks) };
 }
+
 

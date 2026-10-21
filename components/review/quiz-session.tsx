@@ -6,9 +6,15 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { TypeIcon } from "@/components/review/review-setup";
 import { Mascot } from "@/components/ui/mascot";
-import { QUIZ_TYPE_LABELS, type PublicSession, type QuestionResult, type QuizSummary } from "@/lib/quiz/types";
+import { QUIZ_TYPE_LABELS, type PublicSession, type QuestionResult, type QuizSummary, type QuizType, type QuizMode } from "@/lib/quiz/types";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
+
+function displayModeForQuestion(type: QuizType): Exclude<QuizMode, "random"> {
+  if (type === "enumeration-multiple-choice") return "multiple-choice";
+  if (type === "enumeration-identification") return "identification";
+  return type;
+}
 
 function CheckIcon() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>;
@@ -103,6 +109,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [selectedTruth, setSelectedTruth] = useState<boolean | null>(null);
   const [text, setText] = useState("");
+  const [itemAnswers, setItemAnswers] = useState<string[]>([]);
   const [hintOpen, setHintOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -111,6 +118,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const busyRef = useRef(false);
   const nextRef = useRef<() => void>(() => {});
   const inputRef = useRef<HTMLInputElement>(null);
+  const itemRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const question = questions[index];
   const result = question ? results[question.index] : undefined;
@@ -180,6 +188,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
 
   useEffect(() => {
     if (questionType === "identification" && !hasResult) inputRef.current?.focus();
+    if (questionType === "enumeration-identification" && !hasResult) itemRefs.current[0]?.focus();
   }, [index, questionType, hasResult]);
 
   if (summary) {
@@ -194,6 +203,8 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const selOption = result?.selectedIndex ?? selectedOption;
   const selTruth = result?.selectedTruth ?? selectedTruth;
   const typed = result?.userAnswer ?? text;
+  const itemCount = question.itemCount ?? 0;
+  const enumTyped = result?.userAnswers ?? Array.from({ length: itemCount }, (_, i) => itemAnswers[i] ?? "");
 
   async function restart() {
     if (againBusy) return;
@@ -217,12 +228,16 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   async function submit() {
     if (busyRef.current || result || !question) return;
     let payload: Record<string, unknown>;
-    if (question.type === "multiple-choice") {
+    if (question.type === "multiple-choice" || question.type === "enumeration-multiple-choice") {
       if (selectedOption === null) return;
       payload = { selectedIndex: selectedOption };
     } else if (question.type === "identification") {
       if (!text.trim()) return;
       payload = { answer: text };
+    } else if (question.type === "enumeration-identification") {
+      const answers = Array.from({ length: question.itemCount ?? 0 }, (_, i) => (itemAnswers[i] ?? "").trim()).filter(Boolean);
+      if (answers.length === 0) return;
+      payload = { answers };
     } else {
       if (selectedTruth === null) return;
       payload = { truth: selectedTruth };
@@ -256,6 +271,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       setSelectedOption(null);
       setSelectedTruth(null);
       setText("");
+      setItemAnswers([]);
       setHintOpen(false);
       return;
     }
@@ -280,6 +296,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         setSelectedOption(null);
         setSelectedTruth(null);
         setText("");
+        setItemAnswers([]);
         setHintOpen(false);
         setRoundNotice(`Round ${round}: these cards still need ${target} consecutive correct answers in ${QUIZ_TYPE_LABELS[initial.type]}. A wrong answer resets this quiz type’s streak.`);
         return;
@@ -298,7 +315,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
     void submit();
   }
 
-  const canSubmit = !busy && !result && (question.type === "multiple-choice" ? selectedOption !== null : question.type === "identification" ? text.trim().length > 0 : selectedTruth !== null);
+  const canSubmit = !busy && !result && (question.type === "multiple-choice" || question.type === "enumeration-multiple-choice" ? selectedOption !== null : question.type === "identification" ? text.trim().length > 0 : question.type === "enumeration-identification" ? itemAnswers.some((a) => a.trim().length > 0) : selectedTruth !== null);
   const progressPct = total ? Math.round((answeredCount / total) * 100) : 0;
   const upcoming = questions.slice(index + 1, index + 5);
 
@@ -366,7 +383,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-[#6C879C]" aria-live="polite">Question <span className="font-bold text-[#153B56]">{index + 1}</span> of <span className="font-bold text-[#153B56]">{total}</span></p>
             <span className="inline-flex items-center gap-1" aria-label={`Card mastery ${currentStreak} of ${target}`} title="Correct in a row for this card"><span className="mr-1 text-[11px] text-[#8B7C84]">Mastery</span>{Array.from({ length: target }).map((_, i) => <span key={i} className={`h-2 w-2 rounded-full ${i < currentStreak ? "bg-[#FF6F96]" : "bg-[#F3E9ED]"}`} />)}</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1DDE4] bg-[#FFF7F9] px-3 py-1 text-xs font-medium text-[#C65380]"><TypeIcon type={initial.type} className="h-3.5 w-3.5" />{currentRound > 1 ? `Retry · ${typeLabel}` : typeLabel}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1DDE4] bg-[#FFF7F9] px-3 py-1 text-xs font-medium text-[#C65380]"><TypeIcon type={displayModeForQuestion(question.type)} className="h-3.5 w-3.5" />{currentRound > 1 ? `Retry · ${QUIZ_TYPE_LABELS[displayModeForQuestion(question.type)]}` : QUIZ_TYPE_LABELS[displayModeForQuestion(question.type)]}</span>
           </div>
           {roundNotice && currentRound > 1 && <p role="status" className="mt-3 rounded-xl border border-[#F1DDE4] bg-[#FFF7F9] px-3.5 py-3 text-sm text-[#6C4A58]">{roundNotice}</p>}
 
@@ -390,6 +407,52 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
                   </button>
                 ))}
               </div>
+            )}
+
+            {question.type === "enumeration-multiple-choice" && (
+              <div role="radiogroup" aria-labelledby="question-heading" className="space-y-2.5">
+                <p className="text-xs text-[#7890A4]">Choose the complete list. Items inside each list are shuffled.</p>
+                {(question.options ?? []).map((option, i) => (
+                  <button key={i} type="button" role="radio" aria-checked={selOption === i} disabled={Boolean(result) || busy} onClick={() => setSelectedOption(i)} className={optionClass(i)}>
+                    <span className={letterClass(i)}>{LETTERS[i] ?? i + 1}</span>
+                    <ul className="min-w-0 flex-1 list-disc space-y-0.5 pl-4 marker:text-[#E9577D]">
+                      {option.split("\n").map((item, k) => <li key={k} className="break-words">{item}</li>)}
+                    </ul>
+                    {result && i === result.correctIndex && <span className="text-[#2FBF71]"><CheckIcon /></span>}
+                    {result && i === selOption && i !== result.correctIndex && <span className="text-[#F0507F]"><CrossIcon /></span>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {question.type === "enumeration-identification" && (
+              <fieldset className="space-y-2" disabled={Boolean(result) || busy}>
+                <legend className="mb-1.5 text-sm font-semibold text-[#2F2930]">Type all {itemCount} items. Any order is accepted.</legend>
+                {Array.from({ length: result ? enumTyped.length : itemCount }, (_, i) => {
+                  const state = result ? (result.itemCorrect?.[i] ? "ok" : "bad") : "idle";
+                  return (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="w-5 shrink-0 text-right text-xs font-semibold text-[#8B9BAA]">{i + 1}.</span>
+                      <input
+                        ref={(el) => { itemRefs.current[i] = el; }}
+                        aria-label={`Item ${i + 1}`}
+                        value={enumTyped[i] ?? ""}
+                        onChange={(e) => setItemAnswers((cur) => { const copy = Array.from({ length: itemCount }, (_, k) => cur[k] ?? ""); copy[i] = e.target.value; return copy; })}
+                        onKeyDown={(e) => { if (e.key === "Enter" && i < itemCount - 1) { e.preventDefault(); itemRefs.current[i + 1]?.focus(); } }}
+                        maxLength={120}
+                        autoComplete="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
+                        placeholder={`Item ${i + 1}`}
+                        className={`min-h-11 w-full rounded-xl border px-3.5 text-sm outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20 disabled:cursor-not-allowed ${state === "ok" ? "border-[#2FBF71] bg-[#EAF8F0]" : state === "bad" ? "border-[#F0507F] bg-[#FFF1F1]" : "border-[#E8E2E5] bg-white"}`}
+                      />
+                    </div>
+                  );
+                })}
+                {result && (result.missingItems?.length ?? 0) > 0 && (
+                  <p className="rounded-xl border border-[#F1DDE4] bg-[#FFFAFC] px-3.5 py-2.5 text-sm text-[#45647A]"><span className="font-semibold text-[#153B56]">Missing or not matched: </span>{result.missingItems?.join(", ")}</p>
+                )}
+              </fieldset>
             )}
 
             {question.type === "true-false" && (
@@ -451,7 +514,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
               {result ? (
                 <button type="button" onClick={next} disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#FF477D] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 sm:min-h-11">{busy ? "Finishing…" : `${isLast ? "Finish Round" : "Next Question"}${countdown !== null ? ` (${countdown})` : ""}`}{!busy && <span aria-hidden="true">→</span>}</button>
               ) : (
-                <button type="submit" disabled={!canSubmit} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#FF477D] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">{busy ? "Checking…" : question.type === "identification" ? "Submit Answer" : "Check Answer"}{!busy && <span aria-hidden="true">→</span>}</button>
+                <button type="submit" disabled={!canSubmit} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#FF477D] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">{busy ? "Checking…" : question.type === "identification" || question.type === "enumeration-identification" ? "Submit Answer" : "Check Answer"}{!busy && <span aria-hidden="true">→</span>}</button>
               )}
             </div>
           </form>
@@ -467,7 +530,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
                 <li key={q.index} className="flex items-center gap-3">
                   <span className="w-4 shrink-0 text-center text-[11px] text-[#8B9BAA]">{q.index + 1}</span>
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><TypeIcon type={q.type} className="h-4 w-4" /></span>
-                  <span className="min-w-0 flex-1"><span className="line-clamp-2 block text-xs font-medium leading-4 text-[#294A60]">{q.prompt}</span><span className="mt-1 inline-block rounded bg-[#F4F1F3] px-1.5 py-0.5 text-[10px] text-[#8B7C84]">{typeLabel}</span></span>
+                  <span className="min-w-0 flex-1"><span className="line-clamp-2 block text-xs font-medium leading-4 text-[#294A60]">{q.prompt}</span><span className="mt-1 inline-block rounded bg-[#F4F1F3] px-1.5 py-0.5 text-[10px] text-[#8B7C84]">{QUIZ_TYPE_LABELS[displayModeForQuestion(q.type)]}</span></span>
                 </li>
               ))}
             </ul>
@@ -477,4 +540,5 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
     </div>
   );
 }
+
 

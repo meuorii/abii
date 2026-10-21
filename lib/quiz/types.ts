@@ -1,27 +1,43 @@
-// Shared, client-safe quiz types. Never put answer keys in these payloads before submission.
+// Shared, client-safe quiz types. Flashcard type controls how answers are represented.
+export const FLASHCARD_TYPES = ["standard", "items"] as const;
+export type FlashcardType = (typeof FLASHCARD_TYPES)[number];
+export function isFlashcardType(value: unknown): value is FlashcardType {
+  return typeof value === "string" && (FLASHCARD_TYPES as readonly string[]).includes(value);
+}
 
-export const QUIZ_TYPES = ["multiple-choice", "identification", "true-false"] as const;
+/** Quiz modes available to learners. Enumeration is a flashcard type, not a quiz mode. */
+export const QUIZ_MODES = ["multiple-choice", "identification", "true-false", "random"] as const;
+export type QuizMode = (typeof QUIZ_MODES)[number];
+
+/** Internal question renderers used when an Items flashcard is played in MC/Identification. */
+export const QUIZ_TYPES = ["multiple-choice", "identification", "true-false", "enumeration-identification", "enumeration-multiple-choice"] as const;
 export type QuizType = (typeof QUIZ_TYPES)[number];
+export const RANDOM_MODE = "random" as const;
 
-export const QUIZ_TYPE_LABELS: Record<QuizType, string> = {
+export const QUIZ_TYPE_LABELS: Record<QuizMode, string> = {
   "multiple-choice": "Multiple Choice",
   identification: "Identification",
   "true-false": "True or False",
+  random: "Mixed / Random",
 };
-
-export const QUIZ_TYPE_DESCRIPTIONS: Record<QuizType, string> = {
-  "multiple-choice": "Choose the correct answer from the options.",
-  identification: "Recall the answer and type it yourself.",
+export const QUIZ_TYPE_DESCRIPTIONS: Record<QuizMode, string> = {
+  "multiple-choice": "Choose the correct answer. Items flashcards show complete-list options.",
+  identification: "Recall and type the answer. Items flashcards accept the full list in any order.",
   "true-false": "Decide whether the statement is true or false.",
+  random: "A shuffled mix of Multiple Choice, Identification, and True or False.",
 };
-
+export type ModeProgress = { done: number; total: number };
+export type TypeProgress = Record<QuizMode, ModeProgress>;
+export function emptyTypeProgress(): TypeProgress {
+  return Object.fromEntries(QUIZ_MODES.map((m) => [m, { done: 0, total: 0 }])) as TypeProgress;
+}
 export const ALL_SUBJECTS = "all";
-
 export function isQuizType(value: unknown): value is QuizType {
   return typeof value === "string" && (QUIZ_TYPES as readonly string[]).includes(value);
 }
-
-/** A question as the browser sees it: no correct option, truth value, or expected answer. */
+export function isQuizMode(value: unknown): value is QuizMode {
+  return typeof value === "string" && (QUIZ_MODES as readonly string[]).includes(value);
+}
 export type PublicQuestion = {
   index: number;
   type: QuizType;
@@ -29,13 +45,10 @@ export type PublicQuestion = {
   hint: string | null;
   options?: string[];
   statement?: string;
-  /** 1 for the first pass, 2+ for retry rounds of missed cards. */
+  itemCount?: number;
   round: number;
-  /** Which card (0-based position in round 1) this question is about. Not the card id. */
   cardIndex: number;
 };
-
-/** Only returned after a question has been submitted. */
 export type QuestionResult = {
   correct: boolean;
   correctAnswer: string;
@@ -44,48 +57,21 @@ export type QuestionResult = {
   correctIndex?: number;
   userAnswer?: string;
   selectedTruth?: boolean;
+  userAnswers?: string[];
+  correctItems?: string[];
+  itemCorrect?: boolean[];
+  missingItems?: string[];
 };
-
 export type QuizSummary = {
-  total: number;
-  answered: number;
-  correct: number;
-  incorrect: number;
-  accuracy: number;
-  /** Distinct flashcards in the session. */
-  cards: number;
-  /** Cards answered correctly at least at the end (all of them once the session is complete). */
-  mastered: number;
-  /** Cards answered correctly on their first attempt. */
-  firstTryCorrect: number;
-  /** Number of rounds played (1 = no retries were needed). */
-  rounds: number;
+  total: number; answered: number; correct: number; incorrect: number; accuracy: number;
+  cards: number; mastered: number; firstTryCorrect: number; rounds: number;
 };
-
 export type PublicSession = {
-  id: string;
-  subjectId: string | null;
-  subjectName: string;
-  type: QuizType;
-  status: "active" | "completed";
-  questions: PublicQuestion[];
-  results: Record<number, QuestionResult>;
-  summary: QuizSummary | null;
-  cardTotal: number;
-  /** Correct-in-a-row count per card (keyed by cardIndex). */
-  mastery: Record<number, number>;
-  /** Streak needed for a card to count as mastered. */
-  masteryTarget: number;
+  id: string; subjectId: string | null; subjectName: string; type: QuizMode;
+  status: "active" | "completed"; questions: PublicQuestion[]; results: Record<number, QuestionResult>;
+  summary: QuizSummary | null; cardTotal: number; mastery: Record<number, number>; masteryTarget: number;
 };
-
 export type SetupSubject = {
-  id: string;
-  name: string;
-  flashcardCount: number;
-  /** Cards that completed all three quiz types. */
-  mastered: number;
-  /** Cards that completed the 3-correct streak for each individual quiz type. */
-  typeMastery: Record<QuizType, number>;
-  eligible: Record<QuizType, number>;
+  id: string; name: string; flashcardCount: number; mastered: number;
+  typeMastery: TypeProgress; eligible: Record<QuizMode, number>;
 };
-

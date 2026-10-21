@@ -13,6 +13,7 @@ const flashcardSchema = new Schema(
       ref: "Subject",
       required: [true, "Flashcard subject is required"],
     },
+    flashcardType: { type: String, enum: ["standard", "items"], default: "standard", required: true },
     question: {
       type: String,
       required: [true, "Question is required"],
@@ -46,6 +47,9 @@ flashcardSchema.index(
   { userId: 1, subjectId: 1 },
   { name: "flashcard_owner_subject" },
 );
+
+// Drop a stale dev hot-reload model that predates the flashcardType field.
+if (mongoose.models.Flashcard && !mongoose.models.Flashcard.schema.path("flashcardType")) delete mongoose.models.Flashcard;
 
 export type FlashcardDocument = InferSchemaType<typeof flashcardSchema>;
 export const Flashcard: Model<FlashcardDocument> =
