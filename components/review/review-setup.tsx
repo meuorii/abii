@@ -78,7 +78,6 @@ function subjectSymbol(name: string) {
 function unavailableReason(type: QuizMode) {
   if (type === "multiple-choice") return "Multiple Choice needs flashcards with short answers, plus at least one other flashcard with a different answer to build the options.";
   if (type === "identification") return "Identification needs flashcards with a question and a short answer (120 characters or fewer).";
-  if (type === "enumeration-identification" || type === "enumeration-multiple-choice") return "Enumeration needs flashcards whose answer is a list of 2 to 10 items, separated by commas, semicolons or new lines.";
   if (type === "random") return "Mixed / Random needs at least one usable flashcard.";
   return "True or False needs flashcards with a question and a short answer (120 characters or fewer).";
 }

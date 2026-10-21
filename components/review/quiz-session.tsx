@@ -14,9 +14,18 @@ const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
 /** Show the interaction mode; Items is a flashcard format, not a separate quiz mode. */
 function questionTypeLabel(type: QuizType): string {
-  if (type === "enumeration-identification") return `Items · ${QUIZ_TYPE_LABELS.identification}`;
-  if (type === "enumeration-multiple-choice") return `Items · ${QUIZ_TYPE_LABELS["multiple-choice"]}`;
-  return QUIZ_TYPE_LABELS[type];
+  switch (type) {
+    case "enumeration-identification":
+      return `Items · ${QUIZ_TYPE_LABELS.identification}`;
+    case "enumeration-multiple-choice":
+      return `Items · ${QUIZ_TYPE_LABELS["multiple-choice"]}`;
+    case "identification":
+      return QUIZ_TYPE_LABELS.identification;
+    case "multiple-choice":
+      return QUIZ_TYPE_LABELS["multiple-choice"];
+    case "true-false":
+      return QUIZ_TYPE_LABELS["true-false"];
+  }
 }
 
 function CheckIcon() {
@@ -558,7 +567,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
                 <li key={q.index} className="flex items-center gap-3">
                   <span className="w-4 shrink-0 text-center text-[11px] text-[#8B9BAA]">{q.index + 1}</span>
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><TypeIcon type={q.type} className="h-4 w-4" /></span>
-                  <span className="min-w-0 flex-1"><span className="line-clamp-2 block text-xs font-medium leading-4 text-[#294A60]">{q.prompt}</span><span className="mt-1 inline-block rounded bg-[#F4F1F3] px-1.5 py-0.5 text-[10px] text-[#8B7C84]">{QUIZ_TYPE_LABELS[q.type]}</span></span>
+                  <span className="min-w-0 flex-1"><span className="line-clamp-2 block text-xs font-medium leading-4 text-[#294A60]">{q.prompt}</span><span className="mt-1 inline-block rounded bg-[#F4F1F3] px-1.5 py-0.5 text-[10px] text-[#8B7C84]">{questionTypeLabel(q.type)}</span></span>
                 </li>
               ))}
             </ul>
