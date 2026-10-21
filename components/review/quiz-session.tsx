@@ -4,17 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast-provider";
+import { playAbiiSound } from "@/lib/sounds";
 import { TypeIcon } from "@/components/review/review-setup";
 import { Mascot } from "@/components/ui/mascot";
-import { QUIZ_TYPE_LABELS, type PublicSession, type QuestionResult, type QuizSummary, type QuizType, type QuizMode } from "@/lib/quiz/types";
+import { QUIZ_TYPE_LABELS, type PublicSession, type QuestionResult, type QuizSummary } from "@/lib/quiz/types";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
-
-function displayModeForQuestion(type: QuizType): Exclude<QuizMode, "random"> {
-  if (type === "enumeration-multiple-choice") return "multiple-choice";
-  if (type === "enumeration-identification") return "identification";
-  return type;
-}
 
 function CheckIcon() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>;
@@ -93,6 +89,7 @@ function Completion({ session, summary, firstName, onAgain, againBusy, againErro
 
 export function QuizSession({ initial, firstName }: { initial: PublicSession; firstName: string }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [questions, setQuestions] = useState(initial.questions);
   const total = questions.length;
   const [roundNotice, setRoundNotice] = useState("");
@@ -250,13 +247,22 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       const data = (await response.json().catch(() => ({}))) as { result?: QuestionResult; mastery?: Record<number, number>; error?: string };
       if (!response.ok || !data.result) {
         setError(data.error || "We couldn’t save that answer. Please try again.");
+        toast({ kind: "error", title: "Answer not saved", message: data.error || "Please try submitting your answer again." });
         return;
       }
       const saved = data.result;
       setResults((current) => ({ ...current, [question.index]: saved }));
       if (data.mastery) setMastery(data.mastery);
+      if (saved.correct) {
+        playAbiiSound("correct");
+        toast({ kind: "success", title: "That’s correct! ✨", message: "Nice recall. Keep that streak going!" });
+      } else {
+        playAbiiSound("wrong");
+        toast({ kind: "info", title: "Not quite — keep learning!", message: "Take a look at the answer, then try again next round." });
+      }
     } catch {
       setError("You seem to be offline. Check your connection and try again.");
+      toast({ kind: "error", title: "Connection hiccup", message: "Your answer could not be saved. Check your connection and retry." });
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -301,7 +307,11 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         setRoundNotice(`Round ${round}: these cards still need ${target} consecutive correct answers in ${QUIZ_TYPE_LABELS[initial.type]}. A wrong answer resets this quiz type’s streak.`);
         return;
       }
-      if (data.summary) setSummary(data.summary);
+      if (data.summary) {
+        setSummary(data.summary);
+        playAbiiSound("complete");
+        toast({ kind: "success", title: "Review complete! 🎉", message: `You finished ${data.summary.cards} cards. Great work showing up to study!` });
+      }
     } catch {
       setError("You seem to be offline. Check your connection and try again.");
     } finally {
@@ -383,7 +393,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-[#6C879C]" aria-live="polite">Question <span className="font-bold text-[#153B56]">{index + 1}</span> of <span className="font-bold text-[#153B56]">{total}</span></p>
             <span className="inline-flex items-center gap-1" aria-label={`Card mastery ${currentStreak} of ${target}`} title="Correct in a row for this card"><span className="mr-1 text-[11px] text-[#8B7C84]">Mastery</span>{Array.from({ length: target }).map((_, i) => <span key={i} className={`h-2 w-2 rounded-full ${i < currentStreak ? "bg-[#FF6F96]" : "bg-[#F3E9ED]"}`} />)}</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1DDE4] bg-[#FFF7F9] px-3 py-1 text-xs font-medium text-[#C65380]"><TypeIcon type={displayModeForQuestion(question.type)} className="h-3.5 w-3.5" />{currentRound > 1 ? `Retry · ${QUIZ_TYPE_LABELS[displayModeForQuestion(question.type)]}` : QUIZ_TYPE_LABELS[displayModeForQuestion(question.type)]}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1DDE4] bg-[#FFF7F9] px-3 py-1 text-xs font-medium text-[#C65380]"><TypeIcon type={question.type} className="h-3.5 w-3.5" />{currentRound > 1 ? `Retry · ${QUIZ_TYPE_LABELS[question.type]}` : QUIZ_TYPE_LABELS[question.type]}</span>
           </div>
           {roundNotice && currentRound > 1 && <p role="status" className="mt-3 rounded-xl border border-[#F1DDE4] bg-[#FFF7F9] px-3.5 py-3 text-sm text-[#6C4A58]">{roundNotice}</p>}
 
@@ -530,7 +540,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
                 <li key={q.index} className="flex items-center gap-3">
                   <span className="w-4 shrink-0 text-center text-[11px] text-[#8B9BAA]">{q.index + 1}</span>
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><TypeIcon type={q.type} className="h-4 w-4" /></span>
-                  <span className="min-w-0 flex-1"><span className="line-clamp-2 block text-xs font-medium leading-4 text-[#294A60]">{q.prompt}</span><span className="mt-1 inline-block rounded bg-[#F4F1F3] px-1.5 py-0.5 text-[10px] text-[#8B7C84]">{QUIZ_TYPE_LABELS[displayModeForQuestion(q.type)]}</span></span>
+                  <span className="min-w-0 flex-1"><span className="line-clamp-2 block text-xs font-medium leading-4 text-[#294A60]">{q.prompt}</span><span className="mt-1 inline-block rounded bg-[#F4F1F3] px-1.5 py-0.5 text-[10px] text-[#8B7C84]">{QUIZ_TYPE_LABELS[q.type]}</span></span>
                 </li>
               ))}
             </ul>

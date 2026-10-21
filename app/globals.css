@@ -49,3 +49,13 @@ input,
 textarea {
   -webkit-tap-highlight-color: transparent;
 }
+
+
+@keyframes abii-toast-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[abii-toast-in"] { animation: none !important; }
+}

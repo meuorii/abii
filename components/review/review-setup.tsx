@@ -33,6 +33,12 @@ export function TypeIcon({ type, className = "h-6 w-6" }: { type: QuizMode; clas
   if (type === "identification") {
     return <svg {...shared}><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17l-1 3Z" /><path d="m14 8 3 3" /></svg>;
   }
+  if (type === "enumeration-identification") {
+    return <svg {...shared}><path d="M4 6h2M4 12h2M4 18h2" /><path d="M10 6h10M10 12h10M10 18h6" /></svg>;
+  }
+  if (type === "enumeration-multiple-choice") {
+    return <svg {...shared}><rect x="3.5" y="4" width="17" height="7" rx="2" /><rect x="3.5" y="13" width="17" height="7" rx="2" /><path d="M7 7.5h6M7 16.5h8" /></svg>;
+  }
   if (type === "random") {
     return <svg {...shared}><path d="M4 7h3c4 0 5 10 9 10h4M4 17h3c1.6 0 2.7-1.2 3.6-2.8M13.4 9.2C14.3 8 15.2 7 17 7h3" /><path d="m18 4 2 3-2 3M18 14l2 3-2 3" /></svg>;
   }
@@ -44,8 +50,9 @@ export function MasteryPills({ progress, size = "sm", className = "flex flex-wra
   const dims = size === "md" ? "h-9 min-w-9 px-2 text-sm" : "h-7 min-w-7 px-2 text-[11px]";
   return (
     <span className={className} aria-label="Question type completion">
-      {QUIZ_MODES.filter((mode) => progress[mode].total > 0).map((mode) => {
-        const { done, total } = progress[mode];
+      {QUIZ_MODES.filter((mode) => (progress?.[mode]?.total ?? 0) > 0).map((mode) => {
+        // Newly created subjects may not have saved progress for every quiz mode yet.
+        const { done, total } = progress?.[mode] ?? { done: 0, total: 0 };
         const complete = done === total;
         return (
           <span key={mode} title={`${QUIZ_TYPE_LABELS[mode]}: ${done}/${total} cards complete`} aria-label={`${QUIZ_TYPE_LABELS[mode]} ${complete ? "complete" : "not complete"}: ${done}/${total}`} className={`inline-flex ${dims} items-center justify-center rounded-full border font-bold ${complete ? "border-[#F7C6D6] bg-[#FFF0F5] text-[#D94675]" : "border-[#E7E7EB] bg-[#F3F3F5] text-[#A0A0AA]"}`}>
@@ -68,10 +75,11 @@ function subjectSymbol(name: string) {
 }
 
 function unavailableReason(type: QuizMode) {
-  if (type === "multiple-choice") return "Multiple Choice needs usable flashcards. Standard cards need a short answer and a distractor; Items cards need a list of at least two entries.";
-  if (type === "identification") return "Identification needs a usable question and answer. Items cards must contain a list of at least two entries.";
+  if (type === "multiple-choice") return "Multiple Choice needs flashcards with short answers, plus at least one other flashcard with a different answer to build the options.";
+  if (type === "identification") return "Identification needs flashcards with a question and a short answer (120 characters or fewer).";
+  if (type === "enumeration-identification" || type === "enumeration-multiple-choice") return "Enumeration needs flashcards whose answer is a list of 2 to 10 items, separated by commas, semicolons or new lines.";
   if (type === "random") return "Mixed / Random needs at least one usable flashcard.";
-  return "True or False needs a usable Standard answer or an Items list.";
+  return "True or False needs flashcards with a question and a short answer (120 characters or fewer).";
 }
 
 export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allMastered, allTypeMastery, initialSubjectId, loadFailed }: Props) {
