@@ -3,9 +3,9 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { User } from "@/models/User";
 import { connectToDatabase } from "@/lib/mongodb";
+import { SESSION_AUDIENCE, SESSION_COOKIE, SESSION_COOKIE_OPTIONS, SESSION_DURATION_SECONDS, SESSION_ISSUER } from "@/lib/auth/constants";
 
-export const SESSION_COOKIE = "abii_session";
-const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7;
+export { SESSION_COOKIE, SESSION_DURATION_SECONDS } from "@/lib/auth/constants";
 
 function getSessionSecret(): Uint8Array {
   const secret = process.env.AUTH_SECRET;
@@ -22,16 +22,13 @@ export async function createSession(userId: string): Promise<void> {
     .setSubject(userId)
     .setIssuedAt(now)
     .setExpirationTime(now + SESSION_DURATION_SECONDS)
-    .setIssuer("abii")
-    .setAudience("abii-web")
+    .setIssuer(SESSION_ISSUER)
+    .setAudience(SESSION_AUDIENCE)
     .sign(getSessionSecret());
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/",
+    ...SESSION_COOKIE_OPTIONS,
     maxAge: SESSION_DURATION_SECONDS,
   });
 }
@@ -47,8 +44,8 @@ export async function readSessionUserId(token?: string): Promise<string | null> 
   try {
     const { payload } = await jwtVerify(sessionToken, getSessionSecret(), {
       algorithms: ["HS256"],
-      issuer: "abii",
-      audience: "abii-web",
+      issuer: SESSION_ISSUER,
+      audience: SESSION_AUDIENCE,
     });
     return typeof payload.sub === "string" ? payload.sub : null;
   } catch {
@@ -66,10 +63,8 @@ export async function getCurrentUser() {
 export async function destroySession(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/",
+    ...SESSION_COOKIE_OPTIONS,
     maxAge: 0,
+    expires: new Date(0),
   });
 }

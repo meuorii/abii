@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast-provider";
+import { safeNextPath } from "@/lib/auth/redirect";
 
 type Mode = "login" | "register";
 type FieldErrors = Partial<Record<"name" | "email" | "password", string>>;
@@ -55,8 +56,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       }
       toast({ kind: "success", title: isRegister ? "Welcome to Abii!" : "Welcome back!", message: isRegister ? "Your account is ready. Let’s start learning." : "You’ve signed in successfully." });
       const next = new URLSearchParams(window.location.search).get("next");
-      router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
-      router.refresh();
+      router.replace(safeNextPath(next));
     } catch {
       setMessage("We couldn't connect just now. Please try again in a moment.");
       toast({ kind: "error", title: "Connection problem", message: "Please check your connection and try again." });

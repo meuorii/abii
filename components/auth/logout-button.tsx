@@ -48,7 +48,6 @@ export function LogoutButton() {
         message: "You’ve safely signed out of Abii.",
       });
       router.replace("/login");
-      router.refresh();
     } catch {
       toast({
         kind: "error",
