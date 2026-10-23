@@ -70,6 +70,7 @@ export type PublicSession = {
   id: string; subjectId: string | null; subjectName: string; type: QuizMode;
   status: "active" | "completed"; questions: PublicQuestion[]; results: Record<number, QuestionResult>;
   summary: QuizSummary | null; cardTotal: number; mastery: Record<number, number>; masteryTarget: number;
+  completedAt: string | null;
 };
 export type SetupSubject = {
   id: string; name: string; flashcardCount: number; mastered: number;

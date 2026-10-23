@@ -10,6 +10,8 @@ import { Mascot } from "@/components/ui/mascot";
 import { PageLoadingSkeleton } from "@/components/ui/page-loading-skeleton";
 import { QUIZ_TYPE_LABELS, type PublicSession, type QuestionResult, type QuizSummary, type QuizType } from "@/lib/quiz/types";
 import { Check, X, Lightbulb } from "lucide-react";
+import { QuizCompletion } from "@/components/review/quiz-completion";
+import { classifyFinishResponse, isPublicSessionForId, isQuizSummary } from "@/lib/quiz/finish-response.mjs";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
@@ -65,42 +67,10 @@ function ProgressPanel({ total, answered, correct, incorrect, mastered, cards, r
   );
 }
 
-function Completion({ session, summary, firstName, onAgain, againBusy, againError }: { session: PublicSession; summary: QuizSummary; firstName: string; onAgain: () => void; againBusy: boolean; againError: string }) {
-  const stats = [
-    { label: "Cards mastered", value: `${summary.mastered}/${summary.cards}` },
-    { label: "Correct on first try", value: `${summary.firstTryCorrect}/${summary.cards}` },
-    { label: "Retry rounds", value: summary.rounds - 1 },
-    { label: "Overall accuracy", value: `${summary.accuracy}%` },
-  ];
-  return (
-    <section aria-labelledby="done-title" className="overflow-hidden rounded-[1.4rem] border border-[#F5DDE5] bg-[#FFF7F9] p-5 sm:p-8">
-      <div className="flex flex-col items-center gap-6 text-center md:flex-row md:text-left">
-        <Mascot state="complete" size="lg" />
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#C65380]">Review complete</p>
-          <h1 id="done-title" className="mt-2 text-2xl font-bold tracking-[-0.04em] text-[#173B55] sm:text-3xl">{summary.mastered === summary.cards ? `Great job, ${firstName}! Every card is mastered.` : `Nice work, ${firstName}!`}</h1>
-          <p className="mt-2 text-sm text-[#6C879C]">{session.subjectName} · {QUIZ_TYPE_LABELS[session.type]}</p>
-          <p className="mt-1 text-xs text-[#7890A4]">Complete {session.masteryTarget} correct answers in a row for this quiz type. Each type has its own streak; a wrong answer resets that type’s progress. Complete Multiple Choice, Identification, and True or False to master a card.</p>
-          <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {stats.map((s) => (
-              <div key={s.label} className="rounded-xl border border-[#F1DDE4] bg-white px-3 py-3"><dt className="text-[11px] font-medium text-[#7890A4]">{s.label}</dt><dd className="mt-1 text-xl font-bold tabular-nums text-[#153B56]">{s.value}</dd></div>
-            ))}
-          </dl>
-          {againError && <p role="alert" className="mt-3 text-sm text-[#A43E5C]">{againError}</p>}
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-            <button type="button" onClick={onAgain} disabled={againBusy} className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#FF477D] px-6 text-sm font-semibold text-white transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60">{againBusy ? "Starting…" : "Review Again"}</button>
-            <Link href="/review" className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#E8E2E5] bg-white px-6 text-sm font-semibold text-[#51464E] transition hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Back to Review</Link>
-            {session.subjectId && <Link href={`/subjects/${session.subjectId}`} className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#E8E2E5] bg-white px-6 text-sm font-semibold text-[#51464E] transition hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Back to Subject</Link>}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export function QuizSession({ initial, firstName }: { initial: PublicSession; firstName: string }) {
   const router = useRouter();
   const { toast } = useToast();
+  const [currentSession, setCurrentSession] = useState(initial);
   const [questions, setQuestions] = useState(initial.questions);
   const total = questions.length;
   const [roundNotice, setRoundNotice] = useState("");
@@ -113,7 +83,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
     const first = questions.findIndex((q) => !initial.results[q.index]);
     return first === -1 ? Math.max(total - 1, 0) : first;
   });
-  const [summary, setSummary] = useState<QuizSummary | null>(initial.summary);
+  const summary = currentSession.summary;
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [selectedTruth, setSelectedTruth] = useState<boolean | null>(null);
   const [text, setText] = useState("");
@@ -203,14 +173,12 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
     return <PageLoadingSkeleton variant="finish" withShell={false} />;
   }
 
-  if (summary) {
+  if (summary || currentSession.status === "completed") {
     return (
-      <div className="space-y-3 p-4 pb-24 sm:p-5 xl:p-6">
-        <Completion session={initial} summary={summary} firstName={firstName} againBusy={againBusy} againError={againError} onAgain={restart} />
-      </div>
+      <QuizCompletion session={currentSession} firstName={firstName} againBusy={againBusy} againError={againError} onAgain={restart} />
     );
   }
-  if (!question) return null;
+  if (!question) return <div className="m-4 rounded-2xl border border-[#E8E2E5] bg-white p-6 text-sm text-[#756B72]">This quiz session has no available question. <Link href="/review" className="font-semibold text-[#E9577D] underline">Back to Review</Link></div>;
 
   const selOption = result?.selectedIndex ?? selectedOption;
   const selTruth = result?.selectedTruth ?? selectedTruth;
@@ -273,6 +241,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       const saved = data.result;
       setResults((current) => ({ ...current, [question.index]: saved }));
       if (data.mastery) setMastery(data.mastery);
+      setCurrentSession((current) => ({ ...current, results: { ...current.results, [question.index]: saved }, mastery: data.mastery ?? current.mastery }));
       if (saved.correct) {
         toast({ kind: "success", title: "That’s correct! ✨", message: "Nice recall. Keep that streak going!" });
       } else {
@@ -303,21 +272,24 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
     setBusy(true);
     try {
       const response = await fetch(`/api/quiz/${initial.id}/finish`, { method: "POST" });
-      const data = (await response.json().catch(() => ({}))) as { summary?: QuizSummary; retry?: boolean; session?: PublicSession; error?: string };
-      if (!response.ok || (!data.summary && !(data.retry && data.session))) {
-        const message = data.error || "We couldn’t finish this review. Please try again.";
+      const data = (await response.json().catch(() => null)) as { summary?: QuizSummary; retry?: boolean; session?: unknown; error?: string } | null;
+      if (!response.ok) {
+        const message = data?.error || "We could not finish this review. Please try again.";
         setError(message);
         toast({ kind: "error", title: "Couldn’t finish review", message });
         return;
       }
-      if (data.retry && data.session) {
-        const nextQuestions = data.session.questions;
-        const nextResults = data.session.results;
+      const outcome = classifyFinishResponse(data, initial.id);
+      if (outcome.kind === "retry") {
+        const retrySession = outcome.session;
+        const nextQuestions = retrySession.questions;
+        const nextResults = retrySession.results;
         const first = nextQuestions.findIndex((q) => !nextResults[q.index]);
-        const round = nextQuestions[first >= 0 ? first : 0]?.round ?? 2;
+        const round = nextQuestions[first >= 0 ? first : nextQuestions.length - 1]?.round ?? 2;
+        setCurrentSession(retrySession);
         setQuestions(nextQuestions);
         setResults(nextResults);
-        setMastery(data.session.mastery);
+        setMastery(retrySession.mastery);
         setIndex(first >= 0 ? first : 0);
         setSelectedOption(null);
         setSelectedTruth(null);
@@ -328,10 +300,32 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         toast({ kind: "info", title: `Round ${round} started`, message: "Keep going — these cards need a little more practice." });
         return;
       }
-      if (data.summary) {
-        setSummary(data.summary);
-        toast({ kind: "success", title: "Review complete! 🎉", message: `You finished ${data.summary.cards} cards. Great work showing up to study!` });
+      if (outcome.kind === "complete") {
+        setCurrentSession(outcome.session);
+        toast({ kind: "success", title: "Review complete! 🎉", message: `You finished ${outcome.session.summary.cards} cards. Great work showing up to study!` });
+        return;
       }
+
+      // Recover an inconsistent successful response from the authenticated user's saved session.
+      const recoveredResponse = await fetch(`/api/quiz/${initial.id}/finish`, { method: "GET", cache: "no-store" });
+      const recoveredData = (await recoveredResponse.json().catch(() => null)) as { session?: unknown } | null;
+      const recoveredSession = isPublicSessionForId(recoveredData?.session, initial.id) ? recoveredData.session : null;
+      if (recoveredSession?.status === "completed" && isQuizSummary(recoveredSession.summary)) {
+        setCurrentSession(recoveredSession);
+        toast({ kind: "success", title: "Review complete!", message: `You finished ${recoveredSession.summary.cards} cards. Great work showing up to study!` });
+        return;
+      }
+      if (recoveredSession?.status === "active") {
+        setCurrentSession(recoveredSession);
+        setQuestions(recoveredSession.questions);
+        setResults(recoveredSession.results);
+        setMastery(recoveredSession.mastery);
+        const first = recoveredSession.questions.findIndex((q) => !recoveredSession.results[q.index]);
+        setIndex(first >= 0 ? first : Math.max(recoveredSession.questions.length - 1, 0));
+      }
+      const message = "The finish response was incomplete. We restored the latest saved session; please try finishing again.";
+      setError(message);
+      toast({ kind: "error", title: "Couldn’t load completed review", message });
     } catch {
       const message = "You seem to be offline. Check your connection and try again.";
       setError(message);

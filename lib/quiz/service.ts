@@ -52,6 +52,7 @@ type SessionDoc = {
   type: QuizMode;
   status: "active" | "completed";
   questions: StoredQuestionDoc[];
+  completedAt?: Date | null;
 };
 
 /** The individual type of a stored question (sessions created before Mixed mode have no per-question type). */
@@ -309,6 +310,7 @@ export function toPublicSession(session: SessionDoc, streaks?: Map<string, numbe
     cardTotal: latestByCard(session).size,
     mastery,
     masteryTarget: MASTERY_STREAK,
+    completedAt: session.status === "completed" && session.completedAt ? new Date(session.completedAt).toISOString() : null,
   };
 }
 
@@ -448,7 +450,10 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
   }
   const fresh = await loadSession(userId, sessionId);
   if (!fresh || fresh.status !== "completed") return fail(500, "We couldn’t finish this review. Please try again.");
-  return { ok: true as const, done: true as const, summary: summarize(fresh, streaks) };
+  const finalStreaks = await sessionMastery(userId, fresh);
+  const publicSession = toPublicSession(fresh, finalStreaks);
+  if (publicSession.status !== "completed" || !publicSession.summary) return fail(500, "Could not load the completed review results. Please try again.");
+  return { ok: true as const, done: true as const, summary: publicSession.summary, session: publicSession };
 }
 
 
