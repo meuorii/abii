@@ -30,7 +30,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     const result = await finishSession(user._id, sessionId);
     if (!result.ok) return NextResponse.json({ error: result.message }, { status: result.status });
     if (!result.done) return NextResponse.json({ retry: true, session: result.session });
-    return NextResponse.json({ summary: result.summary, session: result.session });
+    return NextResponse.json({ summary: result.summary, session: result.session, transitioned: result.transitioned });
   } catch (error) {
     console.error("Unable to finish quiz.", error);
     return NextResponse.json({ error: "We couldn’t finish this review. Please try again." }, { status: 500 });

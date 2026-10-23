@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test lib/quiz/distractors.test.mjs lib/quiz/finish-response.test.mjs"
+    "test": "node --test lib/quiz/distractors.test.mjs lib/quiz/finish-response.test.mjs lib/sounds-core.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

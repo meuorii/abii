@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/toast-provider";
 import { Modal, modalCancelClass, modalDangerClass } from "@/components/ui/modal";
 import { LogoutButton } from "@/components/auth/logout-button";
-import { SlidersHorizontal, ShieldCheck, UserRound, Grid2X2, List, Download, Clock3, Layers3 } from "lucide-react";
+import { SlidersHorizontal, ShieldCheck, UserRound, Grid2X2, List, Download, Clock3, Layers3, Volume2, Play } from "lucide-react";
+import { getAbiiSoundVolume, isAbiiSoundEnabled, playAbiiSound, setAbiiSoundEnabled, setAbiiSoundVolume } from "@/lib/sounds";
 
 type Preferences = { targetSubjects: number; defaultLandingPage: string; subjectLayout: "grid" | "list" };
 type InitialUser = { name: string; email: string; profileImage: string; createdAt: string; settings?: Partial<Preferences> | null };
@@ -54,6 +55,23 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"history" | "materials" | "account" | null>(null);
   const [deleteAccountText, setDeleteAccountText] = useState("");
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundVolume, setSoundVolume] = useState(42);
+
+  useEffect(() => {
+    setSoundEnabled(isAbiiSoundEnabled());
+    setSoundVolume(getAbiiSoundVolume());
+  }, []);
+
+  function updateSoundEnabled(enabled: boolean) {
+    setSoundEnabled(enabled);
+    setAbiiSoundEnabled(enabled);
+  }
+
+  function updateSoundVolume(volume: number) {
+    setSoundVolume(volume);
+    setAbiiSoundVolume(volume);
+  }
 
   async function request(url: string, method: string, body?: unknown) {
     const response = await fetch(url, { method, ...(body === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }) });
@@ -152,6 +170,23 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
             <fieldset><legend className="text-sm font-semibold text-[#18384D]">Preferred subject layout</legend><p className="mt-1 text-xs leading-5 text-[#6E879A]">Choose how subjects should appear in My Subjects.</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" aria-pressed={preferences.subjectLayout === "grid"} onClick={() => setPreferences({ ...preferences, subjectLayout: "grid" })} className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition ${preferences.subjectLayout === "grid" ? "border-[#FF9FBA] bg-[#FFF0F4] text-[#C94B76]" : "border-[#E8E2E5] text-[#756B72] hover:bg-[#FFF7F9]"}`}><Grid2X2 className="h-4 w-4"/> Grid</button><button type="button" aria-pressed={preferences.subjectLayout === "list"} onClick={() => setPreferences({ ...preferences, subjectLayout: "list" })} className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition ${preferences.subjectLayout === "list" ? "border-[#FF9FBA] bg-[#FFF0F4] text-[#C94B76]" : "border-[#E8E2E5] text-[#756B72] hover:bg-[#FFF7F9]"}`}><List className="h-4 w-4"/> List</button></div></fieldset>
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1"><p className="text-xs text-[#8A7D84]">Preferences are saved to your account.</p><button type="submit" disabled={saving !== ""} className={buttonClass}>{saving === "preferences" ? "Saving…" : "Save Preferences"}</button></div>
           </form>
+          <div className="mt-3 rounded-xl border border-[#F0E9EC] p-3.5 sm:p-4">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF0F4] text-[#E9577D]" aria-hidden="true"><Volume2 className="h-5 w-5" /></span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-3">
+                  <div><p className="text-sm font-semibold text-[#18384D]">Quiz Sound Effects</p><p className="mt-1 text-xs leading-5 text-[#6E879A]">Play cute sounds for correct answers, mistakes, and completed quizzes.</p></div>
+                  <button type="button" role="switch" aria-checked={soundEnabled} aria-label={`Quiz Sound Effects: Sound ${soundEnabled ? "On" : "Off"}`} onClick={() => updateSoundEnabled(!soundEnabled)} className={`relative h-7 w-12 shrink-0 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${soundEnabled ? "bg-[#E9577D]" : "bg-[#C7BEC3]"}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${soundEnabled ? "left-6" : "left-1"}`} /></button>
+                </div>
+                <p className="mt-2 text-xs font-medium text-[#756B72]" aria-live="polite">Sound {soundEnabled ? "On" : "Off"}</p>
+                <label htmlFor="quizSoundVolume" className="mt-3 flex items-center justify-between gap-3 text-xs font-medium text-[#557087]"><span>Volume</span><span>{soundVolume}%</span></label>
+                <input id="quizSoundVolume" type="range" min={0} max={100} value={soundVolume} onChange={(event) => updateSoundVolume(Number(event.target.value))} className="mt-1.5 h-2 w-full cursor-pointer accent-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]" />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {([ ["correct", "Preview Correct"], ["wrong", "Preview Wrong"], ["complete", "Preview Complete"] ] as const).map(([kind, label]) => <button key={kind} type="button" onClick={() => playAbiiSound(kind)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#F1D7E0] bg-[#FFF9FB] px-2.5 text-xs font-semibold text-[#A94369] transition hover:bg-[#FFF0F4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-1"><Play className="h-3 w-3" aria-hidden="true" />{label}</button>)}
+                </div>
+              </div>
+            </div>
+          </div>
         </SectionCard>
 
         <SectionCard icon={<ShieldCheck className="h-5 w-5"/>} title="Data & Privacy" description="Keep control of your study materials and learning history.">

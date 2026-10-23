@@ -13,6 +13,8 @@ import { Check, X, Lightbulb } from "lucide-react";
 import { QuizAnswerFeedback } from "@/components/review/quiz-answer-feedback";
 import { QuizCompletion } from "@/components/review/quiz-completion";
 import { classifyFinishResponse, isPublicSessionForId, isQuizSummary } from "@/lib/quiz/finish-response.mjs";
+import { playAbiiSound, unlockAbiiAudio } from "@/lib/sounds";
+import { getAnswerSound, shouldPlayCompletionSound } from "@/lib/sounds-core.mjs";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
@@ -96,6 +98,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const [againBusy, setAgainBusy] = useState(false);
   const [againError, setAgainError] = useState("");
   const busyRef = useRef(false);
+  const completionSoundSessionsRef = useRef(new Set<string>());
   const nextRef = useRef<() => void>(() => {});
   const inputRef = useRef<HTMLInputElement>(null);
   const itemRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -129,6 +132,13 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const longAnswer = answerText.length > 140 || (Array.isArray(gradedAnswer) && gradedAnswer.length > 4);
 
   const autoDelay = result?.correct ? autoSeconds : autoSeconds * 2;
+
+  function completeSession(session: PublicSession, newlyCompleted: boolean) {
+    setCurrentSession(session);
+    if (newlyCompleted && session.status === "completed" && session.summary && shouldPlayCompletionSound(session.id, completionSoundSessionsRef.current)) {
+      playAbiiSound("complete");
+    }
+  }
 
   useEffect(() => {
     try {
@@ -244,15 +254,18 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
     busyRef.current = true;
     setBusy(true);
     setError("");
+    unlockAbiiAudio();
     try {
       const response = await fetch(`/api/quiz/${initial.id}/answer`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ questionIndex: question.index, ...payload }) });
-      const data = (await response.json().catch(() => ({}))) as { result?: QuestionResult; mastery?: Record<number, number>; error?: string };
+      const data = (await response.json().catch(() => ({}))) as { result?: QuestionResult; mastery?: Record<number, number>; duplicate?: boolean; error?: string };
       if (!response.ok || !data.result) {
         setError(data.error || "We couldn’t save that answer. Please try again.");
         toast({ kind: "error", title: "Answer not saved", message: data.error || "Please try submitting your answer again." });
         return;
       }
       const saved = data.result;
+      const answerSound = getAnswerSound(saved, data.duplicate);
+      if (answerSound) playAbiiSound(answerSound);
       setResults((current) => ({ ...current, [question.index]: saved }));
       if (data.mastery) setMastery(data.mastery);
       setCurrentSession((current) => ({ ...current, results: { ...current.results, [question.index]: saved }, mastery: data.mastery ?? current.mastery }));
@@ -280,9 +293,10 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
     }
     busyRef.current = true;
     setBusy(true);
+    unlockAbiiAudio();
     try {
       const response = await fetch(`/api/quiz/${initial.id}/finish`, { method: "POST" });
-      const data = (await response.json().catch(() => null)) as { summary?: QuizSummary; retry?: boolean; session?: unknown; error?: string } | null;
+      const data = (await response.json().catch(() => null)) as { summary?: QuizSummary; retry?: boolean; transitioned?: boolean; session?: unknown; error?: string } | null;
       if (!response.ok) {
         const message = data?.error || "We could not finish this review. Please try again.";
         setError(message);
@@ -312,7 +326,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         return;
       }
       if (outcome.kind === "complete") {
-        setCurrentSession(outcome.session);
+        completeSession(outcome.session, data?.transitioned === true);
         toast({ kind: "success", title: "Review complete! 🎉", message: `You finished ${outcome.session.summary.cards} cards. Great work showing up to study!` });
         return;
       }
@@ -322,7 +336,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       const recoveredData = (await recoveredResponse.json().catch(() => null)) as { session?: unknown } | null;
       const recoveredSession = isPublicSessionForId(recoveredData?.session, initial.id) ? recoveredData.session : null;
       if (recoveredSession?.status === "completed" && isQuizSummary(recoveredSession.summary)) {
-        setCurrentSession(recoveredSession);
+        completeSession(recoveredSession, true);
         toast({ kind: "success", title: "Review complete!", message: `You finished ${recoveredSession.summary.cards} cards. Great work showing up to study!` });
         return;
       }

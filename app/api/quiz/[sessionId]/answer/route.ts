@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   try {
     const result = await submitAnswer(user._id, sessionId, body);
     if (!result.ok) return NextResponse.json({ error: result.message }, { status: result.status });
-    return NextResponse.json({ result: result.result, progress: result.progress, mastery: result.mastery });
+    return NextResponse.json({ result: result.result, progress: result.progress, mastery: result.mastery, duplicate: result.duplicate });
   } catch (error) {
     console.error("Unable to submit quiz answer.", error);
     return NextResponse.json({ error: "We couldn’t save that answer. Please try again." }, { status: 500 });

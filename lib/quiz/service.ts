@@ -419,6 +419,7 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
   if (session.questions.some((q) => !q.answered)) return fail(409, "Answer every question before finishing.");
 
   let streaks = await sessionMastery(userId, session);
+  let transitioned = false;
 
   if (session.status === "active") {
     // A review is complete only when every card has reached the mastery streak.
@@ -446,14 +447,15 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
         return { ok: true as const, done: false as const, session: toPublicSession(fresh, streaks) };
       }
     }
-    await QuizSession.updateOne({ _id: session._id, userId, status: "active" }, { $set: { status: "completed", completedAt: new Date() } });
+    const completionUpdate = await QuizSession.updateOne({ _id: session._id, userId, status: "active" }, { $set: { status: "completed", completedAt: new Date() } });
+    transitioned = completionUpdate.modifiedCount > 0;
   }
   const fresh = await loadSession(userId, sessionId);
   if (!fresh || fresh.status !== "completed") return fail(500, "We couldn’t finish this review. Please try again.");
   const finalStreaks = await sessionMastery(userId, fresh);
   const publicSession = toPublicSession(fresh, finalStreaks);
   if (publicSession.status !== "completed" || !publicSession.summary) return fail(500, "Could not load the completed review results. Please try again.");
-  return { ok: true as const, done: true as const, summary: publicSession.summary, session: publicSession };
+  return { ok: true as const, done: true as const, transitioned, summary: publicSession.summary, session: publicSession };
 }
 
 
