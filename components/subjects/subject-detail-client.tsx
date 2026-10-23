@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { TypeProgress } from "@/lib/quiz/types";
 import { MasteryPills } from "@/components/review/review-setup";
 import { useToast } from "@/components/ui/toast-provider";
+import { Modal, modalCancelClass, modalPrimaryClass, modalDangerClass } from "@/components/ui/modal";
 
 type FlashcardItem = { id: string; question: string; answer: string; hint: string; favorite: boolean; reviewed: boolean };
 export type SubjectDetailData = {
@@ -44,43 +45,14 @@ function AddFlashcardModal({ subjectName, onClose, onCreated }: { subjectName: s
     finally { setSaving(false); }
   }
 
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-[#2F2930]/40 p-3 backdrop-blur-[3px] sm:p-5" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
-      <section role="dialog" aria-modal="true" aria-labelledby="add-flashcard-title" className="my-auto w-full max-w-[590px] overflow-hidden rounded-[24px] border border-[#F0DCE3] bg-white shadow-[0_24px_80px_rgba(47,41,48,0.22)]">
-        <div className="relative overflow-hidden border-b border-[#F4E7EC] bg-[#FFF7F9] px-5 py-5 sm:px-7 sm:py-6">
-          <button type="button" onClick={onClose} disabled={saving} aria-label="Close dialog" className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-xl text-[#756B72] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] disabled:opacity-50">×</button>
-          <div className="relative z-10 max-w-[72%]">
-            <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#C65380]">BUILD YOUR KNOWLEDGE</p>
-            <h2 id="add-flashcard-title" className="mt-1.5 text-2xl font-bold tracking-[-0.045em] text-[#2F2930]">Add a flashcard</h2>
-            <p className="mt-1.5 text-sm leading-5 text-[#756B72]">Create a question for <span className="font-semibold text-[#4A3B43]">{subjectName}</span> and practice recalling the answer.</p>
-          </div>
-          <div aria-hidden="true" className="pointer-events-none absolute -bottom-2 right-2 h-[116px] w-[116px] opacity-90 sm:h-[138px] sm:w-[138px]">
-            <Image src="/dashboard-hero/my-subjects.png" alt="" fill sizes="138px" className="object-contain object-bottom" />
-          </div>
-        </div>
-        <form onSubmit={submit} className="space-y-4 p-5 sm:space-y-5 sm:p-7">
-          <div>
-            <label htmlFor="flashcard-question" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Question <span className="text-[#E9577D]">*</span></label>
-            <textarea ref={questionRef} autoFocus id="flashcard-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={2000} rows={3} placeholder="Write a question you want to remember..." className="w-full resize-y rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-3 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20" required />
-            <p className="mt-1 text-right text-[11px] text-[#9A8C93]">{question.length}/2000</p>
-          </div>
-          <div>
-            <label htmlFor="flashcard-answer" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Answer <span className="text-[#E9577D]">*</span></label>
-            <textarea id="flashcard-answer" value={answer} onChange={(event) => setAnswer(event.target.value)} maxLength={5000} rows={3} placeholder="Write the correct answer..." className="w-full resize-y rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-3 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20" required />
-          </div>
-          <div>
-            <label htmlFor="flashcard-hint" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Hint <span className="font-normal text-[#9A8C93]">(optional)</span></label>
-            <input id="flashcard-hint" value={hint} onChange={(event) => setHint(event.target.value)} maxLength={1000} placeholder="Add a small clue to help you recall..." className="h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3.5 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20" />
-          </div>
-          {error && <p role="alert" className="rounded-xl border border-[#F0C7D3] bg-[#FFF1F1] px-3.5 py-3 text-sm text-[#A43E5C]">{error}</p>}
-          <div className="flex flex-col-reverse gap-2 border-t border-[#F1E8EC] pt-4 sm:flex-row sm:justify-end">
-            <button type="button" disabled={saving} onClick={onClose} className="min-h-11 rounded-full border border-[#E8E2E5] px-5 text-sm font-semibold text-[#756B72] transition-colors hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] disabled:opacity-50">Cancel</button>
-            <button type="submit" disabled={saving} className="min-h-11 rounded-full bg-[#FF6F96] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60">{saving ? "Saving..." : "Save Flashcard"}</button>
-          </div>
-        </form>
-      </section>
-    </div>
-  );
+  return <Modal open onClose={onClose} action="create" title="Create a new flashcard" description="Turn what you?ve learned into a flashcard and make your study sessions more effective!" busy={saving} size="md" footer={<><button type="button" disabled={saving} onClick={onClose} className={modalCancelClass}>Cancel</button><button type="submit" form="create-flashcard-form" disabled={saving} className={modalPrimaryClass}>{saving ? "Creating?" : "Create Flashcard"}</button></>}>
+    <form id="create-flashcard-form" onSubmit={submit} className="space-y-3.5">
+      <div><label htmlFor="flashcard-question" className="mb-1.5 block text-[13px] font-semibold text-[#2F2930]">Question <span className="text-[#E9577D]">*</span></label><textarea ref={questionRef} id="flashcard-question" value={question} onChange={e=>setQuestion(e.target.value)} maxLength={2000} rows={3} placeholder="Enter the question or prompt?" className="w-full resize-y rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-3 text-sm text-[#2F2930] outline-none placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20" required/><p className="mt-1 text-right text-[11px] text-[#9A8C93]">{question.length}/2000</p></div>
+      <div><label htmlFor="flashcard-answer" className="mb-1.5 block text-[13px] font-semibold text-[#2F2930]">Answer <span className="text-[#E9577D]">*</span></label><textarea id="flashcard-answer" value={answer} onChange={e=>setAnswer(e.target.value)} maxLength={5000} rows={3} placeholder="Enter the answer or explanation?" className="w-full resize-y rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-3 text-sm text-[#2F2930] outline-none placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20" required/><p className="mt-1 text-right text-[11px] text-[#9A8C93]">{answer.length}/5000</p></div>
+      <div><label htmlFor="flashcard-hint" className="mb-1.5 block text-[13px] font-semibold text-[#2F2930]">Hint <span className="font-normal text-[#9A8C93]">(optional)</span></label><textarea id="flashcard-hint" value={hint} onChange={e=>setHint(e.target.value)} maxLength={1000} rows={2} placeholder="Add a small clue to help you recall?" className="w-full resize-y rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-3 text-sm text-[#2F2930] outline-none placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20"/><p className="mt-1 text-right text-[11px] text-[#9A8C93]">{hint.length}/1000</p></div>
+      <div className="rounded-xl bg-[#FFF7F9] px-3.5 py-3 text-sm text-[#756B72]"><span className="block text-[11px] font-semibold uppercase tracking-wide text-[#9A8C93]">Subject</span>{subjectName}</div>{error&&<p role="alert" className="rounded-xl border border-[#F0C7D3] bg-[#FFF1F1] px-3.5 py-3 text-sm text-[#A43E5C]">{error}</p>}
+    </form>
+  </Modal>;
 }
 
 function IconCircle({ children }: { children: React.ReactNode }) {
@@ -92,6 +64,7 @@ export function SubjectDetailClient({ initialData }: { initialData: SubjectDetai
   const [tab, setTab] = useState<Tab>("flashcards");
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [newName, setNewName] = useState(initialData.name);
@@ -128,13 +101,12 @@ export function SubjectDetailClient({ initialData }: { initialData: SubjectDetai
   }
 
   async function deleteSubject() {
-    const confirmed = window.confirm(`Delete “${data.name}” and its flashcards? This cannot be undone.`);
-    if (!confirmed) return;
-    setSavingSettings(true); setError("");
+setSavingSettings(true); setError("");
     try {
       const response = await fetch(`/api/subjects/${data.id}`, { method: "DELETE" });
       const result = await response.json() as { error?: string };
       if (!response.ok) { const message = result.error || "Could not delete the subject."; setError(message); toast({ kind: "error", title: "Couldn’t delete subject", message }); return; }
+      setDeleteOpen(false);
       toast({ kind: "success", title: "Subject deleted", message: `${data.name} and its flashcards were deleted.` });
       router.push("/subjects");
       router.refresh();
@@ -200,8 +172,9 @@ export function SubjectDetailClient({ initialData }: { initialData: SubjectDetai
 
       {tab === "settings" && <section aria-labelledby="settings-heading" className="max-w-2xl space-y-4"><div><h2 id="settings-heading" className="text-lg font-bold tracking-[-0.035em] text-[#173B52]">Subject Settings</h2><p className="mt-1 text-sm text-[#71869A]">Manage the name and data for this subject.</p></div>
         <form onSubmit={saveName} className="rounded-[18px] border border-[#E8E2E5] bg-white p-5 sm:p-6"><label htmlFor="subject-name" className="block text-sm font-semibold text-[#2F2930]">Subject name</label><p className="mt-1 text-xs text-[#8192A1]">Use a clear name so it’s easy to find in your library.</p><div className="mt-3 flex flex-col gap-2 sm:flex-row"><input id="subject-name" value={newName} onChange={(event) => setNewName(event.target.value)} maxLength={100} required className="h-11 min-w-0 flex-1 rounded-xl border border-[#E8E2E5] px-3.5 text-sm text-[#2F2930] outline-none focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20"/><button disabled={savingSettings} className="min-h-11 rounded-full bg-[#FF6F96] px-5 text-sm font-semibold text-white hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] disabled:opacity-50">{savingSettings ? "Saving..." : "Save Changes"}</button></div></form>
-        <div className="rounded-[18px] border border-[#F0C7D3] bg-white p-5 sm:p-6"><h3 className="font-bold text-[#9C3858]">Delete this subject</h3><p className="mt-1.5 text-sm leading-5 text-[#756B72]">This permanently deletes this subject, its flashcards, and their review history.</p><button type="button" disabled={savingSettings} onClick={deleteSubject} className="mt-4 min-h-10 rounded-full border border-[#E9B4C4] px-4 text-sm font-semibold text-[#B64162] transition-colors hover:bg-[#FFF1F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] disabled:opacity-50">{savingSettings ? "Working..." : "Delete Subject"}</button></div>
+        <div className="rounded-[18px] border border-[#F0C7D3] bg-white p-5 sm:p-6"><h3 className="font-bold text-[#9C3858]">Delete this subject</h3><p className="mt-1.5 text-sm leading-5 text-[#756B72]">This permanently deletes this subject, its flashcards, and their review history.</p><button type="button" disabled={savingSettings} onClick={() => setDeleteOpen(true)} className="mt-4 min-h-10 rounded-full border border-[#E9B4C4] px-4 text-sm font-semibold text-[#B64162] transition-colors hover:bg-[#FFF1F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] disabled:opacity-50">{savingSettings ? "Working..." : "Delete Subject"}</button></div>
       </section>}
+      {deleteOpen && <Modal open onClose={() => { if (!savingSettings) setDeleteOpen(false); }} action="delete" title="Delete this subject?" description="This action cannot be undone." busy={savingSettings} alert footer={<><button type="button" disabled={savingSettings} onClick={() => setDeleteOpen(false)} className={modalCancelClass}>Cancel</button><button type="button" disabled={savingSettings} onClick={() => void deleteSubject()} className={modalDangerClass}>{savingSettings ? "Deleting?" : "Delete Subject"}</button></>}><div className="space-y-3"><div className="rounded-xl bg-[#FFF7F9] p-4"><p className="text-[11px] font-semibold uppercase tracking-wide text-[#9A8C93]">Subject</p><p className="mt-1 font-semibold text-[#2F2930]">{data.name}</p><p className="mt-1 text-sm text-[#756B72]">{data.flashcardCount} {data.flashcardCount === 1 ? "flashcard" : "flashcards"}</p></div><p className="text-sm leading-6 text-[#756B72]">Deleting this subject also removes its flashcards and related study records.</p></div></Modal>}
       {modalOpen && <AddFlashcardModal subjectName={data.name} onClose={() => setModalOpen(false)} onCreated={created} />}
     </>
   );

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { TypeProgress } from "@/lib/quiz/types";
 import { useRouter } from "next/navigation";
+import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
 
 export type SubjectItem = {
   id: string;
@@ -21,133 +22,10 @@ type SubjectsClientProps = {
   initialLayout: SubjectLayout;
 };
 
-function AddSubjectModal({
-  onClose,
-  onCreated,
-}: {
-  onClose: () => void;
-  onCreated: (subject: SubjectItem) => void;
-}) {
-  const [name, setName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const trimmedName = name.trim();
-
-    if (!trimmedName) {
-      setError("Please enter a subject name.");
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-
-    try {
-      const response = await fetch("/api/subjects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmedName }),
-      });
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(data?.error || data?.message || "Could not create subject.");
-      }
-
-      const raw = data?.subject ?? data?.data?.subject ?? data;
-      const subjectId = String(raw?.id ?? raw?._id ?? "");
-      if (!subjectId) {
-        throw new Error("The subject was created, but its details could not be loaded. Please refresh.");
-      }
-
-      onCreated({
-        id: subjectId,
-        name: String(raw?.name ?? trimmedName),
-        flashcardCount: Number(raw?.flashcardCount ?? 0),
-        progress: Number(raw?.progress ?? 0),
-        masteredCount: Number(raw?.masteredCount ?? 0),
-        typeMastery: raw?.typeMastery ?? { "multiple-choice": { done: 0, total: 0 }, identification: { done: 0, total: 0 }, "true-false": { done: 0, total: 0 }, random: { done: 0, total: 0 } },
-      });
-      router.refresh();
-      onClose();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Something went wrong. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#2F2930]/35 p-4 backdrop-blur-[2px]"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !saving) onClose();
-      }}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="add-subject-title"
-        className="w-full max-w-md rounded-3xl border border-[#F1DFE5] bg-white p-6 shadow-xl sm:p-7"
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#C65380]">Build your study space</p>
-            <h2 id="add-subject-title" className="mt-2 text-xl font-bold tracking-tight text-[#2F2930]">
-              Add a subject
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-[#756B72]">Keep related flashcards together in one place.</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            aria-label="Close dialog"
-            className="rounded-full p-2 text-[#756B72] transition hover:bg-[#FFF0F5] hover:text-[#2F2930] disabled:opacity-50"
-          >
-            <span aria-hidden="true">✕</span>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <label htmlFor="subject-name" className="block text-sm font-semibold text-[#2F2930]">
-            Subject name
-          </label>
-          <input
-            id="subject-name"
-            autoFocus
-            maxLength={80}
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="e.g. Biology"
-            className="min-h-12 w-full rounded-xl border border-[#E8E2E5] bg-white px-4 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A49AA0] focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/15"
-          />
-          {error ? <p role="alert" className="text-sm text-[#C65363]">{error}</p> : null}
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="min-h-11 rounded-xl border border-[#E8E2E5] px-4 text-sm font-semibold text-[#756B72] transition hover:bg-[#FFF7F9] disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="min-h-11 rounded-xl bg-[#FF6F96] px-5 text-sm font-semibold text-white transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? "Creating..." : "Create subject"}
-            </button>
-          </div>
-        </form>
-      </section>
-    </div>
-  );
+function AddSubjectModal({ onClose, onCreated }: { onClose: () => void; onCreated: (subject: SubjectItem) => void }) {
+ const [name,setName]=useState(""); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const router=useRouter();
+ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const trimmedName=name.trim(); if(!trimmedName){setError("Please enter a subject name.");return;} setSaving(true);setError(""); try { const response=await fetch("/api/subjects",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:trimmedName})}); const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data?.error||data?.message||"Could not create subject."); const raw=data?.subject??data?.data?.subject??data; const subjectId=String(raw?.id??raw?._id??""); if(!subjectId)throw new Error("The subject was created, but its details could not be loaded. Please refresh."); onCreated({id:subjectId,name:String(raw?.name??trimmedName),flashcardCount:Number(raw?.flashcardCount??0),progress:Number(raw?.progress??0),masteredCount:Number(raw?.masteredCount??0),typeMastery:raw?.typeMastery??{"multiple-choice":{done:0,total:0},identification:{done:0,total:0},"true-false":{done:0,total:0},random:{done:0,total:0}}}); router.refresh();onClose(); } catch(cause){setError(cause instanceof Error?cause.message:"Something went wrong. Please try again.");}finally{setSaving(false);} }
+ return <Modal open onClose={onClose} action="create" title="Create a subject" description="Give your study materials a place to belong." busy={saving} footer={<><button type="button" onClick={onClose} disabled={saving} className={modalCancelClass}>Cancel</button><button type="submit" form="create-subject-form" disabled={saving} className={modalPrimaryClass}>{saving?"Creating?":"Create Subject"}</button></>}><form id="create-subject-form" onSubmit={handleSubmit} className="space-y-3"><label htmlFor="subject-name" className="block text-[13px] font-semibold text-[#2F2930]">Subject Name <span className="text-[#F04469]">*</span></label><input id="subject-name" required maxLength={100} value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Biology" className="min-h-12 w-full rounded-xl border border-[#E8E2E5] bg-white px-4 text-sm text-[#2F2930] outline-none placeholder:text-[#A49AA0] focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/15"/>{error&&<p role="alert" className="text-sm text-[#C65363]">{error}</p>}</form></Modal>;
 }
 
 const masteryIndicators = [

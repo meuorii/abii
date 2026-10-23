@@ -8,6 +8,7 @@ import { MascotDisplay } from "@/components/ui/mascot-display";
 import { Mascot, type MascotState } from "@/components/ui/mascot";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { ToastShowcase } from "@/components/ui/toast-showcase";
+import { ModalShowcase } from "@/components/ui/modal-showcase";
 
 const swatches = [
   ["White", "#FFFFFF", "bg-white"],
@@ -160,6 +161,8 @@ export default function DesignSystemPage() {
         </section>
 
         <ToastShowcase />
+
+        <ModalShowcase />
 
         <footer className="mt-14 border-t border-border pt-6 text-sm text-muted">
           Abii · Learn a little, remember a lot.

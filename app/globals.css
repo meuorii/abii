@@ -257,3 +257,13 @@ textarea {
   .abii-toast-dismiss { transition: none; }
 }
 
+@keyframes abii-modal-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes abii-modal-panel-in { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes abii-modal-overlay-out { to { opacity: 0; } }
+@keyframes abii-modal-panel-out { to { opacity: 0; transform: translateY(5px) scale(.99); } }
+.abii-modal-overlay { animation: abii-modal-overlay-in 190ms ease-out both; }
+.abii-modal-panel { animation: abii-modal-panel-in 220ms cubic-bezier(.2,.75,.25,1) both; }
+.abii-modal-overlay-out { animation: abii-modal-overlay-out 180ms ease-in both; }
+.abii-modal-panel-out { animation: abii-modal-panel-out 180ms ease-in both; }
+@media (prefers-reduced-motion: reduce) { .abii-modal-overlay, .abii-modal-panel, .abii-modal-overlay-out, .abii-modal-panel-out { animation: none; } }
+
