@@ -7,6 +7,7 @@ import { Navigation } from "@/components/ui/navigation";
 import { MascotDisplay } from "@/components/ui/mascot-display";
 import { Mascot, type MascotState } from "@/components/ui/mascot";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { ToastShowcase } from "@/components/ui/toast-showcase";
 
 const swatches = [
   ["White", "#FFFFFF", "bg-white"],
@@ -157,6 +158,8 @@ export default function DesignSystemPage() {
             </Card>
           </div>
         </section>
+
+        <ToastShowcase />
 
         <footer className="mt-14 border-t border-border pt-6 text-sm text-muted">
           Abii · Learn a little, remember a lot.
