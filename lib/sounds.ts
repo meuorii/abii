@@ -16,6 +16,14 @@ let playbackToken = 0;
 let enabledOverride: boolean | null = null;
 let volumeOverride: number | null = null;
 
+function audioDebug(message: string, details?: unknown) {
+  if (process.env.NODE_ENV === "development") console.debug(`[Abii audio] ${message}`, details);
+}
+
+function audioFailure(message: string, error: unknown) {
+  if (process.env.NODE_ENV === "development") console.warn(`[Abii audio] ${message}`, error);
+}
+
 function readStorage(key: string): string | null {
   try { return window.localStorage.getItem(key); } catch { return null; }
 }
@@ -51,7 +59,10 @@ function getAudioContext(): AudioContext | null {
   if (typeof window === "undefined") return null;
   if (context && context.state !== "closed") return context;
   const AudioContextConstructor = window.AudioContext || (window as AudioContextWithWebkit).webkitAudioContext;
-  if (!AudioContextConstructor) return null;
+  if (!AudioContextConstructor) {
+    audioDebug("Web Audio is unavailable");
+    return null;
+  }
 
   try {
     context = new AudioContextConstructor();
@@ -59,8 +70,10 @@ function getAudioContext(): AudioContext | null {
     master.gain.value = getAbiiSoundVolume() / 100;
     master.connect(context.destination);
     document.addEventListener("visibilitychange", onVisibilityChange);
+    audioDebug("Context initialized", { state: context.state, masterGain: master.gain.value });
     return context;
-  } catch {
+  } catch (error) {
+    audioFailure("Context initialization failed", error);
     context = null;
     master = null;
     return null;
@@ -76,11 +89,16 @@ export function unlockAbiiAudio(): void {
   if (!canPlayAbiiSound(isAbiiSoundEnabled(), getAbiiSoundVolume())) return;
   const audio = getAudioContext();
   if (!audio || audio.state !== "suspended") return;
-  try { void resumeAbiiAudioContext(audio).catch(() => undefined); } catch { /* audio is optional */ }
+  try {
+    void resumeAbiiAudioContext(audio)
+      .then(() => audioDebug("Gesture resume finished", { state: audio.state }))
+      .catch((error) => audioFailure("Gesture resume failed", error));
+  } catch (error) { audioFailure("Gesture resume failed", error); }
 }
 
 export function stopAbiiSound(): void {
   playbackToken += 1;
+  audioDebug("Playback canceled", { token: playbackToken, voices: voices.length });
   const audio = context;
   if (!audio) return;
   const now = audio.currentTime;
@@ -110,6 +128,7 @@ function addTone(
   oscillator.type = wave;
   oscillator.frequency.setValueAtTime(frequency, start);
   if (detune) oscillator.detune.setValueAtTime(detune, start);
+  oscillator.connect(envelope);
 
   let output: AudioNode = envelope;
   if (filterFrequency) {
@@ -183,22 +202,50 @@ function scheduleSound(audio: AudioContext, kind: SoundKind) {
 
 /** Plays one synthesized, optional quiz sound using the shared browser audio context. */
 export function playAbiiSound(kind: SoundKind): void {
-  if (typeof window === "undefined" || document.visibilityState === "hidden") return;
-  if (!canPlayAbiiSound(isAbiiSoundEnabled(), getAbiiSoundVolume())) return;
+  if (typeof window === "undefined") return;
+  const enabled = isAbiiSoundEnabled();
+  const volume = getAbiiSoundVolume();
+  audioDebug("Playback requested", { kind, enabled, volume, visibility: document.visibilityState });
+  if (document.visibilityState === "hidden" || !canPlayAbiiSound(enabled, volume)) {
+    audioDebug("Playback skipped by preference or visibility", { kind });
+    return;
+  }
 
   const audio = getAudioContext();
   if (!audio || !master) return;
   const token = ++playbackToken;
   stopCurrentVoicesForReplacement();
   const play = () => {
-    if (token !== playbackToken || document.visibilityState === "hidden") return;
-    if (!canPlayAbiiSound(isAbiiSoundEnabled(), getAbiiSoundVolume())) return;
-    const now = audio.currentTime;
-    master?.gain.setTargetAtTime(getAbiiSoundVolume() / 100, now, 0.02);
-    try { scheduleSound(audio, kind); } catch { stopAbiiSound(); }
+    if (token !== playbackToken || document.visibilityState === "hidden") {
+      audioDebug("Pending playback canceled", { kind, token, latestToken: playbackToken });
+      return;
+    }
+    if (!canPlayAbiiSound(isAbiiSoundEnabled(), getAbiiSoundVolume())) {
+      audioDebug("Pending playback muted", { kind });
+      return;
+    }
+    if (audio.state !== "running") {
+      audioDebug("Context is not running; playback skipped", { kind, state: audio.state });
+      return;
+    }
+    try {
+      const now = audio.currentTime;
+      master?.gain.setTargetAtTime(getAbiiSoundVolume() / 100, now, 0.02);
+      const previousVoices = voices.length;
+      scheduleSound(audio, kind);
+      audioDebug("Notes scheduled", { kind, state: audio.state, token, voices: voices.length - previousVoices, volume: getAbiiSoundVolume() });
+    } catch (error) {
+      audioFailure(`Failed to schedule ${kind}`, error);
+      stopAbiiSound();
+    }
   };
   if (audio.state === "suspended") {
-    try { void resumeAbiiAudioContext(audio).then(play).catch(() => undefined); } catch { /* audio is optional */ }
+    try {
+      void resumeAbiiAudioContext(audio).then(() => {
+        audioDebug("Preview resume finished", { kind, state: audio.state });
+        play();
+      }).catch((error) => audioFailure(`Resume failed for ${kind}`, error));
+    } catch (error) { audioFailure(`Resume failed for ${kind}`, error); }
   } else {
     play();
   }
