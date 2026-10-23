@@ -26,6 +26,28 @@
   background-color: #fff1f1;
 }
 
+@media (max-width: 767px) {
+  .answer-feedback-mascot-image {
+    width: 124px;
+    max-width: none;
+  }
+
+  /* The wrong mascot has substantially wider transparent side margins. */
+  .answer-feedback-mascot-incorrect .answer-feedback-mascot-image {
+    width: 153px;
+  }
+}
+
+@media (max-width: 359px) {
+  .answer-feedback-mascot-image {
+    width: 108px;
+  }
+
+  .answer-feedback-mascot-incorrect .answer-feedback-mascot-image {
+    width: 133px;
+  }
+}
+
 .quiz-answer-feedback::after {
   position: absolute;
   right: -36px;
