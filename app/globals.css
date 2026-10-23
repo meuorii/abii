@@ -16,6 +16,43 @@
   --error: #fff1f1;
 }
 
+.quiz-answer-feedback-correct {
+  border-color: #ccebd9;
+  background-color: #eaf8f0;
+}
+
+.quiz-answer-feedback-incorrect {
+  border-color: #f4ccd3;
+  background-color: #fff1f1;
+}
+
+.quiz-answer-feedback::after {
+  position: absolute;
+  right: -36px;
+  bottom: -76px;
+  width: 230px;
+  height: 145px;
+  border-radius: 50% 50% 0 0;
+  background: color-mix(in srgb, #22c77a 4%, transparent);
+  content: "";
+  pointer-events: none;
+}
+
+.quiz-answer-feedback-incorrect::after {
+  background: color-mix(in srgb, #f05272 4%, transparent);
+}
+
+.quiz-answer-feedback-enter { animation: quiz-answer-feedback-in 200ms ease-out both; }
+
+@keyframes quiz-answer-feedback-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quiz-answer-feedback-enter { animation: none; }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -10,6 +10,7 @@ import { Mascot } from "@/components/ui/mascot";
 import { PageLoadingSkeleton } from "@/components/ui/page-loading-skeleton";
 import { QUIZ_TYPE_LABELS, type PublicSession, type QuestionResult, type QuizSummary, type QuizType } from "@/lib/quiz/types";
 import { Check, X, Lightbulb } from "lucide-react";
+import { QuizAnswerFeedback } from "@/components/review/quiz-answer-feedback";
 import { QuizCompletion } from "@/components/review/quiz-completion";
 import { classifyFinishResponse, isPublicSessionForId, isQuizSummary } from "@/lib/quiz/finish-response.mjs";
 
@@ -89,6 +90,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const [text, setText] = useState("");
   const [itemAnswers, setItemAnswers] = useState<string[]>([]);
   const [hintOpen, setHintOpen] = useState(false);
+  const [answerExpanded, setAnswerExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [againBusy, setAgainBusy] = useState(false);
@@ -113,6 +115,18 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const typeLabel = QUIZ_TYPE_LABELS[initial.type];
   const hasResult = Boolean(result);
   const questionType = question?.type;
+
+  const gradedAnswer = result && question ? (
+    question.type === "multiple-choice"
+      ? question.options?.[result.correctIndex ?? -1] ?? result.correctAnswer
+      : question.type === "true-false"
+        ? ((result.correct ? result.selectedTruth : !result.selectedTruth) ? "True" : "False")
+        : question.type === "enumeration-identification" || question.type === "enumeration-multiple-choice"
+          ? result.correctItems?.length ? result.correctItems : result.correctAnswer.split(/\n|,\s*/).filter(Boolean)
+          : result.correctAnswer
+  ) : undefined;
+  const answerText = Array.isArray(gradedAnswer) ? gradedAnswer.join(", ") : gradedAnswer ?? "";
+  const longAnswer = answerText.length > 140 || (Array.isArray(gradedAnswer) && gradedAnswer.length > 4);
 
   const autoDelay = result?.correct ? autoSeconds : autoSeconds * 2;
 
@@ -242,11 +256,6 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       setResults((current) => ({ ...current, [question.index]: saved }));
       if (data.mastery) setMastery(data.mastery);
       setCurrentSession((current) => ({ ...current, results: { ...current.results, [question.index]: saved }, mastery: data.mastery ?? current.mastery }));
-      if (saved.correct) {
-        toast({ kind: "success", title: "That’s correct! ✨", message: "Nice recall. Keep that streak going!" });
-      } else {
-        toast({ kind: "info", title: "Not quite — keep learning!", message: "Take a look at the answer, then try again next round." });
-      }
     } catch {
       setError("You seem to be offline. Check your connection and try again.");
       toast({ kind: "error", title: "Connection hiccup", message: "Your answer could not be saved. Check your connection and retry." });
@@ -266,6 +275,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       setText("");
       setItemAnswers([]);
       setHintOpen(false);
+      setAnswerExpanded(false);
       return;
     }
     busyRef.current = true;
@@ -296,6 +306,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         setText("");
         setItemAnswers([]);
         setHintOpen(false);
+        setAnswerExpanded(false);
         setRoundNotice(`Round ${round}: these cards still need ${target} consecutive correct answers in ${QUIZ_TYPE_LABELS[initial.type]}. A wrong answer resets this quiz type’s streak.`);
         toast({ kind: "info", title: `Round ${round} started`, message: "Keep going — these cards need a little more practice." });
         return;
@@ -414,6 +425,16 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
           {roundNotice && currentRound > 1 && <p role="status" className="mt-3 rounded-xl border border-[#F1DDE4] bg-[#FFF7F9] px-3.5 py-3 text-sm text-[#6C4A58]">{roundNotice}</p>}
 
           <h2 id="question-heading" className="mt-5 whitespace-pre-wrap break-words text-lg font-semibold leading-snug tracking-[-0.02em] text-[#153B56] sm:text-xl">{question.type === "true-false" ? "Is this the correct answer to the question below?" : question.prompt}</h2>
+          {result && gradedAnswer !== undefined && (
+            <QuizAnswerFeedback
+              correct={result.correct}
+              answer={gradedAnswer}
+              answerText={answerText}
+              longAnswer={longAnswer}
+              expanded={answerExpanded}
+              onToggleExpanded={() => setAnswerExpanded((open) => !open)}
+            />
+          )}
           {question.type === "true-false" && (
             <div className="mt-3 space-y-2 rounded-xl border border-[#F1DDE4] bg-[#FFFAFC] p-4">
               <p className="whitespace-pre-wrap break-words text-sm text-[#45647A]"><span className="font-semibold text-[#153B56]">Question: </span>{question.prompt}</p>
@@ -500,16 +521,6 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
               <div className="flex gap-3 rounded-xl border border-[#F1DDE4] bg-[#FFF7F9] p-4">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><BulbIcon /></span>
                 <div className="min-w-0 flex-1"><p className="text-sm font-bold text-[#2F2930]">Hint</p><p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-[#756B72]">{question.hint}</p><button type="button" onClick={() => setHintOpen(false)} className="mt-2 rounded-lg border border-[#F1DDE4] bg-white px-3 py-1.5 text-xs font-semibold text-[#C65380] hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Got it</button></div>
-              </div>
-            )}
-
-            {result && (
-              <div role="status" className={`flex items-start gap-3 rounded-xl border p-4 ${result.correct ? "border-[#CDEBD9] bg-[#EAF8F0]" : "border-[#F6D0D8] bg-[#FFF1F1]"}`}>
-                <Mascot state={result.correct ? "correct" : "wrong"} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className={`flex items-center gap-1.5 text-base font-bold ${result.correct ? "text-[#1F7A4C]" : "text-[#B83F68]"}`}><span className={`flex h-6 w-6 items-center justify-center rounded-full text-white ${result.correct ? "bg-[#2FBF71]" : "bg-[#F0507F]"}`}>{result.correct ? <CheckIcon /> : <CrossIcon />}</span>{result.correct ? "Correct!" : "Not quite."}</p>
-                  <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[#45515A]">{result.correct ? "That’s right! " : ""}{result.explanation}</p>
-                </div>
               </div>
             )}
 
