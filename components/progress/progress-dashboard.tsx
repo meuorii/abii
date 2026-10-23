@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Layers3, Target, CalendarDays, Flame, Leaf, BookOpen, RefreshCw, ArrowRight } from "lucide-react";
 
 type ActivityPoint = { date: string; label: string; sessions: number; cards: number };
 type SubjectRow = { id: string; name: string; totalCards: number; reviewed: number; accuracy: number | null; progress: number };
@@ -24,19 +25,7 @@ const border = "#E8E2E5";
 const formatNumber = (value: number) => new Intl.NumberFormat("en-US").format(value);
 const formatDate = (value: string) => new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-function Icon({ name, className = "h-5 w-5" }: { name: string; className?: string }) {
-  const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  return <svg viewBox="0 0 24 24" className={className} aria-hidden="true" {...common}>
-    {name === "cards" && <><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/><path d="M3 7v13a2 2 0 0 0 2 2"/></>}
-    {name === "target" && <><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></>}
-    {name === "calendar" && <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M8 14h2M14 14h2M8 17h2"/></>}
-    {name === "flame" && <path d="M12 22c4.5 0 7-3.1 7-7.1 0-3.4-2.1-5.8-4.3-8.1.1 2.4-1 3.4-2 4.1C12.5 7.2 10 4.5 8 2c.2 4.5-1 6.3-2.4 8.3C4.5 12 4 13.4 4 15c0 4 3 7 8 7Z"/>}
-    {name === "leaf" && <><path d="M20 4C10 4 5 7 5 14a6 6 0 0 0 6 6c7 0 9-8 9-16Z"/><path d="M3 21c3-5 7-8 12-11"/></>}
-    {name === "book" && <><path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H20v18H7.5A3.5 3.5 0 0 0 4 23Z"/><path d="M4 5.5v14A3.5 3.5 0 0 1 7.5 16H20M9 6h6M9 10h7"/></>}
-    {name === "refresh" && <><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.5 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.5-3"/></>}
-    {name === "arrow" && <><path d="M5 12h14M13 6l6 6-6 6"/></>}
-  </svg>;
-}
+function Icon({ name, className = "h-5 w-5" }: { name: string; className?: string }) { const icons: Record<string, typeof Layers3> = { cards: Layers3, target: Target, calendar: CalendarDays, flame: Flame, leaf: Leaf, book: BookOpen, refresh: RefreshCw, arrow: ArrowRight }; const Component = icons[name] ?? Target; return <Component className={className} aria-hidden="true" />; }
 
 function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <section className={`min-w-0 rounded-2xl border bg-white p-4 sm:p-5 ${className}`} style={{ borderColor: border }}>{children}</section>;

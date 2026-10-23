@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
+import { Sparkles } from "lucide-react";
 
 const steps = [
   {
@@ -37,7 +38,7 @@ export default async function LandingPage() {
           aria-label="Abii home"
           className="inline-flex items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-4"
         >
-          <span aria-hidden="true" className="text-[1.7rem] leading-none text-[#E9577D]">♡</span>
+          <Sparkles aria-hidden="true" className="h-7 w-7 text-[#E9577D]" />
           <span className="text-[1.65rem] font-extrabold tracking-[-0.075em]">
             abii<span className="text-[#FF6F96]">.</span>
           </span>

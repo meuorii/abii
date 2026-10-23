@@ -5,6 +5,9 @@ import { useMemo, useState } from "react";
 import type { TypeProgress } from "@/lib/quiz/types";
 import { useRouter } from "next/navigation";
 import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
+import { useToast } from "@/components/ui/toast-provider";
+import { BookOpen, Plus, Search, ArrowUpRight } from "lucide-react";
+import { ListChecks, PenLine, CheckCircle2, Shuffle } from "lucide-react";
 
 export type SubjectItem = {
   id: string;
@@ -42,52 +45,8 @@ function QuestionTypeIcon({
   type: (typeof masteryIndicators)[number]["key"];
   className?: string;
 }) {
-  const shared = {
-    className,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.8,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true as const,
-  };
-
-  if (type === "multiple-choice") {
-    return (
-      <svg {...shared}>
-        <circle cx="5" cy="6" r="1.6" />
-        <circle cx="5" cy="12" r="1.6" />
-        <circle cx="5" cy="18" r="1.6" />
-        <path d="M10 6h10M10 12h10M10 18h10" />
-      </svg>
-    );
-  }
-
-  if (type === "identification") {
-    return (
-      <svg {...shared}>
-        <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17l-1 3Z" />
-        <path d="m14 8 3 3" />
-      </svg>
-    );
-  }
-
-  if (type === "true-false") {
-    return (
-      <svg {...shared}>
-        <circle cx="8" cy="12" r="5" />
-        <path d="m6 12 1.6 1.6L10 10.5M16 9l4 4M20 9l-4 4" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg {...shared}>
-      <path d="M4 7h3c4 0 5 10 9 10h4M4 17h3c1.6 0 2.7-1.2 3.6-2.8M13.4 9.2C14.3 8 15.2 7 17 7h3" />
-      <path d="m18 4 2 3-2 3M18 14l2 3-2 3" />
-    </svg>
-  );
+  const Icon = type === "multiple-choice" ? ListChecks : type === "identification" ? PenLine : type === "true-false" ? CheckCircle2 : Shuffle;
+  return <Icon className={className} aria-hidden="true" />;
 }
 
 function TypeMasteryIndicators({ mastery }: { mastery: TypeProgress }) {
@@ -119,12 +78,12 @@ function TypeMasteryIndicators({ mastery }: { mastery: TypeProgress }) {
 }
 
 export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClientProps) {
+  const { toast } = useToast();
   const [subjects, setSubjects] = useState<SubjectItem[]>(initialSubjects);
   const [query, setQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [layout, setLayout] = useState<SubjectLayout>(initialLayout);
+  const [layout] = useState<SubjectLayout>(initialLayout);
   const [notice, setNotice] = useState("");
-  const router = useRouter();
 
   const filteredSubjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -138,6 +97,7 @@ export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClien
       return [...current, subject].sort((a, b) => a.name.localeCompare(b.name));
     });
     setNotice(`“${subject.name}” was created successfully.`);
+    toast({ kind: "success", title: "Subject created", message: `${subject.name} is ready for your flashcards.` });
     window.setTimeout(() => setNotice(""), 3500);
   }
 
@@ -156,7 +116,7 @@ export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClien
             onClick={() => setIsModalOpen(true)}
             className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-[#FF6F96] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:self-auto"
           >
-            <span aria-hidden="true" className="text-lg leading-none">+</span>
+            <Plus aria-hidden="true" className="h-4 w-4" />
             Add subject
           </button>
         </div>
@@ -170,7 +130,7 @@ export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClien
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <label className="relative block min-w-0 flex-1">
             <span className="sr-only">Search subjects</span>
-            <span aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9B9097]">⌕</span>
+            <Search aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9B9097]" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -183,7 +143,7 @@ export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClien
 
         {filteredSubjects.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#E8D7DE] bg-white px-5 py-12 text-center sm:px-8">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF0F5] text-2xl" aria-hidden="true">📚</div>
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF0F5] text-2xl text-[#E9577D]" aria-hidden="true"><BookOpen className="h-7 w-7" /></div>
             <h3 className="mt-4 text-base font-bold text-[#2F2930]">
               {query.trim() ? "No matching subjects" : "Your study space starts here"}
             </h3>
@@ -213,16 +173,14 @@ export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClien
                 }`}
               >
                 <div className={`flex min-w-0 items-start gap-3 ${layout === "list" ? "sm:flex-1" : ""}`}>
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFF0F5] text-lg text-[#D85E86] transition group-hover:bg-[#FFE5EE]" aria-hidden="true">
-                    ▤
-                  </div>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFF0F5] text-lg text-[#D85E86] transition group-hover:bg-[#FFE5EE]" aria-hidden="true"><BookOpen className="h-5 w-5" /></div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-bold text-[#2F2930] group-hover:text-[#C65380]">{subject.name}</h3>
                     <p className="mt-1 text-sm text-[#756B72]">
                       {subject.flashcardCount} {subject.flashcardCount === 1 ? "flashcard" : "flashcards"}
                     </p>
                   </div>
-                  <span className="mt-1 text-[#B5A7AE] transition group-hover:translate-x-0.5 group-hover:text-[#D85E86]" aria-hidden="true">↗</span>
+                  <ArrowUpRight className="mt-1 h-4 w-4 text-[#B5A7AE] transition group-hover:translate-x-0.5 group-hover:text-[#D85E86]" aria-hidden="true" />
                 </div>
 
                 <div className={`${layout === "grid" ? "mt-5" : "mt-4 sm:mt-0 sm:w-[42%] sm:max-w-xs"}`}>

@@ -9,6 +9,7 @@ import { TypeIcon } from "@/components/review/review-setup";
 import { Mascot } from "@/components/ui/mascot";
 import { PageLoadingSkeleton } from "@/components/ui/page-loading-skeleton";
 import { QUIZ_TYPE_LABELS, type PublicSession, type QuestionResult, type QuizSummary, type QuizType } from "@/lib/quiz/types";
+import { Check, X, Lightbulb } from "lucide-react";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
@@ -28,15 +29,9 @@ function questionTypeLabel(type: QuizType): string {
   }
 }
 
-function CheckIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>;
-}
-function CrossIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>;
-}
-function BulbIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z" /></svg>;
-}
+function CheckIcon() { return <Check className="h-5 w-5" aria-hidden="true" />; }
+function CrossIcon() { return <X className="h-5 w-5" aria-hidden="true" />; }
+function BulbIcon() { return <Lightbulb className="h-4 w-4" aria-hidden="true" />; }
 
 function ProgressPanel({ total, answered, correct, incorrect, mastered, cards, round, firstName }: { total: number; answered: number; correct: number; incorrect: number; mastered: number; cards: number; round: number; firstName: string }) {
   const remaining = total - answered;

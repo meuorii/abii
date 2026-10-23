@@ -4,7 +4,7 @@ These Mongoose models are server-only and use `timestamps: true` (`createdAt` an
 
 - `User.ts` — trimmed name, lowercase/trimmed email, password hash excluded from normal query results, unique email index.
 - `Subject.ts` — subject owner and name; owner index.
-- `Flashcard.ts` — owner, subject, question, answer, optional hint, favorite flag; compound owner/subject index.
+- `Flashcard.ts` — owner, subject, question, answer, optional hint, and type; compound owner/subject index.
 - `ReviewRecord.ts` — owner, flashcard, correct/wrong result, question type, review dates; owner/card/next-review index.
 - `index.ts` — convenient server-side exports.
 

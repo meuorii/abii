@@ -4,7 +4,6 @@ import { ErrorMessage, EmptyState, LoadingState } from "@/components/ui/feedback
 import { Flashcard } from "@/components/ui/flashcard";
 import { TextArea, TextInput } from "@/components/ui/input";
 import { Navigation } from "@/components/ui/navigation";
-import { MascotDisplay } from "@/components/ui/mascot-display";
 import { Mascot, type MascotState } from "@/components/ui/mascot";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { ToastShowcase } from "@/components/ui/toast-showcase";

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { CalendarDays, Layers3, BookOpen, FlaskConical, Leaf, Plus, RefreshCw, ChevronRight, ArrowRight, Circle } from "lucide-react";
 
 type SubjectOverview = {
   id: string;
@@ -18,43 +19,7 @@ type DashboardOverviewProps = {
   loadFailed?: boolean;
 };
 
-function Icon({ name, className = "h-5 w-5" }: { name: string; className?: string }) {
-  const shared = {
-    className,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.8,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true as const,
-  };
-
-  switch (name) {
-    case "calendar":
-      return <svg {...shared}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></svg>;
-    case "cards":
-      return <svg {...shared}><rect x="7" y="5" width="13" height="15" rx="2" /><path d="M4 16V4a1 1 0 0 1 1-1h11M10 9h7M10 13h5" /></svg>;
-    case "book":
-      return <svg {...shared}><path d="M12 7v14M12 7C9 4.5 5.5 4 3 5v14c3-1 6.5-.5 9 2M12 7c3-2.5 6.5-3 9-2v14c-3-1-6.5-.5-9 2" /></svg>;
-    case "flask":
-      return <svg {...shared}><path d="M9 3h6M10 3v6l-5.5 9.2A2 2 0 0 0 6.2 21h11.6a2 2 0 0 0 1.7-2.8L14 9V3M8 15h8" /></svg>;
-    case "leaf":
-      return <svg {...shared}><path d="M20.5 3.5C12 3 5 5.5 4 12c-.5 3.5 2 6 5 5.5 6.5-1 9-8 11.5-14Z" /><path d="M3 21c3-6 7-9 12-12" /></svg>;
-    case "plus":
-      return <svg {...shared}><path d="M12 5v14M5 12h14" /></svg>;
-    case "refresh":
-      return <svg {...shared}><path d="M20 7v5h-5M4 17v-5h5" /><path d="M5.5 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.5-3" /></svg>;
-    case "heart":
-      return <svg {...shared}><path d="M20.8 8.8c0 5.2-8.8 10.2-8.8 10.2S3.2 14 3.2 8.8A4.6 4.6 0 0 1 12 6.6a4.6 4.6 0 0 1 8.8 2.2Z" /></svg>;
-    case "chevron":
-      return <svg {...shared}><path d="m9 18 6-6-6-6" /></svg>;
-    case "arrow":
-      return <svg {...shared}><path d="M4 12h15M13 6l6 6-6 6" /></svg>;
-    default:
-      return <svg {...shared}><circle cx="12" cy="12" r="8" /></svg>;
-  }
-}
+function Icon({ name, className = "h-5 w-5" }: { name: string; className?: string }) { const icons: Record<string, typeof CalendarDays> = { calendar: CalendarDays, cards: Layers3, book: BookOpen, flask: FlaskConical, leaf: Leaf, plus: Plus, refresh: RefreshCw, chevron: ChevronRight, arrow: ArrowRight, circle: Circle }; const Component=icons[name]??Circle; return <Component className={className} aria-hidden="true" />; }
 
 function SectionHeading({ icon, title, href, linkLabel = "See all" }: { icon: string; title: string; href?: string; linkLabel?: string }) {
   return (

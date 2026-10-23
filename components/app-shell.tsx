@@ -6,21 +6,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { LayoutDashboard, BookOpen, RotateCcw, ChartNoAxesColumn, Settings, Bell, ChevronDown } from "lucide-react";
 
 const desktopNavigation = [
-  { href: "/dashboard", label: "Dashboard", icon: "⌂" },
-  { href: "/subjects", label: "My Subjects", icon: "▤" },
-  { href: "/review", label: "Review", icon: "↻" },
-  { href: "/progress", label: "Progress", icon: "▥" },
-  { href: "/settings", label: "Settings", icon: "⚙" },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/subjects", label: "My Subjects", icon: BookOpen },
+  { href: "/review", label: "Review", icon: RotateCcw },
+  { href: "/progress", label: "Progress", icon: ChartNoAxesColumn },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 const mobileNavigation = [
-  { href: "/dashboard", label: "Dashboard", icon: "⌂" },
-  { href: "/subjects", label: "Subjects", icon: "▤" },
-  { href: "/review", label: "Review", icon: "↻" },
-  { href: "/progress", label: "Progress", icon: "▥" },
-  { href: "/settings", label: "Settings", icon: "⚙" },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/subjects", label: "Subjects", icon: BookOpen },
+  { href: "/review", label: "Review", icon: RotateCcw },
+  { href: "/progress", label: "Progress", icon: ChartNoAxesColumn },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 type AppShellProps = {
@@ -119,12 +120,7 @@ export function AppShell({ children, userName }: AppShellProps) {
                       : "text-[#6F8293] hover:bg-[#FFF4F7] hover:text-[#2F2930]"
                   }`}
                 >
-                  <span
-                    aria-hidden="true"
-                    className="flex w-5 items-center justify-center text-[20px] leading-none"
-                  >
-                    {item.icon}
-                  </span>
+                  <item.icon aria-hidden="true" className="h-5 w-5" />
 
                   <span>{item.label}</span>
                 </Link>
@@ -159,7 +155,7 @@ export function AppShell({ children, userName }: AppShellProps) {
                 aria-label="Notifications"
                 className="relative flex h-9 w-9 items-center justify-center rounded-full text-[21px] text-[#708397] transition-colors hover:bg-[#FFF4F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"
               >
-                <span aria-hidden="true">♧</span>
+                <Bell aria-hidden="true" className="h-5 w-5" />
                 <span className="absolute right-[7px] top-[6px] h-[6px] w-[6px] rounded-full bg-[#FF6F96] ring-2 ring-white" />
               </button>
 
@@ -192,12 +188,7 @@ export function AppShell({ children, userName }: AppShellProps) {
                     {userName || "Abii learner"}
                   </span>
 
-                  <span
-                    aria-hidden="true"
-                    className="hidden text-sm text-[#8292A0] sm:block"
-                  >
-                    ⌄
-                  </span>
+                  <ChevronDown aria-hidden="true" className="hidden h-4 w-4 text-[#8292A0] sm:block" />
                 </button>
 
                 {profileMenuOpen && (
@@ -244,12 +235,7 @@ export function AppShell({ children, userName }: AppShellProps) {
                       : "text-[#7F91A1] hover:bg-[#FFF7F9]"
                   }`}
                 >
-                  <span
-                    aria-hidden="true"
-                    className="text-[20px] leading-5"
-                  >
-                    {item.icon}
-                  </span>
+                  <item.icon aria-hidden="true" className="h-5 w-5" />
 
                   <span>{item.label}</span>
                 </Link>

@@ -34,11 +34,6 @@ const flashcardSchema = new Schema(
       maxlength: [1000, "Hint must be 1000 characters or fewer"],
       default: undefined,
     },
-    favorite: {
-      type: Boolean,
-      default: false,
-      required: true,
-    },
   },
   { timestamps: true, versionKey: false },
 );

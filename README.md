@@ -14,7 +14,6 @@
 ## Routes used
 - Add Subject / View all: `/subjects`
 - Start Review: `/review`
-- Favorites: `/favorites`
 - Subject card: `/subjects/[subjectId]`
 
 The `/review` and `/subjects/[subjectId]` routes need to exist in your project for those actions to open fully implemented screens. This phase does not create those features. The Add Subject action links to the existing Subjects area because the create-subject form is outside this phase.

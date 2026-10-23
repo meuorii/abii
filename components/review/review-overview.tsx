@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CalendarDays, Clock3, CircleCheck, Flame, BookOpen, ChartNoAxesColumnIncreasing, RefreshCw } from "lucide-react";
 import type { TypeProgress } from "@/lib/quiz/types";
 import { MasteryPills } from "@/components/review/review-setup";
 
@@ -26,17 +27,7 @@ type Props = {
   streak: number;
 };
 
-function Icon({ name }: { name: "calendar" | "clock" | "check" | "flame" | "book" | "chart" }) {
-  const paths: Record<typeof name, React.ReactNode> = {
-    calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18M8 14h3M8 17h6" /></>,
-    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
-    check: <><circle cx="12" cy="12" r="9" /><path d="m7.5 12 3 3 6-6" /></>,
-    flame: <><path d="M12 22c4.2 0 7-3 7-7 0-3.2-1.8-5.2-4.3-8.2-.1 2-1 3.2-2.1 4.1C12.2 7.3 10.5 4.7 8 3c.4 4-1 6.2-2.5 8.5C4.7 12.7 4 14 4 15.5 4 19.3 7.2 22 12 22Z" /><path d="M12 18c1.6 0 2.7-1.1 2.7-2.6 0-1-.5-1.8-1.6-3-.2 1-.7 1.5-1.5 2-.5-.8-1-1.3-1.7-1.8-.1 2.8-.5 3.3-.5 4 0 .8 1 1.4 2.6 1.4Z" /></>,
-    book: <><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22Z" /><path d="M4 5.5V22M8 7h8M8 11h8" /></>,
-    chart: <><path d="M4 19V5M4 19h17" /><path d="m7 15 4-4 3 2 5-6" /></>,
-  };
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">{paths[name]}</svg>;
-}
+function Icon({ name }: { name: "calendar" | "clock" | "check" | "flame" | "book" | "chart" }) { const icons={calendar:CalendarDays,clock:Clock3,check:CircleCheck,flame:Flame,book:BookOpen,chart:ChartNoAxesColumnIncreasing};const Component=icons[name];return <Component className="h-5 w-5" aria-hidden="true"/>; }
 
 function ProgressBar({ value, label }: { value: number; label?: string }) {
   const safeValue = Math.max(0, Math.min(100, value));
@@ -82,7 +73,7 @@ export function ReviewOverview({ firstName, subjects, totalCards, totalMastered,
     <section aria-labelledby="review-overview-title">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="flex items-start gap-3">
-          <span className="mt-1 text-[#FF5B8B]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-7 w-7" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5" strokeLinecap="round" strokeLinejoin="round"/><path d="M5.5 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.5-3" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+          <span className="mt-1 text-[#FF5B8B]"><RefreshCw className="h-7 w-7" aria-hidden="true"/></span>
           <div><h2 id="review-overview-title" className="text-lg font-bold tracking-tight text-[#153B56] sm:text-xl">Review Overview</h2><p className="mt-0.5 text-xs text-[#6C879C] sm:text-sm">See your progress and stay on track with your learning goals.</p></div>
         </div>
         <span className="inline-flex items-center gap-2 rounded-full border border-[#E8EAF0] bg-white px-3 py-2 text-xs font-medium text-[#557087]"><Icon name="calendar" /> Today</span>

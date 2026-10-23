@@ -3,7 +3,7 @@ import mongoose, { Schema, type InferSchemaType, type Model } from "mongoose";
 
 const userSettingsSchema = new Schema({
   targetSubjects: { type: Number, min: 1, max: 100, default: 5 },
-  defaultLandingPage: { type: String, enum: ["/dashboard", "/subjects", "/review", "/favorites", "/progress"], default: "/dashboard" },
+  defaultLandingPage: { type: String, enum: ["/dashboard", "/subjects", "/review", "/progress"], default: "/dashboard" },
   subjectLayout: { type: String, enum: ["grid", "list"], default: "grid" },
 }, { _id: false });
 

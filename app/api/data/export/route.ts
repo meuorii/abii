@@ -14,7 +14,7 @@ export async function GET() {
   const [account, subjects, flashcards, reviews, sessions] = await Promise.all([
     User.findById(user._id).select("name email createdAt settings").lean(),
     Subject.find({ userId: user._id }).select("name createdAt updatedAt").lean(),
-    Flashcard.find({ userId: user._id }).select("subjectId flashcardType question answer hint favorite createdAt updatedAt").lean(),
+    Flashcard.find({ userId: user._id }).select("subjectId flashcardType question answer hint createdAt updatedAt").lean(),
     ReviewRecord.find({ userId: user._id }).select("flashcardId result questionType reviewedAt nextReviewAt createdAt").lean(),
     QuizSession.find({ userId: user._id, status: "completed" }).select("subjectId subjectName type status questions completedAt createdAt updatedAt").lean(),
   ]);

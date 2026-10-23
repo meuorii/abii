@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/toast-provider";
 import { useRouter } from "next/navigation";
+import { ListChecks, PenLine, ListOrdered, Shuffle, CheckCircle2 } from "lucide-react";
 import {
   ALL_SUBJECTS,
   QUIZ_MODES,
@@ -27,23 +28,8 @@ type Props = {
 };
 
 export function TypeIcon({ type, className = "h-6 w-6" }: { type: QuizMode | import("@/lib/quiz/types").QuizType; className?: string }) {
-  const shared = { className, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true as const };
-  if (type === "multiple-choice") {
-    return <svg {...shared}><circle cx="5" cy="6" r="1.6" /><circle cx="5" cy="12" r="1.6" /><circle cx="5" cy="18" r="1.6" /><path d="M10 6h10M10 12h10M10 18h10" /></svg>;
-  }
-  if (type === "identification") {
-    return <svg {...shared}><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17l-1 3Z" /><path d="m14 8 3 3" /></svg>;
-  }
-  if (type === "enumeration-identification") {
-    return <svg {...shared}><path d="M4 6h2M4 12h2M4 18h2" /><path d="M10 6h10M10 12h10M10 18h6" /></svg>;
-  }
-  if (type === "enumeration-multiple-choice") {
-    return <svg {...shared}><rect x="3.5" y="4" width="17" height="7" rx="2" /><rect x="3.5" y="13" width="17" height="7" rx="2" /><path d="M7 7.5h6M7 16.5h8" /></svg>;
-  }
-  if (type === "random") {
-    return <svg {...shared}><path d="M4 7h3c4 0 5 10 9 10h4M4 17h3c1.6 0 2.7-1.2 3.6-2.8M13.4 9.2C14.3 8 15.2 7 17 7h3" /><path d="m18 4 2 3-2 3M18 14l2 3-2 3" /></svg>;
-  }
-  return <svg {...shared}><circle cx="8" cy="12" r="5" /><path d="m6 12 1.6 1.6L10 10.5M16 9l4 4M20 9l-4 4" /></svg>;
+  const Icon = type === "multiple-choice" || type === "enumeration-multiple-choice" ? ListChecks : type === "identification" ? PenLine : type === "enumeration-identification" ? ListOrdered : type === "random" ? Shuffle : CheckCircle2;
+  return <Icon className={className} aria-hidden="true" />;
 }
 
 /** Completion pills for every mode that applies to at least one card. */

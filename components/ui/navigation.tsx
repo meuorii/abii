@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Sparkles } from "lucide-react";
 
 const defaultItems = [
   { label: "Overview", href: "/", active: true },
@@ -19,7 +20,7 @@ export function Navigation({ brand = "abii", items = defaultItems }: NavigationP
         className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8"
       >
         <Link href="/" className="flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-active">
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-pink-card text-xl text-pink-active" aria-hidden="true">♡</span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-pink-card text-pink-active" aria-hidden="true"><Sparkles className="h-5 w-5" /></span>
           <span className="text-xl font-extrabold tracking-tight text-foreground">{brand}<span className="text-pink-primary">.</span></span>
         </Link>
         <div className="flex flex-wrap items-center gap-1">

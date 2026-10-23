@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
+import { QuizSession } from "@/models/QuizSession";
 import { Subject } from "@/models/Subject";
 
 export const runtime = "nodejs";
@@ -42,7 +43,10 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     if (!subject) return NextResponse.json({ error: "This subject could not be found." }, { status: 404 });
     const cards = await Flashcard.find({ userId: user._id, subjectId: subject._id }).select("_id").lean();
     const cardIds = cards.map((card) => card._id);
-    if (cardIds.length) await ReviewRecord.deleteMany({ userId: user._id, flashcardId: { $in: cardIds } });
+    if (cardIds.length) await Promise.all([
+      ReviewRecord.deleteMany({ userId: user._id, flashcardId: { $in: cardIds } }),
+      QuizSession.deleteMany({ userId: user._id, status: "active", $or: [{ subjectId: subject._id }, { "questions.flashcardId": { $in: cardIds } }] }),
+    ]);
     await Flashcard.deleteMany({ userId: user._id, subjectId: subject._id });
     await Subject.deleteOne({ _id: subject._id, userId: user._id });
     return NextResponse.json({ success: true });

@@ -11,6 +11,7 @@ import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { emptyTypeProgress } from "@/lib/quiz/types";
+import { BookOpen, ChevronRight, ArrowRight, CircleCheck } from "lucide-react";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
 
   const mastery = await getSubjectMastery(user._id);
   const cards = await Flashcard.find({ userId: user._id, subjectId: subject._id })
-    .select("_id flashcardType question answer hint favorite createdAt")
+    .select("_id flashcardType question answer hint createdAt")
     .sort({ createdAt: -1 })
     .lean();
   const cardIds = cards.map((card) => card._id);
@@ -76,7 +77,6 @@ export default async function SubjectDetailPage({ params }: PageProps) {
       question: card.question,
       answer: card.answer,
       hint: card.hint ?? "",
-      favorite: Boolean(card.favorite),
       reviewed: reviewedIds.has(String(card._id)),
     })),
   };
@@ -87,7 +87,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
       <div className="space-y-3 p-4 pb-24 sm:space-y-4 sm:p-5 sm:pb-24 xl:p-6">
         <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs sm:text-sm">
           <Link href="/subjects" className="font-medium text-[#75889A] transition-colors hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] rounded">My Subjects</Link>
-          <span aria-hidden="true" className="text-[#B4A5AC]">›</span>
+          <ChevronRight aria-hidden="true" className="h-4 w-4 text-[#B4A5AC]" />
           <span aria-current="page" className="max-w-[55vw] truncate font-semibold text-[#2F2930]">{subject.name}</span>
         </nav>
 
@@ -95,9 +95,9 @@ export default async function SubjectDetailPage({ params }: PageProps) {
           <div className="relative z-10 flex min-h-[270px] items-center sm:min-h-[285px] lg:min-h-[300px]">
             <div className="max-w-[70%] px-5 py-6 sm:max-w-[62%] sm:px-7 sm:py-7 lg:max-w-[60%] lg:px-8">
               <div className="flex items-center gap-3">
-                <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#FFE0E9] text-xl text-[#E9577D] sm:h-12 sm:w-12">▤</span>
+                <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#FFE0E9] text-[#E9577D] sm:h-12 sm:w-12"><BookOpen className="h-5 w-5" /></span>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2"><h1 className="truncate text-xl font-bold tracking-[-0.04em] text-[#2F2930] sm:text-2xl">{subject.name}</h1>{cards.length > 0 && masteredCount === cards.length && <span title="Mastered" aria-label="Mastered" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-2 py-1 text-[10px] font-bold text-[#D94675]">✓ Mastered</span>}</div>
+                  <div className="flex items-center gap-2"><h1 className="truncate text-xl font-bold tracking-[-0.04em] text-[#2F2930] sm:text-2xl">{subject.name}</h1>{cards.length > 0 && masteredCount === cards.length && <span title="Mastered" aria-label="Mastered" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-2 py-1 text-[10px] font-bold text-[#D94675]"><CircleCheck className="h-3 w-3"/>Mastered</span>}</div>
                   <p className="mt-1 text-[11px] text-[#6E8497] sm:text-xs">{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"} <span className="mx-1.5">·</span> {progress}% mastered</p>
                   <div className="mt-2 h-1.5 w-32 overflow-hidden rounded-full bg-white/90 sm:w-48"><div className="h-full rounded-full bg-[#E9577D]" style={{ width: `${progress}%` }} /></div>
                   
@@ -105,7 +105,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
               </div>
               <h2 id="subject-hero-title" className="mt-5 max-w-[420px] text-[clamp(1.45rem,2.5vw,2rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#173B52]">One card at a time,<br /><span className="text-[#E9577D]">one step closer.</span></h2>
               <p className="mt-2 max-w-sm text-xs leading-5 text-[#526F83] sm:text-sm sm:leading-6">Keep practicing and build your confidence.</p>
-              <Link href={`/review?subjectId=${subject._id}`} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#F05B87] px-5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:min-h-11 sm:px-6 sm:text-sm">Study Subject <span aria-hidden="true">→</span></Link>
+              <Link href={`/review?subjectId=${subject._id}`} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#F05B87] px-5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:min-h-11 sm:px-6 sm:text-sm">Study Subject <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>
             </div>
           </div>
           <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-[42%] items-end justify-center sm:w-[40%] lg:w-[39%]">

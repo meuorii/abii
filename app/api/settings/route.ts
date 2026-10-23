@@ -4,7 +4,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/models/User";
 
 export const runtime = "nodejs";
-const landingPages = new Set(["/dashboard", "/subjects", "/review", "/favorites", "/progress"]);
+const landingPages = new Set(["/dashboard", "/subjects", "/review", "/progress"]);
 export async function PATCH(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Please log in to update your settings." }, { status: 401 });

@@ -11,6 +11,7 @@ import {
   TF_FALSE_PROBABILITY,
 } from "./config";
 import { normalizeText, parseEnumeration } from "./normalize";
+import { buildEnumerationWrongLists } from "./distractors.mjs";
 import { QUIZ_MODES, type FlashcardType, type QuizMode, type QuizType } from "./types";
 
 export type PreparedCard = {
@@ -87,15 +88,29 @@ function isValidDistractor(card: PreparedCard, other: PreparedCard): boolean {
   return (
     isShortAnswer(other) &&
     other.id !== card.id &&
-    other.flashcardType === card.flashcardType &&
     other.qn !== card.qn &&
-    other.an !== card.an &&
-    !other.an.includes(card.an) &&
-    !card.an.includes(other.an)
+    other.an !== card.an
   );
 }
 
+function foreignItems(card: PreparedCard, usable: PreparedCard[]): string[] {
+  const own = new Set((card.flashcardType === "items" ? card.items : [card.answer]).map(normalizeText));
+  const seen = new Set<string>(own);
+  const same: string[] = []; const cross: string[] = [];
+  for (const other of shuffle(usable)) {
+    if (other.id === card.id || other.qn === card.qn) continue;
+    const values = other.flashcardType === "items" ? other.items : [other.answer];
+    for (const value of values) {
+      const key = normalizeText(value);
+      if (!key || value.length > MAX_QUIZ_ANSWER_LENGTH || seen.has(key)) continue;
+      seen.add(key); (other.subjectId === card.subjectId ? same : cross).push(value);
+    }
+  }
+  return [...shuffle(same), ...shuffle(cross)];
+}
+
 export function hasDistractor(card: PreparedCard, usable: PreparedCard[]): boolean {
+  if (card.flashcardType === "standard") return foreignItems(card, usable).length > 0;
   return usable.some(
     (other) =>
       isValidDistractor(card, other) &&
@@ -127,7 +142,7 @@ function isEligibleForMode(card: PreparedCard, mode: QuizMode, usable: PreparedC
     if (!isEnumerationCard(card)) return false;
     // Items use complete-list options for MC and a multi-entry answer for Identification.
     // True/False compares the displayed statement with the complete list.
-    return mode === "multiple-choice" || mode === "identification" || mode === "true-false";
+      return mode === "multiple-choice" ? enumerationWrongLists(card, usable, 1).length > 0 : mode === "identification" || mode === "true-false";
   }
   switch (mode) {
     case "multiple-choice": return isShortAnswer(card) && hasDistractor(card, usable);
@@ -161,9 +176,10 @@ function safeHint(card: PreparedCard): string | undefined {
 }
 
 function buildMultipleChoice(card: PreparedCard, usable: PreparedCard[]): StoredQuestion | null {
-  const { same, other } = getDistractors(card, usable);
+  const same = foreignItems(card, usable.filter((candidate) => candidate.subjectId === card.subjectId));
+  const cross = foreignItems(card, usable.filter((candidate) => candidate.subjectId !== card.subjectId));
   const wanted = MC_OPTION_COUNT - 1;
-  const picked = [...shuffle(same), ...shuffle(other)].slice(0, wanted);
+  const picked = [...shuffle(same), ...shuffle(cross)].slice(0, wanted);
   if (picked.length === 0) return null; // skipped: no valid distractor can be found
   const entries = shuffle([
     { text: card.answer, correct: true },
@@ -193,11 +209,15 @@ function buildIdentification(card: PreparedCard): StoredQuestion {
 }
 
 function buildTrueFalse(card: PreparedCard, usable: PreparedCard[]): StoredQuestion {
-  const { same, other } = getDistractors(card, usable);
-  const itemAlternatives = card.flashcardType === "items"
-    ? usable.filter((candidate) => candidate.id !== card.id && candidate.flashcardType === "items" && candidate.qn !== card.qn && candidate.an !== card.an).map((candidate) => candidate.answer)
-    : [];
-  const pool = itemAlternatives.length ? itemAlternatives : same.length ? same : other;
+  if (card.flashcardType === "items") {
+    const falseLists = enumerationWrongLists(card, usable, 1);
+    const makeFalse = falseLists.length > 0 && randomInt(1000) < TF_FALSE_PROBABILITY * 1000;
+    const statement = (makeFalse ? falseLists[0] : shuffle(card.items)).join("\n");
+    return { type: "true-false", flashcardId: card.id, prompt: card.question, hint: safeHint(card), options: [], correctIndex: -1, statement, truth: !makeFalse, expectedItems: card.items, expectedAnswer: card.items.join(", ") };
+  }
+  const same = foreignItems(card, usable.filter((candidate) => candidate.subjectId === card.subjectId));
+  const cross = foreignItems(card, usable.filter((candidate) => candidate.subjectId !== card.subjectId));
+  const pool = same.length ? same : cross;
   const makeFalse = pool.length > 0 && randomInt(1000) < TF_FALSE_PROBABILITY * 1000;
   const statement = makeFalse ? pool[randomInt(pool.length)] : card.answer;
   return {
@@ -226,55 +246,16 @@ function buildEnumerationIdentification(card: PreparedCard): StoredQuestion {
   };
 }
 
-const setKey = (items: string[]) => items.map(normalizeText).sort().join("\u0000");
+function enumerationWrongLists(card: PreparedCard, usable: PreparedCard[], count: number): string[][] {
+  const same = foreignItems(card, usable.filter((candidate) => candidate.subjectId === card.subjectId));
+  const cross = foreignItems(card, usable.filter((candidate) => candidate.subjectId !== card.subjectId));
+  return buildEnumerationWrongLists(card.items, same, cross, count);
+}
 
-/**
- * Wrong lists are variations of the correct one: an item removed, an item swapped for
- * a foreign item, or a foreign item added. Foreign items come from the user's other enumeration cards.
- * Every wrong list differs from the correct list (and from each other) as a set.
- */
 function buildEnumerationMultipleChoice(card: PreparedCard, usable: PreparedCard[]): StoredQuestion | null {
   const correct = card.items;
-  const own = new Set(correct.map(normalizeText));
-  const foreignSeen = new Set<string>();
-  const foreign: string[] = [];
-  for (const other of shuffle(usable)) {
-    if (other.id === card.id) continue;
-    for (const item of other.items) {
-      const key = normalizeText(item);
-      if (own.has(key) || foreignSeen.has(key) || item.length > MAX_QUIZ_ANSWER_LENGTH) continue;
-      foreignSeen.add(key);
-      foreign.push(item);
-    }
-  }
-  const taken = new Set<string>([setKey(correct)]);
-  const wrong: string[][] = [];
-  const tryAdd = (items: string[]) => {
-    if (items.length < 1 || items.length > ENUM_MAX_ITEMS) return;
-    const key = setKey(items);
-    if (taken.has(key)) return;
-    taken.add(key);
-    wrong.push(items);
-  };
   const wanted = ENUM_MC_OPTION_COUNT - 1;
-  const pickForeign = () => (foreign.length ? foreign[randomInt(foreign.length)] : null);
-  // Mix the three variations round-robin so options do not share a telltale pattern.
-  for (let attempt = 0; attempt < 40 && wrong.length < wanted; attempt += 1) {
-    const kind = attempt % 3;
-    if (kind === 0 && correct.length > 1) {
-      const drop = randomInt(correct.length);
-      tryAdd(correct.filter((_, i) => i !== drop));
-    } else if (kind === 1) {
-      const f = pickForeign();
-      const swap = randomInt(correct.length);
-      if (f) tryAdd(correct.map((item, i) => (i === swap ? f : item)));
-    } else {
-      const f = pickForeign();
-      if (f) tryAdd([...correct, f]);
-    }
-  }
-  // Fallback when there are few foreign items: sweep every drop-one variation.
-  if (wrong.length === 0 && correct.length > 1) correct.forEach((_, i) => tryAdd(correct.filter((__, j) => j !== i)));
+  const wrong = enumerationWrongLists(card, usable, wanted);
   if (wrong.length === 0) return null;
   const entries = shuffle([
     { items: correct, correct: true },
@@ -286,7 +267,7 @@ function buildEnumerationMultipleChoice(card: PreparedCard, usable: PreparedCard
     prompt: card.question,
     hint: safeHint(card),
     // Items are shuffled inside each option so list order never gives the answer away.
-    options: entries.map((e) => shuffle(e.items).join("\n")),
+    options: entries.map((e) => e.items.join("\n")),
     correctIndex: entries.findIndex((e) => e.correct),
     expectedItems: correct,
     expectedAnswer: correct.join(", "),
