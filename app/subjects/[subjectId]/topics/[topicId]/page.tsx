@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import { isValidObjectId } from "mongoose";
 import { ChevronRight, FolderOpen } from "lucide-react";
@@ -44,13 +45,18 @@ export default async function TopicPage({ params }: Props) {
         <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[#B4A5AC]"/>
         <span aria-current="page" className="max-w-[38vw] truncate font-semibold text-[#153B56]">{topic.name}</span>
       </nav>
-      <section className="relative isolate overflow-hidden rounded-[1.35rem] border border-[#F7DFE7] bg-[#FFF7F9] p-5 sm:p-8">
-        <div className="relative z-10 max-w-2xl">
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFE7EE] text-[#E9577D]"><FolderOpen aria-hidden="true" className="h-5 w-5"/></span>
-          <h1 className="mt-4 break-words text-[clamp(1.6rem,4vw,2.25rem)] font-bold tracking-[-.04em] text-[#153B56]">{topic.name}</h1>
-          <p className="mt-1 text-sm text-[#71869A]">{subject.name}</p>
-          {topic.description && <p className="mt-3 max-w-xl break-words text-sm leading-6 text-[#526F83]">{topic.description}</p>}
-          <p className="mt-4 text-sm font-semibold text-[#C65380]">{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}</p>
+      <section aria-labelledby="topic-hero-title" className="relative isolate min-h-[270px] overflow-hidden rounded-[1.35rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[285px] lg:min-h-[300px]">
+        <div className="relative z-10 flex min-h-[270px] items-center sm:min-h-[285px] lg:min-h-[300px]">
+          <div className="w-full max-w-[64%] px-5 py-7 sm:max-w-[62%] sm:px-7 sm:py-8 lg:max-w-[60%] lg:px-8">
+            <span aria-hidden="true" className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFE0E9] text-[#E9577D] sm:h-12 sm:w-12"><FolderOpen className="h-5 w-5"/></span>
+            <h1 id="topic-hero-title" className="mt-3 break-words text-[clamp(1.45rem,4vw,2.25rem)] font-bold leading-[1.12] tracking-[-.04em] text-[#173B52]">{topic.name}</h1>
+            <p className="mt-2 break-words text-sm text-[#6E8497]">{subject.name}</p>
+            {topic.description && <p className="mt-3 max-w-xl break-words text-sm leading-6 text-[#526F83]">{topic.description}</p>}
+            <p className="mt-4 text-sm font-semibold text-[#C65380]">{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}</p>
+          </div>
+        </div>
+        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-[36%] items-end justify-center sm:w-[40%] lg:w-[39%]">
+          <Image src="/dashboard-hero/my-subjects.png" alt="" fill priority sizes="(max-width: 640px) 43vw, 420px" className="object-contain object-bottom" />
         </div>
       </section>
       <TopicDetailClient subjectId={String(subject._id)} subjectName={subject.name} topic={{ id: String(topic._id), name: topic.name, count: cards.length }} mastery={topicMastery} typeMastery={topicTypeMastery} topicOptions={topicDocs.map((item) => ({ id: String(item._id), name: item.name }))} initialCards={cards.map((card) => ({ id: String(card._id), topicId: String(topic._id), topicName: topic.name, flashcardType: card.flashcardType === "items" ? "items" as const : "standard" as const, question: card.question, answer: card.answer, hint: card.hint ?? "", reviewed: reviewed.has(String(card._id)) }))}/>
