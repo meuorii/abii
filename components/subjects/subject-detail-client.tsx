@@ -10,13 +10,14 @@ import { Modal, modalCancelClass, modalPrimaryClass, modalDangerClass } from "@/
 import { FlashcardEditorModal, type EditableFlashcard } from "@/components/subjects/flashcard-editor-modal";
 import { Eye, Pencil, Trash2, Search, Layers3, ListOrdered, Plus, BookOpen, Clock3, CircleCheck, ArrowRight, ChartNoAxesColumn, Settings } from "lucide-react";
 import { parseEnumeration } from "@/lib/quiz/normalize";
+import { TopicsSection } from "@/components/subjects/topics-section";
 
 type FlashcardItem = EditableFlashcard;
 export type SubjectDetailData = {
   id: string; name: string; flashcardCount: number; reviewedCount: number; masteredCount: number; dueCount: number;
   progress: number; typeMastery: TypeProgress; correctCount: number; wrongCount: number; cards: FlashcardItem[];
 };
-type Tab = "flashcards" | "progress" | "settings";
+type Tab = "topics" | "flashcards" | "progress" | "settings";
 
 
 function IconCircle({ children }: { children: React.ReactNode }) {
@@ -25,7 +26,7 @@ function IconCircle({ children }: { children: React.ReactNode }) {
 
 export function SubjectDetailClient({ initialData }: { initialData: SubjectDetailData }) {
   const [data, setData] = useState(initialData);
-  const [tab, setTab] = useState<Tab>("flashcards");
+  const [tab, setTab] = useState<Tab>("topics");
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -97,10 +98,12 @@ setSavingSettings(true); setError("");
   return (
     <>
       <div className="flex items-center gap-1 overflow-x-auto border-b border-[#E8E2E5]" role="tablist" aria-label="Subject sections">
-        {([ ["flashcards", Layers3, "Flashcards"], ["progress", ChartNoAxesColumn, "Study Progress"], ["settings", Settings, "Settings"] ] as const).map(([value, Icon, label]) => (
+        {([ ["topics", BookOpen, "Topics"], ["flashcards", Layers3, "All Flashcards"], ["progress", ChartNoAxesColumn, "Progress"], ["settings", Settings, "Settings"] ] as const).map(([value, Icon, label]) => (
           <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => { setTab(value); setError(""); setNotice(""); }} className={`inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-xs font-semibold transition-colors sm:px-4 sm:text-sm ${tab === value ? "border-[#E9577D] text-[#E9577D]" : "border-transparent text-[#71869A] hover:text-[#2F2930]"} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E9577D]`}><Icon aria-hidden="true" className="h-4 w-4" />{label}</button>
         ))}
       </div>
+
+      {tab === "topics" && <TopicsSection subjectId={data.id} />}
 
       {notice && <p role="status" className="rounded-xl border border-[#CFE8D8] bg-[#EAF8F0] px-4 py-3 text-sm text-[#35664B]">{notice}</p>}
       {error && <p role="alert" className="rounded-xl border border-[#F0C7D3] bg-[#FFF1F1] px-4 py-3 text-sm text-[#A43E5C]">{error}</p>}

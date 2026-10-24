@@ -9,6 +9,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
+import { Topic } from "@/models/Topic";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { emptyTypeProgress } from "@/lib/quiz/types";
 import { BookOpen, ChevronRight, ArrowRight, CircleCheck } from "lucide-react";
@@ -57,6 +58,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
   const correctCount = reviews.filter((review) => review.result === "correct").length;
   const wrongCount = reviews.filter((review) => review.result === "wrong").length;
   const masteredCount = mastery.bySubject.get(String(subject._id)) ?? 0;
+  const topicCount = await Topic.countDocuments({ userId: user._id, subjectId: subject._id });
   const typeMastery = mastery.byTypeBySubject.get(String(subject._id)) ?? emptyTypeProgress();
   const progress = cards.length ? Math.round((masteredCount / cards.length) * 100) : 0;
 
@@ -98,7 +100,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
                 <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#FFE0E9] text-[#E9577D] sm:h-12 sm:w-12"><BookOpen className="h-5 w-5" /></span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2"><h1 className="truncate text-xl font-bold tracking-[-0.04em] text-[#2F2930] sm:text-2xl">{subject.name}</h1>{cards.length > 0 && masteredCount === cards.length && <span title="Mastered" aria-label="Mastered" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-2 py-1 text-[10px] font-bold text-[#D94675]"><CircleCheck className="h-3 w-3"/>Mastered</span>}</div>
-                  <p className="mt-1 text-[11px] text-[#6E8497] sm:text-xs">{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"} <span className="mx-1.5">·</span> {progress}% mastered</p>
+                  <p className="mt-1 text-[11px] text-[#6E8497] sm:text-xs">{topicCount} {topicCount === 1 ? "topic" : "topics"}<span className="mx-1.5">·</span>{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}<span className="mx-1.5">·</span>{progress}% mastered</p>
                   <div className="mt-2 h-1.5 w-32 overflow-hidden rounded-full bg-white/90 sm:w-48"><div className="h-full rounded-full bg-[#E9577D]" style={{ width: `${progress}%` }} /></div>
                   
                 </div>

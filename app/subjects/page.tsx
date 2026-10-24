@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
 import { Subject } from "@/models/Subject";
+import { Topic } from "@/models/Topic";
 import { User } from "@/models/User";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { emptyTypeProgress } from "@/lib/quiz/types";
@@ -36,9 +37,10 @@ export default async function SubjectsPage() {
   try {
     await connectToDatabase();
     const userId = user._id;
-    const [subjectDocs, cards, mastery, userSettings] = await Promise.all([
+    const [subjectDocs, cards, topics, mastery, userSettings] = await Promise.all([
       Subject.find({ userId }).select("_id name").sort({ name: 1 }).lean(),
       Flashcard.find({ userId }).select("_id subjectId").lean(),
+      Topic.aggregate<{ _id: typeof userId; count: number }>([{ $match: { userId } }, { $group: { _id: "$subjectId", count: { $sum: 1 } } }]),
       getSubjectMastery(userId),
       User.findById(userId).select("settings.subjectLayout").lean(),
     ]);
@@ -46,6 +48,7 @@ export default async function SubjectsPage() {
     preferredLayout = userSettings?.settings?.subjectLayout === "list" ? "list" : "grid";
 
     const counts = new Map<string, number>();
+    const topicCounts = new Map(topics.map((row) => [String(row._id), row.count]));
     for (const card of cards) {
       const subjectId = String(card.subjectId);
       counts.set(subjectId, (counts.get(subjectId) ?? 0) + 1);
@@ -59,6 +62,7 @@ export default async function SubjectsPage() {
         id,
         name: subject.name,
         flashcardCount,
+        topicCount: topicCounts.get(id) ?? 0,
         masteredCount,
         typeMastery: mastery.byTypeBySubject.get(id) ?? emptyTypeProgress(),
         progress: flashcardCount === 0 ? 0 : Math.round((masteredCount / flashcardCount) * 100),

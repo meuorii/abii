@@ -55,13 +55,19 @@ test("real authenticated Next.js routes and legacy Subject/Flashcard contracts",
     assert.equal(source.status, 201);
     const target = await request(topics, "POST", { name: "Target" });
     assert.equal(target.status, 201);
+    const detailTopic = await request(topics, "POST", { name: "Detail topic" });
+    assert.equal(detailTopic.status, 201);
+    const topicCard = await request(`${path}/flashcards`, "POST", { topicId: detailTopic.body.topic.id, flashcardType: "standard", question: "In topic", answer: "Card" });
+    assert.equal(topicCard.status, 201);
+    assert.equal((await request(`${topics}/${detailTopic.body.topic.id}`)).body.topic.flashcardCount, 1);
+    assert.equal((await request(`${path}/flashcards`, "POST", { topicId: String(new mongoose.Types.ObjectId()), question: "Invalid link", answer: "Must not save" })).status, 404);
     const itemPath = `${topics}/${source.body.topic.id}`;
     const read = await request(itemPath);
     assert.equal(read.status, 200);
     const renamed = await request(itemPath, "PATCH", { name: "Renamed" }, read.etag);
     assert.equal(renamed.status, 200);
     for (const flashcardType of ["standard", "items"]) {
-      const card = await request(`${path}/flashcards`, "POST", { flashcardType, question: "Question", answer: flashcardType === "items" ? "one\ntwo" : "Answer", hint: "Hint" });
+      const card = await request(`${path}/flashcards`, "POST", { topicId: source.body.topic.id, flashcardType, question: "Question", answer: flashcardType === "items" ? "one\ntwo" : "Answer", hint: "Hint" });
       assert.equal(card.status, 201);
       assert.equal(card.body.card.flashcardType, flashcardType);
       const cardPath = `${path}/flashcards/${card.body.card.id}`;
@@ -69,11 +75,10 @@ test("real authenticated Next.js routes and legacy Subject/Flashcard contracts",
       const edited = await request(cardPath, "PATCH", { ...card.body.card, hint: "Updated hint" });
       assert.equal(edited.status, 200);
       assert.equal(edited.body.masteryReset, false);
-      // Seed a valid assignment without introducing a Phase 3 flashcard API.
-      await db.collection("flashcards").updateOne({ _id: new mongoose.Types.ObjectId(card.body.card.id) }, { $set: { topicId: new mongoose.Types.ObjectId(source.body.topic.id) } });
     }
-    assert.equal((await request(`${path}/flashcards`)).body.cards.length, 2);
+    assert.equal((await request(`${path}/flashcards`)).body.cards.length, 3);
     assert.equal((await request(topics)).body.topics.find((row) => row.id === source.body.topic.id).flashcardCount, 2);
+    assert.equal((await request(topics)).body.topics.find((row) => row.id === detailTopic.body.topic.id).flashcardCount, 1);
     assert.equal((await request(itemPath, "DELETE", { confirm: true }, renamed.etag)).status, 409);
     const transferred = await request(itemPath, "DELETE", { confirm: true, destinationTopicId: target.body.topic.id }, renamed.etag);
     assert.equal(transferred.status, 200);

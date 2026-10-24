@@ -65,8 +65,10 @@ no non-atomic fallback. Use a single-node replica set locally. Deploy Phase 1's
 unique owner/subject/normalizedName index, topic sorting index and flashcard
 owner/subject/topic index before serving Topic traffic. No migration runs here.
 
-Future card-assignment endpoints must use the same parent transaction lock and
-validate the destination. Current Flashcard endpoints do not accept topicId writes.
+The existing Subject Flashcard create endpoint accepts an optional `topicId` and
+checks it belongs to the signed-in owner and same subject. Existing creates without
+that field still work. Updates preserve the saved topic. Future movement endpoints
+must use the same parent transaction lock and validate the destination.
 Direct database writers and migrations bypass the protocol; pause application
 writes for migrations as documented in Phase 1. Mongoose refs are not foreign keys.
 

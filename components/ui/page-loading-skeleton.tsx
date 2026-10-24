@@ -6,6 +6,7 @@ export type PageLoadingVariant =
   | "dashboard"
   | "subjects"
   | "subject-detail"
+  | "topic-detail"
   | "review"
   | "quiz-setup"
   | "quiz"
@@ -179,6 +180,8 @@ function Content({ variant }: { variant: PageLoadingVariant }) {
       return <div className="space-y-5"><Hero /><div className="flex items-center justify-between gap-3"><Bar className="h-5 w-36" /><Bar className="h-10 w-32 rounded-full" /></div><SubjectCards /></div>;
     case "subject-detail":
       return <div className="space-y-5"><Bar className="h-4 w-44" /><Hero /><MetricCards count={4} /><div className="flex items-center justify-between"><Bar className="h-5 w-40" /><Bar className="h-9 w-28 rounded-full" /></div><div className="grid gap-3 md:grid-cols-2"><CardSkeleton className="min-h-[150px]"><Bar className="h-3 w-24" /><Bar className="mt-5 h-4 w-full" /><Bar className="mt-3 h-3 w-2/3" /></CardSkeleton><CardSkeleton className="min-h-[150px]"><Bar className="h-3 w-24" /><Bar className="mt-5 h-4 w-full" /><Bar className="mt-3 h-3 w-2/3" /></CardSkeleton></div></div>;
+    case "topic-detail":
+      return <div className="space-y-5"><Bar className="h-4 w-48" /><Hero variant="compact" /><CardSkeleton><Bar className="h-10 w-full rounded-xl"/><div className="mt-5 space-y-3">{[0,1,2,3].map((n)=><Bar key={n} className="h-16 w-full rounded-xl"/>)}</div></CardSkeleton></div>;
     case "review":
       return <div className="space-y-5"><Hero /><MetricCards count={3} /><CardSkeleton><Bar className="h-5 w-44" /><div className="mt-5 space-y-3">{[0, 1, 2].map((n) => <div key={n} className="flex items-center gap-3 rounded-xl border border-[#F4E9ED] p-3"><Bar className="h-10 w-10 rounded-xl" /><div className="flex-1 space-y-2"><Bar className="h-3 w-2/3" /><Bar className="h-2.5 w-1/3" /></div><Bar className="h-9 w-24 rounded-full" /></div>)}</div></CardSkeleton></div>;
     case "quiz-setup":

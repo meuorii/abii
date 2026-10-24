@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
 import { Subject } from "@/models/Subject";
+import { Topic } from "@/models/Topic";
 import { parseEnumeration } from "@/lib/quiz/normalize";
 import { isFlashcardType } from "@/lib/quiz/types";
 import { ENUM_MAX_ITEMS, ENUM_MIN_ITEMS, MAX_ENUM_ANSWER_LENGTH } from "@/lib/quiz/config";
@@ -18,7 +19,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   const { subjectId } = await params;
   if (!isValidObjectId(subjectId)) return NextResponse.json({ error: "This subject could not be found." }, { status: 404 });
 
-  let body: { question?: unknown; answer?: unknown; hint?: unknown; flashcardType?: unknown };
+  let body: { question?: unknown; answer?: unknown; hint?: unknown; flashcardType?: unknown; topicId?: unknown };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Please check the form and try again." }, { status: 400 }); }
   const flashcardType = body.flashcardType === undefined ? "standard" : body.flashcardType;
   if (!isFlashcardType(flashcardType)) return NextResponse.json({ error: "Choose Standard or Enumeration." }, { status: 400 });
@@ -36,7 +37,14 @@ export async function POST(request: Request, { params }: RouteContext) {
     await connectToDatabase();
     const subject = await Subject.findOne({ _id: subjectId, userId: user._id }).select("_id").lean();
     if (!subject) return NextResponse.json({ error: "This subject could not be found." }, { status: 404 });
-    const card = await Flashcard.create({ userId: user._id, subjectId: subject._id, flashcardType, question, answer, ...(hint ? { hint } : {}) });
+    let topicId;
+    if (body.topicId !== undefined) {
+      if (typeof body.topicId !== "string" || !isValidObjectId(body.topicId)) return NextResponse.json({ error: "This topic could not be found." }, { status: 404 });
+      const topic = await Topic.findOne({ _id: body.topicId, userId: user._id, subjectId: subject._id }).select("_id").lean();
+      if (!topic) return NextResponse.json({ error: "This topic could not be found." }, { status: 404 });
+      topicId = topic._id;
+    }
+    const card = await Flashcard.create({ userId: user._id, subjectId: subject._id, ...(topicId ? { topicId } : {}), flashcardType, question, answer, ...(hint ? { hint } : {}) });
     return NextResponse.json({ card: { id: String(card._id), flashcardType: card.flashcardType ?? "standard", question: card.question, answer: card.answer, hint: card.hint ?? "", reviewed: false } }, { status: 201 });
   } catch (error) {
     console.error("Unable to create flashcard.", error);

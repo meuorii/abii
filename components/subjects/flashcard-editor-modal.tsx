@@ -8,7 +8,7 @@ import { normalizeText, parseEnumeration } from "@/lib/quiz/normalize";
 import { ENUM_MAX_ITEMS, ENUM_MIN_ITEMS, MAX_ENUM_ANSWER_LENGTH, MAX_ENUM_ITEM_LENGTH } from "@/lib/quiz/config";
 
 export type EditableFlashcard = { id: string; flashcardType: "standard" | "items"; question: string; answer: string; hint: string; reviewed: boolean };
-export function FlashcardEditorModal({ subjectId, subjectName, initial, onClose, onSaved }: { subjectId: string; subjectName: string; initial?: EditableFlashcard; onClose: () => void; onSaved: (card: EditableFlashcard, resetMastery: boolean) => void }) {
+export function FlashcardEditorModal({ subjectId, subjectName, topicId, initial, onClose, onSaved }: { subjectId: string; subjectName: string; topicId?: string; initial?: EditableFlashcard; onClose: () => void; onSaved: (card: EditableFlashcard, resetMastery: boolean) => void }) {
   const { toast } = useToast();
   const [type, setType] = useState<"standard" | "items">(initial?.flashcardType ?? "standard");
   const [question, setQuestion] = useState(initial?.question ?? "");
@@ -27,7 +27,7 @@ export function FlashcardEditorModal({ subjectId, subjectName, initial, onClose,
     setSaving(true); setError("");
     try {
       const url = `/api/subjects/${subjectId}/flashcards${initial ? `/${initial.id}` : ""}`;
-      const response = await fetch(url, { method: initial ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ flashcardType: type, question: question.trim(), answer: finalAnswer, hint: hint.trim() }) });
+      const response = await fetch(url, { method: initial ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ flashcardType: type, question: question.trim(), answer: finalAnswer, hint: hint.trim(), ...(!initial && topicId ? { topicId } : {}) }) });
       const result = await response.json();
       if (!response.ok || !result.card) throw new Error(result.error || "Could not save flashcard.");
       onSaved({ ...result.card, reviewed: Boolean(initial?.reviewed) && !result.masteryReset }, Boolean(result.masteryReset));
