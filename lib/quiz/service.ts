@@ -22,6 +22,7 @@ import {
   type ReviewScope,
   type QuizSummary,
   type QuizType,
+  type MasteryStats,
   type TypeProgress,
 } from "./types";
 
@@ -234,58 +235,117 @@ export async function computeStreaks(userId: Types.ObjectId | string, flashcardI
 }
 
 /**
- * Mastery progress per subject and mode, for the setup, review and subject pages.
- * A mode only counts for cards it applies to (e.g. Enumeration only for list answers).
- * A card is mastered when it has the streak in every mode that applies to it AND in Mixed / Random mode.
+ * Computes streak mastery once per owned card, then aggregates it by topic,
+ * subject, and account. Type applicability uses the exact question builder rules.
  */
 export async function getSubjectMastery(userId: Types.ObjectId | string) {
-  const usable = await loadUsableCards(userId);
-  const records = await ReviewRecord.find({ userId })
-    .select("flashcardId result reviewedAt questionType")
-    .sort({ reviewedAt: -1, _id: -1 })
-    .lean();
-
+  await connectToDatabase();
+  const [rawCards, subjects, topics, records] = await Promise.all([
+    Flashcard.find({ userId }).select("_id subjectId topicId flashcardType question answer hint").lean(),
+    Subject.find({ userId }).select("_id").lean(),
+    Topic.find({ userId }).select("_id subjectId").lean(),
+    ReviewRecord.find({ userId }).select("flashcardId result reviewedAt nextReviewAt questionType").sort({ reviewedAt: -1, _id: -1 }).lean(),
+  ]);
+  const cards = rawCards.map(prepareCard);
+  const usable = cards.filter(isUsableCard);
+  const usableIds = new Set(usable.map((card) => card.id));
+  const cardById = new Map(cards.map((card) => [card.id, card]));
+  const topicParentById = new Map(topics.map((topic) => [String(topic._id), String(topic.subjectId)]));
+  const stats = (): MasteryStats => ({ total: 0, usable: 0, reviewed: 0, mastered: 0, due: 0, correct: 0, incorrect: 0, progress: 0 });
+  const bySubject = new Map<string, MasteryStats>(subjects.map((subject) => [String(subject._id), stats()]));
+  const byTopic = new Map<string, MasteryStats>(topics.map((topic) => [String(topic._id), stats()]));
+  const byTypeBySubject = new Map<string, TypeProgress>();
+  const byTypeByTopic = new Map<string, TypeProgress>();
+  const allByType = emptyTypeProgress();
+  const overall = stats();
+  const latestByCard = new Map<string, (typeof records)[number]>();
+  const recordCounts = new Map<string, { correct: number; incorrect: number }>();
   const streakByMode = new Map<QuizMode, Map<string, number>>();
+  for (const record of records) {
+    const id = String(record.flashcardId);
+    if (!cardById.has(id)) continue;
+    if (!latestByCard.has(id)) latestByCard.set(id, record);
+    const totals = recordCounts.get(id) ?? { correct: 0, incorrect: 0 };
+    if (record.result === "correct") totals.correct += 1;
+    else totals.incorrect += 1;
+    recordCounts.set(id, totals);
+  }
   for (const mode of QUIZ_MODES) {
     const streaks = new Map<string, number>();
     const ended = new Set<string>();
     for (const record of records) {
-      if (record.questionType !== mode) continue;
       const id = String(record.flashcardId);
-      if (ended.has(id)) continue;
+      if (!cardById.has(id)) continue;
+      if (record.questionType !== mode || ended.has(id)) continue;
       if (record.result === "correct") streaks.set(id, (streaks.get(id) ?? 0) + 1);
       else ended.add(id);
     }
     streakByMode.set(mode, streaks);
   }
 
-  const bySubject = new Map<string, number>();
-  const byTypeBySubject = new Map<string, TypeProgress>();
-  const allByType = emptyTypeProgress();
-  let all = 0;
-  for (const card of usable) {
-    const subjectId = card.subjectId;
-    const progress = byTypeBySubject.get(subjectId) ?? emptyTypeProgress();
-    const applicable: QuizMode[] = [...eligibleTypes(card, usable), "random"];
-    let complete = true;
-    for (const mode of applicable) {
-      const done = (streakByMode.get(mode)?.get(card.id) ?? 0) >= MASTERY_STREAK;
-      progress[mode].total += 1;
-      allByType[mode].total += 1;
-      if (done) {
-        progress[mode].done += 1;
-        allByType[mode].done += 1;
-      } else complete = false;
+  const addStats = (target: MasteryStats, card: PreparedCard, mastered: boolean, latest: (typeof records)[number] | undefined, attempts: { correct: number; incorrect: number }) => {
+    target.total += 1;
+    if (usableIds.has(card.id)) target.usable += 1;
+    if (latest) target.reviewed += 1;
+    if (!latest || new Date(latest.nextReviewAt).getTime() <= Date.now()) target.due += 1;
+    target.correct += attempts.correct;
+    target.incorrect += attempts.incorrect;
+    if (mastered) target.mastered += 1;
+  };
+
+  for (const card of cards) {
+    const latest = latestByCard.get(card.id);
+    const attempts = recordCounts.get(card.id) ?? { correct: 0, incorrect: 0 };
+    let applicable: QuizMode[] = [];
+    let mastered = false;
+    if (usableIds.has(card.id)) {
+      applicable = eligibleTypes(card, usable);
+      if (applicable.length > 0) {
+        applicable.push("random");
+        mastered = applicable.every((mode) => (streakByMode.get(mode)?.get(card.id) ?? 0) >= MASTERY_STREAK);
+      }
     }
-    byTypeBySubject.set(subjectId, progress);
-    if (complete) {
-      bySubject.set(subjectId, (bySubject.get(subjectId) ?? 0) + 1);
-      all += 1;
+    const subjectStats = bySubject.get(card.subjectId) ?? stats();
+    addStats(subjectStats, card, mastered, latest, attempts);
+    bySubject.set(card.subjectId, subjectStats);
+    addStats(overall, card, mastered, latest, attempts);
+    const topicId = card.topicId;
+    if (topicId && topicParentById.get(topicId) === card.subjectId) {
+      const topicStats = byTopic.get(topicId) ?? stats();
+      addStats(topicStats, card, mastered, latest, attempts);
+      byTopic.set(topicId, topicStats);
+    }
+    if (usableIds.has(card.id)) {
+      const subjectTypes = byTypeBySubject.get(card.subjectId) ?? emptyTypeProgress();
+      const topicTypes = topicId && topicParentById.get(topicId) === card.subjectId ? byTypeByTopic.get(topicId) ?? emptyTypeProgress() : null;
+      for (const mode of applicable) {
+        const done = (streakByMode.get(mode)?.get(card.id) ?? 0) >= MASTERY_STREAK;
+        subjectTypes[mode].total += 1;
+        allByType[mode].total += 1;
+        if (topicTypes) topicTypes[mode].total += 1;
+        if (done) {
+          subjectTypes[mode].done += 1;
+          allByType[mode].done += 1;
+          if (topicTypes) topicTypes[mode].done += 1;
+        }
+      }
+      byTypeBySubject.set(card.subjectId, subjectTypes);
+      if (topicTypes && topicId) byTypeByTopic.set(topicId, topicTypes);
     }
   }
-  return { bySubject, byTypeBySubject, allByType, all };
+  for (const value of [overall, ...bySubject.values(), ...byTopic.values()]) value.progress = value.total ? Math.round((value.mastered / value.total) * 100) : 0;
+  return {
+    byTopic,
+    bySubject,
+    overall,
+    byTypeByTopic,
+    byTypeBySubject,
+    allByType,
+    reviewedCardIds: new Set(latestByCard.keys()),
+    // Compatibility aliases retained for existing quiz and progress consumers.
+    all: overall.mastered,
+  };
 }
-
 /** Current consecutive-correct streak for cards in this session's selected quiz type. */
 export async function sessionMastery(userId: Types.ObjectId | string, session: SessionDoc): Promise<Map<string, number>> {
   return computeStreaks(userId, [...new Set(session.questions.map((q) => String(q.flashcardId)))], session.type);

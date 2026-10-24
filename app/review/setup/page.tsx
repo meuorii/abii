@@ -27,6 +27,7 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
   let allEligible = Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>;
   let totalCards = 0;
   let allMastered = 0;
+  let allProgress = 0;
   let allTypeMastery = emptyTypeProgress();
   let loadFailed = false;
 
@@ -40,7 +41,8 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
       getEligibilityCounts(userId),
       getSubjectMastery(userId),
     ]);
-    allMastered = mastery.all;
+    allMastered = mastery.overall.mastered;
+    allProgress = mastery.overall.progress;
     allTypeMastery = mastery.allByType;
     totalCards = cards.length;
     const cardCounts = new Map<string, number>();
@@ -57,6 +59,9 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
       const setupTopic: SetupTopic = {
         id, name: topic.name,
         flashcardCount: topicCardCounts.get(id) ?? 0,
+        mastered: mastery.byTopic.get(id)?.mastered ?? 0,
+        usableCount: mastery.byTopic.get(id)?.usable ?? 0,
+        masteryProgress: mastery.byTopic.get(id)?.progress ?? 0,
         eligible: counts.byTopic.get(id) ?? (Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>),
       };
       const parentId = String(topic.subjectId);
@@ -68,7 +73,9 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
         id,
         name: subject.name,
         flashcardCount: cardCounts.get(id) ?? 0,
-        mastered: mastery.bySubject.get(id) ?? 0,
+        mastered: mastery.bySubject.get(id)?.mastered ?? 0,
+        usableCount: mastery.bySubject.get(id)?.usable ?? 0,
+        masteryProgress: mastery.bySubject.get(id)?.progress ?? 0,
         typeMastery: mastery.byTypeBySubject.get(id) ?? emptyTypeProgress(),
         eligible: counts.bySubject.get(id) ?? (Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>),
         topics: topicsBySubject.get(id) ?? [],
@@ -92,6 +99,7 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
         allEligible={allEligible}
         totalCards={totalCards}
         allMastered={allMastered}
+        allProgress={allProgress}
         allTypeMastery={allTypeMastery}
         initialSubjectId={initialSubjectId}
         initialTopicId={initialTopicId}

@@ -89,7 +89,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
     ]);
 
     totalCards = cards.length;
-    masteryTotal = mastery.all;
+    masteryTotal = mastery.overall.mastered;
     const cardIds = cards.map((card) => card._id);
     const records = (cardIds.length
       ? await ReviewRecord.find({ userId, flashcardId: { $in: cardIds } })
@@ -155,9 +155,9 @@ export default async function ReviewPage({ searchParams }: PageProps) {
           id,
           name: subject.name,
           flashcardCount,
-          progress: flashcardCount ? Math.round(((mastery.bySubject.get(id) ?? 0) / flashcardCount) * 100) : 0,
+          progress: mastery.bySubject.get(id)?.progress ?? 0,
           lastReviewedAt: latestSubjectActivity.get(id) ?? 0,
-          mastered: mastery.bySubject.get(id) ?? 0,
+          mastered: mastery.bySubject.get(id)?.mastered ?? 0,
           typeMastery: mastery.byTypeBySubject.get(id) ?? emptyTypeProgress(),
         };
       })

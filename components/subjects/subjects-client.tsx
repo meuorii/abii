@@ -8,6 +8,7 @@ import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/moda
 import { useToast } from "@/components/ui/toast-provider";
 import { BookOpen, Plus, Search, ArrowUpRight } from "lucide-react";
 import { ListChecks, PenLine, CheckCircle2, Shuffle } from "lucide-react";
+import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 
 export type SubjectItem = {
   id: string;
@@ -16,6 +17,7 @@ export type SubjectItem = {
   topicCount: number;
   progress: number;
   masteredCount: number;
+  usableCount?: number;
   typeMastery: TypeProgress;
 };
 
@@ -185,14 +187,7 @@ export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClien
                 </div>
 
                 <div className={`${layout === "grid" ? "mt-5" : "mt-4 sm:mt-0 sm:w-[42%] sm:max-w-xs"}`}>
-                  <div className="mb-2 flex items-center justify-between gap-3 text-xs">
-                    <span className="font-medium text-[#756B72]">Mastery progress</span>
-                    <span className="font-bold tabular-nums text-[#2F2930]">{Math.max(0, Math.min(100, subject.progress))}%</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-[#F5E9ED]" role="progressbar" aria-label={`${subject.name} mastery progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(100, subject.progress))}>
-                    <div className="h-full rounded-full bg-[#F28BA9] transition-[width] duration-300" style={{ width: `${Math.max(0, Math.min(100, subject.progress))}%` }} />
-                  </div>
-                  <p className="mt-2 text-xs text-[#8A7E85]">{subject.masteredCount} mastered</p>
+                  <MasteryProgressBar label={`${subject.name} mastery progress`} mastered={subject.masteredCount} total={subject.flashcardCount} usable={subject.usableCount} progress={subject.progress} />
                   <TypeMasteryIndicators mastery={subject.typeMastery} />
                 </div>
               </Link>

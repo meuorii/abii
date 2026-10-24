@@ -6,11 +6,14 @@ import { Eye, Layers3, ListOrdered, Pencil, Plus, Search, Trash2 } from "lucide-
 import { FlashcardEditorModal, type EditableFlashcard, type FlashcardTopicOption } from "@/components/subjects/flashcard-editor-modal";
 import { Modal, modalCancelClass, modalDangerClass } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
+import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
+import { MasteryPills } from "@/components/review/review-setup";
+import type { MasteryStats, TypeProgress } from "@/lib/quiz/types";
 
 type Card = EditableFlashcard;
 type KindFilter = "all" | "standard" | "items";
 
-export function TopicDetailClient({ subjectId, subjectName, topic, topicOptions, initialCards }: { subjectId: string; subjectName: string; topic: { id: string; name: string; count: number }; topicOptions: FlashcardTopicOption[]; initialCards: Card[] }) {
+export function TopicDetailClient({ subjectId, subjectName, topic, mastery, typeMastery, topicOptions, initialCards }: { subjectId: string; subjectName: string; topic: { id: string; name: string; count: number }; mastery: MasteryStats; typeMastery: TypeProgress; topicOptions: FlashcardTopicOption[]; initialCards: Card[] }) {
   const [cards, setCards] = useState(initialCards);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<KindFilter>("all");
@@ -46,6 +49,13 @@ export function TopicDetailClient({ subjectId, subjectName, topic, topicOptions,
     finally { setBusy(false); }
   }
   return <section aria-labelledby="topic-cards-heading" className="min-w-0 space-y-4">
+    <section aria-label={`${topic.name} mastery summary`} className="rounded-2xl border border-[#F0E5E9] bg-white p-4 sm:p-5">
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+        <div><h2 className="text-sm font-bold text-[#153B56]">Topic mastery</h2><p className="mt-1 text-xs text-[#71869A]">A card is mastered after the required correct streak in every applicable mode and Mixed / Random.</p><div className="mt-3"><MasteryProgressBar label={`${topic.name} mastery progress`} mastered={mastery.mastered} total={mastery.total} usable={mastery.usable} progress={mastery.progress} size="md" /></div></div>
+        <div className="sm:min-w-44"><p className="text-xs text-[#71869A]">Reviewed {mastery.reviewed}/{mastery.total} · Due {mastery.due}</p><p className="mt-1 text-xs text-[#71869A]">Correct answers {mastery.correct} · Incorrect {mastery.incorrect}</p></div>
+      </div>
+      <MasteryPills progress={typeMastery} className="mt-3 flex flex-wrap gap-1" />
+    </section>
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div><h2 id="topic-cards-heading" className="text-lg font-bold text-[#153B56]">Flashcards <span className="ml-1 text-sm font-medium text-[#8192A1]">{cards.length}</span></h2><p className="mt-1 text-sm text-[#71869A]">Search and manage cards in this topic.</p></div>
       <button type="button" onClick={() => setEditor("create")} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6F96] px-4 text-sm font-semibold text-white transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2"><Plus aria-hidden="true" className="h-4 w-4"/>Add flashcard</button>

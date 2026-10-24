@@ -57,15 +57,17 @@ export default async function SubjectsPage() {
     subjects = subjectDocs.map((subject) => {
       const id = String(subject._id);
       const flashcardCount = counts.get(id) ?? 0;
-      const masteredCount = mastery.bySubject.get(id) ?? 0;
+      const masteryStats = mastery.bySubject.get(id);
+      const masteredCount = masteryStats?.mastered ?? 0;
       return {
         id,
         name: subject.name,
         flashcardCount,
+        usableCount: masteryStats?.usable ?? 0,
         topicCount: topicCounts.get(id) ?? 0,
         masteredCount,
         typeMastery: mastery.byTypeBySubject.get(id) ?? emptyTypeProgress(),
-        progress: flashcardCount === 0 ? 0 : Math.round((masteredCount / flashcardCount) * 100),
+        progress: masteryStats?.progress ?? 0,
       };
     });
   } catch (error) {

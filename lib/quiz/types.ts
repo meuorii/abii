@@ -29,6 +29,16 @@ export const QUIZ_TYPE_DESCRIPTIONS: Record<QuizMode, string> = {
 };
 export type ModeProgress = { done: number; total: number };
 export type TypeProgress = Record<QuizMode, ModeProgress>;
+export type MasteryStats = {
+  total: number;
+  usable: number;
+  reviewed: number;
+  mastered: number;
+  due: number;
+  correct: number;
+  incorrect: number;
+  progress: number;
+};
 export function emptyTypeProgress(): TypeProgress {
   return Object.fromEntries(QUIZ_MODES.map((m) => [m, { done: 0, total: 0 }])) as TypeProgress;
 }
@@ -76,7 +86,8 @@ export type PublicSession = {
 };
 export type SetupSubject = {
   id: string; name: string; flashcardCount: number; mastered: number;
+  usableCount: number; masteryProgress: number;
   typeMastery: TypeProgress; eligible: Record<QuizMode, number>;
   topics: SetupTopic[];
 };
-export type SetupTopic = { id: string; name: string; flashcardCount: number; eligible: Record<QuizMode, number> };
+export type SetupTopic = { id: string; name: string; flashcardCount: number; mastered: number; usableCount: number; masteryProgress: number; eligible: Record<QuizMode, number> };

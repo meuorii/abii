@@ -1,11 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CalendarDays, Layers3, BookOpen, FlaskConical, Leaf, Plus, RefreshCw, ChevronRight, ArrowRight, Circle } from "lucide-react";
+import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 
 type SubjectOverview = {
   id: string;
   name: string;
   flashcardCount: number;
+  masteredCount: number;
   progress: number;
 };
 
@@ -13,6 +15,7 @@ type DashboardOverviewProps = {
   firstName: string;
   dueCount: number;
   totalCards: number;
+  overallMastery: { mastered: number; total: number; progress: number };
   currentStreak: number;
   lastSevenDays: { label: string; completed: boolean }[];
   subjects: SubjectOverview[];
@@ -44,7 +47,7 @@ function EmptySubjects() {
   );
 }
 
-export function DashboardOverview({ firstName, dueCount, totalCards, currentStreak, lastSevenDays, subjects, loadFailed = false }: DashboardOverviewProps) {
+export function DashboardOverview({ firstName, dueCount, totalCards, overallMastery, currentStreak, lastSevenDays, subjects, loadFailed = false }: DashboardOverviewProps) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const shownSubjects = subjects.slice(0, 4);
@@ -74,6 +77,10 @@ export function DashboardOverview({ firstName, dueCount, totalCards, currentStre
         </section>
       ) : (
         <>
+          <section aria-label="Overall mastery" className="rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5">
+            <h2 className="mb-3 text-sm font-bold text-[#153B56]">Overall mastery</h2>
+            <MasteryProgressBar label="Overall mastery progress" mastered={overallMastery.mastered} total={overallMastery.total} progress={overallMastery.progress} size="md" />
+          </section>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.45fr_1fr]">
             <section className="min-w-0 rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5" aria-labelledby="today-review-heading">
               <SectionHeading icon="calendar" title="Today’s Review" href="/review" />
@@ -122,7 +129,7 @@ export function DashboardOverview({ firstName, dueCount, totalCards, currentStre
                         <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-[#2F4658]">{subject.name}</span><span className="mt-1 block text-[10px] text-[#8B9AA6]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "card" : "cards"}</span></span>
                         <Icon name="chevron" className="h-4 w-4 shrink-0 text-[#A0AFBA] transition-transform group-hover:translate-x-0.5" />
                       </div>
-                      <div className="mt-4 flex items-center gap-2"><div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-[#F0F1F4]"><div className="h-full rounded-full bg-[#F17D9D] transition-[width]" style={{ width: `${subject.progress}%` }} /></div><span className="w-8 shrink-0 text-right text-[10px] font-semibold text-[#718394]">{subject.progress}%</span></div>
+                      <div className="mt-4"><MasteryProgressBar label={`${subject.name} mastery progress`} mastered={subject.masteredCount} total={subject.flashcardCount} progress={subject.progress} /></div>
                     </Link>
                   </li>;
                 })}

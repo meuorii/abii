@@ -7,9 +7,10 @@ import { TopicDetailClient } from "@/components/subjects/topic-detail-client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
-import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { Topic } from "@/models/Topic";
+import { getSubjectMastery } from "@/lib/quiz/service";
+import { emptyTypeProgress } from "@/lib/quiz/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,16 +24,17 @@ export default async function TopicPage({ params }: Props) {
   await connectToDatabase();
   const subject = await Subject.findOne({ _id: subjectId, userId: user._id }).select("_id name").lean();
   if (!subject) notFound();
-  const [topic, topicDocs] = await Promise.all([
+  const [topic, topicDocs, mastery] = await Promise.all([
     Topic.findOne({ _id: topicId, subjectId: subject._id, userId: user._id }).select("_id subjectId name description position createdAt updatedAt").lean(),
     Topic.find({ userId: user._id, subjectId: subject._id }).select("_id name").sort({ position: 1, _id: 1 }).lean(),
+    getSubjectMastery(user._id),
   ]);
   if (!topic) notFound();
   const cards = await Flashcard.find({ userId: user._id, subjectId: subject._id, topicId: topic._id })
     .select("_id flashcardType question answer hint createdAt").sort({ createdAt: -1 }).lean();
-  const cardIds = cards.map((card) => card._id);
-  const reviews = cardIds.length ? await ReviewRecord.find({ userId: user._id, flashcardId: { $in: cardIds } }).select("flashcardId").lean() : [];
-  const reviewed = new Set(reviews.map((row) => String(row.flashcardId)));
+  const reviewed = mastery.reviewedCardIds;
+  const topicMastery = mastery.byTopic.get(String(topic._id)) ?? { total: cards.length, usable: 0, reviewed: 0, mastered: 0, due: cards.length, correct: 0, incorrect: 0, progress: 0 };
+  const topicTypeMastery = mastery.byTypeByTopic.get(String(topic._id)) ?? emptyTypeProgress();
   return <AppShell pageTitle={topic.name} pageDescription="Flashcards in this topic" userName={user.name}>
     <div className="min-w-0 space-y-5 p-4 pb-24 sm:p-6 xl:p-7">
       <nav aria-label="Breadcrumb" className="flex min-w-0 flex-wrap items-center gap-2 text-xs sm:text-sm">
@@ -51,7 +53,7 @@ export default async function TopicPage({ params }: Props) {
           <p className="mt-4 text-sm font-semibold text-[#C65380]">{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}</p>
         </div>
       </section>
-      <TopicDetailClient subjectId={String(subject._id)} subjectName={subject.name} topic={{ id: String(topic._id), name: topic.name, count: cards.length }} topicOptions={topicDocs.map((item) => ({ id: String(item._id), name: item.name }))} initialCards={cards.map((card) => ({ id: String(card._id), topicId: String(topic._id), topicName: topic.name, flashcardType: card.flashcardType === "items" ? "items" as const : "standard" as const, question: card.question, answer: card.answer, hint: card.hint ?? "", reviewed: reviewed.has(String(card._id)) }))}/>
+      <TopicDetailClient subjectId={String(subject._id)} subjectName={subject.name} topic={{ id: String(topic._id), name: topic.name, count: cards.length }} mastery={topicMastery} typeMastery={topicTypeMastery} topicOptions={topicDocs.map((item) => ({ id: String(item._id), name: item.name }))} initialCards={cards.map((card) => ({ id: String(card._id), topicId: String(topic._id), topicName: topic.name, flashcardType: card.flashcardType === "items" ? "items" as const : "standard" as const, question: card.question, answer: card.answer, hint: card.hint ?? "", reviewed: reviewed.has(String(card._id)) }))}/>
     </div>
   </AppShell>;
 }

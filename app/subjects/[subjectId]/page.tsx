@@ -7,7 +7,6 @@ import { SubjectDetailClient, type SubjectDetailData } from "@/components/subjec
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
-import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { Topic } from "@/models/Topic";
 import { getSubjectMastery } from "@/lib/quiz/service";
@@ -38,32 +37,15 @@ export default async function SubjectDetailPage({ params }: PageProps) {
     .lean(),
   ]);
   const topicNames = new Map(topicDocs.map((topic) => [String(topic._id), topic.name]));
-  const cardIds = cards.map((card) => card._id);
-  const reviews = cardIds.length
-    ? await ReviewRecord.find({ userId: user._id, flashcardId: { $in: cardIds } })
-        .select("flashcardId result reviewedAt nextReviewAt")
-        .sort({ reviewedAt: -1 })
-        .lean()
-    : [];
-
-  const latestReview = new Map<string, (typeof reviews)[number]>();
-  const reviewedIds = new Set<string>();
-  for (const review of reviews) {
-    const id = String(review.flashcardId);
-    reviewedIds.add(id);
-    if (!latestReview.has(id)) latestReview.set(id, review);
-  }
-  const now = new Date();
-  const dueCount = cards.filter((card) => {
-    const latest = latestReview.get(String(card._id));
-    return !latest || new Date(latest.nextReviewAt).getTime() <= now.getTime();
-  }).length;
-  const correctCount = reviews.filter((review) => review.result === "correct").length;
-  const wrongCount = reviews.filter((review) => review.result === "wrong").length;
-  const masteredCount = mastery.bySubject.get(String(subject._id)) ?? 0;
+  const reviewedIds = mastery.reviewedCardIds;
+  const masteryStats = mastery.bySubject.get(String(subject._id));
+  const dueCount = masteryStats?.due ?? cards.length;
+  const correctCount = masteryStats?.correct ?? 0;
+  const wrongCount = masteryStats?.incorrect ?? 0;
+  const masteredCount = masteryStats?.mastered ?? 0;
   const topicCount = await Topic.countDocuments({ userId: user._id, subjectId: subject._id });
   const typeMastery = mastery.byTypeBySubject.get(String(subject._id)) ?? emptyTypeProgress();
-  const progress = cards.length ? Math.round((masteredCount / cards.length) * 100) : 0;
+  const progress = masteryStats?.progress ?? 0;
 
   const data: SubjectDetailData = {
     id: String(subject._id),
@@ -71,6 +53,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
     flashcardCount: cards.length,
     reviewedCount: reviewedIds.size,
     masteredCount,
+    usableCount: masteryStats?.usable ?? 0,
     typeMastery,
     dueCount,
     progress,

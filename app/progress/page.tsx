@@ -9,6 +9,7 @@ import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { QuizSession } from "@/models/QuizSession";
+import { getSubjectMastery } from "@/lib/quiz/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export default async function ProgressPage() {
   const today = startOfDay(now);
   const chartStart = new Date(today.getTime() - 89 * DAY);
 
-  const [subjects, flashcards, reviews, sessions, recentSessions, groupedCardReviews] = await Promise.all([
+  const [subjects, flashcards, reviews, sessions, recentSessions, groupedCardReviews, mastery] = await Promise.all([
     Subject.find({ userId }).select("_id name").lean(),
     Flashcard.find({ userId }).select("_id subjectId question flashcardType").lean(),
     ReviewRecord.find({ userId, reviewedAt: { $gte: chartStart } }).select("flashcardId result questionType reviewedAt").sort({ reviewedAt: -1 }).lean(),
@@ -41,6 +42,7 @@ export default async function ProgressPage() {
       { $sort: { wrong: -1, total: -1 } },
       { $limit: 20 },
     ]),
+    getSubjectMastery(userId),
   ]);
 
   const subjectNameById = new Map(subjects.map((s) => [String(s._id), s.name]));
@@ -106,7 +108,9 @@ export default async function ProgressPage() {
       totalCards: stats.total,
       reviewed: stats.reviewed.size,
       accuracy: stats.answered ? percent(stats.correct, stats.answered) : null,
-      progress: stats.total ? percent(stats.reviewed.size, stats.total) ?? 0 : 0,
+      progress: mastery.bySubject.get(id)?.progress ?? 0,
+      mastered: mastery.bySubject.get(id)?.mastered ?? 0,
+      usable: mastery.bySubject.get(id)?.usable ?? 0,
     };
   }).sort((a, b) => (a.accuracy ?? 101) - (b.accuracy ?? 101));
 
@@ -135,7 +139,7 @@ export default async function ProgressPage() {
   });
 
   const payload: ProgressPayload = {
-    summary: { totalReviews: answeredAll, accuracy: percent(correctAll, answeredAll), sessions: sessions.length, streak },
+    summary: { totalReviews: answeredAll, accuracy: percent(correctAll, answeredAll), sessions: sessions.length, streak, masteredCards: mastery.overall.mastered, totalCards: mastery.overall.total, masteryProgress: mastery.overall.progress },
     activity,
     subjects: subjectPerformance,
     challengingCards,

@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { BookOpen, ChevronRight, FolderOpen, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Modal, modalCancelClass, modalDangerClass, modalPrimaryClass } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
+import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 
-export type TopicItem = { id: string; subjectId: string; name: string; description: string; position: number; createdAt: string; updatedAt: string; flashcardCount: number; metrics?: { flashcardCount: number } };
+export type TopicItem = { id: string; subjectId: string; name: string; description: string; position: number; createdAt: string; updatedAt: string; flashcardCount: number; usableFlashcardCount?: number; masteredCount?: number; progress?: number; metrics?: { flashcardCount: number; usableFlashcardCount?: number; reviewedFlashcardCount?: number; masteredFlashcardCount?: number; dueFlashcardCount?: number; correctAnswerCount?: number; incorrectAnswerCount?: number; masteryPercentage?: number } };
 type Editor = { mode: "create" | "edit"; topic?: TopicItem } | null;
 
 function TopicForm({ subjectId, editor, onClose, onSaved }: { subjectId: string; editor: Editor; onClose: () => void; onSaved: (topic: TopicItem) => void }) {
@@ -87,8 +88,9 @@ function TopicCard({ topic, onEdit, onDelete }: { topic: TopicItem; onEdit: () =
       <span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#FFF0F5] text-[#E9577D]"><FolderOpen className="h-5 w-5" /></span>
       <div className="min-w-0 flex-1"><h3 className="break-words font-bold text-[#153B56]">{topic.name}</h3>{topic.description && <p className="mt-1 line-clamp-2 break-words text-sm leading-5 text-[#756B72]">{topic.description}</p>}</div>
     </div>
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#F5EEF1] pt-3">
+    <div className="mt-4 space-y-3 border-t border-[#F5EEF1] pt-3">
       <p className="text-sm font-medium text-[#756B72]">{topic.flashcardCount} {topic.flashcardCount === 1 ? "flashcard" : "flashcards"}</p>
+      <MasteryProgressBar label={`${topic.name} mastery progress`} mastered={topic.masteredCount ?? topic.metrics?.masteredFlashcardCount ?? 0} total={topic.flashcardCount} usable={topic.usableFlashcardCount ?? topic.metrics?.usableFlashcardCount} progress={topic.progress ?? topic.metrics?.masteryPercentage ?? 0} />
       <div className="flex items-center gap-1">
         <button type="button" aria-label={`Edit ${topic.name}`} onClick={onEdit} className="grid h-10 w-10 place-items-center rounded-lg text-[#8A6171] hover:bg-[#FFF0F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"><Pencil className="h-4 w-4" /></button>
         <button type="button" aria-label={`Delete ${topic.name}`} onClick={onDelete} className="grid h-10 w-10 place-items-center rounded-lg text-[#A43E5C] hover:bg-[#FFF1F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"><Trash2 className="h-4 w-4" /></button>
@@ -120,7 +122,7 @@ export function TopicsSection({ subjectId }: { subjectId: string }) {
   function saved(topic: TopicItem) {
     setTopics((current) => editor?.mode === "edit" ? current.map((item) => item.id === topic.id ? topic : item) : [...current, topic].sort((a, b) => a.position - b.position || a.name.localeCompare(b.name)));
     toast({ kind: "success", title: editor?.mode === "edit" ? "Topic updated" : "Topic created", message: `“${topic.name}” is ready.` });
-    setEditor(null); router.refresh();
+    setEditor(null); void load(); router.refresh();
   }
   function removed(moved: number) {
     toast({ kind: "success", title: "Topic deleted", message: moved ? `${moved} flashcards were moved safely.` : "The empty topic was removed." });

@@ -6,11 +6,12 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
+import { getSubjectMastery } from "@/lib/quiz/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type SubjectSummary = { id: string; name: string; flashcardCount: number; progress: number };
+type SubjectSummary = { id: string; name: string; flashcardCount: number; masteredCount: number; progress: number };
 
 function dateKey(date: Date) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
@@ -41,6 +42,7 @@ export default async function DashboardPage() {
   let subjects: SubjectSummary[] = [];
   let dueCount = 0;
   let totalCards = 0;
+  let overallMastery = { mastered: 0, total: 0, progress: 0 };
   let currentStreak = 0;
   let lastSevenDays: { label: string; completed: boolean }[] = [];
   let loadFailed = false;
@@ -49,10 +51,12 @@ export default async function DashboardPage() {
     await connectToDatabase();
     const userId = user._id;
     const now = new Date();
-    const [subjectDocs, cards] = await Promise.all([
+    const [subjectDocs, cards, mastery] = await Promise.all([
       Subject.find({ userId }).select("_id name").sort({ name: 1 }).lean(),
       Flashcard.find({ userId }).select("_id subjectId").lean(),
+      getSubjectMastery(userId),
     ]);
+    overallMastery = { mastered: mastery.overall.mastered, total: mastery.overall.total, progress: mastery.overall.progress };
 
     totalCards = cards.length;
     const cardIds = cards.map((card) => card._id);
@@ -64,7 +68,6 @@ export default async function DashboardPage() {
       : [];
 
     const latestReviewByCard = new Map<string, (typeof reviewRecords)[number]>();
-    const reviewedCardIdsBySubject = new Map<string, Set<string>>();
     const studyDays = new Set<string>();
 
     for (const record of reviewRecords) {
@@ -75,13 +78,6 @@ export default async function DashboardPage() {
     }
 
     for (const card of cards) {
-      const subjectId = String(card.subjectId);
-      const reviewed = latestReviewByCard.has(String(card._id));
-      if (reviewed) {
-        const set = reviewedCardIdsBySubject.get(subjectId) ?? new Set<string>();
-        set.add(String(card._id));
-        reviewedCardIdsBySubject.set(subjectId, set);
-      }
       const latest = latestReviewByCard.get(String(card._id));
       if (!latest || new Date(latest.nextReviewAt).getTime() <= now.getTime()) dueCount += 1;
     }
@@ -95,13 +91,13 @@ export default async function DashboardPage() {
     subjects = subjectDocs.map((subject) => {
       const id = String(subject._id);
       const count = countBySubject.get(id) ?? 0;
-      const reviewedCount = reviewedCardIdsBySubject.get(id)?.size ?? 0;
+      const masteryStats = mastery.bySubject.get(id);
       return {
         id,
         name: subject.name,
         flashcardCount: count,
-        // Progress means the percentage of this subject's cards with at least one saved review.
-        progress: count === 0 ? 0 : Math.round((reviewedCount / count) * 100),
+        masteredCount: masteryStats?.mastered ?? 0,
+        progress: masteryStats?.progress ?? 0,
       };
     });
 
@@ -124,6 +120,7 @@ export default async function DashboardPage() {
         firstName={firstName}
         dueCount={dueCount}
         totalCards={totalCards}
+        overallMastery={overallMastery}
         currentStreak={currentStreak}
         lastSevenDays={lastSevenDays}
         subjects={subjects}

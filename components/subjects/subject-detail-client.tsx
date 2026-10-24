@@ -8,14 +8,15 @@ import { MasteryPills } from "@/components/review/review-setup";
 import { useToast } from "@/components/ui/toast-provider";
 import { Modal, modalCancelClass, modalPrimaryClass, modalDangerClass } from "@/components/ui/modal";
 import { FlashcardEditorModal, type EditableFlashcard } from "@/components/subjects/flashcard-editor-modal";
-import { Eye, Pencil, Trash2, Search, Layers3, ListOrdered, Plus, BookOpen, Clock3, CircleCheck, ArrowRight, ChartNoAxesColumn, Settings } from "lucide-react";
+import { Eye, Pencil, Trash2, Search, Layers3, ListOrdered, Plus, BookOpen, Clock3, ArrowRight, ChartNoAxesColumn, Settings } from "lucide-react";
 import { parseEnumeration } from "@/lib/quiz/normalize";
 import { TopicsSection } from "@/components/subjects/topics-section";
+import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 
 type FlashcardItem = EditableFlashcard;
 export type SubjectDetailData = {
   id: string; name: string; flashcardCount: number; reviewedCount: number; masteredCount: number; dueCount: number;
-  progress: number; typeMastery: TypeProgress; correctCount: number; wrongCount: number; cards: FlashcardItem[]; topics: { id: string; name: string }[];
+  progress: number; usableCount: number; typeMastery: TypeProgress; correctCount: number; wrongCount: number; cards: FlashcardItem[]; topics: { id: string; name: string }[];
 };
 type Tab = "topics" | "flashcards" | "progress" | "settings";
 
@@ -141,7 +142,7 @@ setSavingSettings(true); setError("");
             <div className="mt-3 space-y-2">
               <StatRow icon={<BookOpen className="h-4 w-4"/>} value={String(data.flashcardCount)} label="Total Flashcards" />
               <StatRow icon={<Clock3 className="h-4 w-4"/>} value={String(data.dueCount)} label="Due for Review" />
-              <div className="rounded-xl bg-[#FFF7F9] p-3"><div className="flex items-center gap-2"><IconCircle><CircleCheck className="h-4 w-4"/></IconCircle><div><p className="text-sm font-bold text-[#2F2930]">{data.progress}%</p><p className="text-[11px] text-[#71869A]">Mastery Progress</p></div></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#EDEFF2]"><div className="h-full rounded-full bg-[#E9577D]" style={{ width: `${data.progress}%` }} /></div><p className="mt-2 text-[10px] text-[#71869A]">{data.masteredCount}/{data.flashcardCount} cards mastered</p></div>
+              <div className="rounded-xl bg-[#FFF7F9] p-3"><MasteryProgressBar label={`${data.name} mastery progress`} mastered={data.masteredCount} total={data.flashcardCount} usable={data.usableCount} progress={data.progress} /></div>
               <MasteryPills progress={data.typeMastery} className="flex flex-wrap gap-2" />
               
             </div>
@@ -155,7 +156,7 @@ setSavingSettings(true); setError("");
 
       {tab === "progress" && <section aria-labelledby="progress-heading" className="space-y-4"><div><h2 id="progress-heading" className="text-lg font-bold tracking-[-0.035em] text-[#173B52]">Study Progress</h2><p className="mt-1 text-sm text-[#71869A]">A clear view of how much of this subject you’ve practiced.</p></div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric title="Total flashcards" value={data.flashcardCount} detail="Cards in this subject"/><Metric title="Reviewed cards" value={data.reviewedCount} detail="Reviewed at least once"/><Metric title="Due for review" value={data.dueCount} detail="Ready for another practice"/><Metric title="Mastered cards" value={`${data.masteredCount}/${data.flashcardCount}`} detail="Every type + Random, 3 correct in a row"/></div>
-        <div className="rounded-[18px] border border-[#E8E2E5] bg-white p-5 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-4"><div><h3 className="font-bold text-[#2F2930]">Mastery completion</h3><p className="mt-1 text-sm text-[#71869A]">{data.masteredCount} of {data.flashcardCount} cards mastered across every applicable question type and Mixed / Random.</p></div>{data.flashcardCount > 0 && data.masteredCount === data.flashcardCount && <span className="inline-flex items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-3 py-1.5 text-xs font-bold text-[#D94675]">✓ Mastered</span>}</div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[#F0F1F4]"><div className="h-full rounded-full bg-[#E9577D] transition-[width]" style={{ width: `${data.progress}%` }} /></div><MasteryPills progress={data.typeMastery} size="md" className="mt-4 flex flex-wrap gap-3" /><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl bg-[#EAF8F0] p-4"><p className="text-xs text-[#4F7D62]">Correct review results</p><p className="mt-1 text-2xl font-bold text-[#35664B]">{data.correctCount}</p></div><div className="rounded-xl bg-[#FFF1F1] p-4"><p className="text-xs text-[#A45D6B]">Incorrect review results</p><p className="mt-1 text-2xl font-bold text-[#A43E5C]">{data.wrongCount}</p></div></div></div>
+        <div className="rounded-[18px] border border-[#E8E2E5] bg-white p-5 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-4"><div><h3 className="font-bold text-[#2F2930]">Mastery completion</h3><p className="mt-1 text-sm text-[#71869A]">{data.masteredCount} of {data.flashcardCount} cards mastered across every applicable question type and Mixed / Random.</p></div>{data.flashcardCount > 0 && data.masteredCount === data.flashcardCount && <span className="inline-flex items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-3 py-1.5 text-xs font-bold text-[#D94675]">✓ Mastered</span>}</div><div className="mt-4"><MasteryProgressBar label={`${data.name} mastery completion`} mastered={data.masteredCount} total={data.flashcardCount} usable={data.usableCount} progress={data.progress} size="md" /></div><MasteryPills progress={data.typeMastery} size="md" className="mt-4 flex flex-wrap gap-3" /><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl bg-[#EAF8F0] p-4"><p className="text-xs text-[#4F7D62]">Correct review results</p><p className="mt-1 text-2xl font-bold text-[#35664B]">{data.correctCount}</p></div><div className="rounded-xl bg-[#FFF1F1] p-4"><p className="text-xs text-[#A45D6B]">Incorrect review results</p><p className="mt-1 text-2xl font-bold text-[#A43E5C]">{data.wrongCount}</p></div></div></div>
       </section>}
 
       {tab === "settings" && <section aria-labelledby="settings-heading" className="max-w-2xl space-y-4"><div><h2 id="settings-heading" className="text-lg font-bold tracking-[-0.035em] text-[#173B52]">Subject Settings</h2><p className="mt-1 text-sm text-[#71869A]">Manage the name and data for this subject.</p></div>
