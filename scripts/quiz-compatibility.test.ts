@@ -94,6 +94,16 @@ test("standard and enumeration formats remain compatible across quiz modes and t
     // Start every selectable mode under all/subject/topic scopes; only source questions are scope-filtered.
     for (const scope of ["all", "subject", "topic"] as const) {
       for (const mode of ["multiple-choice", "identification", "true-false", "random"] as const satisfies readonly QuizMode[]) {
+        const selectedCards = scope === "all"
+          ? allPrepared
+          : allPrepared.filter((card) => scope === "subject" ? card.subjectId === String(subject._id) : card.topicId === String(topic._id));
+        const expectedEligible = buildQuestions(selectedCards, allPrepared, mode).length;
+        const reportedEligible = scope === "all"
+          ? eligibility.all[mode]
+          : scope === "subject"
+            ? eligibility.bySubject.get(String(subject._id))?.[mode] ?? 0
+            : eligibility.byTopic.get(String(topic._id))?.[mode] ?? 0;
+        assert.equal(reportedEligible, expectedEligible, `${scope}/${mode} eligibility count should match generated questions`);
         const result = await startSession(userId, { scope, ...(scope === "all" ? {} : { subjectId: String(subject._id) }), ...(scope === "topic" ? { topicId: String(topic._id) } : {}), type: mode });
         assert.equal(result.ok, true, `${scope}/${mode}: ${"message" in result ? result.message : ""}`);
         if (!result.ok) continue;

@@ -1,38 +1,72 @@
-# Abii — Phase 8: Dashboard
+# Abii Active Recall
 
-## Included file
-- `app/dashboard/page.tsx` — replaces the Phase 6 dashboard with an authenticated, MongoDB-backed dashboard.
+Abii organizes study material into Subjects, Topics, and Flashcards. Topics can
+contain Standard cards and Enumeration (`items`) cards. The same quiz engine
+supports All Subjects, one Subject, or one Topic review.
 
-## What it does
-- Gets the signed-in user from `getCurrentUser()` on the server.
-- Loads only subjects and flashcards owned by that user.
-- Shows each subject's real flashcard count.
-- Counts cards due now from the most recent review record for each card. Cards never reviewed are treated as ready to study.
-- Handles empty subjects/cards and database errors without displaying database details to the user.
-- Uses the existing `AppShell` and Abii design palette. No dependency changes.
+## Topic system
 
-## Routes used
-- Add Subject / View all: `/subjects`
-- Start Review: `/review`
-- Subject card: `/subjects/[subjectId]`
+```text
+User
+└── Subjects
+    └── Topics
+        └── Flashcards
+            ├── Standard
+            └── Enumeration (`items`)
 
-The `/review` and `/subjects/[subjectId]` routes need to exist in your project for those actions to open fully implemented screens. This phase does not create those features. The Add Subject action links to the existing Subjects area because the create-subject form is outside this phase.
+Review Setup
+├── All Subjects
+├── Specific Subject
+└── Specific Topic
 
-## Install
-Copy `app/dashboard/page.tsx` into the matching path in your existing project, replacing the old dashboard page.
+Quiz modes
+├── Multiple Choice
+├── Identification
+├── True or False
+└── Mixed / Random
 
-## Checks
-Run:
+Mastery
+├── Topic
+├── Subject
+└── Overall
+```
+
+See [Topic implementation and QA](docs/TOPIC_IMPLEMENTATION.md) for the data
+model, API contract, user workflow, mastery rules, and verification results.
+
+## Local development
+
+Use Node.js supported by the installed Next.js and MongoDB test dependencies.
+Create `.env.local` with a development `MONGODB_URI` and the authentication
+settings documented in `lib/auth/constants.ts`. Start the app with:
+
 ```bash
-npm run lint
-npm run typecheck
-npm run build
+npm install
 npm run dev
 ```
 
-Test with:
-1. An account with no subjects or flashcards: the dashboard should show a welcoming empty state and zero due cards.
-2. An account with subjects and cards: subject counts should match MongoDB; cards never reviewed or whose latest `nextReviewAt` is in the past should count as due.
-3. A signed-out browser: `/dashboard` should redirect to `/login`.
+Topic mutations and cleanup operations use MongoDB transactions. Use a local
+single-node replica set or another replica set / sharded MongoDB deployment.
+Standalone MongoDB fails closed for these writes.
 
-I couldn't run the app against your local MongoDB or browser sessions in this environment, so these integration tests remain for you to perform locally.
+## Existing flashcards and migration
+
+Flashcard `topicId` remains optional in the schema for backwards-compatible
+reads. Existing unassigned cards should be assigned to a subject's `General`
+Topic using the migration before relying on topic-specific organization. The
+migration is dry-run by default, requires an explicitly selected database, and
+is safe to rerun. Read [migration instructions](scripts/README.md) before using
+it. No production migration is run automatically by the app or test suite.
+
+## Verification
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
+
+Integration tests use temporary in-memory MongoDB instances. They do not use
+the application database URI. `npm test` includes schema/migration, Topic API,
+mastery, quiz compatibility, and authenticated HTTP route tests.
