@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test lib/quiz/distractors.test.mjs lib/quiz/finish-response.test.mjs lib/sounds-core.test.mjs lib/sounds-engine.test.mjs"
+    "test": "node --test lib/quiz/distractors.test.mjs lib/quiz/finish-response.test.mjs lib/sounds-core.test.mjs lib/sounds-engine.test.mjs && npm run test:topics",
+    "test:topics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/topics.test.ts",
+    "migrate:topics": "node --conditions=react-server --import ./scripts/register-typescript.mjs scripts/migrate-topics.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -17,7 +19,8 @@
     "mongoose": "^8.19.1",
     "next": "^15.5.4",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.13",
@@ -26,6 +29,7 @@
     "@types/react-dom": "^19.1.9",
     "eslint": "^9.36.0",
     "eslint-config-next": "^15.5.4",
+    "mongodb-memory-server": "^11.3.0",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2"
   }

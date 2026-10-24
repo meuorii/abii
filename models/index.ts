@@ -4,6 +4,8 @@ export { User } from "./User";
 export type { UserDocument } from "./User";
 export { Subject } from "./Subject";
 export type { SubjectDocument } from "./Subject";
+export { Topic } from "./Topic";
+export type { TopicDocument } from "./Topic";
 export { Flashcard } from "./Flashcard";
 export type { FlashcardDocument } from "./Flashcard";
 export { ReviewRecord, QUESTION_TYPES } from "./ReviewRecord";
