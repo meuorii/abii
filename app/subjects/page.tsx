@@ -66,6 +66,8 @@ export default async function SubjectsPage() {
         usableCount: masteryStats?.usable ?? 0,
         topicCount: topicCounts.get(id) ?? 0,
         masteredCount,
+        completedRequirements: masteryStats?.completedRequirements ?? 0,
+        totalRequirements: masteryStats?.totalRequirements ?? 0,
         typeMastery: mastery.byTypeBySubject.get(id) ?? emptyTypeProgress(),
         progress: masteryStats?.progress ?? 0,
       };

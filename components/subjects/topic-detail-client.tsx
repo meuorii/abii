@@ -52,7 +52,7 @@ export function TopicDetailClient({ subjectId, subjectName, topic, mastery, type
   return <section aria-labelledby="topic-cards-heading" className="min-w-0 space-y-4">
     <section aria-label={`${topic.name} mastery summary`} className="rounded-2xl border border-[#F0E5E9] bg-white p-4 sm:p-5">
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-        <div><h2 className="text-sm font-bold text-[#153B56]">Topic mastery</h2><p className="mt-1 text-xs text-[#71869A]">A card is mastered after the required correct streak in every applicable mode and Mixed / Random.</p><div className="mt-3"><MasteryProgressBar label={`${topic.name} mastery progress`} mastered={mastery.mastered} total={mastery.total} usable={mastery.usable} progress={mastery.progress} size="md" /></div></div>
+        <div><h2 className="text-sm font-bold text-[#153B56]">Topic mastery</h2><p className="mt-1 text-xs text-[#71869A]">A card is fully mastered after the required correct streak in every applicable mode and Mixed / Random.</p><div className="mt-3"><MasteryProgressBar label={`${topic.name} mastery progress`} mastered={mastery.mastered} total={mastery.total} completedRequirements={mastery.completedRequirements} totalRequirements={mastery.totalRequirements} usable={mastery.usable} progress={mastery.progress} size="md" /></div></div>
         <div className="sm:min-w-44"><p className="text-xs text-[#71869A]">Reviewed {mastery.reviewed}/{mastery.total} · Due {mastery.due}</p><p className="mt-1 text-xs text-[#71869A]">Correct answers {mastery.correct} · Incorrect {mastery.incorrect}</p></div>
       </div>
       <MasteryPills progress={typeMastery} className="mt-3 flex flex-wrap gap-1" />

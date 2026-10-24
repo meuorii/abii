@@ -9,13 +9,15 @@ type SubjectOverview = {
   flashcardCount: number;
   masteredCount: number;
   progress: number;
+  completedRequirements: number;
+  totalRequirements: number;
 };
 
 type DashboardOverviewProps = {
   firstName: string;
   dueCount: number;
   totalCards: number;
-  overallMastery: { mastered: number; total: number; progress: number };
+  overallMastery: { mastered: number; total: number; completedRequirements: number; totalRequirements: number; progress: number };
   currentStreak: number;
   lastSevenDays: { label: string; completed: boolean }[];
   subjects: SubjectOverview[];
@@ -79,7 +81,7 @@ export function DashboardOverview({ firstName, dueCount, totalCards, overallMast
         <>
           <section aria-label="Overall mastery" className="rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5">
             <h2 className="mb-3 text-sm font-bold text-[#153B56]">Overall mastery</h2>
-            <MasteryProgressBar label="Overall mastery progress" mastered={overallMastery.mastered} total={overallMastery.total} progress={overallMastery.progress} size="md" />
+            <MasteryProgressBar label="Overall mastery progress" mastered={overallMastery.mastered} total={overallMastery.total} completedRequirements={overallMastery.completedRequirements} totalRequirements={overallMastery.totalRequirements} progress={overallMastery.progress} size="md" />
           </section>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.45fr_1fr]">
             <section className="min-w-0 rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5" aria-labelledby="today-review-heading">
@@ -129,7 +131,7 @@ export function DashboardOverview({ firstName, dueCount, totalCards, overallMast
                         <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-[#2F4658]">{subject.name}</span><span className="mt-1 block text-[10px] text-[#8B9AA6]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "card" : "cards"}</span></span>
                         <Icon name="chevron" className="h-4 w-4 shrink-0 text-[#A0AFBA] transition-transform group-hover:translate-x-0.5" />
                       </div>
-                      <div className="mt-4"><MasteryProgressBar label={`${subject.name} mastery progress`} mastered={subject.masteredCount} total={subject.flashcardCount} progress={subject.progress} /></div>
+                      <div className="mt-4"><MasteryProgressBar label={`${subject.name} mastery progress`} mastered={subject.masteredCount} total={subject.flashcardCount} completedRequirements={subject.completedRequirements} totalRequirements={subject.totalRequirements} progress={subject.progress} /></div>
                     </Link>
                   </li>;
                 })}

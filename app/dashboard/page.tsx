@@ -11,7 +11,7 @@ import { getSubjectMastery } from "@/lib/quiz/service";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type SubjectSummary = { id: string; name: string; flashcardCount: number; masteredCount: number; progress: number };
+type SubjectSummary = { id: string; name: string; flashcardCount: number; masteredCount: number; progress: number; completedRequirements: number; totalRequirements: number };
 
 function dateKey(date: Date) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
   let subjects: SubjectSummary[] = [];
   let dueCount = 0;
   let totalCards = 0;
-  let overallMastery = { mastered: 0, total: 0, progress: 0 };
+  let overallMastery = { mastered: 0, total: 0, completedRequirements: 0, totalRequirements: 0, progress: 0 };
   let currentStreak = 0;
   let lastSevenDays: { label: string; completed: boolean }[] = [];
   let loadFailed = false;
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
       Flashcard.find({ userId }).select("_id subjectId").lean(),
       getSubjectMastery(userId),
     ]);
-    overallMastery = { mastered: mastery.overall.mastered, total: mastery.overall.total, progress: mastery.overall.progress };
+    overallMastery = { mastered: mastery.overall.mastered, total: mastery.overall.total, completedRequirements: mastery.overall.completedRequirements, totalRequirements: mastery.overall.totalRequirements, progress: mastery.overall.progress };
 
     totalCards = cards.length;
     const cardIds = cards.map((card) => card._id);
@@ -97,6 +97,8 @@ export default async function DashboardPage() {
         name: subject.name,
         flashcardCount: count,
         masteredCount: masteryStats?.mastered ?? 0,
+        completedRequirements: masteryStats?.completedRequirements ?? 0,
+        totalRequirements: masteryStats?.totalRequirements ?? 0,
         progress: masteryStats?.progress ?? 0,
       };
     });

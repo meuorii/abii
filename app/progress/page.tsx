@@ -119,6 +119,8 @@ export default async function ProgressPage() {
       progress: mastery.bySubject.get(id)?.progress ?? 0,
       mastered: mastery.bySubject.get(id)?.mastered ?? 0,
       usable: mastery.bySubject.get(id)?.usable ?? 0,
+      completedRequirements: mastery.bySubject.get(id)?.completedRequirements ?? 0,
+      totalRequirements: mastery.bySubject.get(id)?.totalRequirements ?? 0,
     };
   }).sort((a, b) => (a.accuracy ?? 101) - (b.accuracy ?? 101));
 
@@ -126,7 +128,7 @@ export default async function ProgressPage() {
     const id = String(topic._id);
     const subjectId = String(topic.subjectId);
     const stats = mastery.byTopic.get(id);
-    return { id, subjectId, subject: subjectNameById.get(subjectId) ?? "Subject", name: topic.name, totalCards: topicCardCounts.get(id) ?? 0, mastered: stats?.mastered ?? 0, usable: stats?.usable ?? 0, progress: stats?.progress ?? 0 };
+    return { id, subjectId, subject: subjectNameById.get(subjectId) ?? "Subject", name: topic.name, totalCards: topicCardCounts.get(id) ?? 0, mastered: stats?.mastered ?? 0, usable: stats?.usable ?? 0, progress: stats?.progress ?? 0, completedRequirements: stats?.completedRequirements ?? 0, totalRequirements: stats?.totalRequirements ?? 0 };
   });
 
   const challengingCards = groupedCardReviews.map((item: { _id: unknown; total: number; wrong: number; correct: number }) => {
@@ -154,7 +156,7 @@ export default async function ProgressPage() {
   });
 
   const payload: ProgressPayload = {
-    summary: { totalReviews: answeredAll, accuracy: percent(correctAll, answeredAll), sessions: sessions.length, streak, masteredCards: mastery.overall.mastered, totalCards: mastery.overall.total, masteryProgress: mastery.overall.progress },
+    summary: { totalReviews: answeredAll, accuracy: percent(correctAll, answeredAll), sessions: sessions.length, streak, masteredCards: mastery.overall.mastered, totalCards: mastery.overall.total, masteryProgress: mastery.overall.progress, completedRequirements: mastery.overall.completedRequirements, totalRequirements: mastery.overall.totalRequirements },
     activity,
     subjects: subjectPerformance,
     topics: topicPerformance,

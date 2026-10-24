@@ -34,6 +34,8 @@ export type MasteryStats = {
   usable: number;
   reviewed: number;
   mastered: number;
+  completedRequirements: number;
+  totalRequirements: number;
   due: number;
   correct: number;
   incorrect: number;
@@ -86,8 +88,8 @@ export type PublicSession = {
 };
 export type SetupSubject = {
   id: string; name: string; flashcardCount: number; mastered: number;
-  usableCount: number; masteryProgress: number;
+  usableCount: number; masteryProgress: number; completedRequirements: number; totalRequirements: number;
   typeMastery: TypeProgress; eligible: Record<QuizMode, number>;
   topics: SetupTopic[];
 };
-export type SetupTopic = { id: string; name: string; flashcardCount: number; mastered: number; usableCount: number; masteryProgress: number; eligible: Record<QuizMode, number> };
+export type SetupTopic = { id: string; name: string; flashcardCount: number; mastered: number; usableCount: number; masteryProgress: number; completedRequirements: number; totalRequirements: number; eligible: Record<QuizMode, number> };

@@ -251,7 +251,7 @@ export async function getSubjectMastery(userId: Types.ObjectId | string) {
   const usableIds = new Set(usable.map((card) => card.id));
   const cardById = new Map(cards.map((card) => [card.id, card]));
   const topicParentById = new Map(topics.map((topic) => [String(topic._id), String(topic.subjectId)]));
-  const stats = (): MasteryStats => ({ total: 0, usable: 0, reviewed: 0, mastered: 0, due: 0, correct: 0, incorrect: 0, progress: 0 });
+  const stats = (): MasteryStats => ({ total: 0, usable: 0, reviewed: 0, mastered: 0, completedRequirements: 0, totalRequirements: 0, due: 0, correct: 0, incorrect: 0, progress: 0 });
   const bySubject = new Map<string, MasteryStats>(subjects.map((subject) => [String(subject._id), stats()]));
   const byTopic = new Map<string, MasteryStats>(topics.map((topic) => [String(topic._id), stats()]));
   const byTypeBySubject = new Map<string, TypeProgress>();
@@ -283,7 +283,7 @@ export async function getSubjectMastery(userId: Types.ObjectId | string) {
     streakByMode.set(mode, streaks);
   }
 
-  const addStats = (target: MasteryStats, card: PreparedCard, mastered: boolean, latest: (typeof records)[number] | undefined, attempts: { correct: number; incorrect: number }) => {
+  const addStats = (target: MasteryStats, card: PreparedCard, mastered: boolean, completedRequirements: number, totalRequirements: number, latest: (typeof records)[number] | undefined, attempts: { correct: number; incorrect: number }) => {
     target.total += 1;
     if (usableIds.has(card.id)) target.usable += 1;
     if (latest) target.reviewed += 1;
@@ -291,6 +291,8 @@ export async function getSubjectMastery(userId: Types.ObjectId | string) {
     target.correct += attempts.correct;
     target.incorrect += attempts.incorrect;
     if (mastered) target.mastered += 1;
+    target.completedRequirements += completedRequirements;
+    target.totalRequirements += totalRequirements;
   };
 
   for (const card of cards) {
@@ -298,21 +300,23 @@ export async function getSubjectMastery(userId: Types.ObjectId | string) {
     const attempts = recordCounts.get(card.id) ?? { correct: 0, incorrect: 0 };
     let applicable: QuizMode[] = [];
     let mastered = false;
+    let completedRequirements = 0;
     if (usableIds.has(card.id)) {
       applicable = eligibleTypes(card, usable);
       if (applicable.length > 0) {
         applicable.push("random");
-        mastered = applicable.every((mode) => (streakByMode.get(mode)?.get(card.id) ?? 0) >= MASTERY_STREAK);
+        completedRequirements = applicable.filter((mode) => (streakByMode.get(mode)?.get(card.id) ?? 0) >= MASTERY_STREAK).length;
+        mastered = completedRequirements === applicable.length;
       }
     }
     const subjectStats = bySubject.get(card.subjectId) ?? stats();
-    addStats(subjectStats, card, mastered, latest, attempts);
+    addStats(subjectStats, card, mastered, completedRequirements, applicable.length, latest, attempts);
     bySubject.set(card.subjectId, subjectStats);
-    addStats(overall, card, mastered, latest, attempts);
+    addStats(overall, card, mastered, completedRequirements, applicable.length, latest, attempts);
     const topicId = card.topicId;
     if (topicId && topicParentById.get(topicId) === card.subjectId) {
       const topicStats = byTopic.get(topicId) ?? stats();
-      addStats(topicStats, card, mastered, latest, attempts);
+      addStats(topicStats, card, mastered, completedRequirements, applicable.length, latest, attempts);
       byTopic.set(topicId, topicStats);
     }
     if (usableIds.has(card.id)) {
@@ -333,7 +337,7 @@ export async function getSubjectMastery(userId: Types.ObjectId | string) {
       if (topicTypes && topicId) byTypeByTopic.set(topicId, topicTypes);
     }
   }
-  for (const value of [overall, ...bySubject.values(), ...byTopic.values()]) value.progress = value.total ? Math.round((value.mastered / value.total) * 100) : 0;
+  for (const value of [overall, ...bySubject.values(), ...byTopic.values()]) value.progress = value.totalRequirements ? Math.round((value.completedRequirements / value.totalRequirements) * 100) : 0;
   return {
     byTopic,
     bySubject,

@@ -40,12 +40,24 @@ test("streak mastery aggregates consistently by topic, subject, type, and accoun
     assert.equal(initial.overall.total, 4);
     assert.equal(initial.overall.usable, 4);
     assert.equal(subjectStats.mastered, 1);
-    assert.equal(subjectStats.progress, 25);
+    assert.equal(subjectStats.completedRequirements, 5);
+    assert.equal(subjectStats.totalRequirements, 16);
+    assert.equal(subjectStats.progress, 31);
     assert.equal(initial.byTopic.get(String(topicA._id))!.total, 2);
     assert.equal(initial.byTopic.get(String(topicA._id))!.mastered, 1);
+    assert.equal(initial.byTopic.get(String(topicA._id))!.completedRequirements, 4);
+    assert.equal(initial.byTopic.get(String(topicA._id))!.totalRequirements, 8);
+    assert.equal(initial.byTopic.get(String(topicA._id))!.progress, 50);
     assert.equal(initial.byTopic.get(String(topicB._id))!.total, 2);
     assert.equal(initial.byTopic.get(String(topicB._id))!.mastered, 0);
+    assert.equal(initial.byTopic.get(String(topicB._id))!.completedRequirements, 1);
+    assert.equal(initial.byTopic.get(String(topicB._id))!.totalRequirements, 8);
+    assert.equal(initial.byTopic.get(String(topicB._id))!.progress, 13);
     assert.equal(initial.byTopic.get(String(emptyTopic._id))!.progress, 0);
+    assert.equal(initial.overall.completedRequirements, 5);
+    assert.equal(initial.overall.totalRequirements, 16);
+    assert.equal(initial.byTopic.get(String(topicA._id))!.totalRequirements + initial.byTopic.get(String(topicB._id))!.totalRequirements, subjectStats.totalRequirements);
+    assert.equal([...initial.bySubject.values()].reduce((sum, value) => sum + value.completedRequirements, 0), initial.overall.completedRequirements);
     assert.equal(initial.byTypeBySubject.get(String(subject._id))!.identification.done, 2);
     assert.equal(initial.byTypeBySubject.get(String(subject._id))!.identification.total, 4);
     assert.equal(initial.byTypeByTopic.get(String(topicA._id))!.identification.done, 1);
@@ -53,12 +65,34 @@ test("streak mastery aggregates consistently by topic, subject, type, and accoun
     assert.equal([...initial.byTopic.values()].reduce((sum, value) => sum + value.total, 0), subjectStats.total);
     assert.equal([...initial.bySubject.values()].reduce((sum, value) => sum + value.total, 0), initial.overall.total);
 
+    // Adding fresh streaks one mode at a time increases requirement completion
+    // while the card remains partially mastered until its fourth applicable mode.
+    for (let modeIndex = 0; modeIndex < QUIZ_MODES.length; modeIndex++) {
+      const mode = QUIZ_MODES[modeIndex];
+      await ReviewRecord.create(Array.from({ length: 3 }, (_, attempt) => ({
+        userId,
+        flashcardId: wrongStreak._id,
+        questionType: mode,
+        result: "correct",
+        reviewedAt: new Date(Date.UTC(2025, 3, modeIndex * 3 + attempt + 1)),
+        nextReviewAt: new Date("2020-01-01"),
+      })));
+      const partial = await getSubjectMastery(userId);
+      assert.equal(partial.overall.completedRequirements, 5 + modeIndex + 1);
+      assert.equal(partial.overall.mastered, modeIndex === QUIZ_MODES.length - 1 ? 2 : 1);
+    }
+    await ReviewRecord.deleteMany({ userId, flashcardId: wrongStreak._id });
+
     await Flashcard.updateOne({ _id: mastered._id }, { $set: { topicId: topicB._id } });
     const moved = await getSubjectMastery(userId);
     assert.equal(moved.byTopic.get(String(topicA._id))!.total, 1);
     assert.equal(moved.byTopic.get(String(topicB._id))!.total, 3);
+    assert.equal(moved.byTopic.get(String(topicA._id))!.totalRequirements, 4);
+    assert.equal(moved.byTopic.get(String(topicB._id))!.totalRequirements, 12);
+    assert.equal(moved.byTopic.get(String(topicA._id))!.totalRequirements + moved.byTopic.get(String(topicB._id))!.totalRequirements, 16);
     assert.equal(moved.byTopic.get(String(topicA._id))!.mastered, 0);
     assert.equal(moved.byTopic.get(String(topicB._id))!.mastered, 1);
+    assert.equal(moved.byTopic.get(String(topicA._id))!.totalRequirements + moved.byTopic.get(String(topicB._id))!.totalRequirements, moved.bySubject.get(String(subject._id))!.totalRequirements);
     assert.equal(moved.bySubject.get(String(subject._id))!.mastered, 1);
     assert.equal(moved.overall.mastered, 1);
 

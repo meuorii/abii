@@ -8,7 +8,7 @@ import { Modal, modalCancelClass, modalDangerClass, modalPrimaryClass } from "@/
 import { useToast } from "@/components/ui/toast-provider";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 
-export type TopicItem = { id: string; subjectId: string; name: string; description: string; position: number; createdAt: string; updatedAt: string; flashcardCount: number; usableFlashcardCount?: number; masteredCount?: number; progress?: number; metrics?: { flashcardCount: number; usableFlashcardCount?: number; reviewedFlashcardCount?: number; masteredFlashcardCount?: number; dueFlashcardCount?: number; correctAnswerCount?: number; incorrectAnswerCount?: number; masteryPercentage?: number } };
+export type TopicItem = { id: string; subjectId: string; name: string; description: string; position: number; createdAt: string; updatedAt: string; flashcardCount: number; usableFlashcardCount?: number; masteredCount?: number; completedRequirements?: number; totalRequirements?: number; progress?: number; metrics?: { flashcardCount: number; usableFlashcardCount?: number; reviewedFlashcardCount?: number; masteredFlashcardCount?: number; dueFlashcardCount?: number; correctAnswerCount?: number; incorrectAnswerCount?: number; completedRequirements?: number; totalRequirements?: number; masteryPercentage?: number } };
 type Editor = { mode: "create" | "edit"; topic?: TopicItem } | null;
 
 function TopicForm({ subjectId, editor, onClose, onSaved }: { subjectId: string; editor: Editor; onClose: () => void; onSaved: (topic: TopicItem) => void }) {
@@ -90,7 +90,7 @@ function TopicCard({ topic, onEdit, onDelete }: { topic: TopicItem; onEdit: () =
     </div>
     <div className="mt-4 space-y-3 border-t border-[#F5EEF1] pt-3">
       <p className="text-sm font-medium text-[#756B72]">{topic.flashcardCount} {topic.flashcardCount === 1 ? "flashcard" : "flashcards"}</p>
-      <MasteryProgressBar label={`${topic.name} mastery progress`} mastered={topic.masteredCount ?? topic.metrics?.masteredFlashcardCount ?? 0} total={topic.flashcardCount} usable={topic.usableFlashcardCount ?? topic.metrics?.usableFlashcardCount} progress={topic.progress ?? topic.metrics?.masteryPercentage ?? 0} />
+      <MasteryProgressBar label={`${topic.name} mastery progress`} mastered={topic.masteredCount ?? topic.metrics?.masteredFlashcardCount ?? 0} total={topic.flashcardCount} completedRequirements={topic.completedRequirements ?? topic.metrics?.completedRequirements} totalRequirements={topic.totalRequirements ?? topic.metrics?.totalRequirements} usable={topic.usableFlashcardCount ?? topic.metrics?.usableFlashcardCount} progress={topic.progress ?? topic.metrics?.masteryPercentage ?? 0} />
       <div className="flex items-center gap-1">
         <button type="button" aria-label={`Edit ${topic.name}`} onClick={onEdit} className="grid h-10 w-10 place-items-center rounded-lg text-[#8A6171] hover:bg-[#FFF0F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"><Pencil className="h-4 w-4" /></button>
         <button type="button" aria-label={`Delete ${topic.name}`} onClick={onDelete} className="grid h-10 w-10 place-items-center rounded-lg text-[#A43E5C] hover:bg-[#FFF1F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"><Trash2 className="h-4 w-4" /></button>

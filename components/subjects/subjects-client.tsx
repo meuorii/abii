@@ -17,6 +17,8 @@ export type SubjectItem = {
   topicCount: number;
   progress: number;
   masteredCount: number;
+  completedRequirements?: number;
+  totalRequirements?: number;
   usableCount?: number;
   typeMastery: TypeProgress;
 };
@@ -187,7 +189,7 @@ export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClien
                 </div>
 
                 <div className={`${layout === "grid" ? "mt-5" : "mt-4 sm:mt-0 sm:w-[42%] sm:max-w-xs"}`}>
-                  <MasteryProgressBar label={`${subject.name} mastery progress`} mastered={subject.masteredCount} total={subject.flashcardCount} usable={subject.usableCount} progress={subject.progress} />
+                  <MasteryProgressBar label={`${subject.name} mastery progress`} mastered={subject.masteredCount} total={subject.flashcardCount} completedRequirements={subject.completedRequirements} totalRequirements={subject.totalRequirements} usable={subject.usableCount} progress={subject.progress} />
                   <TypeMasteryIndicators mastery={subject.typeMastery} />
                 </div>
               </Link>

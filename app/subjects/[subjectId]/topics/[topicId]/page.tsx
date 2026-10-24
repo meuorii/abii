@@ -34,7 +34,7 @@ export default async function TopicPage({ params }: Props) {
   const cards = await Flashcard.find({ userId: user._id, subjectId: subject._id, topicId: topic._id })
     .select("_id flashcardType question answer hint createdAt").sort({ createdAt: -1 }).lean();
   const reviewed = mastery.reviewedCardIds;
-  const topicMastery = mastery.byTopic.get(String(topic._id)) ?? { total: cards.length, usable: 0, reviewed: 0, mastered: 0, due: cards.length, correct: 0, incorrect: 0, progress: 0 };
+  const topicMastery = mastery.byTopic.get(String(topic._id)) ?? { total: cards.length, usable: 0, reviewed: 0, mastered: 0, completedRequirements: 0, totalRequirements: 0, due: cards.length, correct: 0, incorrect: 0, progress: 0 };
   const topicTypeMastery = mastery.byTypeByTopic.get(String(topic._id)) ?? emptyTypeProgress();
   return <AppShell pageTitle={topic.name} pageDescription="Flashcards in this topic" userName={user.name}>
     <div className="min-w-0 space-y-5 p-4 pb-24 sm:p-6 xl:p-7">

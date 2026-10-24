@@ -15,7 +15,9 @@ function withMastery<T extends { id: string; flashcardCount: number; metrics?: R
     usableFlashcardCount: stats.usable,
     masteredCount: stats.mastered,
     progress: stats.progress,
-    metrics: { ...topic.metrics, usableFlashcardCount: stats.usable, reviewedFlashcardCount: stats.reviewed, masteredFlashcardCount: stats.mastered, dueFlashcardCount: stats.due, correctAnswerCount: stats.correct, incorrectAnswerCount: stats.incorrect, masteryPercentage: stats.progress },
+    completedRequirements: stats.completedRequirements,
+    totalRequirements: stats.totalRequirements,
+    metrics: { ...topic.metrics, usableFlashcardCount: stats.usable, reviewedFlashcardCount: stats.reviewed, masteredFlashcardCount: stats.mastered, dueFlashcardCount: stats.due, correctAnswerCount: stats.correct, incorrectAnswerCount: stats.incorrect, completedRequirements: stats.completedRequirements, totalRequirements: stats.totalRequirements, masteryPercentage: stats.progress },
   };
 }
 

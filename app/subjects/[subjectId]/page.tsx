@@ -54,6 +54,8 @@ export default async function SubjectDetailPage({ params }: PageProps) {
     reviewedCount: reviewedIds.size,
     masteredCount,
     usableCount: masteryStats?.usable ?? 0,
+    completedRequirements: masteryStats?.completedRequirements ?? 0,
+    totalRequirements: masteryStats?.totalRequirements ?? 0,
     typeMastery,
     dueCount,
     progress,

@@ -16,7 +16,7 @@ import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 type FlashcardItem = EditableFlashcard;
 export type SubjectDetailData = {
   id: string; name: string; flashcardCount: number; reviewedCount: number; masteredCount: number; dueCount: number;
-  progress: number; usableCount: number; typeMastery: TypeProgress; correctCount: number; wrongCount: number; cards: FlashcardItem[]; topics: { id: string; name: string }[];
+  progress: number; usableCount: number; completedRequirements: number; totalRequirements: number; typeMastery: TypeProgress; correctCount: number; wrongCount: number; cards: FlashcardItem[]; topics: { id: string; name: string }[];
 };
 type Tab = "topics" | "flashcards" | "progress" | "settings";
 
@@ -142,7 +142,7 @@ setSavingSettings(true); setError("");
             <div className="mt-3 space-y-2">
               <StatRow icon={<BookOpen className="h-4 w-4"/>} value={String(data.flashcardCount)} label="Total Flashcards" />
               <StatRow icon={<Clock3 className="h-4 w-4"/>} value={String(data.dueCount)} label="Due for Review" />
-              <div className="rounded-xl bg-[#FFF7F9] p-3"><MasteryProgressBar label={`${data.name} mastery progress`} mastered={data.masteredCount} total={data.flashcardCount} usable={data.usableCount} progress={data.progress} /></div>
+              <div className="rounded-xl bg-[#FFF7F9] p-3"><MasteryProgressBar label={`${data.name} mastery progress`} mastered={data.masteredCount} total={data.flashcardCount} completedRequirements={data.completedRequirements} totalRequirements={data.totalRequirements} usable={data.usableCount} progress={data.progress} /></div>
               <MasteryPills progress={data.typeMastery} className="flex flex-wrap gap-2" />
               
             </div>
