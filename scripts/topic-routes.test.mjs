@@ -17,7 +17,7 @@ test("real authenticated Next.js routes and legacy Subject/Flashcard contracts",
     await mongoose.connect(uri);
     const db = mongoose.connection.db;
     const userId = new mongoose.Types.ObjectId();
-    await db.collection("users").insertOne({ _id: userId, name: "Integration", email: "test@example.invalid" });
+    await db.collection("users").insertOne({ _id: userId, name: "Integration", email: "test@example.invalid", passwordHash: "never-export-this" });
     const secret = "isolated-topic-route-test-secret-at-least-32-characters";
     const token = await new SignJWT({}).setProtectedHeader({ alg: "HS256" }).setSubject(String(userId)).setIssuer("abii").setAudience("abii-web").setIssuedAt().setExpirationTime("10m").sign(new TextEncoder().encode(secret));
     const probe = createServer();
@@ -91,8 +91,8 @@ test("real authenticated Next.js routes and legacy Subject/Flashcard contracts",
       assert.equal((await request(cardPath, "PATCH", { ...edited.body.card, topicId: otherTopic.body.topic.id })).status, 404);
       const cardId = new mongoose.Types.ObjectId(card.body.card.id);
       await db.collection("reviewrecords").insertOne({ userId, flashcardId: cardId, result: "correct", questionType: "random", reviewedAt: new Date(), nextReviewAt: new Date(Date.now() + 60_000), createdAt: new Date(), updatedAt: new Date() });
-      const snapshot = { flashcardId: cardId, prompt: "Stored question snapshot", expectedAnswer: "Stored answer snapshot", answered: false };
-      await db.collection("quizsessions").insertMany(["active", "completed"].map((status) => ({ userId, subjectId: new mongoose.Types.ObjectId(subject.body.subject.id), subjectName: "HTTP compatibility", type: "identification", status, questions: [snapshot], expiresAt: new Date(Date.now() + 60_000), createdAt: new Date(), updatedAt: new Date() })));
+      const snapshot = { flashcardId: cardId, prompt: "Stored question snapshot", expectedAnswer: "Stored answer snapshot" };
+      await db.collection("quizsessions").insertMany(["active", "completed"].map((status) => ({ userId, subjectId: new mongoose.Types.ObjectId(subject.body.subject.id), subjectName: "HTTP compatibility", type: "identification", status, questions: [{ ...snapshot, answered: status === "completed", ...(status === "completed" ? { correct: true } : {}) }], ...(status === "completed" ? { completedAt: new Date() } : {}), expiresAt: new Date(Date.now() + 60_000), createdAt: new Date(), updatedAt: new Date() })));
       const moved = await request(cardPath, "PATCH", { ...edited.body.card, topicId: target.body.topic.id });
       assert.equal(moved.status, 200);
       assert.equal(moved.body.card.topicId, target.body.topic.id);
@@ -157,6 +157,26 @@ test("real authenticated Next.js routes and legacy Subject/Flashcard contracts",
     assert.equal((await request("/api/quiz/start", "POST", { scope: "topic", subjectId: subject.body.subject.id, topicId: String(foreignTopicId), type: "random" })).status, 404);
     assert.equal((await request("/api/quiz/start", "POST", { scope: "subject", subjectId: otherSubject.body.subject.id, type: "random" })).status, 422);
     assert.equal((await request("/api/quiz/start", "POST", { scope: "topic", subjectId: subject.body.subject.id, topicId: source.body.topic.id, type: "random" })).status, 422);
+    const exported = await request("/api/data/export");
+    assert.equal(exported.status, 200);
+    assert.ok(Array.isArray(exported.body.topics));
+    assert.ok(exported.body.topics.some((topic) => String(topic._id) === source.body.topic.id && topic.name === "Renamed"));
+    assert.ok(exported.body.flashcards.some((card) => card.topicId === target.body.topic.id));
+    assert.equal(JSON.stringify(exported.body).includes("never-export-this"), false);
+    assert.ok(exported.body.completedStudySessions.some((session) => session.questions.some((question) => question.prompt === "Stored question snapshot")));
+    assert.ok(exported.body.completedStudySessions.some((session) => session.scope === undefined), "legacy completed sessions should export without requiring scope metadata");
+    const legacyHistory = await db.collection("quizsessions").findOne({ userId, status: "completed", "questions.prompt": "Stored question snapshot" });
+    const legacyLoaded = await request(`/api/quiz/${String(legacyHistory._id)}/finish`);
+    assert.equal(legacyLoaded.status, 200);
+    assert.equal(legacyLoaded.body.session.scope, "subject");
+    assert.equal(legacyLoaded.body.session.topicId, null);
+    await db.collection("quizsessions").updateOne({ _id: new mongoose.Types.ObjectId(topicRetrySessionId) }, { $set: { status: "completed", completedAt: new Date(), "questions.$[].answered": true, "questions.$[].correct": true } });
+    const targetDetail = await request(`${topics}/${target.body.topic.id}`);
+    assert.equal((await request(`${topics}/${target.body.topic.id}`, "PATCH", { name: "Renamed Target" }, targetDetail.etag)).status, 200);
+    const renamedHistory = await request(`/api/quiz/${topicRetrySessionId}/finish`);
+    assert.equal(renamedHistory.status, 200);
+    assert.equal(renamedHistory.body.session.topicId, target.body.topic.id);
+    assert.equal(renamedHistory.body.session.topicName, "Target", "historical topic metadata stays as the session snapshot after a topic rename");
     const populatedPath = `${topics}/${detailTopic.body.topic.id}`;
     const populated = await request(populatedPath);
     assert.equal((await request(populatedPath, "DELETE", { confirm: true }, populated.etag)).status, 409);
@@ -170,6 +190,25 @@ test("real authenticated Next.js routes and legacy Subject/Flashcard contracts",
     assert.equal((await request(path, "DELETE")).status, 200);
     assert.equal(await db.collection("topics").countDocuments({ subjectId: new mongoose.Types.ObjectId(subject.body.subject.id) }), 0);
     assert.equal(await db.collection("flashcards").countDocuments(), 0);
+    assert.equal(await db.collection("reviewrecords").countDocuments({ userId }), 0);
+    assert.equal(await db.collection("quizsessions").countDocuments({ userId, status: "active" }), 0);
+
+    const materialSubject = await request("/api/subjects", "POST", { name: "Materials cleanup" });
+    const materialTopic = await request(`/api/subjects/${materialSubject.body.subject.id}/topics`, "POST", { name: "Cleanup topic" });
+    assert.equal((await request(`/api/subjects/${materialSubject.body.subject.id}/flashcards`, "POST", { topicId: materialTopic.body.topic.id, question: "Cleanup card", answer: "Cleanup answer" })).status, 201);
+    const materialClear = await request("/api/data/materials", "DELETE", {});
+    assert.equal(materialClear.status, 200);
+    for (const collection of ["subjects", "topics", "flashcards", "reviewrecords", "quizsessions"]) assert.equal(await db.collection(collection).countDocuments({ userId }), 0, `${collection} should be cleared for this user`);
+    assert.equal(await db.collection("topics").countDocuments({ userId: foreignUserId }), 1, "clearing materials must preserve another user's topics");
+
+    const accountSubject = await request("/api/subjects", "POST", { name: "Account cleanup" });
+    const accountTopic = await request(`/api/subjects/${accountSubject.body.subject.id}/topics`, "POST", { name: "Account topic" });
+    assert.equal(accountTopic.status, 201);
+    const accountDelete = await request("/api/account", "DELETE", { confirmation: "DELETE" });
+    assert.equal(accountDelete.status, 200);
+    assert.equal(await db.collection("users").countDocuments({ _id: userId }), 0);
+    for (const collection of ["subjects", "topics", "flashcards", "reviewrecords", "quizsessions"]) assert.equal(await db.collection(collection).countDocuments({ userId }), 0, `${collection} should be deleted with the account`);
+    assert.equal(await db.collection("topics").countDocuments({ userId: foreignUserId }), 1, "account deletion must preserve another user's topics");
   } catch (error) {
     throw new Error(`${error.message}\nNext server output:\n${output}`, { cause: error });
   } finally {

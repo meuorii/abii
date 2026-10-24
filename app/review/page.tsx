@@ -7,7 +7,8 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
-import { ReviewOverview, type ReviewSubjectItem } from "@/components/review/review-overview";
+import { Topic } from "@/models/Topic";
+import { ReviewOverview, type ReviewSubjectItem, type ReviewTopicItem } from "@/components/review/review-overview";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { emptyTypeProgress } from "@/lib/quiz/types";
 
@@ -66,6 +67,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
   const firstName = user.name.trim().split(/\s+/)[0] || "there";
   let loadFailed = false;
   let subjects: ReviewSubjectItem[] = [];
+  let topics: ReviewTopicItem[] = [];
   let totalCards = 0;
   let dueCount = 0;
   let reviewedUniqueCount = 0;
@@ -82,9 +84,10 @@ export default async function ReviewPage({ searchParams }: PageProps) {
     const now = new Date();
     const todayStart = utcDayStart(now);
     const tomorrowStart = new Date(todayStart.getTime() + 86_400_000);
-    const [subjectDocs, cards, mastery] = await Promise.all([
+    const [subjectDocs, cards, topicDocs, mastery] = await Promise.all([
       Subject.find({ userId }).select("_id name").lean(),
-      Flashcard.find({ userId }).select("_id subjectId").lean(),
+      Flashcard.find({ userId }).select("_id subjectId topicId").lean(),
+      Topic.find({ userId }).select("_id subjectId name position").sort({ position: 1, name: 1 }).lean(),
       getSubjectMastery(userId),
     ]);
 
@@ -104,11 +107,17 @@ export default async function ReviewPage({ searchParams }: PageProps) {
     const reviewedDays = new Set<string>();
     const reviewedBySubject = new Map<string, Set<string>>();
     const cardsBySubject = new Map<string, number>();
+    const cardsByTopic = new Map<string, number>();
+    const topicSubjectById = new Map(topicDocs.map((topic) => [String(topic._id), String(topic.subjectId)]));
     const latestSubjectActivity = new Map<string, number>();
 
     for (const card of cards) {
       const subjectId = String(card.subjectId);
       cardsBySubject.set(subjectId, (cardsBySubject.get(subjectId) ?? 0) + 1);
+      if (card.topicId && topicSubjectById.get(String(card.topicId)) === subjectId) {
+        const topicId = String(card.topicId);
+        cardsByTopic.set(topicId, (cardsByTopic.get(topicId) ?? 0) + 1);
+      }
     }
 
     for (const record of records) {
@@ -164,6 +173,26 @@ export default async function ReviewPage({ searchParams }: PageProps) {
       .filter((subject) => subject.flashcardCount > 0 || subject.name)
       .sort((a, b) => (b.lastReviewedAt - a.lastReviewedAt) || a.name.localeCompare(b.name))
       .slice(0, 4);
+
+    const subjectNames = new Map(subjectDocs.map((subject) => [String(subject._id), subject.name]));
+    topics = topicDocs
+      .map((topic) => {
+        const id = String(topic._id);
+        const subjectId = String(topic.subjectId);
+        const stats = mastery.byTopic.get(id);
+        return {
+          id,
+          subjectId,
+          subjectName: subjectNames.get(subjectId) ?? "Subject",
+          name: topic.name,
+          flashcardCount: cardsByTopic.get(id) ?? 0,
+          mastered: stats?.mastered ?? 0,
+          progress: stats?.progress ?? 0,
+        };
+      })
+      .filter((topic) => topic.flashcardCount > 0)
+      .sort((a, b) => a.subjectName.localeCompare(b.subjectName) || a.name.localeCompare(b.name))
+      .slice(0, 8);
   } catch (error) {
     console.error("Review overview data could not be loaded.", error);
     loadFailed = true;
@@ -191,8 +220,8 @@ export default async function ReviewPage({ searchParams }: PageProps) {
 
         {loadFailed ? <ReviewLoadError /> : (
           <ReviewOverview
-            firstName={firstName}
             subjects={subjects}
+            topics={topics}
             totalCards={totalCards}
             totalMastered={masteryTotal}
             dueCount={dueCount}

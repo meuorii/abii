@@ -43,7 +43,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
   const correctCount = masteryStats?.correct ?? 0;
   const wrongCount = masteryStats?.incorrect ?? 0;
   const masteredCount = masteryStats?.mastered ?? 0;
-  const topicCount = await Topic.countDocuments({ userId: user._id, subjectId: subject._id });
+  const topicCount = topicDocs.length;
   const typeMastery = mastery.byTypeBySubject.get(String(subject._id)) ?? emptyTypeProgress();
   const progress = masteryStats?.progress ?? 0;
 

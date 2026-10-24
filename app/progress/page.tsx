@@ -9,6 +9,7 @@ import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { QuizSession } from "@/models/QuizSession";
+import { Topic } from "@/models/Topic";
 import { getSubjectMastery } from "@/lib/quiz/service";
 
 export const runtime = "nodejs";
@@ -29,9 +30,10 @@ export default async function ProgressPage() {
   const today = startOfDay(now);
   const chartStart = new Date(today.getTime() - 89 * DAY);
 
-  const [subjects, flashcards, reviews, sessions, recentSessions, groupedCardReviews, mastery] = await Promise.all([
+  const [subjects, topics, flashcards, reviews, sessions, recentSessions, groupedCardReviews, mastery] = await Promise.all([
     Subject.find({ userId }).select("_id name").lean(),
-    Flashcard.find({ userId }).select("_id subjectId question flashcardType").lean(),
+    Topic.find({ userId }).select("_id subjectId name").sort({ subjectId: 1, name: 1 }).lean(),
+    Flashcard.find({ userId }).select("_id subjectId topicId question flashcardType").lean(),
     ReviewRecord.find({ userId, reviewedAt: { $gte: chartStart } }).select("flashcardId result questionType reviewedAt").sort({ reviewedAt: -1 }).lean(),
     QuizSession.find({ userId, status: "completed" }).select("_id subjectId subjectName type questions completedAt createdAt").lean(),
     QuizSession.find({ userId, status: "completed" }).select("_id subjectName type questions completedAt createdAt").sort({ completedAt: -1, createdAt: -1 }).limit(5).lean(),
@@ -46,6 +48,8 @@ export default async function ProgressPage() {
   ]);
 
   const subjectNameById = new Map(subjects.map((s) => [String(s._id), s.name]));
+  const topicCardCounts = new Map<string, number>();
+  const topicSubjectById = new Map(topics.map((topic) => [String(topic._id), String(topic.subjectId)]));
   const subjectStats = new Map<string, { total: number; reviewed: Set<string>; correct: number; answered: number }>();
   for (const subject of subjects) subjectStats.set(String(subject._id), { total: 0, reviewed: new Set(), correct: 0, answered: 0 });
   const cardSubject = new Map<string, string>();
@@ -56,6 +60,10 @@ export default async function ProgressPage() {
     if (stats) stats.total += 1;
     cardSubject.set(String(card._id), subjectId);
     cardById.set(String(card._id), card);
+    if (card.topicId && topicSubjectById.get(String(card.topicId)) === subjectId) {
+      const topicId = String(card.topicId);
+      topicCardCounts.set(topicId, (topicCardCounts.get(topicId) ?? 0) + 1);
+    }
   }
 
   let correctAll = 0;
@@ -114,6 +122,13 @@ export default async function ProgressPage() {
     };
   }).sort((a, b) => (a.accuracy ?? 101) - (b.accuracy ?? 101));
 
+  const topicPerformance = topics.map((topic) => {
+    const id = String(topic._id);
+    const subjectId = String(topic.subjectId);
+    const stats = mastery.byTopic.get(id);
+    return { id, subjectId, subject: subjectNameById.get(subjectId) ?? "Subject", name: topic.name, totalCards: topicCardCounts.get(id) ?? 0, mastered: stats?.mastered ?? 0, usable: stats?.usable ?? 0, progress: stats?.progress ?? 0 };
+  });
+
   const challengingCards = groupedCardReviews.map((item: { _id: unknown; total: number; wrong: number; correct: number }) => {
     const card = cardById.get(String(item._id));
     if (!card) return null;
@@ -142,6 +157,7 @@ export default async function ProgressPage() {
     summary: { totalReviews: answeredAll, accuracy: percent(correctAll, answeredAll), sessions: sessions.length, streak, masteredCards: mastery.overall.mastered, totalCards: mastery.overall.total, masteryProgress: mastery.overall.progress },
     activity,
     subjects: subjectPerformance,
+    topics: topicPerformance,
     challengingCards,
     lowerAccuracySubjects,
     recentSessions: serializedSessions,

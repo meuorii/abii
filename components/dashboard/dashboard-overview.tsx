@@ -123,7 +123,7 @@ export function DashboardOverview({ firstName, dueCount, totalCards, overallMast
                 {shownSubjects.map((subject, index) => {
                   const subjectIcon = ["cards", "flask", "book", "leaf"][index % 4];
                   return <li key={subject.id}>
-                    <Link href="/subjects" className="group block h-full rounded-xl border border-[#EAE6E8] bg-white p-3.5 transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[#F0B6C9] hover:shadow-[0_6px_18px_rgba(47,41,48,0.045)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">
+                    <Link href={`/subjects/${subject.id}`} className="group block h-full rounded-xl border border-[#EAE6E8] bg-white p-3.5 transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[#F0B6C9] hover:shadow-[0_6px_18px_rgba(47,41,48,0.045)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">
                       <div className="flex items-center gap-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF0F5] text-[#E9577D]"><Icon name={subjectIcon} className="h-5 w-5" /></span>
                         <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-[#2F4658]">{subject.name}</span><span className="mt-1 block text-[10px] text-[#8B9AA6]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "card" : "cards"}</span></span>

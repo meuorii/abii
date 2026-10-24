@@ -6,6 +6,7 @@ import { Topic, normalizeTopicName, isDuplicateTopicError } from "../models/Topi
 import { Flashcard } from "../models/Flashcard";
 import { QuizSession } from "../models/QuizSession";
 import { migrateTopics } from "./migrate-topics";
+import { TransactionUnavailableError, withRequiredTransaction } from "../lib/mongodb-transaction";
 
 test("Topic validation and backward-compatible flashcard/session schemas", async () => {
   const scope = { userId: new Types.ObjectId(), subjectId: new Types.ObjectId() };
@@ -116,6 +117,24 @@ test("isolated MongoDB: uniqueness, migration, progress preservation and recover
     assert.equal(resumed.assignedCards, 1);
     assert.equal(resumed.createdTopics, 0);
     assert.equal(resumed.idempotent, true);
+  } finally {
+    await mongoose.disconnect();
+    await server.stop();
+  }
+});
+
+test("required cleanup transactions leave standalone MongoDB unchanged", async () => {
+  const server = await MongoMemoryServer.create();
+  try {
+    await mongoose.connect(server.getUri(), { dbName: "abii_transaction_test" });
+    const collection = mongoose.connection.db!.collection("transaction-probe");
+    await assert.rejects(
+      withRequiredTransaction(async (session) => {
+        await collection.insertOne({ marker: "must rollback" }, { session });
+      }),
+      (error) => error instanceof TransactionUnavailableError,
+    );
+    assert.equal(await collection.countDocuments(), 0);
   } finally {
     await mongoose.disconnect();
     await server.stop();
