@@ -8,15 +8,16 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Please sign in to start a quiz." }, { status: 401 });
 
-  let body: { subjectId?: unknown; type?: unknown };
+  let body: { scope?: unknown; subjectId?: unknown; topicId?: unknown; type?: unknown };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Please check your selection and try again." }, { status: 400 });
   }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Please check your selection and try again." }, { status: 400 });
 
   try {
-    const result = await startSession(user._id, body.subjectId, body.type);
+    const result = await startSession(user._id, body);
     if (!result.ok) return NextResponse.json({ error: result.message }, { status: result.status });
     return NextResponse.json({ sessionId: result.sessionId, total: result.total }, { status: 201 });
   } catch (error) {

@@ -8,6 +8,7 @@ export function isFlashcardType(value: unknown): value is FlashcardType {
 /** Quiz modes available to learners. Enumeration is a flashcard type, not a quiz mode. */
 export const QUIZ_MODES = ["multiple-choice", "identification", "true-false", "random"] as const;
 export type QuizMode = (typeof QUIZ_MODES)[number];
+export type ReviewScope = "all" | "subject" | "topic";
 
 /** Internal question renderers used when an Items flashcard is played in MC/Identification. */
 export const QUIZ_TYPES = ["multiple-choice", "identification", "true-false", "enumeration-identification", "enumeration-multiple-choice"] as const;
@@ -68,6 +69,7 @@ export type QuizSummary = {
 };
 export type PublicSession = {
   id: string; subjectId: string | null; subjectName: string; type: QuizMode;
+  scope?: ReviewScope; topicId?: string | null; topicName?: string | null;
   status: "active" | "completed"; questions: PublicQuestion[]; results: Record<number, QuestionResult>;
   summary: QuizSummary | null; cardTotal: number; mastery: Record<number, number>; masteryTarget: number;
   completedAt: string | null;
@@ -75,4 +77,6 @@ export type PublicSession = {
 export type SetupSubject = {
   id: string; name: string; flashcardCount: number; mastered: number;
   typeMastery: TypeProgress; eligible: Record<QuizMode, number>;
+  topics: SetupTopic[];
 };
+export type SetupTopic = { id: string; name: string; flashcardCount: number; eligible: Record<QuizMode, number> };

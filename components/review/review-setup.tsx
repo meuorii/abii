@@ -5,13 +5,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/toast-provider";
 import { useRouter } from "next/navigation";
-import { ListChecks, PenLine, ListOrdered, Shuffle, CheckCircle2 } from "lucide-react";
+import { ListChecks, PenLine, ListOrdered, Shuffle, CheckCircle2, BookOpen, Layers3, FolderOpen } from "lucide-react";
 import {
-  ALL_SUBJECTS,
   QUIZ_MODES,
   QUIZ_TYPE_DESCRIPTIONS,
   QUIZ_TYPE_LABELS,
   type QuizMode,
+  type ReviewScope,
   type SetupSubject,
   type TypeProgress,
 } from "@/lib/quiz/types";
@@ -24,6 +24,7 @@ type Props = {
   allMastered: number;
   allTypeMastery: TypeProgress;
   initialSubjectId: string | null;
+  initialTopicId: string | null;
   loadFailed: boolean;
 };
 
@@ -51,16 +52,6 @@ export function MasteryPills({ progress, size = "sm", className = "flex flex-wra
   );
 }
 
-function subjectSymbol(name: string) {
-  const n = name.toLowerCase();
-  if (/math|algebra|calculus|statistics/.test(n)) return "▦";
-  if (/science|biology|chemistry|physics/.test(n)) return "⚗";
-  if (/english|language|literature/.test(n)) return "▤";
-  if (/history|social/.test(n)) return "❀";
-  if (/filipino|literacy/.test(n)) return "◈";
-  return "▤";
-}
-
 function unavailableReason(type: QuizMode) {
   if (type === "multiple-choice") return "Multiple Choice needs flashcards with short answers, plus at least one other flashcard with a different answer to build the options.";
   if (type === "identification") return "Identification needs flashcards with a question and a short answer (120 characters or fewer).";
@@ -68,10 +59,12 @@ function unavailableReason(type: QuizMode) {
   return "True or False needs flashcards with a question and a short answer (120 characters or fewer).";
 }
 
-export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allMastered, allTypeMastery, initialSubjectId, loadFailed }: Props) {
+export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allMastered, allTypeMastery, initialSubjectId, initialTopicId, loadFailed }: Props) {
   const router = useRouter();
   const { toast } = useToast();
-  const [subjectId, setSubjectId] = useState<string | null>(initialSubjectId);
+  const [scope, setScope] = useState<ReviewScope>(initialTopicId ? "topic" : initialSubjectId ? "subject" : "all");
+  const [subjectId, setSubjectId] = useState<string>(initialSubjectId ?? "");
+  const [topicId, setTopicId] = useState<string>(initialTopicId ?? "");
   const [type, setType] = useState<QuizMode | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
@@ -86,21 +79,20 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
     }
   }, [loadFailed, subjects.length, totalCards, toast]);
 
-  const selectedSubject = subjectId && subjectId !== ALL_SUBJECTS ? subjects.find((s) => s.id === subjectId) ?? null : null;
-  const countsFor = (id: string | null): Record<QuizMode, number> | null =>
-    id === ALL_SUBJECTS ? allEligible : (subjects.find((s) => s.id === id)?.eligible ?? null);
-  const counts = countsFor(subjectId);
+  const selectedSubject = subjects.find((s) => s.id === subjectId) ?? null;
+  const selectedTopic = selectedSubject?.topics.find((item) => item.id === topicId) ?? null;
+  const counts = scope === "all" ? allEligible : scope === "subject" ? selectedSubject?.eligible ?? null : selectedTopic?.eligible ?? null;
   const available = counts && type ? counts[type] : null;
-  const canStart = Boolean(subjectId && type && available && available > 0 && !starting);
-  const subjectLabel = subjectId === ALL_SUBJECTS ? "All Subjects" : selectedSubject?.name;
-  const eligibleSubjectTotal = (s: SetupSubject) => Math.max(...QUIZ_MODES.map((t) => s.eligible[t]));
+  const hasRequiredScope = scope === "all" || Boolean(selectedSubject && (scope === "subject" || selectedTopic));
+  const canStart = Boolean(hasRequiredScope && type && available && available > 0 && !starting);
+  const scopeLabel = scope === "all" ? "All Subjects and Topics" : scope === "subject" ? selectedSubject?.name : `${selectedSubject?.name ?? "Subject"} · ${selectedTopic?.name ?? "Topic"}`;
 
   async function start() {
-    if (!canStart || !subjectId || !type) return;
+    if (!canStart || !type) return;
     setStarting(true);
     setError("");
     try {
-      const response = await fetch("/api/quiz/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subjectId, type }) });
+      const response = await fetch("/api/quiz/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scope, ...(scope !== "all" ? { subjectId } : {}), ...(scope === "topic" ? { topicId } : {}), type }) });
       const data = (await response.json().catch(() => ({}))) as { sessionId?: string; error?: string };
       if (!response.ok || !data.sessionId) {
         const message = data.error || "We couldn’t start your quiz. Please try again.";
@@ -168,30 +160,19 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
       </nav>
       {hero}
 
-      <section aria-labelledby="choose-subject">
-        <h2 id="choose-subject" className="text-base font-bold tracking-tight text-[#153B56] sm:text-lg"><span className="mr-2 text-[#E9577D]">1</span>Choose a subject</h2>
-        <div role="radiogroup" aria-labelledby="choose-subject" className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {[{ id: ALL_SUBJECTS, name: "All Subjects", symbol: "◎", count: Math.max(...QUIZ_MODES.map((t) => allEligible[t])), cards: totalCards, mastered: allMastered, typeMastery: allTypeMastery }, ...subjects.map((s) => ({ id: s.id, name: s.name, symbol: subjectSymbol(s.name), count: eligibleSubjectTotal(s), cards: s.flashcardCount, mastered: s.mastered, typeMastery: s.typeMastery }))].map((item) => {
-            const selected = subjectId === item.id;
-            return (
-              <button key={item.id} type="button" role="radio" aria-checked={selected} onClick={() => { setSubjectId(item.id); setError(""); }} className={`flex min-h-[72px] min-w-0 items-center gap-3 rounded-2xl border p-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${selected ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}>
-                <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-xl text-[#E9577D]">{item.symbol}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-bold text-[#153B56]">{item.name}</span>
-                  <span className="mt-0.5 block text-xs text-[#7890A4]">{item.cards} {item.cards === 1 ? "flashcard" : "flashcards"} · up to {item.count} {item.count === 1 ? "question" : "questions"}</span>
-                  <span className="mt-1.5 flex items-center gap-2" aria-label={`${item.mastered} of ${item.cards} cards mastered`}>
-                    <span className="h-1.5 w-20 overflow-hidden rounded-full bg-[#F3E9ED]"><span className="block h-full rounded-full bg-[#FF6F96]" style={{ width: `${item.cards ? Math.round((item.mastered / item.cards) * 100) : 0}%` }} /></span>
-                    <span className="text-[11px] font-medium text-[#C65380]">{item.mastered === item.cards && item.cards > 0 ? "Mastered · all types + Random" : `${item.mastered}/${item.cards} mastered`}</span>
-                  </span>
-                  <MasteryPills progress={item.typeMastery} className="mt-2 flex flex-wrap gap-1" />
-                </span>
-                <span aria-hidden="true" className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${selected ? "border-[#E9577D] bg-[#E9577D] text-white" : "border-[#D9D2D6] text-transparent"}`}>✓</span>
-              </button>
-            );
-          })}
+      <section aria-labelledby="choose-scope" className="space-y-3">
+        <h2 id="choose-scope" className="text-base font-bold tracking-tight text-[#153B56] sm:text-lg"><span className="mr-2 text-[#E9577D]">1</span>Choose review scope</h2>
+        <div role="radiogroup" aria-labelledby="choose-scope" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {([ ["all", "All Subjects and Topics", Layers3], ["subject", "Specific Subject", BookOpen], ["topic", "Specific Topic", FolderOpen] ] as const).map(([value, label, Icon]) => <button key={value} type="button" role="radio" aria-checked={scope === value} onClick={() => { setScope(value); setError(""); }} className={`flex min-h-16 min-w-0 items-center gap-3 rounded-2xl border p-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${scope === value ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}><span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><Icon className="h-5 w-5"/></span><span className="min-w-0 text-sm font-bold text-[#153B56]">{label}</span></button>)}
         </div>
+        {scope !== "all" && <div className={`grid min-w-0 gap-3 ${scope === "topic" ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
+          <label className="block text-sm font-semibold text-[#294A60]">Subject<select value={subjectId} onChange={(event) => { setSubjectId(event.target.value); setTopicId(""); setError(""); }} className="mt-1.5 min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3 text-sm font-normal text-[#153B56] focus:border-[#E9577D] focus:outline-none focus:ring-4 focus:ring-[#FF9FBA]/15"><option value="">Choose a subject…</option>{subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select></label>
+          {scope === "topic" && <label className="block text-sm font-semibold text-[#294A60]">Topic<select value={topicId} onChange={(event) => { setTopicId(event.target.value); setError(""); }} disabled={!selectedSubject || selectedSubject.topics.length === 0} className="mt-1.5 min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3 text-sm font-normal text-[#153B56] disabled:bg-[#F5F2F4] focus:border-[#E9577D] focus:outline-none focus:ring-4 focus:ring-[#FF9FBA]/15"><option value="">{!selectedSubject ? "Choose a subject first" : selectedSubject.topics.length ? "Choose a topic…" : "This subject has no topics yet"}</option>{selectedSubject?.topics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name} · {topic.flashcardCount} cards</option>)}</select>{selectedSubject && selectedSubject.topics.length === 0 && <Link href={`/subjects/${selectedSubject.id}`} className="mt-2 inline-flex text-xs font-semibold text-[#C65380] underline underline-offset-2">Create a topic in this subject</Link>}</label>}
+        </div>}
+        <p className="text-xs leading-5 text-[#7890A4]">{scope === "all" ? `${totalCards} flashcards across ${subjects.length} subjects; ${allMastered} mastered. Eligible questions can draw distractors from your full study library.` : scope === "subject" ? selectedSubject ? `${selectedSubject.flashcardCount} flashcards in ${selectedSubject.name}, across all its topics.` : "Choose a subject to see its eligible questions." : selectedTopic ? `${selectedTopic.flashcardCount} flashcards in ${selectedTopic.name}.` : "Choose a subject and topic to continue."}</p>
+        {scope === "all" && <MasteryPills progress={allTypeMastery} />}
+        {scope === "subject" && selectedSubject && <MasteryPills progress={selectedSubject.typeMastery} />}
       </section>
-
       <section aria-labelledby="choose-type">
         <h2 id="choose-type" className="text-base font-bold tracking-tight text-[#153B56] sm:text-lg"><span className="mr-2 text-[#E9577D]">2</span>Choose a quiz type</h2>
         <p className="mt-1 text-xs leading-5 text-[#7890A4]">Each question type, including Mixed / Random, has its own 3-correct-answer streak. Complete every type that applies to a card, plus Random, to earn the <span className="font-semibold text-[#207A4B]">Mastered</span> indicator.</p>
@@ -200,13 +181,13 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
             const selected = type === t;
             const n = counts ? counts[t] : null;
             return (
-              <button key={t} type="button" role="radio" aria-checked={selected} onClick={() => { setType(t); setError(""); if (subjectId && counts && counts[t] === 0) toast({ kind: "error", title: "No eligible flashcards", message: `There are no cards ready for ${QUIZ_TYPE_LABELS[t]} in ${subjectLabel ?? "this subject"}. Choose another quiz type or update your flashcards.` }); }} className={`flex min-h-[132px] min-w-0 flex-col items-start gap-3 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${selected ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}>
+              <button key={t} type="button" role="radio" aria-checked={selected} onClick={() => { setType(t); setError(""); if (hasRequiredScope && counts && counts[t] === 0) toast({ kind: "error", title: "No eligible flashcards", message: `There are no cards ready for ${QUIZ_TYPE_LABELS[t]} in ${scopeLabel ?? "this scope"}. Choose another quiz type or update your flashcards.` }); }} className={`flex min-h-[132px] min-w-0 flex-col items-start gap-3 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${selected ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}>
                 <span className="flex w-full items-center justify-between">
                   <span className={`flex h-11 w-11 items-center justify-center rounded-full ${selected ? "bg-[#FF6F96] text-white" : "bg-[#FFE8EF] text-[#E9577D]"}`}><TypeIcon type={t} /></span>
                   <span className="flex flex-wrap items-center justify-end gap-1.5">
                     {n !== null && <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${n > 0 ? "bg-white text-[#C65380]" : "bg-[#F4F1F3] text-[#8B7C84]"}`}>{n} {n === 1 ? "question" : "questions"}</span>}
-                    {subjectId && (() => {
-                      const progress = subjectId === ALL_SUBJECTS ? allTypeMastery[t] : selectedSubject?.typeMastery[t];
+                    {scope !== "topic" && (() => {
+                      const progress = scope === "all" ? allTypeMastery[t] : selectedSubject?.typeMastery[t];
                       const isComplete = Boolean(progress && progress.total > 0 && progress.done === progress.total);
                       return <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isComplete ? "bg-[#FFF0F5] text-[#D94675]" : "bg-[#F3F3F5] text-[#A0A0AA]"}`}>{isComplete ? "✓" : "○"}</span>;
                     })()}
@@ -226,14 +207,13 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h2 className="text-sm font-bold text-[#153B56]">Quiz summary</h2>
-            {!subjectId || !type ? (
-              <p className="mt-1 text-sm text-[#6C879C]">{!subjectId && !type ? "Choose a subject and a quiz type to continue." : !subjectId ? "Choose a subject to continue." : "Choose a quiz type to continue."}</p>
+            {!hasRequiredScope || !type ? (
+              <p className="mt-1 text-sm text-[#6C879C]">{!hasRequiredScope ? scope === "topic" && selectedSubject?.topics.length === 0 ? "This subject has no topics yet. Create one to review by topic." : `Choose ${scope === "topic" ? "a subject and topic" : "a subject"} to continue.` : "Choose a quiz type to continue."}</p>
             ) : available && available > 0 ? (
-              <p className="mt-1 text-sm text-[#45647A]"><span className="font-semibold text-[#153B56]">{available} {available === 1 ? "question" : "questions"}</span> · {QUIZ_TYPE_LABELS[type]} · {subjectLabel}. Every eligible flashcard is included, in random order.</p>
+              <p className="mt-1 text-sm text-[#45647A]"><span className="font-semibold text-[#153B56]">{available} {available === 1 ? "question" : "questions"}</span> · {QUIZ_TYPE_LABELS[type]} · {scopeLabel}. Every eligible flashcard is included, in random order.</p>
             ) : (
-              <p role="alert" className="mt-1 text-sm leading-6 text-[#A43E5C]">No eligible flashcards for {QUIZ_TYPE_LABELS[type]} in {subjectLabel}. {unavailableReason(type)} <Link href={selectedSubject ? `/subjects/${selectedSubject.id}` : "/subjects"} className="font-semibold underline underline-offset-2">Add or update flashcards</Link>, or choose another option yourself.</p>
-            )}
-            {error && <p role="alert" className="mt-2 text-sm text-[#A43E5C]">{error}</p>}
+              <p role="alert" className="mt-1 text-sm leading-6 text-[#A43E5C]">No eligible flashcards for {QUIZ_TYPE_LABELS[type]} in {scopeLabel}. {unavailableReason(type)} <Link href={selectedSubject ? `/subjects/${selectedSubject.id}` : "/subjects"} className="font-semibold underline underline-offset-2">Add or update flashcards</Link>, or choose another option yourself.</p>
+            )}            {error && <p role="alert" className="mt-2 text-sm text-[#A43E5C]">{error}</p>}
           </div>
           <button type="button" onClick={start} disabled={!canStart} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#FF477D] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">
             {starting ? "Starting…" : "Start Quiz"} {!starting && <span aria-hidden="true">→</span>}

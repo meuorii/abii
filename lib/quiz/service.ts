@@ -5,6 +5,7 @@ import { Flashcard } from "@/models/Flashcard";
 import { QuizSession } from "@/models/QuizSession";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
+import { Topic } from "@/models/Topic";
 import { buildQuestionForCard, buildQuestions, eligibleTypes, isEligible, shuffle, isUsableCard, prepareCard, type PreparedCard } from "./builder";
 import { ENUM_MAX_ITEMS, ENUM_ORDER_MATTERS, MASTERY_STREAK, MAX_ENUM_ITEM_LENGTH, MAX_TYPED_ANSWER_LENGTH, SESSION_TTL_HOURS } from "./config";
 import { normalizeText, sanitizeTyped } from "./normalize";
@@ -18,6 +19,7 @@ import {
   type PublicSession,
   type QuestionResult,
   type QuizMode,
+  type ReviewScope,
   type QuizSummary,
   type QuizType,
   type TypeProgress,
@@ -49,6 +51,9 @@ type SessionDoc = {
   userId: Types.ObjectId;
   subjectId?: Types.ObjectId | null;
   subjectName: string;
+  scope?: ReviewScope;
+  topicId?: Types.ObjectId | null;
+  topicName?: string | null;
   type: QuizMode;
   status: "active" | "completed";
   questions: StoredQuestionDoc[];
@@ -86,37 +91,64 @@ const fail = (status: number, message: string): ServiceError => ({ ok: false, st
 
 /** All of a user's usable cards, prepared for quiz generation. Always scoped to the owner. */
 export async function loadUsableCards(userId: Types.ObjectId | string): Promise<PreparedCard[]> {
-  const cards = await Flashcard.find({ userId }).select("_id subjectId flashcardType question answer hint").lean();
+  const cards = await Flashcard.find({ userId }).select("_id subjectId topicId flashcardType question answer hint").lean();
   return cards.map(prepareCard).filter(isUsableCard);
 }
 
-export async function startSession(userId: Types.ObjectId | string, subjectParam: unknown, typeParam: unknown) {
-  if (!isQuizMode(typeParam)) return fail(400, "Choose a valid quiz type.");
-  const type: QuizMode = typeParam;
-  if (typeof subjectParam !== "string") return fail(400, "Choose a subject.");
-
+export async function startSession(userId: Types.ObjectId | string, input: { scope?: unknown; subjectId?: unknown; topicId?: unknown; type?: unknown }) {
+  if (!input || typeof input !== "object") return fail(400, "Choose a review scope and quiz type.");
+  if (!isQuizMode(input.type)) return fail(400, "Choose a valid quiz type.");
+  const type: QuizMode = input.type;
+  let scope: ReviewScope;
+  if (input.scope !== undefined) {
+    if (input.scope !== "all" && input.scope !== "subject" && input.scope !== "topic") return fail(400, "Choose All Subjects, a subject, or a topic.");
+    scope = input.scope;
+  } else {
+    // Compatibility for existing clients using { subjectId: "all" | id, type }.
+    if (input.topicId !== undefined) return fail(400, "Choose a review scope when selecting a topic.");
+    if (input.subjectId === ALL_SUBJECTS) scope = "all";
+    else if (typeof input.subjectId === "string") scope = "subject";
+    else return fail(400, "Choose a subject.");
+  }
+  if (scope === "all" && ((input.subjectId !== undefined && input.subjectId !== ALL_SUBJECTS) || input.topicId !== undefined)) return fail(400, "All Subjects cannot include a subject or topic restriction.");
+  if (scope === "subject" && input.topicId !== undefined) return fail(400, "A subject review cannot include a topic restriction.");
+  if ((scope === "subject" || scope === "topic") && typeof input.subjectId !== "string") return fail(400, "Choose a subject.");
+  if (scope === "topic" && (typeof input.topicId !== "string" || !isValidObjectId(input.topicId))) return fail(400, "Choose a valid topic.");
   await connectToDatabase();
   let subjectId: Types.ObjectId | null = null;
   let subjectName = "All Subjects";
-  if (subjectParam !== ALL_SUBJECTS) {
-    if (!isValidObjectId(subjectParam)) return fail(404, "This subject could not be found.");
-    const subject = await Subject.findOne({ _id: subjectParam, userId }).select("_id name").lean();
+  if (scope !== "all") {
+    if (!isValidObjectId(input.subjectId)) return fail(400, "Choose a valid subject.");
+    const subject = await Subject.findOne({ _id: input.subjectId, userId }).select("_id name").lean();
     if (!subject) return fail(404, "This subject could not be found.");
     subjectId = subject._id as Types.ObjectId;
     subjectName = subject.name;
   }
-
+  let topicId: Types.ObjectId | null = null;
+  let topicName: string | null = null;
+  if (scope === "topic") {
+    const topic = await Topic.findOne({ _id: input.topicId, subjectId, userId }).select("_id name").lean();
+    if (!topic) return fail(404, "This topic could not be found in the selected subject.");
+    topicId = topic._id as Types.ObjectId;
+    topicName = topic.name;
+  }
   const usable = await loadUsableCards(userId);
-  const scope = subjectId ? usable.filter((c) => c.subjectId === String(subjectId)) : usable;
-  const questions = buildQuestions(scope, usable, type);
+  const scopedCards = scope === "topic"
+    ? usable.filter((card) => card.topicId === String(topicId))
+    : scope === "subject"
+      ? usable.filter((card) => card.subjectId === String(subjectId))
+      : usable;
+  const questions = buildQuestions(scopedCards, usable, type);
   if (questions.length === 0) {
-    return fail(422, "There are no eligible flashcards for this subject and quiz type.");
+    return fail(422, `There are no eligible flashcards for this ${scope} and quiz type.`);
   }
 
   const session = await QuizSession.create({
     userId,
     subjectId,
     subjectName,
+    scope,
+    ...(topicId ? { topicId, topicName } : {}),
     type,
     status: "active",
     questions: questions.map((q, i) => ({ ...q, flashcardId: new Types.ObjectId(q.flashcardId), round: 1, origin: i, answered: false })),
@@ -131,17 +163,21 @@ export async function getEligibilityCounts(userId: Types.ObjectId | string) {
   const empty = () => Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>;
   const all = empty();
   const bySubject = new Map<string, Record<QuizMode, number>>();
+  const byTopic = new Map<string, Record<QuizMode, number>>();
   for (const card of usable) {
     const counts = bySubject.get(card.subjectId) ?? empty();
+    const topicCounts = card.topicId ? byTopic.get(card.topicId) ?? empty() : null;
     for (const type of QUIZ_MODES) {
       if (isEligible(card, type, usable)) {
         counts[type] += 1;
         all[type] += 1;
+        if (topicCounts) topicCounts[type] += 1;
       }
     }
     bySubject.set(card.subjectId, counts);
+    if (card.topicId && topicCounts) byTopic.set(card.topicId, topicCounts);
   }
-  return { all, bySubject, usableCount: usable.length };
+  return { all, bySubject, byTopic, usableCount: usable.length };
 }
 
 function explanationFor(q: StoredQuestionDoc, type: QuizType): string {
@@ -302,6 +338,9 @@ export function toPublicSession(session: SessionDoc, streaks?: Map<string, numbe
     id: String(session._id),
     subjectId: session.subjectId ? String(session.subjectId) : null,
     subjectName: session.subjectName,
+    scope: session.scope ?? (session.subjectId ? "subject" : "all"),
+    topicId: session.topicId ? String(session.topicId) : null,
+    topicName: session.topicName ?? null,
     type: session.type,
     status: session.status,
     questions,

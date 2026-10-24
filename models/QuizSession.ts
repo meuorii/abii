@@ -39,6 +39,9 @@ const quizSessionSchema = new Schema(
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     subjectId: { type: Schema.Types.ObjectId, ref: "Subject", default: null },
     subjectName: { type: String, required: true, trim: true },
+    scope: { type: String, enum: ["all", "subject", "topic"], default: undefined },
+    topicId: { type: Schema.Types.ObjectId, ref: "Topic", default: undefined },
+    topicName: { type: String, trim: true, default: undefined },
     type: { type: String, enum: MODES, required: true },
     status: { type: String, enum: ["active", "completed"], default: "active", required: true },
     questions: { type: [quizQuestionSchema], default: [] },
@@ -56,7 +59,7 @@ quizSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "quiz_s
 {
   const cached = mongoose.models.QuizSession;
   const questionSchema = (cached?.schema.path("questions") as unknown as { schema?: { path: (p: string) => unknown } } | undefined)?.schema;
-  if (cached && !questionSchema?.path("expectedItems")) delete mongoose.models.QuizSession;
+  if (cached && (!questionSchema?.path("expectedItems") || !cached.schema.path("scope"))) delete mongoose.models.QuizSession;
 }
 
 export type QuizSessionDocument = InferSchemaType<typeof quizSessionSchema>;

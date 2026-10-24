@@ -17,6 +17,7 @@ import { QUIZ_MODES, type FlashcardType, type QuizMode, type QuizType } from "./
 export type PreparedCard = {
   id: string;
   subjectId: string;
+  topicId?: string;
   flashcardType: FlashcardType;
   question: string;
   answer: string;
@@ -43,7 +44,7 @@ export type StoredQuestion = {
   expectedAnswer: string;
 };
 
-export function prepareCard(raw: { _id: unknown; subjectId: unknown; question: string; answer: string; hint?: string | null; flashcardType?: string | null }): PreparedCard {
+export function prepareCard(raw: { _id: unknown; subjectId: unknown; topicId?: unknown; question: string; answer: string; hint?: string | null; flashcardType?: string | null }): PreparedCard {
   const question = (raw.question ?? "").trim();
   const answer = (raw.answer ?? "").trim();
   const flashcardType: FlashcardType = raw.flashcardType === "items" ? "items" : "standard";
@@ -52,6 +53,7 @@ export function prepareCard(raw: { _id: unknown; subjectId: unknown; question: s
   return {
     id: String(raw._id),
     subjectId: String(raw.subjectId),
+    topicId: raw.topicId ? String(raw.topicId) : undefined,
     flashcardType,
     question,
     answer,

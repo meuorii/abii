@@ -110,6 +110,53 @@ test("real authenticated Next.js routes and legacy Subject/Flashcard contracts",
     assert.equal((await request(topics)).body.topics.find((row) => row.id === source.body.topic.id).flashcardCount, 0);
     assert.equal((await request(topics)).body.topics.find((row) => row.id === target.body.topic.id).flashcardCount, 2);
     assert.equal((await request(topics)).body.topics.find((row) => row.id === detailTopic.body.topic.id).flashcardCount, 1);
+    const currentCards = (await request(`${path}/flashcards`)).body.cards;
+    const scopes = [
+      { scope: "all", topicId: undefined, ids: new Set(currentCards.map((card) => card.id)) },
+      { scope: "subject", topicId: undefined, ids: new Set(currentCards.map((card) => card.id)) },
+      { scope: "topic", topicId: target.body.topic.id, ids: new Set(currentCards.filter((card) => card.topicId === target.body.topic.id).map((card) => card.id)) },
+      { scope: "topic", topicId: detailTopic.body.topic.id, ids: new Set(currentCards.filter((card) => card.topicId === detailTopic.body.topic.id).map((card) => card.id)) },
+    ];
+    let topicRetrySessionId;
+    for (const selectedScope of scopes) for (const type of ["multiple-choice", "identification", "true-false", "random"]) {
+      const { scope } = selectedScope;
+      const payload = { scope, type, ...(scope !== "all" ? { subjectId: subject.body.subject.id } : {}), ...(selectedScope.topicId ? { topicId: selectedScope.topicId } : {}) };
+      const started = await request("/api/quiz/start", "POST", payload);
+      assert.equal(started.status, 201, `${scope}/${type}: ${started.body.error ?? "failed"}`);
+      const session = await db.collection("quizsessions").findOne({ _id: new mongoose.Types.ObjectId(started.body.sessionId) });
+      assert.equal(session.scope, scope);
+      if (selectedScope.topicId) {
+        assert.equal(String(session.topicId), selectedScope.topicId);
+        assert.equal(session.topicName, selectedScope.topicId === detailTopic.body.topic.id ? "Detail topic" : "Target");
+      }
+      assert.ok(session.questions.length > 0);
+      assert.ok(session.questions.every((question) => selectedScope.ids.has(String(question.flashcardId))), `${scope}/${type} included an out-of-scope question`);
+      const restored = await request(`/api/quiz/${started.body.sessionId}/finish`);
+      assert.equal(restored.status, 200);
+      assert.equal(restored.body.session.scope, scope);
+      if (selectedScope.topicId === target.body.topic.id && type === "identification") topicRetrySessionId = started.body.sessionId;
+    }
+    assert.ok(topicRetrySessionId);
+    await db.collection("quizsessions").updateOne({ _id: new mongoose.Types.ObjectId(topicRetrySessionId) }, { $set: { "questions.$[].answered": true, "questions.$[].correct": false, "questions.$[].userAnswer": "incorrect", "questions.$[].answeredAt": new Date() } });
+    const retried = await request(`/api/quiz/${topicRetrySessionId}/finish`, "POST");
+    assert.equal(retried.status, 200);
+    assert.equal(retried.body.retry, true);
+    assert.equal(retried.body.session.scope, "topic");
+    assert.equal(retried.body.session.topicId, target.body.topic.id);
+    const retriedDoc = await db.collection("quizsessions").findOne({ _id: new mongoose.Types.ObjectId(topicRetrySessionId) });
+    assert.ok(retriedDoc.questions.every((question) => scopes[2].ids.has(String(question.flashcardId))));
+    for (const legacy of [{ subjectId: "all", type: "random" }, { subjectId: subject.body.subject.id, type: "identification" }]) {
+      const started = await request("/api/quiz/start", "POST", legacy);
+      assert.equal(started.status, 201);
+      const session = await db.collection("quizsessions").findOne({ _id: new mongoose.Types.ObjectId(started.body.sessionId) });
+      assert.equal(session.scope, legacy.subjectId === "all" ? "all" : "subject");
+    }
+    assert.equal((await request("/api/quiz/start", "POST", { scope: "all", topicId: detailTopic.body.topic.id, type: "random" })).status, 400);
+    assert.equal((await request("/api/quiz/start", "POST", { scope: "wrong", subjectId: "all", type: "random" })).status, 400);
+    assert.equal((await request("/api/quiz/start", "POST", { scope: "topic", subjectId: subject.body.subject.id, topicId: otherTopic.body.topic.id, type: "random" })).status, 404);
+    assert.equal((await request("/api/quiz/start", "POST", { scope: "topic", subjectId: subject.body.subject.id, topicId: String(foreignTopicId), type: "random" })).status, 404);
+    assert.equal((await request("/api/quiz/start", "POST", { scope: "subject", subjectId: otherSubject.body.subject.id, type: "random" })).status, 422);
+    assert.equal((await request("/api/quiz/start", "POST", { scope: "topic", subjectId: subject.body.subject.id, topicId: source.body.topic.id, type: "random" })).status, 422);
     const populatedPath = `${topics}/${detailTopic.body.topic.id}`;
     const populated = await request(populatedPath);
     assert.equal((await request(populatedPath, "DELETE", { confirm: true }, populated.etag)).status, 409);
