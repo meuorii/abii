@@ -6,6 +6,7 @@ import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { QuizSession } from "@/models/QuizSession";
 import { Subject } from "@/models/Subject";
+import { Topic } from "@/models/Topic";
 
 export const runtime = "nodejs";
 type RouteContext = { params: Promise<{ subjectId: string }> };
@@ -49,6 +50,9 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     ]);
     await Flashcard.deleteMany({ userId: user._id, subjectId: subject._id });
     await Subject.deleteOne({ _id: subject._id, userId: user._id });
+    // Delete after the parent: Topic transactions write-lock the parent, so no
+    // new topic can commit after this deletion and escape the cleanup.
+    await Topic.deleteMany({ subjectId: subject._id, userId: user._id });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Unable to delete subject.", error);

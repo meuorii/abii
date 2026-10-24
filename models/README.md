@@ -27,11 +27,16 @@ Flashcard now has an optional `topicId` reference and an owner/subject/topic ind
 Both `standard` and `items` (Enumeration) values are unchanged. Topic is optional
 during the transition, so existing creation and quiz paths continue to work.
 Mongoose refs are not foreign-key constraints: the migration validates existence
-and ownership; future Topic CRUD must enforce the same constraints. No Topic CRUD
-or UI is introduced here. Reviews and quiz sessions are unchanged; historical
+and ownership; the Phase 2 Topic API enforces those constraints for its writes.
+Reviews and quiz sessions are unchanged; historical
 sessions need no topic metadata and retain their stored question snapshots.
 
 See [migration instructions](../scripts/README.md) for dry runs, index deployment,
 production safeguards, partial-failure recovery, and idempotency verification.
+
+Phase 2 adds an internal, normally unselected `Subject.topicRevision` counter for
+serializing Topic transactions without changing subject timestamps. See the
+[Topic API contract](../lib/topics/README.md) for CRUD, ETags, ordering, safe transfer,
+and transaction deployment requirements.
 
 MongoDB indexes are declared in the schemas. Mongoose normally creates declared indexes when a model initializes; for production deployments, consider running index creation as a controlled deployment step rather than relying on automatic index creation.
