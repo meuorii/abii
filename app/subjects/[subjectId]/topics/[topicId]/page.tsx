@@ -23,7 +23,10 @@ export default async function TopicPage({ params }: Props) {
   await connectToDatabase();
   const subject = await Subject.findOne({ _id: subjectId, userId: user._id }).select("_id name").lean();
   if (!subject) notFound();
-  const topic = await Topic.findOne({ _id: topicId, subjectId: subject._id, userId: user._id }).select("_id subjectId name description position createdAt updatedAt").lean();
+  const [topic, topicDocs] = await Promise.all([
+    Topic.findOne({ _id: topicId, subjectId: subject._id, userId: user._id }).select("_id subjectId name description position createdAt updatedAt").lean(),
+    Topic.find({ userId: user._id, subjectId: subject._id }).select("_id name").sort({ position: 1, _id: 1 }).lean(),
+  ]);
   if (!topic) notFound();
   const cards = await Flashcard.find({ userId: user._id, subjectId: subject._id, topicId: topic._id })
     .select("_id flashcardType question answer hint createdAt").sort({ createdAt: -1 }).lean();
@@ -48,7 +51,7 @@ export default async function TopicPage({ params }: Props) {
           <p className="mt-4 text-sm font-semibold text-[#C65380]">{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}</p>
         </div>
       </section>
-      <TopicDetailClient subjectId={String(subject._id)} subjectName={subject.name} topic={{ id: String(topic._id), name: topic.name, count: cards.length }} initialCards={cards.map((card) => ({ id: String(card._id), flashcardType: card.flashcardType === "items" ? "items" as const : "standard" as const, question: card.question, answer: card.answer, hint: card.hint ?? "", reviewed: reviewed.has(String(card._id)) }))}/>
+      <TopicDetailClient subjectId={String(subject._id)} subjectName={subject.name} topic={{ id: String(topic._id), name: topic.name, count: cards.length }} topicOptions={topicDocs.map((item) => ({ id: String(item._id), name: item.name }))} initialCards={cards.map((card) => ({ id: String(card._id), topicId: String(topic._id), topicName: topic.name, flashcardType: card.flashcardType === "items" ? "items" as const : "standard" as const, question: card.question, answer: card.answer, hint: card.hint ?? "", reviewed: reviewed.has(String(card._id)) }))}/>
     </div>
   </AppShell>;
 }

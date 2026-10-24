@@ -31,10 +31,13 @@ export default async function SubjectDetailPage({ params }: PageProps) {
   if (!subject) notFound();
 
   const mastery = await getSubjectMastery(user._id);
-  const cards = await Flashcard.find({ userId: user._id, subjectId: subject._id })
-    .select("_id flashcardType question answer hint createdAt")
+  const [topicDocs, cards] = await Promise.all([
+    Topic.find({ userId: user._id, subjectId: subject._id }).select("_id name").sort({ position: 1, _id: 1 }).lean(),
+    Flashcard.find({ userId: user._id, subjectId: subject._id }).select("_id topicId flashcardType question answer hint createdAt")
     .sort({ createdAt: -1 })
-    .lean();
+    .lean(),
+  ]);
+  const topicNames = new Map(topicDocs.map((topic) => [String(topic._id), topic.name]));
   const cardIds = cards.map((card) => card._id);
   const reviews = cardIds.length
     ? await ReviewRecord.find({ userId: user._id, flashcardId: { $in: cardIds } })
@@ -73,8 +76,11 @@ export default async function SubjectDetailPage({ params }: PageProps) {
     progress,
     correctCount,
     wrongCount,
+    topics: topicDocs.map((topic) => ({ id: String(topic._id), name: topic.name })),
     cards: cards.map((card) => ({
       id: String(card._id),
+      topicId: card.topicId ? String(card.topicId) : null,
+      topicName: card.topicId ? topicNames.get(String(card.topicId)) ?? null : null,
       flashcardType: card.flashcardType === "items" ? "items" as const : "standard" as const,
       question: card.question,
       answer: card.answer,
@@ -82,8 +88,6 @@ export default async function SubjectDetailPage({ params }: PageProps) {
       reviewed: reviewedIds.has(String(card._id)),
     })),
   };
-  const firstName = user.name.trim().split(/\s+/)[0] || "there";
-
   return (
     <AppShell pageTitle={subject.name} pageDescription="Your subject and study cards" userName={user.name}>
       <div className="space-y-3 p-4 pb-24 sm:space-y-4 sm:p-5 sm:pb-24 xl:p-6">
@@ -115,7 +119,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
           </div>
         </section>
 
-        <SubjectDetailClient initialData={data} />
+    <SubjectDetailClient initialData={data} />
       </div>
     </AppShell>
   );
