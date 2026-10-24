@@ -22,10 +22,7 @@ type Props = {
   subjects: SetupSubject[];
   allEligible: Record<QuizMode, number>;
   totalCards: number;
-  allMastered: number;
   allProgress: number;
-  allCompletedRequirements: number;
-  allTotalRequirements: number;
   allTypeMastery: TypeProgress;
   initialSubjectId: string | null;
   initialTopicId: string | null;
@@ -63,7 +60,7 @@ function unavailableReason(type: QuizMode) {
   return "True or False needs flashcards with a question and a short answer (120 characters or fewer).";
 }
 
-export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allMastered, allProgress, allCompletedRequirements, allTotalRequirements, allTypeMastery, initialSubjectId, initialTopicId, loadFailed }: Props) {
+export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allProgress, allTypeMastery, initialSubjectId, initialTopicId, loadFailed }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [scope, setScope] = useState<ReviewScope>(initialTopicId ? "topic" : initialSubjectId ? "subject" : "all");
@@ -173,10 +170,10 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allM
           <label className="block text-sm font-semibold text-[#294A60]">Subject<select value={subjectId} onChange={(event) => { setSubjectId(event.target.value); setTopicId(""); setError(""); }} className="mt-1.5 min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3 text-sm font-normal text-[#153B56] focus:border-[#E9577D] focus:outline-none focus:ring-4 focus:ring-[#FF9FBA]/15"><option value="">Choose a subject…</option>{subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select></label>
           {scope === "topic" && <label className="block text-sm font-semibold text-[#294A60]">Topic<select value={topicId} onChange={(event) => { setTopicId(event.target.value); setError(""); }} disabled={!selectedSubject || selectedSubject.topics.length === 0} className="mt-1.5 min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3 text-sm font-normal text-[#153B56] disabled:bg-[#F5F2F4] focus:border-[#E9577D] focus:outline-none focus:ring-4 focus:ring-[#FF9FBA]/15"><option value="">{!selectedSubject ? "Choose a subject first" : selectedSubject.topics.length ? "Choose a topic…" : "This subject has no topics yet"}</option>{selectedSubject?.topics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name} · {topic.flashcardCount} cards</option>)}</select>{selectedSubject && selectedSubject.topics.length === 0 && <Link href={`/subjects/${selectedSubject.id}`} className="mt-2 inline-flex text-xs font-semibold text-[#C65380] underline underline-offset-2">Create a topic in this subject</Link>}</label>}
         </div>}
-        <p className="text-xs leading-5 text-[#7890A4]">{scope === "all" ? `${totalCards} flashcards across ${subjects.length} subjects; ${allMastered} mastered. Eligible questions can draw distractors from your full study library.` : scope === "subject" ? selectedSubject ? `${selectedSubject.flashcardCount} flashcards in ${selectedSubject.name}, across all its topics.` : "Choose a subject to see its eligible questions." : selectedTopic ? `${selectedTopic.flashcardCount} flashcards in ${selectedTopic.name}.` : "Choose a subject and topic to continue."}</p>
-        {scope === "all" && <MasteryProgressBar label="Overall mastery progress" mastered={allMastered} total={totalCards} completedRequirements={allCompletedRequirements} totalRequirements={allTotalRequirements} progress={allProgress} />}
-        {scope === "subject" && selectedSubject && <MasteryProgressBar label={`${selectedSubject.name} mastery progress`} mastered={selectedSubject.mastered} total={selectedSubject.flashcardCount} completedRequirements={selectedSubject.completedRequirements} totalRequirements={selectedSubject.totalRequirements} usable={selectedSubject.usableCount} progress={selectedSubject.masteryProgress} />}
-        {scope === "topic" && selectedTopic && <MasteryProgressBar label={`${selectedTopic.name} mastery progress`} mastered={selectedTopic.mastered} total={selectedTopic.flashcardCount} completedRequirements={selectedTopic.completedRequirements} totalRequirements={selectedTopic.totalRequirements} usable={selectedTopic.usableCount} progress={selectedTopic.masteryProgress} />}
+        <p className="text-xs leading-5 text-[#7890A4]">{scope === "all" ? `${totalCards} flashcards across ${subjects.length} subjects. Eligible questions can draw distractors from your full study library.` : scope === "subject" ? selectedSubject ? `${selectedSubject.flashcardCount} flashcards in ${selectedSubject.name}, across all its topics.` : "Choose a subject to see its eligible questions." : selectedTopic ? `${selectedTopic.flashcardCount} flashcards in ${selectedTopic.name}.` : "Choose a subject and topic to continue."}</p>
+        {scope === "all" && <MasteryProgressBar label="Overall Mastery" ariaLabel="Overall mastery progress" progress={allProgress} />}
+        {scope === "subject" && selectedSubject && <MasteryProgressBar label="Mastery" ariaLabel={`${selectedSubject.name} mastery progress`} progress={selectedSubject.masteryProgress} />}
+        {scope === "topic" && selectedTopic && <MasteryProgressBar label="Mastery" ariaLabel={`${selectedTopic.name} mastery progress`} progress={selectedTopic.masteryProgress} />}
         {scope === "all" && <MasteryPills progress={allTypeMastery} />}
         {scope === "subject" && selectedSubject && <MasteryPills progress={selectedSubject.typeMastery} />}
       </section>

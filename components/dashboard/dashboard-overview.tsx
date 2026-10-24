@@ -3,21 +3,13 @@ import Link from "next/link";
 import { CalendarDays, Layers3, BookOpen, FlaskConical, Leaf, Plus, RefreshCw, ChevronRight, ArrowRight, Circle } from "lucide-react";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 
-type SubjectOverview = {
-  id: string;
-  name: string;
-  flashcardCount: number;
-  masteredCount: number;
-  progress: number;
-  completedRequirements: number;
-  totalRequirements: number;
-};
+type SubjectOverview = { id: string; name: string; flashcardCount: number; progress: number };
 
 type DashboardOverviewProps = {
   firstName: string;
   dueCount: number;
   totalCards: number;
-  overallMastery: { mastered: number; total: number; completedRequirements: number; totalRequirements: number; progress: number };
+  overallMastery: { progress: number };
   currentStreak: number;
   lastSevenDays: { label: string; completed: boolean }[];
   subjects: SubjectOverview[];
@@ -79,9 +71,8 @@ export function DashboardOverview({ firstName, dueCount, totalCards, overallMast
         </section>
       ) : (
         <>
-          <section aria-label="Overall mastery" className="rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5">
-            <h2 className="mb-3 text-sm font-bold text-[#153B56]">Overall mastery</h2>
-            <MasteryProgressBar label="Overall mastery progress" mastered={overallMastery.mastered} total={overallMastery.total} completedRequirements={overallMastery.completedRequirements} totalRequirements={overallMastery.totalRequirements} progress={overallMastery.progress} size="md" />
+          <section aria-label="Overall mastery" className="rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-4">
+            <MasteryProgressBar label="Overall Mastery" ariaLabel="Overall mastery progress" progress={overallMastery.progress} size="md" />
           </section>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.45fr_1fr]">
             <section className="min-w-0 rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5" aria-labelledby="today-review-heading">
@@ -128,10 +119,10 @@ export function DashboardOverview({ firstName, dueCount, totalCards, overallMast
                     <Link href={`/subjects/${subject.id}`} className="group block h-full rounded-xl border border-[#EAE6E8] bg-white p-3.5 transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[#F0B6C9] hover:shadow-[0_6px_18px_rgba(47,41,48,0.045)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">
                       <div className="flex items-center gap-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF0F5] text-[#E9577D]"><Icon name={subjectIcon} className="h-5 w-5" /></span>
-                        <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-[#2F4658]">{subject.name}</span><span className="mt-1 block text-[10px] text-[#8B9AA6]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "card" : "cards"}</span></span>
+                        <span className="min-w-0 flex-1"><span className="line-clamp-2 break-words text-xs font-semibold text-[#2F4658]">{subject.name}</span><span className="mt-1 block text-[10px] text-[#8B9AA6]">{subject.flashcardCount} {subject.flashcardCount === 1 ? "flashcard" : "flashcards"}</span></span>
                         <Icon name="chevron" className="h-4 w-4 shrink-0 text-[#A0AFBA] transition-transform group-hover:translate-x-0.5" />
                       </div>
-                      <div className="mt-4"><MasteryProgressBar label={`${subject.name} mastery progress`} mastered={subject.masteredCount} total={subject.flashcardCount} completedRequirements={subject.completedRequirements} totalRequirements={subject.totalRequirements} progress={subject.progress} /></div>
+                      <div className="mt-3"><MasteryProgressBar label="Mastery" ariaLabel={`${subject.name} mastery progress`} progress={subject.progress} /></div>
                     </Link>
                   </li>;
                 })}

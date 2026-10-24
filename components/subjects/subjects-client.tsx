@@ -180,7 +180,7 @@ export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClien
                 <div className={`flex min-w-0 items-start gap-3 ${layout === "list" ? "sm:flex-1" : ""}`}>
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFF0F5] text-lg text-[#D85E86] transition group-hover:bg-[#FFE5EE]" aria-hidden="true"><BookOpen className="h-5 w-5" /></div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-bold text-[#2F2930] group-hover:text-[#C65380]">{subject.name}</h3>
+                    <h3 className="line-clamp-2 break-words font-bold text-[#2F2930] group-hover:text-[#C65380]">{subject.name}</h3>
                     <p className="mt-1 text-sm text-[#756B72]">
                       {subject.topicCount} {subject.topicCount === 1 ? "topic" : "topics"} <span aria-hidden="true">·</span> {subject.flashcardCount} {subject.flashcardCount === 1 ? "flashcard" : "flashcards"}
                     </p>
@@ -188,8 +188,8 @@ export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClien
                   <ArrowUpRight className="mt-1 h-4 w-4 text-[#B5A7AE] transition group-hover:translate-x-0.5 group-hover:text-[#D85E86]" aria-hidden="true" />
                 </div>
 
-                <div className={`${layout === "grid" ? "mt-5" : "mt-4 sm:mt-0 sm:w-[42%] sm:max-w-xs"}`}>
-                  <MasteryProgressBar label={`${subject.name} mastery progress`} mastered={subject.masteredCount} total={subject.flashcardCount} completedRequirements={subject.completedRequirements} totalRequirements={subject.totalRequirements} usable={subject.usableCount} progress={subject.progress} />
+                <div className={`${layout === "grid" ? "mt-4" : "mt-4 sm:mt-0 sm:w-[42%] sm:max-w-xs"}`}>
+                  <MasteryProgressBar label="Mastery" ariaLabel={`${subject.name} mastery progress`} progress={subject.progress} />
                   <TypeMasteryIndicators mastery={subject.typeMastery} />
                 </div>
               </Link>

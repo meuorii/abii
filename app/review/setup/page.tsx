@@ -26,10 +26,7 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
   let subjects: SetupSubject[] = [];
   let allEligible = Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>;
   let totalCards = 0;
-  let allMastered = 0;
   let allProgress = 0;
-  let allCompletedRequirements = 0;
-  let allTotalRequirements = 0;
   let allTypeMastery = emptyTypeProgress();
   let loadFailed = false;
 
@@ -43,10 +40,7 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
       getEligibilityCounts(userId),
       getSubjectMastery(userId),
     ]);
-    allMastered = mastery.overall.mastered;
     allProgress = mastery.overall.progress;
-    allCompletedRequirements = mastery.overall.completedRequirements;
-    allTotalRequirements = mastery.overall.totalRequirements;
     allTypeMastery = mastery.allByType;
     totalCards = cards.length;
     const cardCounts = new Map<string, number>();
@@ -106,10 +100,7 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
         subjects={subjects}
         allEligible={allEligible}
         totalCards={totalCards}
-        allMastered={allMastered}
         allProgress={allProgress}
-        allCompletedRequirements={allCompletedRequirements}
-        allTotalRequirements={allTotalRequirements}
         allTypeMastery={allTypeMastery}
         initialSubjectId={initialSubjectId}
         initialTopicId={initialTopicId}
