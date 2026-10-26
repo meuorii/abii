@@ -7,6 +7,7 @@ import { Modal, modalCancelClass, modalDangerClass } from "@/components/ui/modal
 import { LogoutButton } from "@/components/auth/logout-button";
 import { SlidersHorizontal, ShieldCheck, UserRound, Grid2X2, List, Download, Clock3, Layers3, Volume2, Play } from "lucide-react";
 import { getAbiiSoundVolume, isAbiiSoundEnabled, playAbiiSound, setAbiiSoundEnabled, setAbiiSoundVolume } from "@/lib/sounds";
+import { ProfilePictureCropModal } from "@/components/settings/profile-picture-crop-modal";
 
 type Preferences = { targetSubjects: number; defaultLandingPage: string; subjectLayout: "grid" | "list" };
 type InitialUser = { name: string; email: string; profileImage: string; createdAt: string; settings?: Partial<Preferences> | null };
@@ -30,7 +31,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
   const [preferences, setPreferences] = useState<Preferences>(() => ({ ...defaultPreferences, ...(initialUser.settings ?? {}), defaultLandingPage: initialUser.settings?.defaultLandingPage === "/favorites" ? "/dashboard" : initialUser.settings?.defaultLandingPage ?? defaultPreferences.defaultLandingPage }));
   const [profile, setProfile] = useState({ name: initialUser.name, email: initialUser.email });
   const [profileImage, setProfileImage] = useState(initialUser.profileImage);
-  const [imagePreview, setImagePreview] = useState("");
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -91,12 +92,12 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
     catch (error) { setNoticeFor("profile", { kind: "error", text: error instanceof Error ? error.message : "Could not update account details." }); }
     finally { setSaving(""); }
   }
-  async function uploadProfilePhoto(event: React.ChangeEvent<HTMLInputElement>) {
+  async function selectProfilePhoto(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { setNoticeFor("photo", { kind: "error", text: "Choose a JPG, PNG, or WebP image." }); return; }
-    if (file.size > 1024 * 1024) { setNoticeFor("photo", { kind: "error", text: "Profile photos must be 1 MB or smaller." }); return; }
+    if (file.size > 15 * 1024 * 1024) { setNoticeFor("photo", { kind: "error", text: "Choose a source image no larger than 15 MB." }); return; }
     if (typeof createImageBitmap !== "function") { setNoticeFor("photo", { kind: "error", text: "Your browser cannot validate this image. Please try another browser." }); return; }
     let bitmap: ImageBitmap | undefined;
     try {
@@ -104,20 +105,38 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
       if (bitmap.width > 6000 || bitmap.height > 6000 || bitmap.width * bitmap.height > 20_000_000) { setNoticeFor("photo", { kind: "error", text: "Choose an image no larger than 6000 × 6000 pixels or 20 megapixels." }); return; }
     } catch { setNoticeFor("photo", { kind: "error", text: "The selected image could not be decoded. Please choose another image." }); return; }
     finally { bitmap?.close(); }
-    const reader = new FileReader();
-    reader.onload = async () => {
-      if (typeof reader.result !== "string") { setNoticeFor("photo", { kind: "error", text: "The image could not be read." }); return; }
-      setImagePreview(reader.result); setSaving("photo"); setNoticeFor("photo", null);
-      try { const data = await request("/api/account/profile-picture", "PATCH", { image: reader.result }); setProfileImage(data.profileImage); setImagePreview(""); setNoticeFor("photo", { kind: "success", text: data.message || "Profile photo updated." }); }
-      catch (error) { setImagePreview(""); setNoticeFor("photo", { kind: "error", text: error instanceof Error ? error.message : "Could not update profile photo." }); }
-      finally { setSaving(""); }
-    };
-    reader.onerror = () => setNoticeFor("photo", { kind: "error", text: "The image could not be read." });
-    reader.readAsDataURL(file);
+    setNoticeFor("photo", null);
+    setCropFile(file);
+  }
+  async function editSavedPhoto() {
+    if (!profileImage || saving) return;
+    setSaving("photo"); setNoticeFor("photo", null);
+    try {
+      const response = await fetch(profileImage, { mode: "cors", credentials: "omit", cache: "no-store" });
+      if (!response.ok) throw new Error("The saved photo could not be downloaded.");
+      const blob = await response.blob();
+      if (!["image/jpeg", "image/png", "image/webp"].includes(blob.type) || blob.size > 15 * 1024 * 1024) throw new Error("This saved image cannot be edited here. Select the original photo again.");
+      setCropFile(new File([blob], "saved-profile-photo", { type: blob.type }));
+    } catch {
+      setNoticeFor("photo", { kind: "error", text: "This hosted photo can’t be safely edited in the browser. Choose the original image again to crop it." });
+    } finally { setSaving(""); }
+  }
+  async function saveCroppedPhoto(image: string) {
+    setSaving("photo"); setNoticeFor("photo", null);
+    try {
+      const data = await request("/api/account/profile-picture", "PATCH", { image });
+      setProfileImage(data.profileImage);
+      window.dispatchEvent(new CustomEvent("abii-profile-image-updated", { detail: { profileImage: data.profileImage } }));
+      setNoticeFor("photo", { kind: "success", text: data.message || "Profile photo updated." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not update profile photo.";
+      setNoticeFor("photo", { kind: "error", text: message });
+      throw error;
+    } finally { setSaving(""); }
   }
   async function removeProfilePhoto() {
     setSaving("photo"); setNoticeFor("photo", null);
-    try { const data = await request("/api/account/profile-picture", "DELETE"); setProfileImage(""); setImagePreview(""); setNoticeFor("photo", { kind: "success", text: data.message || "Profile photo removed." }); }
+    try { const data = await request("/api/account/profile-picture", "DELETE"); setProfileImage(""); window.dispatchEvent(new CustomEvent("abii-profile-image-updated", { detail: { profileImage: "" } })); setNoticeFor("photo", { kind: "success", text: data.message || "Profile photo removed." }); }
     catch (error) { setNoticeFor("photo", { kind: "error", text: error instanceof Error ? error.message : "Could not remove profile photo." }); }
     finally { setSaving(""); }
   }
@@ -180,7 +199,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
                 </div>
                 <p className="mt-2 text-xs font-medium text-[#756B72]" aria-live="polite">Sound {soundEnabled ? "On" : "Off"}</p>
                 <label htmlFor="quizSoundVolume" className="mt-3 flex items-center justify-between gap-3 text-xs font-medium text-[#557087]"><span>Volume</span><span>{soundVolume}%</span></label>
-                <input id="quizSoundVolume" type="range" min={0} max={100} value={soundVolume} onChange={(event) => updateSoundVolume(Number(event.target.value))} className="mt-1.5 h-2 w-full cursor-pointer accent-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]" />
+                <input id="quizSoundVolume" aria-label="Volume" aria-valuetext={`${soundVolume}%`} type="range" min={0} max={100} value={soundVolume} onChange={(event) => updateSoundVolume(Number(event.target.value))} className="abii-volume-slider mt-1.5 w-full" style={{ "--volume-progress": `${soundVolume}%` } as React.CSSProperties} />
                 <div className="mt-3 flex flex-wrap gap-2">
                   {([ ["correct", "Preview Correct"], ["wrong", "Preview Wrong"], ["complete", "Preview Complete"] ] as const).map(([kind, label]) => <button key={kind} type="button" onClick={() => playAbiiSound(kind)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#F1D7E0] bg-[#FFF9FB] px-2.5 text-xs font-semibold text-[#A94369] transition hover:bg-[#FFF0F4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-1"><Play className="h-3 w-3" aria-hidden="true" />{label}</button>)}
                 </div>
@@ -202,7 +221,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
       <div className="min-w-0 space-y-4 sm:space-y-5">
         <SectionCard icon={<UserRound className="h-5 w-5"/>} title="Account & Security" description="Manage your personal information and protect your account.">
           <div className="rounded-xl border border-[#F0E9EC] p-3.5 sm:p-4">
-            <div className="mb-4 flex flex-wrap items-center gap-3"><div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#F4DCE4] bg-[#FFE0E9] text-lg font-semibold text-[#D94E7B]">{(imagePreview || profileImage) ? <Image src={imagePreview || profileImage} alt="Profile photo preview" fill sizes="56px" unoptimized className="object-cover" /> : (profile.name.trim().charAt(0).toUpperCase() || "A")}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-[#18384D]">{profile.name}</p><p className="truncate text-xs text-[#6E879A]">{profile.email}</p><div className="mt-2 flex flex-wrap gap-2"><label className={`${secondaryButton} cursor-pointer ${saving === "photo" ? "pointer-events-none opacity-60" : ""}`}>{saving === "photo" ? "Updating…" : "Change Photo"}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={saving !== ""} onChange={uploadProfilePhoto} /></label>{profileImage && <button type="button" disabled={saving !== ""} className={secondaryButton} onClick={removeProfilePhoto}>Remove</button>}</div></div></div><p className="text-xs leading-5 text-[#6E879A]">JPG, PNG, or WebP · up to 1 MB. Your photo appears in the account header too.</p>
+            <div className="mb-4 flex flex-wrap items-center gap-3"><div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#F4DCE4] bg-[#FFE0E9] text-lg font-semibold text-[#D94E7B]">{profileImage ? <Image key={profileImage} src={profileImage} alt="Profile photo preview" fill sizes="56px" unoptimized className="object-cover" /> : (profile.name.trim().charAt(0).toUpperCase() || "A")}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-[#18384D]">{profile.name}</p><p className="truncate text-xs text-[#6E879A]">{profile.email}</p><div className="mt-2 flex flex-wrap gap-2"><label className={`${secondaryButton} cursor-pointer ${saving === "photo" ? "pointer-events-none opacity-60" : ""}`}>{saving === "photo" ? "Updating…" : "Change Photo"}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={saving !== ""} onChange={selectProfilePhoto} /></label>{profileImage && <button type="button" disabled={saving !== ""} className={secondaryButton} onClick={() => void editSavedPhoto()}>Edit / Crop</button>}{profileImage && <button type="button" disabled={saving !== ""} className={secondaryButton} onClick={removeProfilePhoto}>Remove</button>}</div></div></div><p className="text-xs leading-5 text-[#6E879A]">Source: JPG, PNG, or WebP · up to 15 MB and 20 megapixels. Saved square crop: up to 1 MB. Your photo appears in the account header too.</p>
             <form onSubmit={saveProfile} className="mt-4 space-y-3.5">
               <div><label htmlFor="profileName" className="text-xs font-semibold text-[#18384D]">Name</label><input id="profileName" autoComplete="name" maxLength={80} required value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} className={inputClass} /></div>
               <div><label htmlFor="profileEmail" className="text-xs font-semibold text-[#18384D]">Email</label><input id="profileEmail" type="email" autoComplete="email" maxLength={254} required value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} className={inputClass} /></div>
@@ -218,6 +237,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
     </div>
 
     <Modal open={privacyOpen} onClose={() => setPrivacyOpen(false)} action="information" title="Your data, your choice" description="What these controls do" footer={<button type="button" onClick={() => setPrivacyOpen(false)} className="col-span-2 bg-[#FF6F96] text-white hover:bg-[#E9577D]">Got it</button>}><ul className="space-y-3 text-sm leading-6 text-[#756B72]"><li><strong className="text-[#2F2930]">Export:</strong> downloads available profile details, subjects, flashcards, review records, and completed sessions as JSON. Password hashes and session tokens are excluded.</li><li><strong className="text-[#2F2930]">Clear Study History:</strong> removes review records and completed sessions while preserving your subjects and flashcards.</li><li><strong className="text-[#2F2930]">Delete Study Materials:</strong> removes subjects, flashcards, and associated review/session records while preserving your account.</li><li><strong className="text-[#2F2930]">Delete Account:</strong> removes your account and associated study data. Confirm before proceeding because this cannot be undone.</li></ul><p className="mt-4 rounded-xl bg-[#FFF7F9] p-3 text-xs leading-5 text-[#756B72]">This panel describes the controls currently implemented in Abii; it is not a substitute for a full published privacy policy.</p></Modal>
+    {cropFile && <ProfilePictureCropModal file={cropFile} onClose={() => setCropFile(null)} onSave={saveCroppedPhoto} />}
     <Modal open={confirmAction !== null} onClose={() => { if (!saving) setConfirmAction(null); }} action="delete" alert busy={Boolean(saving)} title={confirmAction === "history" ? "Clear study history?" : confirmAction === "materials" ? "Delete all study materials?" : "Delete your account?"} description={confirmAction === "account" ? "This action is permanent and cannot be undone." : "Are you sure you want to continue?"} footer={<><button type="button" disabled={Boolean(saving)} onClick={() => setConfirmAction(null)} className={modalCancelClass}>Cancel</button><button type="button" disabled={Boolean(saving) || (confirmAction === "account" && deleteAccountText !== "DELETE")} onClick={() => { if (confirmAction === "history") void runAction("history", "/api/data/history", "DELETE"); else if (confirmAction === "materials") void runAction("materials", "/api/data/materials", "DELETE"); else if (confirmAction === "account") void runAction("account", "/api/account", "DELETE", { confirmation: "DELETE" }); }} className={modalDangerClass}>{saving ? "Working…" : confirmAction === "history" ? "Clear History" : confirmAction === "materials" ? "Delete Materials" : "Delete Account"}</button></>}>
       {confirmAction === "history" ? <p className="text-sm leading-6 text-[#756B72]">Review records and completed session history will be removed. Your subjects and flashcards remain.</p> : confirmAction === "materials" ? <p className="text-sm leading-6 text-[#756B72]">Subjects, topics, flashcards, review records, and quiz sessions will be deleted. Your user account remains.</p> : <div><p className="text-sm leading-6 text-[#756B72]">Your account, subjects, topics, flashcards, review history, and study sessions will be permanently deleted.</p><label htmlFor="deleteAccountConfirm" className="mt-4 block text-[13px] font-semibold text-[#2F2930]">Type DELETE to confirm</label><input id="deleteAccountConfirm" value={deleteAccountText} onChange={e=>setDeleteAccountText(e.target.value)} className={inputClass} placeholder="DELETE" autoComplete="off"/></div>}
     </Modal>

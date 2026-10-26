@@ -77,18 +77,23 @@ export function AppShell({ children, userName }: AppShellProps) {
 
   useEffect(() => {
     let active = true;
+    let updatedInThisTab = false;
 
     fetch("/api/account/profile-picture")
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
-        if (active && data?.profileImage) {
-          setProfileImage(data.profileImage);
-        }
+        if (active && !updatedInThisTab) setProfileImage(data?.profileImage ?? "");
       })
       .catch(() => {});
 
+    const syncProfileImage = (event: Event) => {
+      const image = (event as CustomEvent<{ profileImage?: string }>).detail?.profileImage;
+      if (typeof image === "string") { updatedInThisTab = true; setProfileImage(image); }
+    };
+    window.addEventListener("abii-profile-image-updated", syncProfileImage);
     return () => {
       active = false;
+      window.removeEventListener("abii-profile-image-updated", syncProfileImage);
     };
   }, []);
 
