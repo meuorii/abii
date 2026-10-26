@@ -7,9 +7,10 @@ import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { Topic } from "@/models/Topic";
 import { buildQuestionForCard, buildQuestions, eligibleTypes, isEligible, shuffle, isUsableCard, prepareCard, type PreparedCard } from "./builder";
-import { ENUM_MAX_ITEMS, ENUM_ORDER_MATTERS, MASTERY_STREAK, MAX_ENUM_ITEM_LENGTH, MAX_TYPED_ANSWER_LENGTH, SESSION_TTL_HOURS } from "./config";
+import { ACTIVE_SESSION_INACTIVITY_DAYS, ENUM_MAX_ITEMS, ENUM_ORDER_MATTERS, MASTERY_STREAK, MAX_ENUM_ITEM_LENGTH, MAX_TYPED_ANSWER_LENGTH, SESSION_TTL_HOURS } from "./config";
 import { normalizeText, sanitizeTyped } from "./normalize";
 import { computeNextReviewAt } from "./schedule";
+import { currentRoundProgress } from "./resume-state";
 import {
   ALL_SUBJECTS,
   QUIZ_MODES,
@@ -21,6 +22,7 @@ import {
   type QuizMode,
   type ReviewScope,
   type QuizSummary,
+  type ActiveQuizSummary,
   type QuizType,
   type MasteryStats,
   type TypeProgress,
@@ -59,7 +61,44 @@ type SessionDoc = {
   status: "active" | "completed";
   questions: StoredQuestionDoc[];
   completedAt?: Date | null;
+  expiresAt?: Date;
+  lastActivityAt?: Date;
 };
+
+const activeExpiry = (now = new Date()) => new Date(now.getTime() + ACTIVE_SESSION_INACTIVITY_DAYS * 86_400_000);
+/** Compact metadata only; no question text, submitted responses, or answer keys. */
+export async function listActiveSessions(userId: Types.ObjectId | string): Promise<ActiveQuizSummary[]> {
+  await connectToDatabase();
+  const now = new Date();
+  const sessions = await QuizSession.find({ userId, status: "active", expiresAt: { $gt: now }, "questions.0.prompt": { $type: "string" } })
+    .select("_id scope subjectId subjectName topicName type questions.round questions.answered createdAt updatedAt lastActivityAt expiresAt")
+    .sort({ lastActivityAt: -1, updatedAt: -1 }).lean();
+  return sessions.map((session) => {
+    const questions = session.questions ?? [];
+    const { currentRound, answeredCount, totalQuestions, progress, readyToFinish } = currentRoundProgress(questions);
+    return { id: String(session._id), scope: session.scope ?? (session.subjectId ? "subject" : "all"), subjectName: session.subjectName,
+      topicName: session.topicName ?? null, type: session.type as QuizMode, status: "active", answeredCount, totalQuestions, progress, currentRound,
+      readyToFinish,
+      lastActivityAt: (session.lastActivityAt ?? session.updatedAt ?? session.createdAt).toISOString(), expiresAt: session.expiresAt.toISOString() };
+  });
+}
+
+export async function resumeSession(userId: Types.ObjectId | string, sessionId: string) {
+  if (!isValidObjectId(sessionId)) return fail(404, "This quiz session has expired or could not be found.");
+  await connectToDatabase();
+  const now = new Date();
+  const session = await QuizSession.findOneAndUpdate({ _id: sessionId, userId, status: "active", expiresAt: { $gt: now }, "questions.0.prompt": { $type: "string" } },
+    { $set: { lastActivityAt: now, expiresAt: activeExpiry(now) } }, { new: true }).select("_id expiresAt lastActivityAt").lean();
+  if (!session) return fail(404, "This quiz session has expired or could not be found.");
+  return { ok: true as const, id: String(session._id), expiresAt: session.expiresAt, lastActivityAt: session.lastActivityAt };
+}
+
+export async function discardSession(userId: Types.ObjectId | string, sessionId: string) {
+  if (!isValidObjectId(sessionId)) return fail(404, "This active quiz could not be found.");
+  await connectToDatabase();
+  const result = await QuizSession.deleteOne({ _id: sessionId, userId, status: "active" });
+  return result.deletedCount ? { ok: true as const } : fail(404, "This active quiz could not be found.");
+}
 
 /** The individual type of a stored question (sessions created before Mixed mode have no per-question type). */
 function questionType(q: StoredQuestionDoc, session: SessionDoc): QuizType {
@@ -153,7 +192,8 @@ export async function startSession(userId: Types.ObjectId | string, input: { sco
     type,
     status: "active",
     questions: questions.map((q, i) => ({ ...q, flashcardId: new Types.ObjectId(q.flashcardId), round: 1, origin: i, answered: false })),
-    expiresAt: new Date(Date.now() + SESSION_TTL_HOURS * 60 * 60 * 1000),
+    lastActivityAt: new Date(),
+    expiresAt: activeExpiry(),
   });
   return { ok: true as const, sessionId: String(session._id), total: questions.length };
 }
@@ -420,7 +460,7 @@ export function toPublicSession(session: SessionDoc, streaks?: Map<string, numbe
 export async function loadSession(userId: Types.ObjectId | string, sessionId: string): Promise<SessionDoc | null> {
   if (!isValidObjectId(sessionId)) return null;
   await connectToDatabase();
-  const session = await QuizSession.findOne({ _id: sessionId, userId }).lean();
+  const session = await QuizSession.findOne({ _id: sessionId, userId, expiresAt: { $gt: new Date() } }).lean();
   return (session as unknown as SessionDoc | null) ?? null;
 }
 
@@ -430,6 +470,7 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   const session = await loadSession(userId, sessionId);
   if (!session) return fail(404, "This quiz session has expired or could not be found.");
   if (session.status === "completed") return fail(409, "This quiz is already finished.");
+  if (session.expiresAt && session.expiresAt.getTime() <= Date.now()) return fail(404, "This quiz session has expired or could not be found.");
 
   const index = input.questionIndex;
   if (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= session.questions.length) {
@@ -478,8 +519,8 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
 
   // Atomic claim: only the first request for this question can flip answered false -> true.
   const claimed = await QuizSession.updateOne(
-    { _id: session._id, userId, status: "active", [`${prefix}.answered`]: false },
-    { $set: set },
+    { _id: session._id, userId, status: "active", expiresAt: { $gt: now }, [`${prefix}.answered`]: false },
+    { $set: { ...set, lastActivityAt: now, expiresAt: activeExpiry(now) } },
   );
   if (claimed.modifiedCount === 0) {
     const fresh = await loadSession(userId, sessionId);
@@ -539,10 +580,11 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
       });
       if (next.length > 0) {
         const n = session.questions.length;
+        const activityAt = new Date();
         // Guard: only one concurrent finish can append this round.
         await QuizSession.updateOne(
           { _id: session._id, userId, status: "active", [`questions.${n}`]: { $exists: false } },
-          { $push: { questions: { $each: next } } },
+          { $push: { questions: { $each: next } }, $set: { lastActivityAt: activityAt, expiresAt: activeExpiry(activityAt) } },
         );
         const fresh = await loadSession(userId, sessionId);
         if (!fresh) return fail(404, "This quiz session has expired or could not be found.");
@@ -550,7 +592,8 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
         return { ok: true as const, done: false as const, session: toPublicSession(fresh, streaks) };
       }
     }
-    const completionUpdate = await QuizSession.updateOne({ _id: session._id, userId, status: "active" }, { $set: { status: "completed", completedAt: new Date() } });
+    const completedAt = new Date();
+    const completionUpdate = await QuizSession.updateOne({ _id: session._id, userId, status: "active" }, { $set: { status: "completed", completedAt, lastActivityAt: completedAt, expiresAt: new Date(completedAt.getTime() + SESSION_TTL_HOURS * 3_600_000) } });
     transitioned = completionUpdate.modifiedCount > 0;
   }
   const fresh = await loadSession(userId, sessionId);

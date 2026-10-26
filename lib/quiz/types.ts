@@ -9,6 +9,7 @@ export function isFlashcardType(value: unknown): value is FlashcardType {
 export const QUIZ_MODES = ["multiple-choice", "identification", "true-false", "random"] as const;
 export type QuizMode = (typeof QUIZ_MODES)[number];
 export type ReviewScope = "all" | "subject" | "topic";
+export type ActiveQuizSummary = { id: string; scope: ReviewScope; subjectName: string; topicName: string | null; type: QuizMode; status: "active"; answeredCount: number; totalQuestions: number; progress: number; currentRound: number; readyToFinish: boolean; lastActivityAt: string; expiresAt: string };
 
 /** Internal question renderers used when an Items flashcard is played in MC/Identification. */
 export const QUIZ_TYPES = ["multiple-choice", "identification", "true-false", "enumeration-identification", "enumeration-multiple-choice"] as const;

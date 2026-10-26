@@ -46,12 +46,14 @@ const quizSessionSchema = new Schema(
     status: { type: String, enum: ["active", "completed"], default: "active", required: true },
     questions: { type: [quizQuestionSchema], default: [] },
     completedAt: { type: Date, default: undefined },
+    lastActivityAt: { type: Date, default: Date.now },
     expiresAt: { type: Date, required: true },
   },
   { timestamps: true, versionKey: false },
 );
 
 quizSessionSchema.index({ userId: 1, createdAt: -1 }, { name: "quiz_session_owner" });
+quizSessionSchema.index({ userId: 1, status: 1, expiresAt: 1, lastActivityAt: -1 }, { name: "quiz_active_owner_activity" });
 quizSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "quiz_session_ttl" });
 
 // In dev, hot reload can keep an older cached model whose schema lacks newer fields
@@ -59,7 +61,7 @@ quizSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "quiz_s
 {
   const cached = mongoose.models.QuizSession;
   const questionSchema = (cached?.schema.path("questions") as unknown as { schema?: { path: (p: string) => unknown } } | undefined)?.schema;
-  if (cached && (!questionSchema?.path("expectedItems") || !cached.schema.path("scope"))) delete mongoose.models.QuizSession;
+  if (cached && (!questionSchema?.path("expectedItems") || !cached.schema.path("scope") || !cached.schema.path("lastActivityAt"))) delete mongoose.models.QuizSession;
 }
 
 export type QuizSessionDocument = InferSchemaType<typeof quizSessionSchema>;

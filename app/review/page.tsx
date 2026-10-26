@@ -9,8 +9,8 @@ import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { Topic } from "@/models/Topic";
 import { ReviewOverview, type ReviewSubjectItem, type ReviewTopicItem } from "@/components/review/review-overview";
-import { getSubjectMastery } from "@/lib/quiz/service";
-import { emptyTypeProgress } from "@/lib/quiz/types";
+import { getSubjectMastery, listActiveSessions } from "@/lib/quiz/service";
+import { emptyTypeProgress, type ActiveQuizSummary } from "@/lib/quiz/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -77,6 +77,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
   let wrongCount = 0;
   let streak = 0;
   let masteryTotal = 0;
+  let activeSessions: ActiveQuizSummary[] = [];
 
   try {
     await connectToDatabase();
@@ -90,6 +91,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
       Topic.find({ userId }).select("_id subjectId name position").sort({ position: 1, name: 1 }).lean(),
       getSubjectMastery(userId),
     ]);
+    activeSessions = await listActiveSessions(userId);
 
     totalCards = cards.length;
     masteryTotal = mastery.overall.mastered;
@@ -231,6 +233,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
             correctCount={correctCount}
             wrongCount={wrongCount}
             streak={streak}
+            activeSessions={activeSessions}
           />
         )}
       </div>

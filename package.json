@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test lib/quiz/distractors.test.mjs lib/quiz/finish-response.test.mjs lib/sounds-core.test.mjs lib/sounds-engine.test.mjs && npm run test:topics && npm run test:topic-routes",
     "test:topic-routes": "node --test scripts/topic-routes.test.mjs",
-    "test:topics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/topics.test.ts scripts/topic-api.test.ts scripts/mastery.test.ts scripts/quiz-compatibility.test.ts",
+    "test:topics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/topics.test.ts scripts/topic-api.test.ts scripts/mastery.test.ts scripts/quiz-compatibility.test.ts scripts/quiz-session-resume.test.ts",
     "migrate:topics": "node --conditions=react-server --import ./scripts/register-typescript.mjs scripts/migrate-topics.ts"
   },
   "dependencies": {

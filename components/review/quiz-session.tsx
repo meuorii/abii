@@ -15,6 +15,8 @@ import { QuizCompletion } from "@/components/review/quiz-completion";
 import { classifyFinishResponse, isPublicSessionForId, isQuizSummary } from "@/lib/quiz/finish-response.mjs";
 import { playAbiiSound, unlockAbiiAudio } from "@/lib/sounds";
 import { getAnswerSound, shouldPlayCompletionSound } from "@/lib/sounds-core.mjs";
+import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
+import { firstUnansweredQuestion } from "@/lib/quiz/resume-state";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
@@ -83,8 +85,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const [countdown, setCountdown] = useState<number | null>(null);
   const [results, setResults] = useState<Record<number, QuestionResult>>(initial.results);
   const [index, setIndex] = useState(() => {
-    const first = questions.findIndex((q) => !initial.results[q.index]);
-    return first === -1 ? Math.max(total - 1, 0) : first;
+    return firstUnansweredQuestion(questions.map((q) => ({ ...q, answered: Boolean(initial.results[q.index]) })));
   });
   const summary = currentSession.summary;
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -97,6 +98,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const [error, setError] = useState("");
   const [againBusy, setAgainBusy] = useState(false);
   const [againError, setAgainError] = useState("");
+  const [exitConfirm, setExitConfirm] = useState(false);
   const busyRef = useRef(false);
   const completionSoundSessionsRef = useRef(new Set<string>());
   const nextRef = useRef<() => void>(() => {});
@@ -209,6 +211,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const typed = result?.userAnswer ?? text;
   const itemCount = question.itemCount ?? 0;
   const enumTyped = result?.userAnswers ?? Array.from({ length: itemCount }, (_, i) => itemAnswers[i] ?? "");
+  const hasDraft = !result && (question.type === "identification" ? Boolean(text.trim()) : question.type === "enumeration-identification" ? itemAnswers.some((answer) => answer.trim()) : false);
 
   async function restart() {
     if (againBusy) return;
@@ -407,6 +410,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         {initial.subjectId ? <Link href={`/subjects/${initial.subjectId}`} className="max-w-[40vw] truncate rounded font-medium text-[#75889A] transition-colors hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">{initial.subjectName}</Link> : <span className="max-w-[40vw] truncate font-medium text-[#75889A]">{initial.subjectName}</span>}
         <span aria-hidden="true" className="text-[#B4A5AC]">›</span>
         <span aria-current="page" className="truncate font-semibold text-[#2F2930]">{typeLabel}</span>
+        <button type="button" disabled={busy} onClick={() => hasDraft ? setExitConfirm(true) : router.push("/review")} className="ml-auto inline-flex min-h-9 shrink-0 items-center rounded-full border border-[#F1DDE4] bg-white px-3 text-[11px] font-semibold text-[#C65380] hover:bg-[#FFF7F9] disabled:opacity-50 sm:px-4 sm:text-xs">Save &amp; Exit</button>
       </nav>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_290px] xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -588,6 +592,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
           )}
         </aside>
       </div>
+      <Modal open={exitConfirm} onClose={() => setExitConfirm(false)} action="confirmation" title="Leave this quiz?" description="Your submitted answers are saved." footer={<><button type="button" onClick={() => setExitConfirm(false)} className={modalCancelClass}>Keep Learning</button><button type="button" onClick={() => router.push("/review")} className={modalPrimaryClass}>Exit Quiz</button></>}><p className="text-sm leading-6 text-[#756B72]">Your current unsubmitted answer will be lost. You can resume this quiz later from Continue Learning.</p></Modal>
     </div>
   );
 }

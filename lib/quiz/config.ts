@@ -12,8 +12,10 @@ export const MC_OPTION_COUNT = 4;
 /** Chance of generating a false statement when a reliable alternative exists. */
 export const TF_FALSE_PROBABILITY = 0.5;
 
-/** Quiz sessions (and their saved question data) are removed this long after creation. */
+/** Completed quiz history keeps the existing 24 hour retention policy. */
 export const SESSION_TTL_HOURS = 24;
+/** Active quizzes remain resumable for 30 days after meaningful activity. */
+export const ACTIVE_SESSION_INACTIVITY_DAYS = 30;
 
 /** Maximum length accepted for a typed Identification answer. */
 export const MAX_TYPED_ANSWER_LENGTH = 500;

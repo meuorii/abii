@@ -2,6 +2,8 @@ import Link from "next/link";
 import { CalendarDays, Clock3, CircleCheck, Flame, BookOpen, ChartNoAxesColumnIncreasing, RefreshCw } from "lucide-react";
 import type { TypeProgress } from "@/lib/quiz/types";
 import { MasteryPills } from "@/components/review/review-setup";
+import { ActiveSessions } from "@/components/review/active-sessions";
+import type { ActiveQuizSummary } from "@/lib/quiz/types";
 
 export type ReviewSubjectItem = {
   id: string;
@@ -26,6 +28,7 @@ type Props = {
   correctCount: number;
   wrongCount: number;
   streak: number;
+  activeSessions: ActiveQuizSummary[];
 };
 
 function Icon({ name }: { name: "calendar" | "clock" | "check" | "flame" | "book" | "chart" }) { const icons={calendar:CalendarDays,clock:Clock3,check:CircleCheck,flame:Flame,book:BookOpen,chart:ChartNoAxesColumnIncreasing};const Component=icons[name];return <Component className="h-5 w-5" aria-hidden="true"/>; }
@@ -64,13 +67,14 @@ function subjectSymbol(name: string) {
   return "▤";
 }
 
-export function ReviewOverview({ subjects, topics, totalCards, totalMastered, dueCount, reviewedUniqueCount, reviewedTodayUnique, reviewAttemptsToday, correctCount, wrongCount, streak }: Props) {
+export function ReviewOverview({ subjects, topics, totalCards, totalMastered, dueCount, reviewedUniqueCount, reviewedTodayUnique, reviewAttemptsToday, correctCount, wrongCount, streak, activeSessions }: Props) {
   const overallProgress = totalCards ? Math.round((totalMastered / totalCards) * 100) : 0;
   const completedTodayProgress = totalCards ? Math.round((reviewedTodayUnique / totalCards) * 100) : 0;
   const totalResults = correctCount + wrongCount;
   const accuracy = totalResults ? Math.round((correctCount / totalResults) * 100) : 0;
 
   return <div className="space-y-7">
+    <ActiveSessions sessions={activeSessions} />
     <section aria-labelledby="review-overview-title">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="flex items-start gap-3">
