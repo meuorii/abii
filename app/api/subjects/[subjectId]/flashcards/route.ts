@@ -8,6 +8,7 @@ import { Topic } from "@/models/Topic";
 import { parseEnumeration } from "@/lib/quiz/normalize";
 import { isFlashcardType } from "@/lib/quiz/types";
 import { ENUM_MAX_ITEMS, ENUM_MIN_ITEMS, MAX_ENUM_ANSWER_LENGTH } from "@/lib/quiz/config";
+import { recordAchievementEvent } from "@/lib/badges/repository";
 
 export const runtime = "nodejs";
 class TopicAssignmentError extends Error {
@@ -50,6 +51,7 @@ export async function POST(request: Request, { params }: RouteContext) {
         const topic = await Topic.findOne({ _id: body.topicId, userId: user._id, subjectId }).select("_id name").session(session).lean();
         if (!topic) throw new TopicAssignmentError(404, "This topic could not be found in this subject.");
         const [card] = await Flashcard.create([{ userId: user._id, subjectId, topicId: topic._id, flashcardType, question, answer, ...(hint ? { hint } : {}) }], { session });
+        await recordAchievementEvent(String(user._id), { idempotencyKey: `flashcard-created:${String(card._id)}`, kind: "flashcard-created", occurredAt: card.createdAt ?? new Date(), subjectId: String(subjectId) }, session);
         createdCard = card;
         createdTopicName = topic.name;
       }, { readConcern: { level: "snapshot" }, writeConcern: { w: "majority" } });

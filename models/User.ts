@@ -1,10 +1,19 @@
 import "server-only";
 import mongoose, { Schema, type InferSchemaType, type Model } from "mongoose";
+import { BADGE_IDS } from "@/lib/badges/types";
+import { isIanaStudyTimezone } from "@/lib/badges/study-day";
+
+const badgeIds = [...BADGE_IDS];
 
 const userSettingsSchema = new Schema({
   targetSubjects: { type: Number, min: 1, max: 100, default: 5 },
   defaultLandingPage: { type: String, enum: ["/dashboard", "/subjects", "/review", "/progress"], default: "/dashboard" },
   subjectLayout: { type: String, enum: ["grid", "list"], default: "grid" },
+  featuredBadges: {
+    dashboard: { type: [{ type: String, enum: badgeIds }], default: [] , validate: { validator: (ids: string[]) => ids.length <= 3 && new Set(ids).size === ids.length, message: "Choose up to 3 different badges." } },
+    progress: { type: [{ type: String, enum: badgeIds }], default: [], validate: { validator: (ids: string[]) => ids.length <= 3 && new Set(ids).size === ids.length, message: "Choose up to 3 different badges." } },
+  },
+  studyTimezone: { type: String, default: "UTC", validate: { validator: isIanaStudyTimezone, message: "Study timezone must be a valid IANA timezone." } },
 }, { _id: false });
 
 const userSchema = new Schema({
@@ -25,7 +34,9 @@ userSchema.index({ email: 1 }, { unique: true, name: "user_email_unique" });
     cached &&
     (!cached.schema.path("settings") ||
       !cached.schema.path("profileImage") ||
-      !cached.schema.path("profileImagePublicId"))
+      !cached.schema.path("profileImagePublicId") ||
+      !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("featuredBadges") ||
+      !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("studyTimezone"))
   ) {
     mongoose.deleteModel("User");
   }

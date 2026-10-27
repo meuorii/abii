@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Subject } from "@/models/Subject";
+import { recordAchievementEvent } from "@/lib/badges/repository";
 
 export const runtime = "nodejs";
 
@@ -34,6 +35,11 @@ export async function POST(request: Request) {
     if (existing) return NextResponse.json({ error: "You already have a subject with that name." }, { status: 409 });
 
     const subject = await Subject.create({ userId, name });
+    try {
+      await recordAchievementEvent(String(userId), { idempotencyKey: `subject-created:${String(subject._id)}`, kind: "subject-created", occurredAt: subject.createdAt ?? new Date(), subjectId: String(subject._id) });
+    } catch (eventError) {
+      console.error("Subject created but achievement activity could not be recorded; it can be reconciled from subjects.", eventError);
+    }
     return NextResponse.json({ subject: { id: String(subject._id), name: subject.name, flashcardCount: 0, progress: 0 } }, { status: 201 });
   } catch (error) {
     console.error("Subject creation failed.", error);

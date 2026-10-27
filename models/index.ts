@@ -10,3 +10,7 @@ export { Flashcard } from "./Flashcard";
 export type { FlashcardDocument } from "./Flashcard";
 export { ReviewRecord, QUESTION_TYPES } from "./ReviewRecord";
 export type { ReviewRecordDocument } from "./ReviewRecord";
+export { UserBadge } from "./UserBadge";
+export type { UserBadgeDocument } from "./UserBadge";
+export { AchievementEvent, ACHIEVEMENT_EVENT_KINDS } from "./AchievementEvent";
+export type { AchievementEventDocument } from "./AchievementEvent";

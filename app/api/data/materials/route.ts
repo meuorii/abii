@@ -7,6 +7,7 @@ import { Subject } from "@/models/Subject";
 import { QuizSession } from "@/models/QuizSession";
 import { Topic } from "@/models/Topic";
 import { TransactionUnavailableError, withRequiredTransaction } from "@/lib/mongodb-transaction";
+import { clearAchievementActivity } from "@/lib/badges/persistence";
 export const runtime = "nodejs";
 export async function DELETE() {
   const user = await getCurrentUser();
@@ -14,6 +15,7 @@ export async function DELETE() {
   await connectToDatabase();
   try {
     await withRequiredTransaction(async (session) => {
+      await clearAchievementActivity(String(user._id), session);
       await ReviewRecord.deleteMany({ userId: user._id }, { session });
       await QuizSession.deleteMany({ userId: user._id }, { session });
       await Flashcard.deleteMany({ userId: user._id }, { session });

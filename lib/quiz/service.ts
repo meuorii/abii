@@ -11,6 +11,9 @@ import { ACTIVE_SESSION_INACTIVITY_DAYS, ENUM_MAX_ITEMS, ENUM_ORDER_MATTERS, MAS
 import { normalizeText, sanitizeTyped } from "./normalize";
 import { computeNextReviewAt } from "./schedule";
 import { currentRoundProgress } from "./resume-state";
+import { recordAchievementEvent } from "@/lib/badges/repository";
+import { studyDayKey } from "@/lib/badges/study-day";
+import { User } from "@/models/User";
 import {
   ALL_SUBJECTS,
   QUIZ_MODES,
@@ -61,6 +64,7 @@ type SessionDoc = {
   status: "active" | "completed";
   questions: StoredQuestionDoc[];
   completedAt?: Date | null;
+  resumedAt?: Date | null;
   expiresAt?: Date;
   lastActivityAt?: Date;
 };
@@ -88,7 +92,7 @@ export async function resumeSession(userId: Types.ObjectId | string, sessionId: 
   await connectToDatabase();
   const now = new Date();
   const session = await QuizSession.findOneAndUpdate({ _id: sessionId, userId, status: "active", expiresAt: { $gt: now }, "questions.0.prompt": { $type: "string" } },
-    { $set: { lastActivityAt: now, expiresAt: activeExpiry(now) } }, { new: true }).select("_id expiresAt lastActivityAt").lean();
+    { $set: { lastActivityAt: now, expiresAt: activeExpiry(now) }, $min: { resumedAt: now } }, { new: true }).select("_id expiresAt lastActivityAt resumedAt").lean();
   if (!session) return fail(404, "This quiz session has expired or could not be found.");
   return { ok: true as const, id: String(session._id), expiresAt: session.expiresAt, lastActivityAt: session.lastActivityAt };
 }
@@ -541,6 +545,23 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
       reviewedAt: now,
       nextReviewAt: computeNextReviewAt(resultValue, now),
     });
+    try {
+      const account = await User.findById(userId).select("settings.studyTimezone").lean();
+      const dayKey = studyDayKey(now, account?.settings?.studyTimezone ?? "UTC");
+      await recordAchievementEvent(String(userId), {
+        idempotencyKey: `quiz-answer:${String(session._id)}:${index}`,
+        kind: "quiz-answer",
+        occurredAt: now,
+        dayKey,
+        ...(session.subjectId ? { subjectId: String(session.subjectId) } : {}),
+        correct,
+        enumerationFullyCorrect: correct && (qType === "enumeration-identification" || qType === "enumeration-multiple-choice"),
+      });
+      await recordAchievementEvent(String(userId), { idempotencyKey: `study-day:${dayKey}`, kind: "study-day", occurredAt: now, dayKey });
+    } catch (eventError) {
+      // ReviewRecord remains the source for reconciliation if the compact ledger is temporarily unavailable.
+      console.error("Achievement activity could not be recorded; it can be reconciled from study records.", eventError);
+    }
   } catch (error) {
     // Undo the claim so the learner can retry and no answer is lost or scored without a record.
     await QuizSession.updateOne(
@@ -601,6 +622,32 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
   const finalStreaks = await sessionMastery(userId, fresh);
   const publicSession = toPublicSession(fresh, finalStreaks);
   if (publicSession.status !== "completed" || !publicSession.summary) return fail(500, "Could not load the completed review results. Please try again.");
+  // Capture compact durable evidence while the temporary completed session is still available.
+  // The stable session key makes this safe on completion retries and preserves the 24-hour TTL.
+  const originalQuestions = fresh.questions.filter((question) => (question.round ?? 1) === 1);
+  const firstAttemptCorrectCount = originalQuestions.filter((question) => question.correct === true).length;
+  const scorePercent = originalQuestions.length ? (firstAttemptCorrectCount / originalQuestions.length) * 100 : 0;
+  const account = await User.findById(userId).select("settings.studyTimezone").lean();
+  const timezone = account?.settings?.studyTimezone ?? "UTC";
+  const completedDay = studyDayKey(fresh.completedAt ?? new Date(), timezone);
+  await recordAchievementEvent(String(userId), {
+    idempotencyKey: `quiz-completed:${String(fresh._id)}`,
+    kind: "quiz-completed",
+    occurredAt: fresh.completedAt ?? new Date(),
+    dayKey: completedDay,
+    ...(fresh.subjectId ? { subjectId: String(fresh.subjectId) } : {}),
+    originalQuestionCount: originalQuestions.length,
+    firstAttemptCorrectCount,
+    scorePercent,
+  });
+  if (fresh.resumedAt) await recordAchievementEvent(String(userId), {
+    idempotencyKey: `resumed-quiz-completed:${String(fresh._id)}`,
+    kind: "resumed-quiz-completed",
+    occurredAt: fresh.completedAt ?? new Date(),
+    dayKey: completedDay,
+    ...(fresh.subjectId ? { subjectId: String(fresh.subjectId) } : {}),
+    resumed: true,
+  });
   return { ok: true as const, done: true as const, transitioned, summary: publicSession.summary, session: publicSession };
 }
 
