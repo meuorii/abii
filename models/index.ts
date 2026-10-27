@@ -14,3 +14,5 @@ export { UserBadge } from "./UserBadge";
 export type { UserBadgeDocument } from "./UserBadge";
 export { AchievementEvent, ACHIEVEMENT_EVENT_KINDS } from "./AchievementEvent";
 export type { AchievementEventDocument } from "./AchievementEvent";
+export { BadgeReconciliation } from "./BadgeReconciliation";
+export type { BadgeReconciliationDocument } from "./BadgeReconciliation";

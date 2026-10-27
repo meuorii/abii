@@ -52,6 +52,7 @@ reviewRecordSchema.index(
   { userId: 1, flashcardId: 1, nextReviewAt: 1 },
   { name: "review_owner_card_next_review" },
 );
+reviewRecordSchema.index({ userId: 1, reviewedAt: -1 }, { name: "review_owner_reviewed_at" });
 
 // Drop a stale cached model (dev hot reload) whose enum lacks the newer question types.
 if (mongoose.models.ReviewRecord && !(mongoose.models.ReviewRecord.schema.path("questionType") as unknown as { enumValues?: string[] }).enumValues?.includes("random")) {

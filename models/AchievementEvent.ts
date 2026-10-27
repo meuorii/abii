@@ -9,6 +9,9 @@ const achievementEventSchema = new Schema({
   occurredAt: { type: Date, required: true },
   dayKey: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },
   subjectId: { type: Schema.Types.ObjectId, ref: "Subject" },
+  sessionId: { type: Schema.Types.ObjectId, ref: "QuizSession" },
+  /** Stable identity within a session; contains no user answer or question text. */
+  questionIdentity: { type: String, maxlength: 40 },
   /** Compact verified numeric facts only; never store prompt, answer, hint, or question text. */
   originalQuestionCount: { type: Number, min: 0 },
   firstAttemptCorrectCount: { type: Number, min: 0 },
@@ -22,6 +25,7 @@ const achievementEventSchema = new Schema({
 
 achievementEventSchema.index({ userId: 1, idempotencyKey: 1 }, { unique: true, name: "achievement_event_owner_key_unique" });
 achievementEventSchema.index({ userId: 1, kind: 1, dayKey: 1 }, { name: "achievement_event_owner_kind_day" });
+achievementEventSchema.index({ userId: 1, createdAt: -1 }, { name: "achievement_event_owner_created" });
 
 if (mongoose.models.AchievementEvent && !mongoose.models.AchievementEvent.schema.indexes().some(([keys, options]) => keys.userId === 1 && keys.idempotencyKey === 1 && options.unique)) mongoose.deleteModel("AchievementEvent");
 export type AchievementEventDocument = InferSchemaType<typeof achievementEventSchema>;

@@ -32,3 +32,20 @@ export function longestConsecutiveDayStreak(dayKeys: Iterable<string>): number {
   }
   return longest;
 }
+
+export function addCalendarDays(dayKey: string, amount: number): string {
+  const [year, month, day] = dayKey.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + amount));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+/** A live streak includes today if active today, otherwise it may continue from yesterday. */
+export function currentConsecutiveDayStreak(dayKeys: Iterable<string>, todayKey: string): number {
+  const days = new Set(dayKeys);
+  const anchor = days.has(todayKey) ? todayKey : addCalendarDays(todayKey, -1);
+  if (!days.has(anchor)) return 0;
+  let streak = 0;
+  let cursor = anchor;
+  while (days.has(cursor)) { streak += 1; cursor = addCalendarDays(cursor, -1); }
+  return streak;
+}

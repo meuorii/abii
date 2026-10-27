@@ -554,6 +554,8 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
         occurredAt: now,
         dayKey,
         ...(session.subjectId ? { subjectId: String(session.subjectId) } : {}),
+        sessionId: String(session._id),
+        questionIdentity: String(q.origin ?? index),
         correct,
         enumerationFullyCorrect: correct && (qType === "enumeration-identification" || qType === "enumeration-multiple-choice"),
       });

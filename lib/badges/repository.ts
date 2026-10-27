@@ -11,6 +11,7 @@ const validBadgeIds = new Set<string>(BADGE_IDS);
 export type AchievementEventKind = (typeof ACHIEVEMENT_EVENT_KINDS)[number];
 export type AchievementEventInput = {
   idempotencyKey: string; kind: AchievementEventKind; occurredAt: Date; dayKey?: string; subjectId?: string;
+  sessionId?: string; questionIdentity?: string;
   originalQuestionCount?: number; firstAttemptCorrectCount?: number; scorePercent?: number; correct?: boolean;
   enumerationFullyCorrect?: boolean; resumed?: boolean; masteryPercent?: number; masteryThreshold?: 25 | 50 | 75 | 100;
 };
