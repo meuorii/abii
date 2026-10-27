@@ -12,5 +12,5 @@ type BadgeImageProps = {
 };
 
 export function BadgeImage({ badgeId, unlocked, alt, className, priority = false }: BadgeImageProps) {
-  return <Image src={getBadgeImagePath(badgeId, unlocked)} alt={alt} width={256} height={256} sizes="(max-width: 640px) 40vw, 256px" priority={priority} className={`aspect-square h-auto max-w-full object-contain ${className ?? ""}`} />;
+  return <Image src={getBadgeImagePath(badgeId, unlocked)} alt={alt} width={256} height={256} sizes="(max-width: 640px) 40vw, 256px" priority={priority} className={`aspect-square h-full w-full max-w-full object-contain ${className ?? ""}`} />;
 }

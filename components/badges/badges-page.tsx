@@ -63,7 +63,7 @@ function RarityOverview({ badges }: { badges: BadgePageItem[] }) {
         const group = badges.filter((badge) => badge.rarity === rarity);
         const earned = group.filter((badge) => badge.unlocked).length;
         return <div key={rarity} className="flex min-w-0 items-center justify-between gap-1.5 rounded-xl bg-[#FFF9FB] px-2.5 py-2 sm:px-3">
-          <RarityIndicator rarity={rarity} />
+          <RarityIndicator rarity={rarity} size="md" />
           <span className="shrink-0 text-xs font-bold tabular-nums text-[#657B8E]">{earned}/{group.length}</span>
         </div>;
       })}
@@ -143,7 +143,7 @@ export function BadgesPage({ initialData, initialError = false }: { initialData:
           </div>
         </div>
 
-        {visibleBadges.length ? <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
+        {visibleBadges.length ? <div className="grid min-w-0 grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
           {visibleBadges.map((badge) => <BadgeCard key={badge.id} badge={badge} onSelect={(item) => setSelectedBadgeId(item.id)} />)}
         </div> : <div className="rounded-2xl border border-dashed border-[#E8DDE2] bg-[#FFFAFC] px-4 py-10 text-center">
           <h3 className="text-base font-bold text-[#183653]">No badges match these filters</h3><p className="mt-1 text-sm text-[#756B72]">Try a different status, rarity, or category.</p>
