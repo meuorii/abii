@@ -12,6 +12,8 @@ const userSettingsSchema = new Schema({
   featuredBadges: {
     dashboard: { type: [{ type: String, enum: badgeIds }], default: [] , validate: { validator: (ids: string[]) => ids.length <= 3 && new Set(ids).size === ids.length, message: "Choose up to 3 different badges." } },
     progress: { type: [{ type: String, enum: badgeIds }], default: [], validate: { validator: (ids: string[]) => ids.length <= 3 && new Set(ids).size === ids.length, message: "Choose up to 3 different badges." } },
+    dashboardCustomized: { type: Boolean, default: false },
+    progressCustomized: { type: Boolean, default: false },
   },
   studyTimezone: { type: String, default: "UTC", validate: { validator: isIanaStudyTimezone, message: "Study timezone must be a valid IANA timezone." } },
 }, { _id: false });
@@ -36,6 +38,7 @@ userSchema.index({ email: 1 }, { unique: true, name: "user_email_unique" });
       !cached.schema.path("profileImage") ||
       !cached.schema.path("profileImagePublicId") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("featuredBadges") ||
+      !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("featuredBadges.dashboardCustomized") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("studyTimezone"))
   ) {
     mongoose.deleteModel("User");

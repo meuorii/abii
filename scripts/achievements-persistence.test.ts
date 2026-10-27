@@ -21,6 +21,8 @@ test("durable achievement persistence, ownership, deletion semantics, and study 
     assert.equal(user.settings.subjectLayout, "list");
     assert.deepEqual(user.settings.featuredBadges?.dashboard ?? [], []);
     assert.deepEqual(user.settings.featuredBadges?.progress ?? [], []);
+    assert.equal(user.settings.featuredBadges?.dashboardCustomized ?? false, false);
+    assert.equal(user.settings.featuredBadges?.progressCustomized ?? false, false);
     assert.equal(user.settings.studyTimezone, "UTC");
     await assert.rejects(new User({ name: "Bad", email: "bad@example.invalid", passwordHash: "hash", settings: { featuredBadges: { dashboard: ["hello-abii", "hello-abii"] } } }).validate());
     await assert.rejects(new User({ name: "Bad", email: "bad@example.invalid", passwordHash: "hash", settings: { featuredBadges: { progress: ["not-a-badge"] } } }).validate());
@@ -52,10 +54,19 @@ test("durable achievement persistence, ownership, deletion semantics, and study 
     const dashboard = await updateFeaturedBadgeSelection(String(owner), "dashboard", ["hello-abii"]);
     assert.deepEqual(dashboard.dashboard, ["hello-abii"]);
     assert.deepEqual(dashboard.progress, []);
+    assert.equal(dashboard.dashboardCustomized, true);
+    assert.equal(dashboard.progressCustomized, false);
     const progress = await updateFeaturedBadgeSelection(String(owner), "progress", ["card-creator"]);
     assert.deepEqual(progress.dashboard, ["hello-abii"]);
     assert.deepEqual(progress.progress, ["card-creator"]);
+    assert.equal(progress.dashboardCustomized, true);
+    assert.equal(progress.progressCustomized, true);
     assert.deepEqual(await fetchFeaturedBadgeSelections(String(owner)), progress);
+    const clearedDashboardShowcase = await updateFeaturedBadgeSelection(String(owner), "dashboard", []);
+    assert.deepEqual(clearedDashboardShowcase.dashboard, []);
+    assert.equal(clearedDashboardShowcase.dashboardCustomized, true, "a deliberately empty showcase remains distinct from an untouched default");
+    assert.deepEqual(clearedDashboardShowcase.progress, ["card-creator"], "changing Dashboard does not change Progress");
+    await updateFeaturedBadgeSelection(String(owner), "dashboard", ["hello-abii"]);
     await assert.rejects(updateFeaturedBadgeSelection(String(owner), "dashboard", ["hello-abii", "card-creator", "quiz-rookie", "little-explorer"]));
     await assert.rejects(updateFeaturedBadgeSelection(String(owner), "dashboard", ["quiz-rookie"]));
     await assert.rejects(updateFeaturedBadgeSelection(String(owner), "dashboard", ["hello-abii", "hello-abii"]));

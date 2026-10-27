@@ -11,6 +11,7 @@ import { Subject } from "@/models/Subject";
 import { QuizSession } from "@/models/QuizSession";
 import { Topic } from "@/models/Topic";
 import { getSubjectMastery } from "@/lib/quiz/service";
+import { getFeaturedBadgeShowcase } from "@/lib/badges/featured";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -165,6 +166,11 @@ export default async function ProgressPage() {
     recentSessions: serializedSessions,
   };
 
+  let featuredShowcase = null;
+  let featuredShowcaseError = false;
+  try { featuredShowcase = await getFeaturedBadgeShowcase(String(user._id), "progress"); }
+  catch (error) { console.error("Progress achievements could not be loaded.", error); featuredShowcaseError = true; }
+
   return (
     <AppShell pageTitle="Progress" pageDescription="Your learning journey, at a glance" userName={user.name}>
       {/* Match the shared content gutters used by Dashboard, My Subjects, and Review. */}
@@ -179,7 +185,7 @@ export default async function ProgressPage() {
           <Image src="/dashboard-hero/progress.png" alt="Abii cheering you on" fill priority sizes="(max-width: 640px) 43vw, 440px" className="object-contain object-bottom" />
         </div>
       </section>
-      <ProgressDashboard data={payload} />
+      <ProgressDashboard data={payload} featuredShowcase={featuredShowcase} featuredShowcaseError={featuredShowcaseError} />
       </div>
     </AppShell>
   );

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 import { Layers3, Target, CalendarDays, Flame, Leaf, BookOpen, RefreshCw, ArrowRight } from "lucide-react";
+import { FeaturedBadges } from "@/components/badges/featured-badges";
+import type { FeaturedBadgeShowcase } from "@/components/badges/featured-types";
 
 type ActivityPoint = { date: string; label: string; sessions: number; cards: number };
 type SubjectRow = { id: string; name: string; totalCards: number; reviewed: number; accuracy: number | null; progress: number; mastered: number; usable: number; completedRequirements: number; totalRequirements: number };
@@ -63,7 +65,7 @@ function StudyChart({ points }: { points: ActivityPoint[] }) {
   </Panel>;
 }
 
-export function ProgressDashboard({ data }: { data: ProgressPayload }) {
+export function ProgressDashboard({ data, featuredShowcase, featuredShowcaseError = false }: { data: ProgressPayload; featuredShowcase: FeaturedBadgeShowcase | null; featuredShowcaseError?: boolean }) {
   const metrics = [
     { label: "Total Flashcards Reviewed", value: formatNumber(data.summary.totalReviews), icon: "cards", note: "Answer attempts" },
     { label: "Overall Answer Accuracy", value: data.summary.accuracy === null ? "—" : `${data.summary.accuracy}%`, icon: "target", note: data.summary.accuracy === null ? "Complete a review to begin" : "Across answered questions" },
@@ -72,6 +74,7 @@ export function ProgressDashboard({ data }: { data: ProgressPayload }) {
   ];
   return <div className="w-full min-w-0">
     <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-5">{metrics.map((metric) => <div key={metric.label} className="min-w-0 rounded-2xl border bg-white p-3 sm:p-4" style={{ borderColor: border }}><div className="flex items-start gap-2.5 sm:gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D] sm:h-11 sm:w-11"><Icon name={metric.icon} /></div><div className="min-w-0"><p className="text-[10px] leading-4 sm:text-xs" style={{ color: muted }}>{metric.label}</p><p className="mt-1 break-words text-xl font-bold sm:text-2xl" style={{ color: ink }}>{metric.value}</p><p className="mt-1 text-[9px] leading-4 sm:text-[10px]" style={{ color: muted }}>{metric.note}</p></div></div></div>)}<div className="flex min-w-0 items-center rounded-2xl border bg-white p-3 sm:p-4" style={{ borderColor: border }}><MasteryProgressBar label="Overall Mastery" ariaLabel="Overall mastery progress" progress={data.summary.masteryProgress} size="lg" className="w-full" /></div></div>
+    <div className="mb-4"><FeaturedBadges surface="progress" initialShowcase={featuredShowcase} initialError={featuredShowcaseError} /></div>
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1.75fr)_minmax(280px,0.95fr)]">
       <div className="flex min-w-0 flex-col gap-4"><StudyChart points={data.activity} />
         <Panel><div id="subject-performance"><SectionHeading title="Subject Performance" subtitle="Incremental mastery requirements and fully mastered flashcards." />

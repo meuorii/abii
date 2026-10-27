@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { CalendarDays, Layers3, BookOpen, FlaskConical, Leaf, Plus, RefreshCw, ChevronRight, ArrowRight, Circle } from "lucide-react";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
+import { FeaturedBadges } from "@/components/badges/featured-badges";
+import type { FeaturedBadgeShowcase } from "@/components/badges/featured-types";
 
 type SubjectOverview = { id: string; name: string; flashcardCount: number; progress: number };
 
@@ -13,6 +15,8 @@ type DashboardOverviewProps = {
   currentStreak: number;
   lastSevenDays: { label: string; completed: boolean }[];
   subjects: SubjectOverview[];
+  featuredShowcase: FeaturedBadgeShowcase | null;
+  featuredShowcaseError?: boolean;
   loadFailed?: boolean;
 };
 
@@ -41,7 +45,7 @@ function EmptySubjects() {
   );
 }
 
-export function DashboardOverview({ firstName, dueCount, totalCards, overallMastery, currentStreak, lastSevenDays, subjects, loadFailed = false }: DashboardOverviewProps) {
+export function DashboardOverview({ firstName, dueCount, totalCards, overallMastery, currentStreak, lastSevenDays, subjects, featuredShowcase, featuredShowcaseError = false, loadFailed = false }: DashboardOverviewProps) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const shownSubjects = subjects.slice(0, 4);
@@ -129,6 +133,8 @@ export function DashboardOverview({ firstName, dueCount, totalCards, overallMast
               </ul>
             )}
           </section>
+
+          <FeaturedBadges surface="dashboard" initialShowcase={featuredShowcase} initialError={featuredShowcaseError} />
 
           <section aria-labelledby="quick-actions-heading" className="rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5">
             <div className="mb-4 flex items-center gap-2.5"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF0F5] text-[#E9577D] text-xl" aria-hidden="true">ϟ</span><h2 id="quick-actions-heading" className="text-base font-semibold tracking-[-0.025em] text-[#2F2930] sm:text-lg">Quick Actions</h2></div>

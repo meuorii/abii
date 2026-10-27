@@ -113,7 +113,12 @@ export async function readDurableAchievementStats(userId: string): Promise<Durab
 
 export async function fetchFeaturedBadgeSelections(userId: string) {
   const user = await User.findById(ownedUserId(userId)).select("settings.featuredBadges").lean();
-  return { dashboard: user?.settings?.featuredBadges?.dashboard ?? [], progress: user?.settings?.featuredBadges?.progress ?? [] };
+  return {
+    dashboard: user?.settings?.featuredBadges?.dashboard ?? [],
+    progress: user?.settings?.featuredBadges?.progress ?? [],
+    dashboardCustomized: user?.settings?.featuredBadges?.dashboardCustomized ?? false,
+    progressCustomized: user?.settings?.featuredBadges?.progressCustomized ?? false,
+  };
 }
 
 export async function updateFeaturedBadgeSelection(userId: string, surface: "dashboard" | "progress", ids: readonly string[]) {
@@ -121,7 +126,7 @@ export async function updateFeaturedBadgeSelection(userId: string, surface: "das
   const owner = ownedUserId(userId);
   const earned = await UserBadge.find({ userId: owner, badgeId: { $in: ids } }).select("badgeId").lean();
   if (earned.length !== ids.length) throw new TypeError("Only earned badges can be featured.");
-  const result = await User.updateOne({ _id: owner }, { $set: { [`settings.featuredBadges.${surface}`]: [...ids] } }, { runValidators: true });
+  const result = await User.updateOne({ _id: owner }, { $set: { [`settings.featuredBadges.${surface}`]: [...ids], [`settings.featuredBadges.${surface}Customized`]: true } }, { runValidators: true });
   if (!result.matchedCount) throw new Error("User was not found.");
   return fetchFeaturedBadgeSelections(userId);
 }

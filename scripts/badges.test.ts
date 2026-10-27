@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { BADGE_BY_ID, BADGE_CATALOG, BADGE_CATEGORIES_METADATA, BADGE_RARITIES } from "../lib/badges/catalog";
 import { BADGE_IMAGES, getBadgeImagePath } from "../lib/badges/images";
 import { BADGE_CATEGORIES, BADGE_IDS, BADGE_RARITIES as RARITY_IDS } from "../lib/badges/types";
+import { defaultFeaturedBadgeIds } from "../lib/badges/featured-selection";
 
 const root = resolve(process.cwd());
 
@@ -35,4 +36,15 @@ test("badge catalog is complete, unique, ordered, and uses only supported catego
   for (const rarity of RARITY_IDS) assert.ok(existsSync(resolve(root, `public${BADGE_RARITIES[rarity].medalImage}`)), `Missing medal for ${rarity}`);
   assert.equal(BADGE_BY_ID["hello-abii"].images.unlocked, "/badges/unlocked/hello-abi-unlocked.png");
   assert.equal(BADGE_BY_ID["hello-abii"].images.locked, "/badges/locked/hello-abi-locked.png");
+});
+
+test("default showcase picks the three most recently earned badges with catalog-order tie breaking", () => {
+  const sameDay = new Date("2025-01-02T12:00:00.000Z");
+  assert.deepEqual(defaultFeaturedBadgeIds([
+    { badgeId: "card-creator", unlockedAt: sameDay },
+    { badgeId: "hello-abii", unlockedAt: sameDay },
+    { badgeId: "quiz-rookie", unlockedAt: new Date("2025-01-03T12:00:00.000Z") },
+    { badgeId: "little-explorer", unlockedAt: new Date("2025-01-01T12:00:00.000Z") },
+    { badgeId: "not-a-badge", unlockedAt: new Date("2025-01-04T12:00:00.000Z") },
+  ]), ["quiz-rookie", "hello-abii", "card-creator"]);
 });

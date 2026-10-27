@@ -52,6 +52,13 @@ function MetricCards({ count = 3 }: { count?: number }) {
   );
 }
 
+function FeaturedBadgesSkeleton() {
+  return <CardSkeleton className="min-h-[150px] sm:min-h-[168px]">
+    <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2.5"><Bar className="h-9 w-9 rounded-xl bg-[#F8DCE5]"/><div><Bar className="h-4 w-36"/><Bar className="mt-2 h-3 w-52 max-w-full"/></div></div><Bar className="h-10 w-28 rounded-xl"/></div>
+    <div className="mt-4 grid grid-cols-1 gap-2.5 min-[390px]:grid-cols-2 xl:grid-cols-3">{[0,1,2].map((item)=><div key={item} className="flex min-h-[88px] items-center gap-3 rounded-xl border border-[#F0E6EA] bg-[#FFFCFD] p-3"><Bar className="h-14 w-14 shrink-0 rounded-full bg-[#F8DCE5]"/><div className="min-w-0 flex-1"><Bar className="h-3 w-3/4"/><Bar className="mt-2 h-3 w-20"/><Bar className="mt-2 h-2.5 w-24"/></div></div>)}</div>
+  </CardSkeleton>;
+}
+
 function SubjectCards() {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -175,7 +182,7 @@ function FinishSkeleton() {
 function Content({ variant }: { variant: PageLoadingVariant }) {
   switch (variant) {
     case "dashboard":
-      return <div className="space-y-5"><Hero /><MetricCards count={4} /><div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]"><CardSkeleton className="min-h-[240px]"><Bar className="h-4 w-36" /><Bar className="mt-6 h-36 w-full rounded-xl" /></CardSkeleton><CardSkeleton className="min-h-[240px]"><Bar className="h-4 w-32" /><div className="mt-5 space-y-4">{[0, 1, 2, 3].map((n) => <div key={n} className="flex gap-3"><Bar className="h-10 w-10 rounded-xl" /><div className="flex-1 space-y-2"><Bar className="h-3 w-3/4" /><Bar className="h-2.5 w-1/2" /></div></div>)}</div></CardSkeleton></div></div>;
+      return <div className="space-y-5"><Hero /><MetricCards count={4} /><div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]"><CardSkeleton className="min-h-[240px]"><Bar className="h-4 w-36" /><Bar className="mt-6 h-36 w-full rounded-xl" /></CardSkeleton><CardSkeleton className="min-h-[240px]"><Bar className="h-4 w-32" /><div className="mt-5 space-y-4">{[0, 1, 2, 3].map((n) => <div key={n} className="flex gap-3"><Bar className="h-10 w-10 rounded-xl" /><div className="flex-1 space-y-2"><Bar className="h-3 w-3/4" /><Bar className="h-2.5 w-1/2" /></div></div>)}</div></CardSkeleton></div><FeaturedBadgesSkeleton /></div>;
     case "subjects":
       return <div className="space-y-5"><Hero /><div className="flex items-center justify-between gap-3"><Bar className="h-5 w-36" /><Bar className="h-10 w-32 rounded-full" /></div><SubjectCards /></div>;
     case "subject-detail":
@@ -191,7 +198,7 @@ function Content({ variant }: { variant: PageLoadingVariant }) {
     case "finish":
       return <FinishSkeleton />;
     case "progress":
-      return <div className="space-y-5"><Hero variant="compact" /><MetricCards count={4} /><div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]"><CardSkeleton className="min-h-[300px]"><Bar className="h-4 w-40" /><Bar className="mt-6 h-52 w-full rounded-xl" /></CardSkeleton><CardSkeleton className="min-h-[300px]"><Bar className="h-4 w-36" /><div className="mt-6 space-y-5">{[0, 1, 2, 3, 4].map((n) => <Bar key={n} className="h-5 w-full" />)}</div></CardSkeleton></div></div>;
+      return <div className="space-y-5"><Hero variant="compact" /><MetricCards count={4} /><FeaturedBadgesSkeleton /><div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]"><CardSkeleton className="min-h-[300px]"><Bar className="h-4 w-40" /><Bar className="mt-6 h-52 w-full rounded-xl" /></CardSkeleton><CardSkeleton className="min-h-[300px]"><Bar className="h-4 w-36" /><div className="mt-6 space-y-5">{[0, 1, 2, 3, 4].map((n) => <Bar key={n} className="h-5 w-full" />)}</div></CardSkeleton></div></div>;
     case "settings":
       return <div className="space-y-5"><Hero variant="compact" /><SettingsSections /></div>;
   }

@@ -7,6 +7,8 @@ import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { getSubjectMastery } from "@/lib/quiz/service";
+import { getFeaturedBadgeShowcase } from "@/lib/badges/featured";
+import type { FeaturedBadgeShowcase } from "@/components/badges/featured-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +48,8 @@ export default async function DashboardPage() {
   let currentStreak = 0;
   let lastSevenDays: { label: string; completed: boolean }[] = [];
   let loadFailed = false;
+  let featuredShowcase: FeaturedBadgeShowcase | null = null;
+  let featuredShowcaseError = false;
 
   try {
     await connectToDatabase();
@@ -111,6 +115,9 @@ export default async function DashboardPage() {
     loadFailed = true;
   }
 
+  try { featuredShowcase = await getFeaturedBadgeShowcase(String(user._id), "dashboard"); }
+  catch (error) { console.error("Dashboard achievements could not be loaded.", error); featuredShowcaseError = true; }
+
   const firstName = user.name.trim().split(/\s+/)[0] || "there";
 
   return (
@@ -123,6 +130,8 @@ export default async function DashboardPage() {
         currentStreak={currentStreak}
         lastSevenDays={lastSevenDays}
         subjects={subjects}
+        featuredShowcase={featuredShowcase}
+        featuredShowcaseError={featuredShowcaseError}
         loadFailed={loadFailed}
       />
     </AppShell>
