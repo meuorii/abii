@@ -91,8 +91,11 @@ export async function resumeSession(userId: Types.ObjectId | string, sessionId: 
   if (!isValidObjectId(sessionId)) return fail(404, "This quiz session has expired or could not be found.");
   await connectToDatabase();
   const now = new Date();
-  const session = await QuizSession.findOneAndUpdate({ _id: sessionId, userId, status: "active", expiresAt: { $gt: now }, "questions.0.prompt": { $type: "string" } },
-    { $set: { lastActivityAt: now, expiresAt: activeExpiry(now) }, $min: { resumedAt: now } }, { new: true }).select("_id expiresAt lastActivityAt resumedAt").lean();
+  const candidate = await QuizSession.findOne({ _id: sessionId, userId, status: "active", expiresAt: { $gt: now }, "questions.0.prompt": { $type: "string" } }).select("questions.answered").lean();
+  const resumedAfterProgress = Boolean(candidate?.questions?.some((question) => question.answered));
+  const update: Record<string, unknown> = { $set: { lastActivityAt: now, expiresAt: activeExpiry(now) } };
+  if (resumedAfterProgress) update.$min = { resumedAt: now };
+  const session = await QuizSession.findOneAndUpdate({ _id: sessionId, userId, status: "active", expiresAt: { $gt: now }, "questions.0.prompt": { $type: "string" } }, update, { new: true }).select("_id expiresAt lastActivityAt resumedAt").lean();
   if (!session) return fail(404, "This quiz session has expired or could not be found.");
   return { ok: true as const, id: String(session._id), expiresAt: session.expiresAt, lastActivityAt: session.lastActivityAt };
 }
@@ -556,9 +559,18 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
         ...(session.subjectId ? { subjectId: String(session.subjectId) } : {}),
         sessionId: String(session._id),
         questionIdentity: String(q.origin ?? index),
-        correct,
-        enumerationFullyCorrect: correct && (qType === "enumeration-identification" || qType === "enumeration-multiple-choice"),
+        // Recall milestones count original first-round answers; retries never inflate this total.
+        correct: (q.round ?? 1) === 1 && correct,
       });
+      const isEnumeration = qType === "enumeration-identification" || qType === "enumeration-multiple-choice";
+      if (isEnumeration && correct && (q.round ?? 1) >= 1) {
+        const originalCard = await Flashcard.findOne({ _id: q.flashcardId, userId }).select("flashcardType").lean();
+        if (originalCard?.flashcardType === "items") await recordAchievementEvent(String(userId), {
+          idempotencyKey: `enumeration-correct:${String(session._id)}:${String(q.origin ?? index)}`,
+          kind: "quiz-answer", occurredAt: now, dayKey, ...(session.subjectId ? { subjectId: String(session.subjectId) } : {}), sessionId: String(session._id),
+          questionIdentity: String(q.origin ?? index), correct: false, enumerationFullyCorrect: true,
+        });
+      }
       await recordAchievementEvent(String(userId), { idempotencyKey: `study-day:${dayKey}`, kind: "study-day", occurredAt: now, dayKey });
     } catch (eventError) {
       // ReviewRecord remains the source for reconciliation if the compact ledger is temporarily unavailable.
@@ -632,24 +644,30 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
   const account = await User.findById(userId).select("settings.studyTimezone").lean();
   const timezone = account?.settings?.studyTimezone ?? "UTC";
   const completedDay = studyDayKey(fresh.completedAt ?? new Date(), timezone);
-  await recordAchievementEvent(String(userId), {
-    idempotencyKey: `quiz-completed:${String(fresh._id)}`,
-    kind: "quiz-completed",
-    occurredAt: fresh.completedAt ?? new Date(),
-    dayKey: completedDay,
-    ...(fresh.subjectId ? { subjectId: String(fresh.subjectId) } : {}),
-    originalQuestionCount: originalQuestions.length,
-    firstAttemptCorrectCount,
-    scorePercent,
-  });
-  if (fresh.resumedAt) await recordAchievementEvent(String(userId), {
-    idempotencyKey: `resumed-quiz-completed:${String(fresh._id)}`,
-    kind: "resumed-quiz-completed",
-    occurredAt: fresh.completedAt ?? new Date(),
-    dayKey: completedDay,
-    ...(fresh.subjectId ? { subjectId: String(fresh.subjectId) } : {}),
-    resumed: true,
-  });
+  try {
+    await recordAchievementEvent(String(userId), {
+      idempotencyKey: `quiz-completed:${String(fresh._id)}`,
+      kind: "quiz-completed",
+      occurredAt: fresh.completedAt ?? new Date(),
+      dayKey: completedDay,
+      ...(fresh.subjectId ? { subjectId: String(fresh.subjectId) } : {}),
+      originalQuestionCount: originalQuestions.length,
+      firstAttemptCorrectCount,
+      scorePercent,
+    });
+    const resumedAfterWork = Boolean(fresh.resumedAt && originalQuestions.some((question) => question.answeredAt && question.answeredAt <= fresh.resumedAt!));
+    if (resumedAfterWork) await recordAchievementEvent(String(userId), {
+      idempotencyKey: `resumed-quiz-completed:${String(fresh._id)}`,
+      kind: "resumed-quiz-completed",
+      occurredAt: fresh.completedAt ?? new Date(),
+      dayKey: completedDay,
+      ...(fresh.subjectId ? { subjectId: String(fresh.subjectId) } : {}),
+      resumed: true,
+    });
+  } catch (eventError) {
+    // Completion is already committed. The surviving session or a client retry can repair its compact evidence.
+    console.error("Quiz completed; durable achievement evidence could not be recorded yet.", eventError);
+  }
   return { ok: true as const, done: true as const, transitioned, summary: publicSession.summary, session: publicSession };
 }
 

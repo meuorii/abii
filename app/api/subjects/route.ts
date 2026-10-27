@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Subject } from "@/models/Subject";
 import { recordAchievementEvent } from "@/lib/badges/repository";
+import { evaluateAffectedBadges, type NewlyUnlockedBadge } from "@/lib/badges/service";
 
 export const runtime = "nodejs";
 
@@ -40,7 +41,10 @@ export async function POST(request: Request) {
     } catch (eventError) {
       console.error("Subject created but achievement activity could not be recorded; it can be reconciled from subjects.", eventError);
     }
-    return NextResponse.json({ subject: { id: String(subject._id), name: subject.name, flashcardCount: 0, progress: 0 } }, { status: 201 });
+    let newlyUnlockedBadges: NewlyUnlockedBadge[] = [];
+    try { newlyUnlockedBadges = await evaluateAffectedBadges(String(userId)); }
+    catch (badgeError) { console.error("Subject saved; badge evaluation will retry during reconciliation.", badgeError); }
+    return NextResponse.json({ subject: { id: String(subject._id), name: subject.name, flashcardCount: 0, progress: 0 }, newlyUnlockedBadges }, { status: 201 });
   } catch (error) {
     console.error("Subject creation failed.", error);
     return NextResponse.json({ error: "We couldn’t save that subject right now. Please try again." }, { status: 500 });

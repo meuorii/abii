@@ -101,7 +101,7 @@ type CompactEventFacts = {
   masteryFacts: { subjectId: mongoose.Types.ObjectId; threshold: 25 | 50 | 75 | 100 }[];
 };
 type ReviewFacts = { studyDays: (string | null)[]; correctAnswers: number; enumerationCorrect: number };
-type SessionQuestion = { flashcardId: mongoose.Types.ObjectId; type?: string; round?: number; origin?: number; answered?: boolean; correct?: boolean };
+type SessionQuestion = { flashcardId: mongoose.Types.ObjectId; type?: string; round?: number; origin?: number; answered?: boolean; correct?: boolean; answeredAt?: Date };
 type CompletedSession = { _id: mongoose.Types.ObjectId; completedAt?: Date; resumedAt?: Date; questions: SessionQuestion[] };
 
 function cardIdFromEventKey(value: string) { return value.startsWith("flashcard-created:") ? value.slice("flashcard-created:".length) : ""; }
@@ -151,7 +151,7 @@ export async function calculateAchievementMetrics(userId: string, now = new Date
       } },
       { $project: { studyDays: { $map: { input: "$studyDays", as: "day", in: "$$day._id" } }, correctAnswers: { $ifNull: [{ $arrayElemAt: ["$correctAnswers.count", 0] }, 0] }, enumerationCorrect: { $ifNull: [{ $arrayElemAt: ["$enumerationCorrect.count", 0] }, 0] } } },
     ]),
-    QuizSession.find({ userId: owner, status: "completed", completedAt: { $type: "date" }, expiresAt: { $gt: now } }).select("_id completedAt resumedAt questions.flashcardId questions.type questions.round questions.origin questions.answered questions.correct").lean(),
+    QuizSession.find({ userId: owner, status: "completed", completedAt: { $type: "date" }, expiresAt: { $gt: now } }).select("_id completedAt resumedAt questions.flashcardId questions.type questions.round questions.origin questions.answered questions.correct questions.answeredAt").lean(),
     getSubjectMastery(owner),
   ]);
 
@@ -188,7 +188,7 @@ export async function calculateAchievementMetrics(userId: string, now = new Date
   const sessionQuizDays = new Set<string>();
   const activeCompletedSessions = (completedSessions as unknown as CompletedSession[]).filter((session) => !baseline || Boolean(session.completedAt && session.completedAt > baseline.recordedAt));
   const sessionKeys = activeCompletedSessions.map((session) => `quiz-completed:${String(session._id)}`).filter((key) => !baselineQuizIds.has(key.replace(/^quiz-completed:/, "")));
-  const resumedKeys = activeCompletedSessions.filter((session) => session.resumedAt && !baselineResumeIds.has(String(session._id))).map((session) => `resumed-quiz-completed:${String(session._id)}`);
+  const resumedKeys = activeCompletedSessions.filter((session) => session.resumedAt && !baselineResumeIds.has(String(session._id)) && session.questions.some((question) => (question.round ?? 1) === 1 && question.answeredAt && question.answeredAt <= session.resumedAt!)).map((session) => `resumed-quiz-completed:${String(session._id)}`);
   const correctQuestionIdentities = new Set<string>(eventFacts.correctQuestionIdentities.filter(Boolean).map((item) => `${String(item.sessionId)}:${item.questionIdentity}`));
   for (const session of completedSessions as unknown as CompletedSession[]) {
     const completedAt = session.completedAt;
@@ -202,8 +202,8 @@ export async function calculateAchievementMetrics(userId: string, now = new Date
   }
   const studyDays = [...new Set([...(baseline?.studyDayKeys ?? []), ...reviewFacts.studyDays, ...eventFacts.studyDayKeys].filter((day): day is string => Boolean(day)))].sort();
   const todayKey = studyDayKey(now, timezone);
-  const masteryMap = mastery.bySubject as Map<string, { total: number; mastered: number; progress: number }>;
-  const subjectsWithFlashcards: SubjectMasteryEvidence[] = [...masteryMap.entries()].filter(([, stats]) => stats.total > 0).map(([subjectId, stats]) => ({ subjectId, totalCards: stats.total, masteredCards: stats.mastered, progressPercent: stats.progress, genuinelyComplete: stats.total > 0 && stats.mastered === stats.total }));
+  const masteryMap = mastery.bySubject as Map<string, { total: number; mastered: number; progress: number; completedRequirements: number; totalRequirements: number }>;
+  const subjectsWithFlashcards: SubjectMasteryEvidence[] = [...masteryMap.entries()].filter(([, stats]) => stats.total > 0).map(([subjectId, stats]) => ({ subjectId, totalCards: stats.total, masteredCards: stats.mastered, progressPercent: stats.totalRequirements ? stats.completedRequirements / stats.totalRequirements * 100 : 0, genuinelyComplete: stats.total > 0 && stats.totalRequirements > 0 && stats.completedRequirements === stats.totalRequirements }));
   const thresholdIds: Record<25 | 50 | 75 | 100, Set<string>> = { 25: new Set(), 50: new Set(), 75: new Set(), 100: new Set() };
   for (const subject of subjectsWithFlashcards) for (const threshold of [25, 50, 75, 100] as const) {
     if (threshold === 100 ? subject.genuinelyComplete : subject.progressPercent >= threshold) thresholdIds[threshold].add(subject.subjectId);
@@ -242,9 +242,11 @@ export async function calculateAchievementMetrics(userId: string, now = new Date
     firstQuizCompleted: quizCount > 0,
     quizHistoryCompleteness: quizCount > 0 ? "verified-minimum" : "incomplete",
     qualifyingQuizScores: quizScores,
-    correctQuizAnswers: (baseline?.correctQuizAnswers ?? 0) + Math.max(eventFacts.correctAnswers, reviewFacts.correctAnswers),
+    // After baseline, the compact event ledger is attempt-deduplicated and excludes retry rounds.
+    // ReviewRecord is used only to establish the legacy baseline because it has no session/question identity.
+    correctQuizAnswers: (baseline?.correctQuizAnswers ?? 0) + (baseline ? Math.max(correctQuestionIdentities.size, eventFacts.correctAnswers) : Math.max(eventFacts.correctAnswers, reviewFacts.correctAnswers)),
     distinctCorrectQuestionIdentities: (baseline?.distinctCorrectQuestionIdentities ?? 0) + correctQuestionIdentities.size,
-    enumerationFullyCorrectAnswers: (baseline?.enumerationFullyCorrectAnswers ?? 0) + Math.max(eventFacts.enumerationCorrect, reviewFacts.enumerationCorrect),
+    enumerationFullyCorrectAnswers: (baseline?.enumerationFullyCorrectAnswers ?? 0) + (baseline ? eventFacts.enumerationCorrect : Math.max(eventFacts.enumerationCorrect, reviewFacts.enumerationCorrect)),
     resumedQuizCompletions: (baseline?.resumedQuizCompletions ?? 0) + uniqueResumeEventIds.size,
     resumedQuizSessionIds: [...new Set([...(baseline?.resumedQuizSessionIds ?? []).map(String), ...uniqueResumeEventIds])],
     subjectsWithFlashcards,

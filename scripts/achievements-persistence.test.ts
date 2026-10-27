@@ -6,7 +6,7 @@ import { User } from "../models/User";
 import { UserBadge } from "../models/UserBadge";
 import { AchievementEvent } from "../models/AchievementEvent";
 import { clearAchievementActivity } from "../lib/badges/persistence";
-import { createEarnedBadgeIdempotently, fetchEarnedBadges, fetchFeaturedBadgeSelections, readDurableAchievementStats, recordAchievementEvent, updateFeaturedBadgeSelection } from "../lib/badges/repository";
+import { awardBadgeIdempotently, createEarnedBadgeIdempotently, fetchEarnedBadges, fetchFeaturedBadgeSelections, readDurableAchievementStats, recordAchievementEvent, updateFeaturedBadgeSelection } from "../lib/badges/repository";
 import { longestConsecutiveDayStreak, studyDayKey } from "../lib/badges/study-day";
 
 test("durable achievement persistence, ownership, deletion semantics, and study calendar", { timeout: 60000 }, async () => {
@@ -33,6 +33,8 @@ test("durable achievement persistence, ownership, deletion semantics, and study 
     assert.equal(new Set(concurrentAwards.map((award) => String(award._id))).size, 1);
     const laterAward = await createEarnedBadgeIdempotently(String(owner), { badgeId: "hello-abii", unlockedAt: new Date("2025-01-01"), verifiedAt: new Date(), source: "backfill" });
     assert.equal(laterAward.unlockedAt.toISOString(), firstDate.toISOString());
+    const createdResults = await Promise.all(Array.from({ length: 8 }, () => awardBadgeIdempotently(String(owner), { badgeId: "card-creator", unlockedAt: firstDate, verifiedAt: firstDate, source: "live" })));
+    assert.equal(createdResults.filter((result) => result.created).length, 1, "only the successful unique insert reports a new award");
     await assert.rejects(createEarnedBadgeIdempotently(String(owner), { badgeId: "bad-id" as never, unlockedAt: firstDate, verifiedAt: firstDate, source: "live" }));
 
     await Promise.all(Array.from({ length: 8 }, () => recordAchievementEvent(String(owner), { idempotencyKey: "quiz-completed:q1", kind: "quiz-completed", occurredAt: firstDate, dayKey: "2024-01-02", originalQuestionCount: 10, firstAttemptCorrectCount: 9, scorePercent: 90 })));
@@ -40,7 +42,7 @@ test("durable achievement persistence, ownership, deletion semantics, and study 
     const eventIndex = AchievementEvent.schema.indexes().find(([keys]) => keys.userId === 1 && keys.idempotencyKey === 1);
     assert.equal(eventIndex?.[1].unique, true);
     assert.equal(await AchievementEvent.countDocuments({ userId: owner, idempotencyKey: "quiz-completed:q1" }), 1);
-    assert.equal((await fetchEarnedBadges(String(owner))).length, 1);
+    assert.equal((await fetchEarnedBadges(String(owner))).length, 2);
     assert.equal((await fetchEarnedBadges(String(stranger))).length, 0);
     const stats = await readDurableAchievementStats(String(owner));
     assert.equal(stats.completedQuizzes, 1);

@@ -46,17 +46,24 @@ export async function findEarnedBadge(userId: string, badgeId: BadgeId) {
 
 /** First award wins: repeated/concurrent calls cannot replace unlockedAt or evidence. */
 export async function createEarnedBadgeIdempotently(userId: string, input: { badgeId: BadgeId; unlockedAt: Date; verifiedAt: Date; source: "live" | "backfill"; minimalEvidence?: { metric?: string; target?: number; observed?: number; subjectId?: string; eventId?: string } }) {
+  return (await awardBadgeIdempotently(userId, input)).record;
+}
+
+/** Reports creation only when this call inserted the permanent award. */
+export async function awardBadgeIdempotently(userId: string, input: { badgeId: BadgeId; unlockedAt: Date; verifiedAt: Date; source: "live" | "backfill"; minimalEvidence?: { metric?: string; target?: number; observed?: number; subjectId?: string; eventId?: string } }) {
   if (!validBadgeIds.has(input.badgeId)) throw new TypeError("Unknown badge ID.");
   const owner = ownedUserId(userId);
   const setOnInsert = { userId: owner, ...input };
+  let created = false;
   try {
-    await UserBadge.updateOne({ userId: owner, badgeId: input.badgeId }, { $setOnInsert: setOnInsert }, { upsert: true, runValidators: true, setDefaultsOnInsert: true });
+    await UserBadge.create(setOnInsert);
+    created = true;
   } catch (error) {
     if (!(error instanceof mongoose.mongo.MongoServerError) || error.code !== 11000) throw error;
   }
   const record = await UserBadge.findOne({ userId: owner, badgeId: input.badgeId }).lean();
   if (!record) throw new Error("Badge award could not be confirmed.");
-  return record;
+  return { record, created };
 }
 
 /** Append compact verified facts; duplicate idempotency keys return the original event. */

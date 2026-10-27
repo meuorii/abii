@@ -9,6 +9,7 @@ import { parseEnumeration } from "@/lib/quiz/normalize";
 import { isFlashcardType } from "@/lib/quiz/types";
 import { ENUM_MAX_ITEMS, ENUM_MIN_ITEMS, MAX_ENUM_ANSWER_LENGTH } from "@/lib/quiz/config";
 import { recordAchievementEvent } from "@/lib/badges/repository";
+import { evaluateAffectedBadges, type NewlyUnlockedBadge } from "@/lib/badges/service";
 
 export const runtime = "nodejs";
 class TopicAssignmentError extends Error {
@@ -60,7 +61,10 @@ export async function POST(request: Request, { params }: RouteContext) {
       if (error instanceof TopicAssignmentError) return NextResponse.json({ error: error.message }, { status: error.status });
       throw error;
     } finally { await session.endSession(); }
-    return NextResponse.json({ card: { id: String(createdCard!._id), topicId: String(createdCard!.topicId), topicName: createdTopicName, flashcardType: createdCard!.flashcardType ?? "standard", question: createdCard!.question, answer: createdCard!.answer, hint: createdCard!.hint ?? "", reviewed: false } }, { status: 201 });
+    let newlyUnlockedBadges: NewlyUnlockedBadge[] = [];
+    try { newlyUnlockedBadges = await evaluateAffectedBadges(String(user._id)); }
+    catch (badgeError) { console.error("Flashcard saved; badge evaluation will retry during reconciliation.", badgeError); }
+    return NextResponse.json({ card: { id: String(createdCard!._id), topicId: String(createdCard!.topicId), topicName: createdTopicName, flashcardType: createdCard!.flashcardType ?? "standard", question: createdCard!.question, answer: createdCard!.answer, hint: createdCard!.hint ?? "", reviewed: false }, newlyUnlockedBadges }, { status: 201 });
   } catch (error) {
     console.error("Unable to create flashcard.", error);
     return NextResponse.json({ error: "We couldn’t save that flashcard. Please try again." }, { status: 500 });

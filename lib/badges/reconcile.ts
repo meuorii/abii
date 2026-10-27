@@ -6,7 +6,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { AchievementEvent } from "@/models/AchievementEvent";
 import { BadgeReconciliation } from "@/models/BadgeReconciliation";
 import { ReviewRecord } from "@/models/ReviewRecord";
-import { createEarnedBadgeIdempotently, fetchEarnedBadges } from "./repository";
+import { awardBadgeIdempotently, fetchEarnedBadges } from "./repository";
 import { BADGE_BY_ID } from "./catalog";
 import { calculateAchievementMetrics, createAchievementBaseline, type AchievementBaseline } from "./metrics";
 import { evaluateBadgeCatalog, type BadgeEvaluation } from "./evaluator";
@@ -16,7 +16,7 @@ export const BADGE_RECONCILIATION_VERSION = 1;
 const RECONCILE_FRESH_MS = 6 * 60 * 60 * 1000;
 const LOCK_MS = 2 * 60 * 1000;
 
-export type ReconcileResult = { cached: boolean; dryRun: boolean; evaluatedAt: Date; results: BadgeEvaluation[] };
+export type ReconcileResult = { cached: boolean; dryRun: boolean; evaluatedAt: Date; results: BadgeEvaluation[]; newlyAwardedBadgeIds: BadgeId[] };
 
 async function hasEvidenceAfter(userId: mongoose.Types.ObjectId, after: Date) {
   const [event, review] = await Promise.all([
@@ -65,7 +65,7 @@ function readBaseline(value: unknown): AchievementBaseline | undefined {
   };
 }
 
-export async function reconcileUserBadges(userId: string, options: { dryRun?: boolean; force?: boolean; now?: Date } = {}): Promise<ReconcileResult> {
+export async function reconcileUserBadges(userId: string, options: { dryRun?: boolean; force?: boolean; now?: Date; source?: "live" | "backfill" } = {}): Promise<ReconcileResult> {
   if (!mongoose.isValidObjectId(userId)) throw new TypeError("A valid authenticated user ID is required.");
   await connectToDatabase();
   const owner = new mongoose.Types.ObjectId(userId);
@@ -79,7 +79,7 @@ export async function reconcileUserBadges(userId: string, options: { dryRun?: bo
     const current = currentRecord;
     if (!options.force && current?.version === BADGE_RECONCILIATION_VERSION && current.evaluatedAt && now.getTime() - current.evaluatedAt.getTime() < RECONCILE_FRESH_MS && !(await hasEvidenceAfter(owner, current.evaluatedAt))) {
       const saved = cachedResults(current);
-      if (saved) return { cached: true, dryRun: false, evaluatedAt: current.evaluatedAt ?? now, results: saved };
+      if (saved) return { cached: true, dryRun: false, evaluatedAt: current.evaluatedAt ?? now, results: saved, newlyAwardedBadgeIds: [] };
     }
   }
 
@@ -101,13 +101,13 @@ export async function reconcileUserBadges(userId: string, options: { dryRun?: bo
       const active = await BadgeReconciliation.findOne({ userId: owner }).lean();
       const saved = cachedResults(active);
       const activeLease = Boolean(active?.lockUntil && active.lockUntil > new Date());
-      if (saved && active?.version === BADGE_RECONCILIATION_VERSION && !activeLease) return { cached: true, dryRun: false, evaluatedAt: active?.evaluatedAt ?? now, results: saved };
+      if (saved && active?.version === BADGE_RECONCILIATION_VERSION && !activeLease) return { cached: true, dryRun: false, evaluatedAt: active?.evaluatedAt ?? now, results: saved, newlyAwardedBadgeIds: [] };
       if (attempt < 29) await delay(100);
     }
     if (!locked) {
       const active = await BadgeReconciliation.findOne({ userId: owner }).lean();
       const saved = cachedResults(active);
-      if (saved) return { cached: true, dryRun: false, evaluatedAt: active?.evaluatedAt ?? now, results: saved };
+      if (saved) return { cached: true, dryRun: false, evaluatedAt: active?.evaluatedAt ?? now, results: saved, newlyAwardedBadgeIds: [] };
       throw new Error("Badge reconciliation is already running for this user. Please retry shortly.");
     }
   }
@@ -120,16 +120,16 @@ export async function reconcileUserBadges(userId: string, options: { dryRun?: bo
       await BadgeReconciliation.updateOne({ userId: owner, lockToken }, { $set: { baseline: initialBaseline } }, { runValidators: true });
     }
     const results = evaluateBadgeCatalog(metrics, alreadyEarned);
-    if (dryRun) return { cached: false, dryRun: true, evaluatedAt: now, results };
+    if (dryRun) return { cached: false, dryRun: true, evaluatedAt: now, results, newlyAwardedBadgeIds: [] };
 
     const newAwards = results.filter((result) => result.unlocked && !result.alreadyEarned);
-    await Promise.all(newAwards.map((result) => {
+    const awardResults = await Promise.all(newAwards.map(async (result) => {
       const definition = BADGE_BY_ID[result.badgeId as BadgeId];
-      return createEarnedBadgeIdempotently(userId, {
+      const award = await awardBadgeIdempotently(userId, {
         badgeId: result.badgeId as BadgeId,
         unlockedAt: now,
         verifiedAt: now,
-        source: "backfill",
+        source: options.source ?? "backfill",
         minimalEvidence: {
           metric: definition.requirement.metric,
           target: definition.requirement.target,
@@ -138,6 +138,7 @@ export async function reconcileUserBadges(userId: string, options: { dryRun?: bo
           eventId: result.evidenceId ?? `reconciliation-v${BADGE_RECONCILIATION_VERSION}`,
         },
       });
+      return { badgeId: result.badgeId as BadgeId, created: award.created };
     }));
     const savedResults = results.map((result) => newAwards.some((award) => award.badgeId === result.badgeId) ? { ...result, alreadyEarned: true } : result);
     await BadgeReconciliation.updateOne(
@@ -145,7 +146,7 @@ export async function reconcileUserBadges(userId: string, options: { dryRun?: bo
       { $set: { version: BADGE_RECONCILIATION_VERSION, evaluatedAt: now, results: savedResults }, $unset: { lockToken: "", lockUntil: "" } },
       { runValidators: true },
     );
-    return { cached: false, dryRun: false, evaluatedAt: now, results: savedResults };
+    return { cached: false, dryRun: false, evaluatedAt: now, results: savedResults, newlyAwardedBadgeIds: awardResults.filter((award) => award.created).map((award) => award.badgeId) };
   } catch (error) {
     if (!dryRun) await BadgeReconciliation.updateOne({ userId: owner, lockToken }, { $unset: { lockToken: "", lockUntil: "" } });
     throw error;

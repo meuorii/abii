@@ -16,6 +16,7 @@ import { reconcileUserBadges } from "../lib/badges/reconcile";
 import { connectToDatabase } from "../lib/mongodb";
 import { addCalendarDays, currentConsecutiveDayStreak, longestConsecutiveDayStreak } from "../lib/badges/study-day";
 import { recordAchievementEvent } from "../lib/badges/repository";
+import { evaluateAffectedBadges } from "../lib/badges/service";
 
 function question(flashcardId: Types.ObjectId, correct: boolean) {
   return { flashcardId, prompt: "Stored quiz question", expectedAnswer: "private answer", round: 1, answered: true, correct };
@@ -80,17 +81,30 @@ test("retroactive metrics use only verified owner data and reconciliation awards
     await Flashcard.deleteOne({ _id: cards[0]._id, userId: user._id });
     const postBaselineCard = await Flashcard.create({ userId: user._id, subjectId: subjects[3]._id, question: "New card", answer: "New answer" });
     await recordAchievementEvent(String(user._id), { idempotencyKey: `flashcard-created:${String(postBaselineCard._id)}`, kind: "flashcard-created", occurredAt: postBaselineCard.createdAt ?? new Date(), subjectId: String(subjects[3]._id) });
+    const answerSessionId = new Types.ObjectId();
+    await recordAchievementEvent(String(user._id), { idempotencyKey: `quiz-answer:${String(answerSessionId)}:0`, kind: "quiz-answer", occurredAt: new Date("2024-04-05T08:00:00Z"), sessionId: String(answerSessionId), questionIdentity: "0", correct: true });
+    await recordAchievementEvent(String(user._id), { idempotencyKey: `quiz-answer:${String(answerSessionId)}:10`, kind: "quiz-answer", occurredAt: new Date("2024-04-05T08:01:00Z"), sessionId: String(answerSessionId), questionIdentity: "0", correct: false });
+    await recordAchievementEvent(String(user._id), { idempotencyKey: `enumeration-correct:${String(answerSessionId)}:1`, kind: "quiz-answer", occurredAt: new Date("2024-04-05T08:02:00Z"), sessionId: String(answerSessionId), questionIdentity: "1", correct: false, enumerationFullyCorrect: true });
+    await recordAchievementEvent(String(user._id), { idempotencyKey: `enumeration-correct:${String(answerSessionId)}:1`, kind: "quiz-answer", occurredAt: new Date("2024-04-05T08:03:00Z"), sessionId: String(answerSessionId), questionIdentity: "1", correct: false, enumerationFullyCorrect: true });
     const afterDeletion = await calculateAchievementMetrics(String(user._id), new Date("2024-04-05T12:00:00Z"), baseline as never);
     assert.equal(afterDeletion.flashcardCount, 26, "baseline preserves old cards after normal deletion, and new events add once");
     assert.equal(afterDeletion.completedQuizCount, 2, "late compact evidence for a baselined session is not counted twice");
-    assert.equal(afterDeletion.correctQuizAnswers, 3, "baseline preserves verified answers when a card's review history is removed");
-    assert.equal(afterDeletion.enumerationFullyCorrectAnswers, 3);
+    assert.equal(afterDeletion.correctQuizAnswers, 4, "retry-round answers do not inflate first-round correct answer progress");
+    assert.equal(afterDeletion.enumerationFullyCorrectAnswers, 4, "repeated event submission counts one original enumeration question");
     assert.equal(afterDeletion.distinctSubjectsWithFlashcards, 4);
 
     const empty = await User.create({ name: "No Activity", email: "empty@example.invalid", passwordHash: "hash" });
     const emptyMetrics = await calculateAchievementMetrics(String(empty._id), new Date("2024-04-04T12:00:00Z"));
     assert.equal(evaluateBadgeCatalog(emptyMetrics).filter((badge) => badge.unlocked).length, 0);
     assert.equal(emptyMetrics.quizHistoryCompleteness, "incomplete");
+
+    const newLearner = await User.create({ name: "New Learner", email: "new@example.invalid", passwordHash: "hash" });
+    await Subject.create({ userId: newLearner._id, name: "First Subject" });
+    const firstAwards = await evaluateAffectedBadges(String(newLearner._id));
+    assert.deepEqual(firstAwards.map((badge) => badge.badgeId), ["hello-abii"]);
+    assert.equal(firstAwards[0].imagePath, "/badges/unlocked/hello-abi-unlocked.png");
+    assert.equal((await UserBadge.findOne({ userId: newLearner._id, badgeId: "hello-abii" }).lean())?.source, "live");
+    assert.deepEqual(await evaluateAffectedBadges(String(newLearner._id)), [], "re-evaluation returns only awards inserted by that call");
   } finally {
     await mongoose.disconnect();
     delete process.env.MONGODB_URI;
