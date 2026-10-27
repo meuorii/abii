@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, Award, Check, RotateCw } from "lucide-react";
 import { BADGE_CATEGORIES_METADATA } from "@/lib/badges/catalog";
 import { RARITY_DEFINITIONS } from "@/lib/badges/images";
@@ -10,6 +10,7 @@ import { RarityIndicator } from "./rarity-indicator";
 import type { BadgePageData, BadgePageItem } from "./types";
 import type { BadgeCategory, BadgeRarity } from "@/lib/badges/types";
 import { countBadgeStatuses, filterBadges, type BadgeCategoryFilter, type BadgeRarityFilter, type BadgeStatusFilter } from "./filtering";
+import { subscribeToAchievementActivity } from "@/lib/badges/client-sync";
 
 type StatusFilter = BadgeStatusFilter;
 type RarityFilter = BadgeRarityFilter;
@@ -77,12 +78,13 @@ export function BadgesPage({ initialData, initialError = false }: { initialData:
   const [status, setStatus] = useState<StatusFilter>("all");
   const [rarity, setRarity] = useState<RarityFilter>("all");
   const [category, setCategory] = useState<CategoryFilter>("all");
-  const [selectedBadge, setSelectedBadge] = useState<BadgePageItem | null>(null);
+  const [selectedBadgeId, setSelectedBadgeId] = useState<BadgePageItem["id"] | null>(null);
 
   const badges = data?.badges ?? EMPTY_BADGES;
+  const selectedBadge = selectedBadgeId ? badges.find((badge) => badge.id === selectedBadgeId) ?? null : null;
   const statusCounts = useMemo(() => countBadgeStatuses(badges, rarity, category), [badges, rarity, category]);
   const visibleBadges = useMemo(() => filterBadges(badges, status, rarity, category), [badges, status, rarity, category]);
-  async function retry() {
+  const refresh = useCallback(async () => {
     setRetrying(true);
     try {
       const response = await fetch("/api/badges", { cache: "no-store" });
@@ -91,11 +93,22 @@ export function BadgesPage({ initialData, initialError = false }: { initialData:
       setData(payload as BadgePageData);
       setError(false);
     } catch {
-      setError(true);
+      if (!data) setError(true);
     } finally {
       setRetrying(false);
     }
-  }
+  }, [data]);
+
+  useEffect(() => {
+    return subscribeToAchievementActivity(() => { void refresh(); });
+  }, [refresh]);
+
+  useEffect(() => {
+    if (initialData) setData(initialData);
+    setError(initialError);
+  }, [initialData, initialError]);
+
+  function retry() { void refresh(); }
 
   const hasFilters = status !== "all" || rarity !== "all" || category !== "all";
   const clearFilters = () => { setStatus("all"); setRarity("all"); setCategory("all"); };
@@ -131,13 +144,13 @@ export function BadgesPage({ initialData, initialError = false }: { initialData:
         </div>
 
         {visibleBadges.length ? <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
-          {visibleBadges.map((badge) => <BadgeCard key={badge.id} badge={badge} onSelect={setSelectedBadge} />)}
+          {visibleBadges.map((badge) => <BadgeCard key={badge.id} badge={badge} onSelect={(item) => setSelectedBadgeId(item.id)} />)}
         </div> : <div className="rounded-2xl border border-dashed border-[#E8DDE2] bg-[#FFFAFC] px-4 py-10 text-center">
           <h3 className="text-base font-bold text-[#183653]">No badges match these filters</h3><p className="mt-1 text-sm text-[#756B72]">Try a different status, rarity, or category.</p>
           {hasFilters && <button type="button" onClick={clearFilters} className="mt-4 min-h-10 rounded-xl px-4 text-sm font-bold text-[#C65380] underline decoration-[#F1B9CB] underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Clear filters</button>}
         </div>}
       </section>
     </>}
-    <BadgeDetailsModal badge={selectedBadge} onClose={() => setSelectedBadge(null)} />
+    <BadgeDetailsModal badge={selectedBadge} onClose={() => setSelectedBadgeId(null)} />
   </div>;
 }

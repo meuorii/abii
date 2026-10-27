@@ -33,21 +33,20 @@ function metricValue(metrics: AchievementMetrics, metric: BadgeProgressMetric): 
   }
 }
 
-function readableProgress(metric: BadgeProgressMetric, progress: number, target: number, threshold?: number) {
+function readableProgress(metric: BadgeProgressMetric, progress: number, target: number, threshold?: number, currentStudyStreak = 0, longestStudyStreak = 0) {
   const current = Math.min(progress, target);
-  const left = Math.max(0, target - progress);
   switch (metric) {
     case "current-subject-count": return `${current} / ${target} subjects`;
     case "current-flashcard-count": return `${current} / ${target} flashcards`;
     case "current-subjects-with-flashcards": return `${current} / ${target} subjects with flashcards`;
-    case "consecutive-study-days": return `${current} / ${target} consecutive days`;
+    case "consecutive-study-days": return `Current streak: ${currentStudyStreak} days · longest: ${longestStudyStreak} days`;
     case "distinct-quiz-completion-days": return `${current} / ${target} quiz days`;
     case "completed-quiz-count": return `${current} / ${target} completed quizzes`;
-    case "qualifying-quiz-score": return threshold === undefined ? `${current} / ${target} qualifying quizzes` : `${current ? "Qualified" : "Not yet qualified"} · at least ${threshold}%`;
+    case "qualifying-quiz-score": return threshold === undefined ? `${current} / ${target} qualifying quizzes` : `No qualifying score yet · need ${threshold}% on 10+ original questions`;
     case "qualifying-correct-quiz-answers": return `${current} / ${target} correct answers`;
     case "fully-correct-enumeration-answers": return `${current} / ${target} complete enumeration answers`;
     case "resumed-quiz-completions": return `${current} / ${target} resumed quizzes completed`;
-    case "current-subject-mastery": return `${Math.min(progress, 100)}% / ${threshold ?? target}% mastery`;
+    case "current-subject-mastery": return `Best subject mastery: ${Math.round(Math.min(progress, 100))}%`;
     case "subjects-reaching-mastery-milestone": return `${current} / ${target} fully mastered subjects`;
   }
 }
@@ -62,16 +61,16 @@ export function evaluateBadgeCatalog(metrics: AchievementMetrics, previouslyEarn
     let qualifies = value >= badge.requirement.target;
 
     if (badge.requirement.metric === "qualifying-quiz-score") {
-      const score = metrics.qualifyingQuizScores
+      const eligibleScores = metrics.qualifyingQuizScores
         .filter((item) => item.originalQuestionCount >= (badge.requirement.minimumOriginalQuestions ?? 0))
-        .filter((item) => item.scorePercent >= (badge.requirement.minimumScorePercent ?? 0))
         .sort((a, b) => b.scorePercent - a.scorePercent)[0];
-      progress = score ? badge.requirement.target : 0;
-      qualifies = Boolean(score);
-      evidenceId = score?.evidenceId;
-      scoreLabel = score
-        ? `${score.scorePercent}% score · target ${badge.requirement.minimumScorePercent}% on ${score.originalQuestionCount} questions`
-        : `Complete a quiz with at least ${badge.requirement.minimumOriginalQuestions} original questions`;
+      const qualifiesWithScore = eligibleScores && eligibleScores.scorePercent >= (badge.requirement.minimumScorePercent ?? 0) ? eligibleScores : undefined;
+      progress = qualifiesWithScore ? badge.requirement.target : 0;
+      qualifies = Boolean(qualifiesWithScore);
+      evidenceId = qualifiesWithScore?.evidenceId;
+      scoreLabel = eligibleScores
+        ? `Best eligible first-attempt score: ${Math.round(eligibleScores.scorePercent * eligibleScores.originalQuestionCount / 100)} / ${eligibleScores.originalQuestionCount} · ${badge.requirement.minimumScorePercent}% needed`
+        : `No eligible score yet · need ${badge.requirement.minimumOriginalQuestions}+ original questions`;
     }
 
     if (badge.requirement.metric === "current-subject-mastery") {
@@ -93,17 +92,23 @@ export function evaluateBadgeCatalog(metrics: AchievementMetrics, previouslyEarn
 
     const alreadyEarned = previouslyEarned.has(badge.id);
     const unlocked = alreadyEarned || qualifies;
-    const displayProgress = badge.requirement.metric === "qualifying-quiz-score" ? (qualifies ? 1 : 0) : progress;
+    const displayProgress = badge.requirement.metric === "qualifying-quiz-score"
+      ? (qualifies ? 1 : 0)
+      : badge.requirement.metric === "consecutive-study-days" && !qualifies
+        ? metrics.currentStudyStreak
+        : progress;
     return {
       badgeId: badge.id,
       unlocked,
       alreadyEarned,
       progress: displayProgress,
       target: badge.requirement.target,
-      remaining: Math.max(0, badge.requirement.target - displayProgress),
+      remaining: badge.requirement.metric === "consecutive-study-days" && !unlocked
+        ? Math.max(0, badge.requirement.target - metrics.currentStudyStreak)
+        : Math.max(0, badge.requirement.target - displayProgress),
       progressLabel: scoreLabel ?? (badge.requirement.metric === "current-subject-mastery" && unlocked && evidenceId?.startsWith("mastery-milestone:")
         ? `Previously reached ${badge.requirement.target}% mastery`
-        : readableProgress(badge.requirement.metric, displayProgress, badge.requirement.target, badge.requirement.minimumScorePercent)),
+        : readableProgress(badge.requirement.metric, displayProgress, badge.requirement.target, badge.requirement.minimumScorePercent, metrics.currentStudyStreak, metrics.longestStudyStreak)),
       evidenceCompleteness: alreadyEarned ? "current-state" : completeness,
       ...(!alreadyEarned && completeness === "incomplete" && (badge.category === "quiz-performance" || badge.id === "study-superstar") ? { historicalNote: "Older completed quiz sessions may have expired; no missing quiz, score, date, or resume evidence is inferred." } : {}),
       ...(!alreadyEarned && completeness === "verified-minimum" && (badge.category === "quiz-performance" || badge.id === "study-superstar") ? { historicalNote: "Verified minimum from surviving sessions and durable records; older completed sessions may have expired." } : {}),

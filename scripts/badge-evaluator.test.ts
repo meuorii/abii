@@ -89,6 +89,28 @@ test("catalog evaluation unlocks at exact thresholds, stacks milestones, and nev
   assert.equal(locked.filter((result) => result.unlocked).length, 0);
   assert.equal(locked.find((result) => result.badgeId === "sharp-mind")?.evidenceCompleteness, "incomplete");
 
+  const partialQuiz = fixture();
+  partialQuiz.qualifyingQuizScores = [{ scorePercent: 80, originalQuestionCount: 10, completedAt: new Date("2025-01-01"), evidenceId: "eligible-quiz" }];
+  const partialQuizResults = evaluateBadgeCatalog(partialQuiz);
+  assert.equal(partialQuizResults.find((result) => result.badgeId === "sharp-mind")?.unlocked, true);
+  assert.equal(partialQuizResults.find((result) => result.badgeId === "perfect-pearl")?.unlocked, false);
+  assert.match(partialQuizResults.find((result) => result.badgeId === "perfect-pearl")?.progressLabel ?? "", /8 \/ 10/);
+
+  const liveStreak = fixture();
+  liveStreak.currentStudyStreak = 4;
+  liveStreak.longestStudyStreak = 4;
+  const rhythm = evaluateBadgeCatalog(liveStreak).find((result) => result.badgeId === "weekly-wonder");
+  assert.equal(rhythm?.remaining, 3);
+  assert.match(rhythm?.progressLabel ?? "", /Current streak: 4 days/);
+
+  const masteryProgress = fixture();
+  masteryProgress.subjectsWithFlashcards = [{ subjectId: "s62", totalCards: 50, masteredCards: 31, progressPercent: 62, genuinelyComplete: false }];
+  masteryProgress.masteryThresholdSubjectIds = { 25: ["s62"], 50: ["s62"], 75: [], 100: [] };
+  masteryProgress.fullyMasteredSubjectCount = 0;
+  const memoryPro = evaluateBadgeCatalog(masteryProgress).find((result) => result.badgeId === "memory-pro");
+  assert.equal(memoryPro?.remaining, 13);
+  assert.match(memoryPro?.progressLabel ?? "", /Best subject mastery: 62%/);
+
   const roundedButNotMastered = fixture();
   roundedButNotMastered.subjectsWithFlashcards = [{ subjectId: "almost", totalCards: 4, masteredCards: 3, progressPercent: 100, genuinelyComplete: false }];
   roundedButNotMastered.masteryThresholdSubjectIds = { 25: ["almost"], 50: ["almost"], 75: ["almost"], 100: [] };

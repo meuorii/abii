@@ -24,7 +24,8 @@ export function BadgeSelectionModal({ surface, earnedBadges, selectedIds, loadEr
   const selected = new Set(draft);
   const showcaseName = surface === "dashboard" ? "Dashboard" : "Progress";
 
-  useEffect(() => { setDraft(selectedIds); setSaveError(""); }, [selectedIds]);
+  const selectionSignature = selectedIds.join("\u001f");
+  useEffect(() => { setDraft(selectionSignature ? selectionSignature.split("\u001f") : []); setSaveError(""); }, [selectionSignature]);
 
   function toggle(id: string) {
     setSaveError("");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Award, Pencil, RotateCw } from "lucide-react";
 import { BadgeDetailsModal } from "./badge-details-modal";
@@ -10,6 +10,7 @@ import type { FeaturedBadgeShowcase, BadgeShowcaseSurface } from "./featured-typ
 import type { BadgePageItem } from "./types";
 import type { BadgeId } from "@/lib/badges/types";
 import { useToast } from "@/components/ui/toast-provider";
+import { subscribeToAchievementActivity } from "@/lib/badges/client-sync";
 
 async function readShowcase(surface: BadgeShowcaseSurface): Promise<FeaturedBadgeShowcase> {
   const response = await fetch(`/api/badges/featured?surface=${surface}`, { cache: "no-store" });
@@ -25,14 +26,15 @@ export function FeaturedBadges({ surface, initialShowcase, initialError = false 
   const [loadError, setLoadError] = useState(initialError ? "Your badges could not be loaded." : "");
   const [loading, setLoading] = useState(false);
   const [selectionOpen, setSelectionOpen] = useState(false);
-  const [detailsBadge, setDetailsBadge] = useState<BadgePageItem | null>(null);
+  const [detailsBadgeId, setDetailsBadgeId] = useState<BadgePageItem["id"] | null>(null);
+  const detailsBadge = detailsBadgeId ? showcase?.earnedBadges.find((badge) => badge.id === detailsBadgeId) ?? null : null;
   const { toast } = useToast();
   const dashboard = surface === "dashboard";
   const title = dashboard ? "My Achievements" : "Achievement Showcase";
   const subtitle = dashboard ? "Celebrate the milestones you've earned along the way." : "Display the accomplishments you're most proud of.";
   const showcaseName = dashboard ? "Dashboard" : "Progress";
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
     try {
       const fresh = await readShowcase(surface);
@@ -46,7 +48,16 @@ export function FeaturedBadges({ surface, initialShowcase, initialError = false 
     } finally {
       setLoading(false);
     }
-  }
+  }, [surface]);
+
+  useEffect(() => {
+    return subscribeToAchievementActivity(() => { void refresh().catch(() => {}); });
+  }, [refresh]);
+
+  useEffect(() => {
+    setShowcase(initialShowcase);
+    setLoadError(initialError ? "Your badges could not be loaded." : "");
+  }, [initialShowcase, initialError]);
 
   async function customize() {
     setSelectionOpen(true);
@@ -84,12 +95,12 @@ export function FeaturedBadges({ surface, initialShowcase, initialError = false 
 
     {loadError && !showcase ? <div role="alert" className="rounded-xl border border-[#F0C7D3] bg-[#FFF8FA] p-4"><p className="text-xs leading-5 text-[#8A4D62]">{loadError}</p><button type="button" onClick={() => void refresh().catch(() => {})} disabled={loading} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-bold text-[#C65380] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] disabled:opacity-60">{loading ? <RotateCw aria-hidden="true" className="h-3.5 w-3.5 animate-spin" /> : <RotateCw aria-hidden="true" className="h-3.5 w-3.5" />}{loading ? "Loading…" : "Try again"}</button></div>
       : showcase?.earnedBadges.length === 0 ? <div className="rounded-xl border border-dashed border-[#E8DDE2] bg-[#FFFAFC] px-4 py-6 text-center"><p className="text-sm font-semibold text-[#183653]">Your first achievement is waiting</p><p className="mt-1 text-xs leading-5 text-[#756B72]">Earn a badge as you study, then feature it here.</p><Link href="/badges" className="mt-3 inline-flex min-h-9 items-center rounded-full px-3 text-xs font-semibold text-[#C65380] underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Explore Badges</Link></div>
-      : showcase?.featuredBadges.length ? <div className="grid min-w-0 grid-cols-1 gap-2.5 min-[390px]:grid-cols-2 xl:grid-cols-3">{showcase.featuredBadges.map((badge) => <FeaturedBadgeCard key={badge.id} badge={badge} onSelect={setDetailsBadge} />)}</div>
+      : showcase?.featuredBadges.length ? <div className="grid min-w-0 grid-cols-1 gap-2.5 min-[390px]:grid-cols-2 xl:grid-cols-3">{showcase.featuredBadges.map((badge) => <FeaturedBadgeCard key={badge.id} badge={badge} onSelect={(item) => setDetailsBadgeId(item.id)} />)}</div>
       : <div className="rounded-xl bg-[#FFF8FA] px-4 py-6 text-center"><p className="text-sm font-semibold text-[#183653]">No badges selected</p><p className="mt-1 text-xs leading-5 text-[#756B72]">Choose up to three earned badges to feature on your {showcaseName.toLowerCase()}.</p></div>}
 
     <div className="mt-3 flex justify-end"><Link href="/badges" className="inline-flex min-h-9 items-center rounded-lg px-2 text-xs font-semibold text-[#E9577D] hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">View All Badges <span aria-hidden="true" className="ml-1">→</span></Link></div>
 
     {selectionOpen && <BadgeSelectionModal surface={surface} earnedBadges={showcase?.earnedBadges ?? []} selectedIds={showcase?.badgeIds ?? EMPTY_BADGE_IDS} loadError={loadError} loading={loading} onRetry={() => void refresh().catch(() => {})} onClose={() => setSelectionOpen(false)} onSave={saveSelection} />}
-    <BadgeDetailsModal badge={detailsBadge} onClose={() => setDetailsBadge(null)} />
+    <BadgeDetailsModal badge={detailsBadge} onClose={() => setDetailsBadgeId(null)} />
   </section>;
 }

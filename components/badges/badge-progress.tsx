@@ -14,8 +14,8 @@ export function BadgeProgress({ badge, compact = false }: { badge: BadgePageItem
         <p className={`${compact ? "text-[11px]" : "text-sm"} min-w-0 flex-1 leading-5 text-[#756B72]`}>{badge.unlocked ? "Requirement completed" : badge.progressLabel}</p>
         {!compact && <span className="shrink-0 text-xs font-bold tabular-nums text-[#657B8E]">{Math.round(value)}%</span>}
       </div>
-      <div role="progressbar" aria-label={`${badge.name} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value)} className={`mt-2 overflow-hidden rounded-full bg-[#F4EDF0] ${compact ? "h-1.5" : "h-2.5"}`}>
-        <div className="h-full rounded-full bg-[#F15D8A] transition-[width] duration-300" style={{ width: `${value}%` }} />
+      <div role="progressbar" aria-label={`${badge.name} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value)} aria-valuetext={badge.unlocked ? "Requirement completed" : badge.progressLabel} className={`mt-2 overflow-hidden rounded-full bg-[#F4EDF0] ${compact ? "h-1.5" : "h-2.5"}`}>
+        <div className="h-full rounded-full bg-[#F15D8A] transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${value}%` }} />
       </div>
     </div>
   );
@@ -23,8 +23,17 @@ export function BadgeProgress({ badge, compact = false }: { badge: BadgePageItem
 
 export function remainingRequirement(badge: BadgePageItem) {
   if (badge.unlocked) return "Requirement completed.";
-  if (badge.requirement.metric === "qualifying-quiz-score") return "Complete one qualifying quiz with the required score.";
-  if (badge.requirement.metric === "current-subject-mastery") return `Reach at least ${badge.target}% mastery in one non-empty subject.`;
+  if (badge.requirement.metric === "qualifying-quiz-score") return `Score at least ${badge.requirement.minimumScorePercent}% on one quiz with ${badge.requirement.minimumOriginalQuestions}+ original questions. Retry rounds do not change the first-attempt score.`;
+  if (badge.requirement.metric === "current-subject-mastery") {
+    const best = Number(badge.progressLabel.match(/(\d+(?:\.\d+)?)%/)?.[1] ?? 0);
+    const points = Math.max(0, Math.ceil(badge.target - best));
+    return `Reach ${badge.target}% mastery in a non-empty subject${points ? ` · ${points} percentage point${points === 1 ? "" : "s"} to go` : ""}.`;
+  }
+  if (badge.requirement.metric === "resumed-quiz-completions") return "Resume an unfinished quiz, then complete that same session.";
+  if (badge.requirement.metric === "consecutive-study-days") {
+    const current = Number(badge.progressLabel.match(/Current streak: (\d+)/)?.[1] ?? 0);
+    return current ? `Keep studying every day for ${badge.remaining} more consecutive study day${badge.remaining === 1 ? "" : "s"}.` : `Start a streak and study on ${badge.target} consecutive calendar days.`;
+  }
   const count = Math.max(0, Math.ceil(badge.remaining));
   const unitByMetric: Record<string, string> = {
     "current-subject-count": "subject",

@@ -6,6 +6,7 @@ import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/moda
 import { useToast } from "@/components/ui/toast-provider";
 import { normalizeText, parseEnumeration } from "@/lib/quiz/normalize";
 import { ENUM_MAX_ITEMS, ENUM_MIN_ITEMS, MAX_ENUM_ANSWER_LENGTH, MAX_ENUM_ITEM_LENGTH } from "@/lib/quiz/config";
+import { notifyAchievementActivity } from "@/lib/badges/client-sync";
 
 export type EditableFlashcard = { id: string; topicId: string | null; topicName: string | null; flashcardType: "standard" | "items"; question: string; answer: string; hint: string; reviewed: boolean };
 export type FlashcardTopicOption = { id: string; name: string };
@@ -33,6 +34,7 @@ export function FlashcardEditorModal({ subjectId, subjectName, topicId, topicOpt
       const response = await fetch(url, { method: initial ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ topicId: selectedTopicId, flashcardType: type, question: question.trim(), answer: finalAnswer, hint: hint.trim() }) });
       const result = await response.json();
       if (!response.ok || !result.card) throw new Error(result.error || "Could not save flashcard.");
+      if (!initial) notifyAchievementActivity();
       onSaved({ ...result.card, reviewed: Boolean(initial?.reviewed) && !result.masteryReset }, Boolean(result.masteryReset));
       const moved = Boolean(initial && initial.topicId !== selectedTopicId);
       toast({ kind: "success", title: moved ? "Flashcard moved" : initial ? "Flashcard updated" : "Flashcard created", message: moved ? "Its study history has been preserved." : initial ? "Your changes have been saved." : "Your new flashcard has been added." });

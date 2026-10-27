@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast-provider";
+import { notifyAchievementActivity } from "@/lib/badges/client-sync";
 import { TypeIcon } from "@/components/review/review-setup";
 import { Mascot } from "@/components/ui/mascot";
 import { PageLoadingSkeleton } from "@/components/ui/page-loading-skeleton";
@@ -267,6 +268,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         return;
       }
       const saved = data.result;
+      if (!data.duplicate) notifyAchievementActivity();
       const answerSound = getAnswerSound(saved, data.duplicate);
       if (answerSound) playAbiiSound(answerSound);
       setResults((current) => ({ ...current, [question.index]: saved }));
@@ -329,6 +331,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         return;
       }
       if (outcome.kind === "complete") {
+        notifyAchievementActivity();
         completeSession(outcome.session, data?.transitioned === true);
         toast({ kind: "success", title: "Review complete! 🎉", message: `You finished ${outcome.session.summary.cards} cards. Great work showing up to study!` });
         return;
@@ -339,6 +342,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       const recoveredData = (await recoveredResponse.json().catch(() => null)) as { session?: unknown } | null;
       const recoveredSession = isPublicSessionForId(recoveredData?.session, initial.id) ? recoveredData.session : null;
       if (recoveredSession?.status === "completed" && isQuizSummary(recoveredSession.summary)) {
+        notifyAchievementActivity();
         completeSession(recoveredSession, true);
         toast({ kind: "success", title: "Review complete!", message: `You finished ${recoveredSession.summary.cards} cards. Great work showing up to study!` });
         return;
