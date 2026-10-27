@@ -44,6 +44,37 @@ function fixture(): AchievementMetrics {
   };
 }
 
+function emptyMetrics(): AchievementMetrics {
+  const metrics = fixture();
+  metrics.subjectCount = 0;
+  metrics.subjectIds = [];
+  metrics.flashcardIds = [];
+  metrics.flashcardCount = 0;
+  metrics.distinctSubjectsWithFlashcards = 0;
+  metrics.subjectIdsWithFlashcards = [];
+  metrics.subjectCreationCompleteness = "incomplete";
+  metrics.flashcardCreationCompleteness = "incomplete";
+  metrics.creationTimestamps = [];
+  metrics.studyDayKeys = [];
+  metrics.currentStudyStreak = 0;
+  metrics.longestStudyStreak = 0;
+  metrics.completedQuizCount = 0;
+  metrics.completedQuizSessionIds = [];
+  metrics.completedQuizDayKeys = [];
+  metrics.firstQuizCompleted = false;
+  metrics.quizHistoryCompleteness = "incomplete";
+  metrics.qualifyingQuizScores = [];
+  metrics.correctQuizAnswers = 0;
+  metrics.distinctCorrectQuestionIdentities = 0;
+  metrics.enumerationFullyCorrectAnswers = 0;
+  metrics.resumedQuizCompletions = 0;
+  metrics.resumedQuizSessionIds = [];
+  metrics.subjectsWithFlashcards = [];
+  metrics.masteryThresholdSubjectIds = { 25: [], 50: [], 75: [], 100: [] };
+  metrics.fullyMasteredSubjectCount = 0;
+  return metrics;
+}
+
 test("catalog evaluation unlocks at exact thresholds, stacks milestones, and never unlocks below evidence", () => {
   const all = evaluateBadgeCatalog(fixture());
   assert.equal(all.length, 18);
@@ -117,4 +148,35 @@ test("catalog evaluation unlocks at exact thresholds, stacks milestones, and nev
   roundedButNotMastered.fullyMasteredSubjectCount = 0;
   assert.equal(evaluateBadgeCatalog(roundedButNotMastered).find((result) => result.badgeId === "mastermind-abii")?.unlocked, false);
   assert.ok(BADGE_CATALOG.every((definition) => all.some((result) => result.badgeId === definition.id)));
+});
+
+test("each achievement rule qualifies independently at its exact metric threshold", () => {
+  const cases: [string, (metrics: AchievementMetrics) => void][] = [
+    ["hello-abii", (m) => { m.subjectCount = 1; }],
+    ["card-creator", (m) => { m.flashcardCount = 10; }],
+    ["quiz-rookie", (m) => { m.completedQuizCount = 1; }],
+    ["little-explorer", (m) => { m.distinctSubjectsWithFlashcards = 3; }],
+    ["getting-into-rhythm", (m) => { m.currentStudyStreak = 3; m.longestStudyStreak = 3; }],
+    ["weekly-wonder", (m) => { m.currentStudyStreak = 7; m.longestStudyStreak = 7; }],
+    ["dedicated-otter", (m) => { m.currentStudyStreak = 30; m.longestStudyStreak = 30; }],
+    ["study-superstar", (m) => { m.completedQuizDayKeys = Array.from({ length: 50 }, (_, i) => new Date(Date.UTC(2025, 0, i + 1)).toISOString().slice(0, 10)); }],
+    ["sharp-mind", (m) => { m.qualifyingQuizScores = [{ scorePercent: 80, originalQuestionCount: 10, completedAt: new Date("2025-01-01"), evidenceId: "sharp-fixture" }]; }],
+    ["perfect-pearl", (m) => { m.qualifyingQuizScores = [{ scorePercent: 100, originalQuestionCount: 10, completedAt: new Date("2025-01-01"), evidenceId: "perfect-fixture" }]; }],
+    ["recall-detective", (m) => { m.correctQuizAnswers = 100; }],
+    ["enumeration-expert", (m) => { m.enumerationFullyCorrectAnswers = 10; }],
+    ["finish-line", (m) => { m.resumedQuizCompletions = 1; }],
+    ["growing-knowledge", (m) => { m.subjectsWithFlashcards = [{ subjectId: "s25", totalCards: 4, masteredCards: 1, progressPercent: 25, genuinelyComplete: false }]; m.masteryThresholdSubjectIds[25] = ["s25"]; }],
+    ["halfway-genius", (m) => { m.subjectsWithFlashcards = [{ subjectId: "s50", totalCards: 2, masteredCards: 1, progressPercent: 50, genuinelyComplete: false }]; m.masteryThresholdSubjectIds[50] = ["s50"]; }],
+    ["memory-pro", (m) => { m.subjectsWithFlashcards = [{ subjectId: "s75", totalCards: 4, masteredCards: 3, progressPercent: 75, genuinelyComplete: false }]; m.masteryThresholdSubjectIds[75] = ["s75"]; }],
+    ["mastermind-abii", (m) => { m.subjectsWithFlashcards = [{ subjectId: "s100", totalCards: 1, masteredCards: 1, progressPercent: 100, genuinelyComplete: true }]; m.masteryThresholdSubjectIds[100] = ["s100"]; }],
+    ["ultimate-scholar", (m) => { m.masteryThresholdSubjectIds[100] = ["s1", "s2", "s3", "s4", "s5"]; m.fullyMasteredSubjectCount = 5; }],
+  ];
+
+  assert.equal(cases.length, 18);
+  for (const [badgeId, prepare] of cases) {
+    const metrics = emptyMetrics();
+    prepare(metrics);
+    const result = evaluateBadgeCatalog(metrics).find((badge) => badge.badgeId === badgeId);
+    assert.equal(result?.unlocked, true, `${badgeId} should qualify at its threshold`);
+  }
 });

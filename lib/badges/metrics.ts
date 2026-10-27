@@ -157,7 +157,6 @@ export async function calculateAchievementMetrics(userId: string, now = new Date
 
   const eventFacts = factsRows[0] ?? { studyDayKeys: [], quizCompletionDays: [], quizCount: 0, quizCompletionKeys: [], quizScores: [], correctAnswers: 0, correctQuestionIdentities: [], enumerationCorrect: 0, resumedCount: 0, resumedKeys: [], masteryFacts: [] };
   const reviewFacts = reviewRows[0] ?? { studyDays: [], correctAnswers: 0, enumerationCorrect: 0 };
-  const currentSubjectIds = new Set(subjects.map((subject) => String(subject._id)));
   const historicalSubjectIds = new Set<string>((baseline?.subjectIds ?? []).map(String));
   const baselineFlashcardIds = new Set((baseline?.flashcardIds ?? []).map(String));
   const historicalFlashcards = new Map<string, { subjectId: string; createdAt: Date }>();
