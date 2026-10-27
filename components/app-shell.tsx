@@ -6,13 +6,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
-import { LayoutDashboard, BookOpen, RotateCcw, ChartNoAxesColumn, Settings, Bell, ChevronDown } from "lucide-react";
+import { LayoutDashboard, BookOpen, RotateCcw, ChartNoAxesColumn, Settings, Bell, ChevronDown, Award } from "lucide-react";
 
 const desktopNavigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/subjects", label: "My Subjects", icon: BookOpen },
   { href: "/review", label: "Review", icon: RotateCcw },
   { href: "/progress", label: "Progress", icon: ChartNoAxesColumn },
+  { href: "/badges", label: "Badges", icon: Award },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -21,6 +22,7 @@ const mobileNavigation = [
   { href: "/subjects", label: "Subjects", icon: BookOpen },
   { href: "/review", label: "Review", icon: RotateCcw },
   { href: "/progress", label: "Progress", icon: ChartNoAxesColumn },
+  { href: "/badges", label: "Badges", icon: Award },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -224,7 +226,7 @@ export function AppShell({ children, userName }: AppShellProps) {
 
           <nav
             aria-label="Mobile bottom navigation"
-            className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[#E8E2E5] bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),4px)] pt-1 backdrop-blur lg:hidden"
+            className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-[#E8E2E5] bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),4px)] pt-1 backdrop-blur lg:hidden"
           >
             {mobileNavigation.map((item) => {
               const active = isActive(pathname, item.href);
