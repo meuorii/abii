@@ -157,9 +157,26 @@ body {
 
 button,
 a,
+[role="button"],
+summary,
 input,
 textarea {
   -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+[role="button"],
+summary {
+  touch-action: manipulation;
+}
+
+@media (max-width: 767px) {
+  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="image"]):not([type="hidden"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 

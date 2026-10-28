@@ -26,7 +26,7 @@ export function Modal({ open, onClose, action, title, description, children, foo
       if (event.key === "Tab") { const items = focusable(); if (!items?.length) { event.preventDefault(); return; } const first = items[0], last = items[items.length - 1]; if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); } }
     }
     document.addEventListener("keydown", keys);
-    return () => { document.removeEventListener("keydown", keys); document.body.style.overflow = priorOverflow; previousFocus.current?.focus(); };
+    return () => { document.removeEventListener("keydown", keys); document.body.style.overflow = priorOverflow; previousFocus.current?.focus({ preventScroll: true }); };
   }, [open, busy]);
   if (!present) return null;
   return <div aria-hidden={!open} className={`abii-modal-overlay fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-[#21151B]/40 p-3 backdrop-blur-[3px] sm:p-5 ${open ? "" : "abii-modal-overlay-out"}`} onMouseDown={(e) => { if (open && e.target === e.currentTarget && !busy) onClose(); }}>

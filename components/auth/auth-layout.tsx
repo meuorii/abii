@@ -9,9 +9,9 @@ export function AuthLayout({ mode, children }: AuthLayoutProps) {
   const isRegister = mode === "register";
 
   return (
-    <main className="h-dvh w-screen min-h-0 overflow-hidden bg-white text-[#29252B]">
+    <main className="min-h-dvh w-full overflow-x-clip bg-white text-[#29252B]">
       {/* Tinanggal ang max-w at mx-auto para maging full width ang grid */}
-      <div className="grid h-full w-full min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,1.08fr)_minmax(420px,0.92fr)]">
+      <div className="grid min-h-dvh w-full grid-cols-1 lg:grid-cols-[minmax(0,1.08fr)_minmax(420px,0.92fr)]">
         
         {/* Left Panel: Full height & width image mascot container */}
         <section className="relative hidden h-full w-full min-h-0 overflow-hidden lg:block">
