@@ -7,6 +7,7 @@ import { ReviewRecord } from "@/models/ReviewRecord";
 import { QuizSession } from "@/models/QuizSession";
 import { Subject } from "@/models/Subject";
 import { Topic } from "@/models/Topic";
+import { Folder } from "@/models/Folder";
 import { TransactionUnavailableError, withRequiredTransaction } from "@/lib/mongodb-transaction";
 
 export const runtime = "nodejs";
@@ -54,6 +55,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
       }, { session });
       await Flashcard.deleteMany({ userId: user._id, subjectId: subject._id }, { session });
       await Topic.deleteMany({ subjectId: subject._id, userId: user._id }, { session });
+      await Folder.deleteMany({ subjectId: subject._id, userId: user._id }, { session });
       await Subject.deleteOne({ _id: subject._id, userId: user._id }, { session });
       return true;
     });

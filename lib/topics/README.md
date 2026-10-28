@@ -7,12 +7,12 @@ cross-subject Topics return 404; unauthenticated requests return 401.
 | Method | Route | Contract |
 | --- | --- | --- |
 | GET | `/api/subjects/:subjectId/topics` | Lists owned Topics ordered by position, with card and mastery metrics. |
-| POST | `/api/subjects/:subjectId/topics` | `{ name, description? }` → 201 `{ topic }`. |
+| POST | `/api/subjects/:subjectId/topics` | `{ name, description?, folderId? }` → 201 `{ topic }`; null or omitted folder means unfiled. |
 | GET | `/api/subjects/:subjectId/topics/:topicId` | Returns the Topic, counts, mastery metrics, and ETag. |
-| PATCH | `/api/subjects/:subjectId/topics/:topicId` | Updates a supported subset of `{ name, description, position }`; requires `If-Match`. |
+| PATCH | `/api/subjects/:subjectId/topics/:topicId` | Updates a supported subset of `{ name, description, position, folderId }`; requires `If-Match`. Null folder means unfiled; omission preserves the assignment. |
 | DELETE | `/api/subjects/:subjectId/topics/:topicId` | `{ confirm: true, destinationTopicId? }`; populated Topics require same-Subject transfer. |
 
-Public Topic fields include `id`, `subjectId`, `name`, `description`,
+Public Topic fields include `id`, `subjectId`, `folderId`, `name`, `description`,
 `position`, timestamps, `flashcardCount`, and genuine mastery metrics. Mastery
 is calculated by the shared streak service; no accuracy-based estimate is
 substituted. List counts are grouped, not queried once per Topic.

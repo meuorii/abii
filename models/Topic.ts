@@ -13,6 +13,7 @@ export function isDuplicateTopicError(error: unknown): boolean {
 const topicSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
   subjectId: { type: Schema.Types.ObjectId, ref: "Subject", required: true },
+  folderId: { type: Schema.Types.ObjectId, ref: "Folder", default: null },
   name: { type: String, required: true, trim: true, minlength: 1, maxlength: 100 },
   normalizedName: { type: String, required: true },
   description: { type: String, maxlength: 500, default: undefined },
@@ -47,7 +48,9 @@ for (const operation of ["replaceOne", "findOneAndReplace"] as const) {
 
 topicSchema.index({ userId: 1, subjectId: 1, normalizedName: 1 }, { unique: true, name: "topic_owner_subject_name_unique" });
 topicSchema.index({ userId: 1, subjectId: 1, position: 1 }, { name: "topic_owner_subject_position" });
+topicSchema.index({ userId: 1, subjectId: 1, folderId: 1, position: 1 }, { name: "topic_owner_subject_folder_position" });
 
 export type TopicDocument = InferSchemaType<typeof topicSchema>;
+if (mongoose.models.Topic && !mongoose.models.Topic.schema.path("folderId")) mongoose.deleteModel("Topic");
 export const Topic: Model<TopicDocument> =
   (mongoose.models.Topic as Model<TopicDocument> | undefined) ?? mongoose.model<TopicDocument>("Topic", topicSchema);

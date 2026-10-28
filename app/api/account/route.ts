@@ -7,6 +7,7 @@ import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
 import { QuizSession } from "@/models/QuizSession";
 import { Topic } from "@/models/Topic";
+import { Folder } from "@/models/Folder";
 import { TransactionUnavailableError, withRequiredTransaction } from "@/lib/mongodb-transaction";
 import { UserBadge } from "@/models/UserBadge";
 import { AchievementEvent } from "@/models/AchievementEvent";
@@ -28,6 +29,7 @@ export async function DELETE(request: Request) {
       await QuizSession.deleteMany({ userId: user._id }, { session });
       await Flashcard.deleteMany({ userId: user._id }, { session });
       await Topic.deleteMany({ userId: user._id }, { session });
+      await Folder.deleteMany({ userId: user._id }, { session });
       await Subject.deleteMany({ userId: user._id }, { session });
       await User.deleteOne({ _id: user._id }, { session });
     });

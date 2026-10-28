@@ -6,6 +6,8 @@ export { Subject } from "./Subject";
 export type { SubjectDocument } from "./Subject";
 export { Topic } from "./Topic";
 export type { TopicDocument } from "./Topic";
+export { Folder } from "./Folder";
+export type { FolderDocument } from "./Folder";
 export { Flashcard } from "./Flashcard";
 export type { FlashcardDocument } from "./Flashcard";
 export { ReviewRecord, QUESTION_TYPES } from "./ReviewRecord";

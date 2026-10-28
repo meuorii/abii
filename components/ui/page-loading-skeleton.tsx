@@ -1,11 +1,14 @@
 "use client";
 
+import Image from "next/image";
+
 import { AppShell } from "@/components/app-shell";
 
 export type PageLoadingVariant =
   | "dashboard"
   | "subjects"
   | "subject-detail"
+  | "folder-detail"
   | "topic-detail"
   | "review"
   | "quiz-setup"
@@ -179,6 +182,63 @@ function FinishSkeleton() {
   return <div className="mx-auto w-full min-w-0 max-w-[1600px] space-y-3"><div className="flex min-h-10 items-center px-2"><Bar className="h-3 w-28" /></div><FinishHero /><FinishResults /><div className={finishGridClass}><RecentQuestions /><NextActions /></div></div>;
 }
 
+function TopicDetailSkeleton() {
+  return <div className="min-w-0 space-y-5">
+    <nav aria-label="Breadcrumb" className="flex min-w-0 flex-wrap items-center gap-2 text-xs sm:text-sm"><Bar className="h-3 w-20"/><Bar className="h-4 w-4 rounded-full"/><Bar className="h-3 w-28 max-w-[30vw]"/><Bar className="h-4 w-4 rounded-full"/><Bar className="h-3 w-24 max-w-[30vw]"/></nav>
+    <section aria-hidden="true" className="relative isolate min-h-[270px] overflow-hidden rounded-[1.35rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[285px] lg:min-h-[300px]">
+      <div className="relative z-10 flex min-h-[270px] items-center sm:min-h-[285px] lg:min-h-[300px]"><div className="w-full max-w-[64%] px-5 py-7 sm:max-w-[62%] sm:px-7 sm:py-8 lg:max-w-[60%] lg:px-8">
+        <Bar className="h-11 w-11 rounded-2xl bg-[#FFE0E9] sm:h-12 sm:w-12"/><Bar className="mt-3 h-7 w-full max-w-[340px] bg-[#EED7E0] sm:h-9"/><Bar className="mt-2 h-4 w-40 max-w-full"/><Bar className="mt-3 h-4 w-full max-w-[440px]"/><Bar className="mt-2 h-4 w-4/5 max-w-[360px]"/><Bar className="mt-4 h-4 w-28 bg-[#F2DCE4]"/>
+      </div></div>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-[36%] items-end justify-center sm:w-[40%] lg:w-[39%]"><Image src="/dashboard-hero/my-subjects.png" alt="" fill priority sizes="(max-width: 640px) 43vw, 420px" className="object-contain object-bottom"/></div>
+    </section>
+    <section aria-hidden="true" className="rounded-2xl border border-[#F0E5E9] bg-white p-4 sm:p-5">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"><div><Bar className="h-4 w-full rounded-full"/><div className="mt-2 flex justify-between"><Bar className="h-3 w-20"/><Bar className="h-3 w-10"/></div></div><div className="space-y-2 sm:min-w-44"><Bar className="h-3 w-36 max-w-full"/><Bar className="h-3 w-40 max-w-full"/></div></div>
+      <div className="mt-3 flex flex-wrap gap-1">{[0,1,2,3,4].map(n=><Bar key={n} className="h-6 w-16 rounded-full"/>)}</div>
+    </section>
+    <section aria-hidden="true" className="min-w-0 space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3"><div className="space-y-2"><Bar className="h-5 w-32"/><Bar className="h-4 w-60 max-w-[70vw]"/></div><Bar className="h-11 w-36 rounded-xl"/></div>
+      <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_190px]"><Bar className="h-11 w-full rounded-xl"/><Bar className="h-11 w-full rounded-xl"/></div>
+      <ul className="min-w-0 overflow-hidden rounded-2xl border border-[#E8E2E5] bg-white" aria-label="Loading flashcards">{[0,1,2,3].map(n=><li key={n} className={`flex min-w-0 flex-wrap items-center gap-2.5 px-3 py-3 sm:flex-nowrap sm:gap-3 sm:px-4 ${n ? "border-t border-[#F0EDF0]" : ""}`}><Bar className="h-10 w-10 shrink-0 rounded-xl bg-[#FFF0F5]"/><div className="min-w-0 flex-1 space-y-2"><Bar className="h-4 w-4/5"/><Bar className="h-3 w-28"/></div><div className="flex shrink-0 items-center gap-1"><Bar className="h-10 w-10 rounded-lg"/><Bar className="h-10 w-10 rounded-lg"/><Bar className="h-10 w-10 rounded-lg"/></div></li>)}</ul>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#F5DDE5] bg-[#FFF7F9] p-4"><div className="min-w-0 space-y-2"><Bar className="h-4 w-32"/><Bar className="h-4 w-64 max-w-[70vw]"/></div><div className="flex flex-wrap gap-2"><Bar className="h-10 w-36 rounded-xl"/><Bar className="h-10 w-32 rounded-xl"/></div></div>
+    </section>
+  </div>;
+}
+
+function FolderDetailSkeleton() {
+  return <div className="min-w-0 space-y-4">
+    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 overflow-hidden text-xs sm:gap-2 sm:text-sm">
+      <Bar className="h-3 w-16 shrink-0"/><Bar className="h-4 w-4 shrink-0 rounded-full"/><Bar className="h-3 w-28 min-w-0 max-w-[32vw]"/><Bar className="h-4 w-4 shrink-0 rounded-full"/><Bar className="h-3 w-24 min-w-0 max-w-[28vw]"/>
+    </nav>
+    <section aria-hidden="true" className="relative isolate min-h-[270px] overflow-hidden rounded-[1.35rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[285px] lg:min-h-[300px]">
+      <div className="relative z-10 flex min-h-[270px] items-center sm:min-h-[285px] lg:min-h-[300px]">
+        <div className="max-w-[72%] px-5 py-6 sm:max-w-[62%] sm:px-7 lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <Bar className="h-11 w-11 shrink-0 rounded-2xl bg-[#FFE0E9] sm:h-12 sm:w-12"/>
+            <div className="min-w-0 flex-1"><Bar className="h-6 w-full max-w-[260px] bg-[#EED7E0] sm:h-7"/><Bar className="mt-2 h-3 w-36 max-w-full"/></div>
+          </div>
+          <Bar className="mt-5 h-7 w-full max-w-[380px] bg-[#EED7E0] sm:h-9"/><Bar className="mt-1 h-7 w-4/5 max-w-[300px] bg-[#EED7E0] sm:h-9"/>
+          <Bar className="mt-2 h-3 w-full max-w-[340px]"/><Bar className="mt-1.5 h-3 w-4/5 max-w-[280px]"/><Bar className="mt-4 h-10 w-32 rounded-full bg-[#F3D4DF] sm:h-11"/>
+        </div>
+      </div>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-[38%] items-end justify-center sm:w-[40%]">
+        <Bar className="absolute bottom-0 right-[7%] h-[65%] w-[76%] rounded-t-[48%] rounded-b-[2rem] bg-[#FFE6EE] sm:h-[72%]"/>
+        <Bar className="absolute bottom-[42%] right-[20%] h-[44%] w-[58%] rounded-full bg-[#F7D5E0]"/>
+        <Bar className="absolute bottom-[62%] right-[62%] h-5 w-5 rounded-full bg-[#F7D5E0] sm:h-7 sm:w-7"/>
+        <Bar className="absolute bottom-[62%] right-[9%] h-5 w-5 rounded-full bg-[#F7D5E0] sm:h-7 sm:w-7"/>
+      </div>
+    </section>
+    <section aria-hidden="true" className="min-w-0 space-y-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 space-y-2"><Bar className="h-5 w-28"/><Bar className="h-4 w-72 max-w-[80vw]"/></div><Bar className="h-11 w-32 rounded-xl"/>
+      </div>
+      <Bar className="h-11 w-full rounded-xl"/>
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {[0,1,2].map(n=><CardSkeleton key={n} className="min-w-0"><div className="flex min-w-0 items-start gap-3"><Bar className="h-11 w-11 shrink-0 rounded-xl bg-[#FFF0F5]"/><div className="min-w-0 flex-1 space-y-2"><Bar className="h-4 w-4/5"/><Bar className="h-3 w-full"/><Bar className="h-3 w-2/3"/></div></div><Bar className="mt-4 h-3 w-28"/><Bar className="mt-3 h-3 w-20"/><Bar className="mt-2 h-2.5 w-full rounded-full"/><div className="mt-4 flex flex-wrap gap-1"><Bar className="h-10 w-10 rounded-lg"/><Bar className="h-10 w-10 rounded-lg"/><Bar className="h-10 w-10 rounded-lg"/><Bar className="h-10 w-28 rounded-xl"/></div></CardSkeleton>)}
+      </div>
+    </section>
+  </div>;
+}
+
 function Content({ variant }: { variant: PageLoadingVariant }) {
   switch (variant) {
     case "dashboard":
@@ -187,8 +247,10 @@ function Content({ variant }: { variant: PageLoadingVariant }) {
       return <div className="space-y-5"><Hero /><div className="flex items-center justify-between gap-3"><Bar className="h-5 w-36" /><Bar className="h-10 w-32 rounded-full" /></div><SubjectCards /></div>;
     case "subject-detail":
       return <div className="space-y-5"><Bar className="h-4 w-44" /><Hero /><MetricCards count={4} /><div className="flex items-center justify-between"><Bar className="h-5 w-40" /><Bar className="h-9 w-28 rounded-full" /></div><div className="grid gap-3 md:grid-cols-2"><CardSkeleton className="min-h-[150px]"><Bar className="h-3 w-24" /><Bar className="mt-5 h-4 w-full" /><Bar className="mt-3 h-3 w-2/3" /></CardSkeleton><CardSkeleton className="min-h-[150px]"><Bar className="h-3 w-24" /><Bar className="mt-5 h-4 w-full" /><Bar className="mt-3 h-3 w-2/3" /></CardSkeleton></div></div>;
+    case "folder-detail":
+      return <FolderDetailSkeleton />;
     case "topic-detail":
-      return <div className="space-y-5"><Bar className="h-4 w-48" /><Hero variant="compact" /><CardSkeleton><Bar className="h-10 w-full rounded-xl"/><div className="mt-5 space-y-3">{[0,1,2,3].map((n)=><Bar key={n} className="h-16 w-full rounded-xl"/>)}</div></CardSkeleton></div>;
+      return <TopicDetailSkeleton />;
     case "review":
       return <div className="space-y-5"><Hero /><MetricCards count={3} /><CardSkeleton><Bar className="h-5 w-44" /><div className="mt-5 space-y-3">{[0, 1, 2].map((n) => <div key={n} className="flex items-center gap-3 rounded-xl border border-[#F4E9ED] p-3"><Bar className="h-10 w-10 rounded-xl" /><div className="flex-1 space-y-2"><Bar className="h-3 w-2/3" /><Bar className="h-2.5 w-1/3" /></div><Bar className="h-9 w-24 rounded-full" /></div>)}</div></CardSkeleton></div>;
     case "quiz-setup":
@@ -205,9 +267,13 @@ function Content({ variant }: { variant: PageLoadingVariant }) {
 }
 
 export function PageLoadingSkeleton({ variant, withShell = true }: { variant: PageLoadingVariant; withShell?: boolean }) {
-  const pageSpacing = variant === "finish"
+  const pageSpacing = variant === "folder-detail"
+    ? "min-w-0 space-y-4 p-4 pb-24 sm:p-5 xl:p-6"
+    : variant === "finish"
     ? "w-full px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 lg:px-7 lg:pb-7"
-    : "space-y-5 p-4 pb-24 sm:p-5 xl:p-6";
+    : variant === "topic-detail"
+      ? "min-w-0 space-y-5 p-4 pb-24 sm:p-6 xl:p-7"
+      : "space-y-5 p-4 pb-24 sm:p-5 xl:p-6";
   const content = (
     <div role="status" aria-live="polite" aria-label={`Loading ${variant.replace("-", " ")} page`} className="min-h-full">
       <span className="sr-only">Loading page content…</span>

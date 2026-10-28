@@ -3,6 +3,7 @@ import mongoose, { Types, type ClientSession } from "mongoose";
 import { Subject } from "../../models/Subject";
 import { Topic, type TopicDocument, normalizeTopicName } from "../../models/Topic";
 import { Flashcard } from "../../models/Flashcard";
+import { Folder } from "../../models/Folder";
 import { TopicError, objectId, topicPayload, deletionPayload } from "./validation";
 
 type Scope = { userId: Types.ObjectId; subjectId: Types.ObjectId };
@@ -14,7 +15,7 @@ async function ownedSubject(scope: Scope, session: ClientSession | null = null) 
   if (!await Subject.exists({ _id: scope.subjectId, userId: scope.userId }).session(session)) throw new TopicError(404, "This subject could not be found.");
 }
 function publicTopic(topic: TopicRow, flashcardCount: number) {
-  return { id: String(topic._id), subjectId: String(topic.subjectId), name: topic.name, description: topic.description ?? "", position: topic.position, createdAt: topic.createdAt.toISOString(), updatedAt: topic.updatedAt.toISOString(), flashcardCount, metrics: { flashcardCount } };
+  return { id: String(topic._id), subjectId: String(topic.subjectId), folderId: topic.folderId ? String(topic.folderId) : null, name: topic.name, description: topic.description ?? "", position: topic.position, createdAt: topic.createdAt.toISOString(), updatedAt: topic.updatedAt.toISOString(), flashcardCount, metrics: { flashcardCount } };
 }
 async function counts(scope: Scope) {
   const rows = await Flashcard.aggregate<{ _id: Types.ObjectId; count: number }>([
@@ -24,7 +25,7 @@ async function counts(scope: Scope) {
 }
 
 /** Every Topic mutation takes the same parent write lock; driver retries conflicts. */
-async function mutate<T>(scope: Scope, action: (session: ClientSession) => Promise<T>): Promise<T> {
+export async function mutate<T>(scope: Scope, action: (session: ClientSession) => Promise<T>): Promise<T> {
   const session = await mongoose.startSession();
   try {
     return await session.withTransaction(async () => {
@@ -47,10 +48,11 @@ async function findTopic(scope: Scope, id: string, session: ClientSession | null
   return topic;
 }
 
-export async function listTopics(userId: string, subjectId: string) {
+export async function listTopics(userId: string, subjectId: string, folderId?: string | null) {
   const scope = scopeFor(userId, subjectId);
   await ownedSubject(scope);
-  const [topics, totals] = await Promise.all([Topic.find(scope).sort({ position: 1, _id: 1 }).lean(), counts(scope)]);
+  const filter = folderId === undefined ? scope : folderId === null ? { ...scope, $or: [{ folderId: null }, { folderId: { $exists: false } }] } : { ...scope, folderId: objectId(folderId) };
+  const [topics, totals] = await Promise.all([Topic.find(filter).sort({ position: 1, _id: 1 }).lean(), counts(scope)]);
   return topics.map((topic) => publicTopic(topic, totals.get(String(topic._id)) ?? 0));
 }
 export async function getTopic(userId: string, subjectId: string, topicId: string) {
@@ -63,6 +65,7 @@ export async function createTopic(userId: string, subjectId: string, body: unkno
   const scope = scopeFor(userId, subjectId);
   const input = topicPayload(body, true);
   return mutate(scope, async (session) => {
+    if (input.folderId && !await Folder.exists({ ...scope, _id: input.folderId }).session(session)) throw new TopicError(404, "This folder could not be found.");
     if (await Topic.exists({ ...scope, normalizedName: normalizeTopicName(input.name!) }).session(session)) throw new TopicError(409, "A topic with that name already exists in this subject.");
     const last = await Topic.findOne(scope).sort({ position: -1 }).session(session);
     const position = last ? last.position + 1 : 0;
@@ -78,6 +81,8 @@ export async function updateTopic(userId: string, subjectId: string, topicId: st
   return mutate(scope, async (session) => {
     const topic = await findTopic(scope, topicId, session);
     checkVersion(topic, expected);
+    if (input.folderId && !await Folder.exists({ ...scope, _id: input.folderId }).session(session)) throw new TopicError(404, "This folder could not be found.");
+    if (input.folderId !== undefined) topic.folderId = input.folderId ? new Types.ObjectId(input.folderId) : null;
     if (input.name && await Topic.exists({ ...scope, _id: { $ne: topic._id }, normalizedName: normalizeTopicName(input.name) }).session(session)) throw new TopicError(409, "A topic with that name already exists in this subject.");
     if (input.position !== undefined) {
       const ordered = await Topic.find(scope).sort({ position: 1, _id: 1 }).session(session);

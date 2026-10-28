@@ -10,7 +10,7 @@ import { Modal, modalCancelClass, modalPrimaryClass, modalDangerClass } from "@/
 import { FlashcardEditorModal, type EditableFlashcard } from "@/components/subjects/flashcard-editor-modal";
 import { Eye, Pencil, Trash2, Search, Layers3, ListOrdered, Plus, BookOpen, Clock3, ArrowRight, ChartNoAxesColumn, Settings } from "lucide-react";
 import { parseEnumeration } from "@/lib/quiz/normalize";
-import { TopicsSection } from "@/components/subjects/topics-section";
+import { FolderOverview } from "@/components/subjects/folder-overview";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 
 type FlashcardItem = EditableFlashcard;
@@ -108,7 +108,7 @@ setSavingSettings(true); setError("");
         ))}
       </div>
 
-      {tab === "topics" && <TopicsSection subjectId={data.id} />}
+      {tab === "topics" && <FolderOverview subjectId={data.id} />}
 
       {notice && <p role="status" className="rounded-xl border border-[#CFE8D8] bg-[#EAF8F0] px-4 py-3 text-sm text-[#35664B]">{notice}</p>}
       {error && <p role="alert" className="rounded-xl border border-[#F0C7D3] bg-[#FFF1F1] px-4 py-3 text-sm text-[#A43E5C]">{error}</p>}

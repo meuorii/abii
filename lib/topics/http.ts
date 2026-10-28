@@ -17,7 +17,11 @@ export function topicHandlers(dependencies: Dependencies) {
       await dependencies.connectToDatabase();
       const userId = String(user._id);
       if (request.method === "GET") {
-        if (!topicId) return Response.json({ topics: await listTopics(userId, subjectId) }, { headers: { "Cache-Control": "no-store" } });
+        if (!topicId) {
+          const url = new URL(request.url);
+          const folder = url.searchParams.get("folderId");
+          return Response.json({ topics: await listTopics(userId, subjectId, folder === "unfiled" ? null : folder ?? undefined) }, { headers: { "Cache-Control": "no-store" } });
+        }
         const topic = await getTopic(userId, subjectId, topicId);
         return Response.json({ topic }, { headers: { ETag: `"${topic.updatedAt}"`, "Cache-Control": "no-store" } });
       }

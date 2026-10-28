@@ -10,9 +10,13 @@ export function objectId(value: string) {
 export function topicPayload(body: unknown, creating: boolean) {
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new TopicError(400, "Provide a JSON object.");
   const data = body as Record<string, unknown>;
-  const allowed = creating ? ["name", "description"] : ["name", "description", "position"];
+  const allowed = creating ? ["name", "description", "folderId"] : ["name", "description", "position", "folderId"];
   if (!Object.keys(data).length || Object.keys(data).some((key) => !allowed.includes(key))) throw new TopicError(400, "Unsupported or empty topic fields.");
-  const result: { name?: string; description?: string; position?: number } = {};
+  const result: { name?: string; description?: string; position?: number; folderId?: string | null } = {};
+  if ("folderId" in data) {
+    if (data.folderId !== null && (typeof data.folderId !== "string" || !/^[a-f\d]{24}$/i.test(data.folderId))) throw new TopicError(400, "Provide a valid folder ID.");
+    result.folderId = data.folderId as string | null;
+  }
   if (creating || "name" in data) {
     if (typeof data.name !== "string") throw new TopicError(400, "Topic name is required.");
     const name = data.name.normalize("NFKC").trim().replace(/\s+/gu, " ");
