@@ -29,11 +29,12 @@ type SubjectLayout = "grid" | "list";
 type SubjectsClientProps = {
   initialSubjects: SubjectItem[];
   initialLayout: SubjectLayout;
+  subjectFolderId?: string | null;
 };
 
-function AddSubjectModal({ onClose, onCreated }: { onClose: () => void; onCreated: (subject: SubjectItem) => void }) {
+export function AddSubjectModal({ onClose, onCreated, subjectFolderId }: { onClose: () => void; onCreated: (subject: SubjectItem) => void; subjectFolderId?: string | null }) {
  const [name,setName]=useState(""); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const router=useRouter();
- async function handleSubmit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const trimmedName=name.trim(); if(!trimmedName){setError("Please enter a subject name.");return;} setSaving(true);setError(""); try { const response=await fetch("/api/subjects",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:trimmedName})}); const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data?.error||data?.message||"Could not create subject."); const raw=data?.subject??data?.data?.subject??data; const subjectId=String(raw?.id??raw?._id??""); if(!subjectId)throw new Error("The subject was created, but its details could not be loaded. Please refresh."); onCreated({id:subjectId,name:String(raw?.name??trimmedName),flashcardCount:Number(raw?.flashcardCount??0),topicCount:0,progress:Number(raw?.progress??0),masteredCount:Number(raw?.masteredCount??0),typeMastery:raw?.typeMastery??{"multiple-choice":{done:0,total:0},identification:{done:0,total:0},"true-false":{done:0,total:0},random:{done:0,total:0}}}); notifyAchievementActivity(); router.refresh();onClose(); } catch(cause){setError(cause instanceof Error?cause.message:"Something went wrong. Please try again.");}finally{setSaving(false);} }
+ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const trimmedName=name.trim(); if(!trimmedName){setError("Please enter a subject name.");return;} setSaving(true);setError(""); try { const response=await fetch("/api/subjects",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:trimmedName,subjectFolderId:subjectFolderId??null})}); const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data?.error||data?.message||"Could not create subject."); const raw=data?.subject??data?.data?.subject??data; const subjectId=String(raw?.id??raw?._id??""); if(!subjectId)throw new Error("The subject was created, but its details could not be loaded. Please refresh."); onCreated({id:subjectId,name:String(raw?.name??trimmedName),flashcardCount:Number(raw?.flashcardCount??0),topicCount:0,progress:Number(raw?.progress??0),masteredCount:Number(raw?.masteredCount??0),typeMastery:raw?.typeMastery??{"multiple-choice":{done:0,total:0},identification:{done:0,total:0},"true-false":{done:0,total:0},random:{done:0,total:0}}}); notifyAchievementActivity(); router.refresh();onClose(); } catch(cause){setError(cause instanceof Error?cause.message:"Something went wrong. Please try again.");}finally{setSaving(false);} }
  return <Modal open onClose={onClose} action="create" title="Create a subject" description="Give your study materials a place to belong." busy={saving} footer={<><button type="button" onClick={onClose} disabled={saving} className={modalCancelClass}>Cancel</button><button type="submit" form="create-subject-form" disabled={saving} className={modalPrimaryClass}>{saving?"Creating?":"Create Subject"}</button></>}><form id="create-subject-form" onSubmit={handleSubmit} className="space-y-3"><label htmlFor="subject-name" className="block text-[13px] font-semibold text-[#2F2930]">Subject Name <span className="text-[#F04469]">*</span></label><input id="subject-name" required maxLength={100} value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Biology" className="min-h-12 w-full rounded-xl border border-[#E8E2E5] bg-white px-4 text-sm text-[#2F2930] outline-none placeholder:text-[#A49AA0] focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/15"/>{error&&<p role="alert" className="text-sm text-[#C65363]">{error}</p>}</form></Modal>;
 }
 
@@ -83,7 +84,7 @@ function TypeMasteryIndicators({ mastery }: { mastery: TypeProgress }) {
   );
 }
 
-export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClientProps) {
+export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId }: SubjectsClientProps) {
   const { toast } = useToast();
   const [subjects, setSubjects] = useState<SubjectItem[]>(initialSubjects);
   const [query, setQuery] = useState("");
@@ -200,7 +201,7 @@ export function SubjectsClient({ initialSubjects, initialLayout }: SubjectsClien
       </section>
 
       {isModalOpen ? (
-        <AddSubjectModal onClose={() => setIsModalOpen(false)} onCreated={handleCreated} />
+        <AddSubjectModal subjectFolderId={subjectFolderId} onClose={() => setIsModalOpen(false)} onCreated={handleCreated} />
       ) : null}
     </>
   );

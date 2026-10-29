@@ -11,6 +11,8 @@ import { Topic } from "@/models/Topic";
 import { User } from "@/models/User";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { emptyTypeProgress } from "@/lib/quiz/types";
+import { SubjectFolder } from "@/models/SubjectFolder";
+import { SubjectFoldersOverview, type SubjectFolderSummary } from "@/components/subjects/subject-folders-overview";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,17 +35,28 @@ export default async function SubjectsPage() {
   let subjects: SubjectItem[] = [];
   let loadFailed = false;
   let preferredLayout: "grid" | "list" = "grid";
+  let folderSummaries: SubjectFolderSummary[] = [];
+  let unfiledCount = 0;
 
   try {
     await connectToDatabase();
     const userId = user._id;
-    const [subjectDocs, cards, topics, mastery, userSettings] = await Promise.all([
-      Subject.find({ userId }).select("_id name").sort({ name: 1 }).lean(),
+    const [subjectDocs, cards, topics, mastery, userSettings, folderDocs] = await Promise.all([
+      Subject.find({ userId }).select("_id name subjectFolderId").sort({ name: 1 }).lean(),
       Flashcard.find({ userId }).select("_id subjectId").lean(),
       Topic.aggregate<{ _id: typeof userId; count: number }>([{ $match: { userId } }, { $group: { _id: "$subjectId", count: { $sum: 1 } } }]),
       getSubjectMastery(userId),
       User.findById(userId).select("settings.subjectLayout").lean(),
+      SubjectFolder.find({ userId }).select("_id name description position updatedAt").sort({ position: 1, _id: 1 }).lean(),
     ]);
+    unfiledCount = subjectDocs.filter(s => !s.subjectFolderId).length;
+    const groupedSubjects = new Map<string, number>();
+    for (const s of subjectDocs) if (s.subjectFolderId) groupedSubjects.set(String(s.subjectFolderId), (groupedSubjects.get(String(s.subjectFolderId)) ?? 0) + 1);
+    const groupedTopics = new Map<string, number>(), groupedCards = new Map<string, number>();
+    const subjectFolderById = new Map(subjectDocs.filter(s => s.subjectFolderId).map(s => [String(s._id), String(s.subjectFolderId)]));
+    for (const row of topics) { const folderId = subjectFolderById.get(String(row._id)); if (folderId) groupedTopics.set(folderId, row.count); }
+    for (const card of cards) { const folderId = subjectFolderById.get(String(card.subjectId)); if (folderId) groupedCards.set(folderId, (groupedCards.get(folderId) ?? 0) + 1); }
+    folderSummaries = folderDocs.map(f => ({ id: String(f._id), name: f.name, description: f.description ?? "", position: f.position, updatedAt: f.updatedAt.toISOString(), subjectCount: groupedSubjects.get(String(f._id)) ?? 0, topicCount: groupedTopics.get(String(f._id)) ?? 0, flashcardCount: groupedCards.get(String(f._id)) ?? 0 }));
 
     preferredLayout = userSettings?.settings?.subjectLayout === "list" ? "list" : "grid";
 
@@ -114,7 +127,7 @@ export default async function SubjectsPage() {
             </div>
           </div>
         </section>
-        {loadFailed ? <SubjectLoadError /> : <SubjectsClient initialSubjects={subjects} initialLayout={preferredLayout} />}
+        {loadFailed ? <SubjectLoadError /> : folderSummaries.length ? <SubjectFoldersOverview initialFolders={folderSummaries} initialUnfiledCount={unfiledCount} /> : <SubjectsClient initialSubjects={subjects} initialLayout={preferredLayout} />}
       </div>
     </AppShell>
   );

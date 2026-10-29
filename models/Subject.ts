@@ -11,6 +11,7 @@ const subjectSchema = new Schema(
       required: [true, "Subject owner is required"],
       index: true,
     },
+    subjectFolderId: { type: Schema.Types.ObjectId, ref: "SubjectFolder", default: null, index: true },
     name: {
       type: String,
       required: [true, "Subject name is required"],

@@ -4,6 +4,8 @@ export { User } from "./User";
 export type { UserDocument } from "./User";
 export { Subject } from "./Subject";
 export type { SubjectDocument } from "./Subject";
+export { SubjectFolder, normalizeSubjectFolderName } from "./SubjectFolder";
+export type { SubjectFolderDocument } from "./SubjectFolder";
 export { Topic } from "./Topic";
 export type { TopicDocument } from "./Topic";
 export { Folder } from "./Folder";
