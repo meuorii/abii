@@ -285,14 +285,16 @@ export async function computeStreaks(userId: Types.ObjectId | string, flashcardI
  * Computes streak mastery once per owned card, then aggregates it by topic,
  * subject, and account. Type applicability uses the exact question builder rules.
  */
-export async function getSubjectMastery(userId: Types.ObjectId | string) {
+export async function getSubjectMastery(userId: Types.ObjectId | string, subjectIds?: Types.ObjectId[]) {
   await connectToDatabase();
-  const [rawCards, subjects, topics, records] = await Promise.all([
-    Flashcard.find({ userId }).select("_id subjectId topicId flashcardType question answer hint").lean(),
-    Subject.find({ userId }).select("_id").lean(),
-    Topic.find({ userId }).select("_id subjectId").lean(),
-    ReviewRecord.find({ userId }).select("flashcardId result reviewedAt nextReviewAt questionType").sort({ reviewedAt: -1, _id: -1 }).lean(),
+  const scopedSubjectFilter = subjectIds ? { $in: subjectIds } : undefined;
+  const [rawCards, subjects, topics] = await Promise.all([
+    Flashcard.find({ userId, ...(scopedSubjectFilter ? { subjectId: scopedSubjectFilter } : {}) }).select("_id subjectId topicId flashcardType question answer hint").lean(),
+    Subject.find({ userId, ...(scopedSubjectFilter ? { _id: scopedSubjectFilter } : {}) }).select("_id").lean(),
+    Topic.find({ userId, ...(scopedSubjectFilter ? { subjectId: scopedSubjectFilter } : {}) }).select("_id subjectId").lean(),
   ]);
+  const cardIds = rawCards.map(card => card._id);
+  const records = cardIds.length ? await ReviewRecord.find({ userId, flashcardId: { $in: cardIds } }).select("flashcardId result reviewedAt nextReviewAt questionType").sort({ reviewedAt: -1, _id: -1 }).lean() : [];
   const cards = rawCards.map(prepareCard);
   const usable = cards.filter(isUsableCard);
   const usableIds = new Set(usable.map((card) => card.id));

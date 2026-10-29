@@ -13,6 +13,7 @@ import { getSubjectMastery } from "@/lib/quiz/service";
 import { emptyTypeProgress } from "@/lib/quiz/types";
 import { SubjectFolder } from "@/models/SubjectFolder";
 import { SubjectFoldersOverview, type SubjectFolderSummary } from "@/components/subjects/subject-folders-overview";
+import { listSubjectFolders } from "@/lib/subject-folders/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,50 +42,27 @@ export default async function SubjectsPage() {
   try {
     await connectToDatabase();
     const userId = user._id;
-    const [subjectDocs, cards, topics, mastery, userSettings, folderDocs] = await Promise.all([
-      Subject.find({ userId }).select("_id name subjectFolderId").sort({ name: 1 }).lean(),
-      Flashcard.find({ userId }).select("_id subjectId").lean(),
-      Topic.aggregate<{ _id: typeof userId; count: number }>([{ $match: { userId } }, { $group: { _id: "$subjectId", count: { $sum: 1 } } }]),
-      getSubjectMastery(userId),
+    const [folderDocs,userSettings] = await Promise.all([
+      SubjectFolder.find({ userId }).select("_id").limit(1).lean(),
       User.findById(userId).select("settings.subjectLayout").lean(),
-      SubjectFolder.find({ userId }).select("_id name description position updatedAt").sort({ position: 1, _id: 1 }).lean(),
     ]);
-    unfiledCount = subjectDocs.filter(s => !s.subjectFolderId).length;
-    const groupedSubjects = new Map<string, number>();
-    for (const s of subjectDocs) if (s.subjectFolderId) groupedSubjects.set(String(s.subjectFolderId), (groupedSubjects.get(String(s.subjectFolderId)) ?? 0) + 1);
-    const groupedTopics = new Map<string, number>(), groupedCards = new Map<string, number>();
-    const subjectFolderById = new Map(subjectDocs.filter(s => s.subjectFolderId).map(s => [String(s._id), String(s.subjectFolderId)]));
-    for (const row of topics) { const folderId = subjectFolderById.get(String(row._id)); if (folderId) groupedTopics.set(folderId, row.count); }
-    for (const card of cards) { const folderId = subjectFolderById.get(String(card.subjectId)); if (folderId) groupedCards.set(folderId, (groupedCards.get(folderId) ?? 0) + 1); }
-    folderSummaries = folderDocs.map(f => ({ id: String(f._id), name: f.name, description: f.description ?? "", position: f.position, updatedAt: f.updatedAt.toISOString(), subjectCount: groupedSubjects.get(String(f._id)) ?? 0, topicCount: groupedTopics.get(String(f._id)) ?? 0, flashcardCount: groupedCards.get(String(f._id)) ?? 0 }));
-
     preferredLayout = userSettings?.settings?.subjectLayout === "list" ? "list" : "grid";
-
-    const counts = new Map<string, number>();
-    const topicCounts = new Map(topics.map((row) => [String(row._id), row.count]));
-    for (const card of cards) {
-      const subjectId = String(card.subjectId);
-      counts.set(subjectId, (counts.get(subjectId) ?? 0) + 1);
+    if(folderDocs.length){
+      [folderSummaries,unfiledCount]=await Promise.all([
+        listSubjectFolders(String(userId)),
+        Subject.countDocuments({userId,$or:[{subjectFolderId:null},{subjectFolderId:{$exists:false}}]}),
+      ]);
+    }else{
+      const [subjectDocs,cards,topics,mastery]=await Promise.all([
+        Subject.find({userId}).select("_id name").sort({name:1}).lean(),
+        Flashcard.aggregate<{_id:typeof userId;count:number}>([{$match:{userId}},{$group:{_id:"$subjectId",count:{$sum:1}}}]),
+        Topic.aggregate<{_id:typeof userId;count:number}>([{$match:{userId}},{$group:{_id:"$subjectId",count:{$sum:1}}}]),
+        getSubjectMastery(userId),
+      ]);
+      const counts=new Map(cards.map(row=>[String(row._id),row.count]));
+      const topicCounts=new Map(topics.map(row=>[String(row._id),row.count]));
+      subjects=subjectDocs.map(subject=>{const id=String(subject._id),stats=mastery.bySubject.get(id);return{id,name:subject.name,flashcardCount:counts.get(id)??0,usableCount:stats?.usable??0,topicCount:topicCounts.get(id)??0,masteredCount:stats?.mastered??0,completedRequirements:stats?.completedRequirements??0,totalRequirements:stats?.totalRequirements??0,typeMastery:mastery.byTypeBySubject.get(id)??emptyTypeProgress(),progress:stats?.progress??0};});
     }
-
-    subjects = subjectDocs.map((subject) => {
-      const id = String(subject._id);
-      const flashcardCount = counts.get(id) ?? 0;
-      const masteryStats = mastery.bySubject.get(id);
-      const masteredCount = masteryStats?.mastered ?? 0;
-      return {
-        id,
-        name: subject.name,
-        flashcardCount,
-        usableCount: masteryStats?.usable ?? 0,
-        topicCount: topicCounts.get(id) ?? 0,
-        masteredCount,
-        completedRequirements: masteryStats?.completedRequirements ?? 0,
-        totalRequirements: masteryStats?.totalRequirements ?? 0,
-        typeMastery: mastery.byTypeBySubject.get(id) ?? emptyTypeProgress(),
-        progress: masteryStats?.progress ?? 0,
-      };
-    });
   } catch (error) {
     console.error("My Subjects data could not be loaded.", error);
     loadFailed = true;

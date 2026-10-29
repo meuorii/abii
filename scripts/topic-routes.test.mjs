@@ -193,12 +193,47 @@ test("real authenticated Next.js routes and legacy Subject/Flashcard contracts",
     assert.equal(await db.collection("reviewrecords").countDocuments({ userId }), 0);
     assert.equal(await db.collection("quizsessions").countDocuments({ userId, status: "active" }), 0);
 
+    const folderA = await request("/api/subject-folders", "POST", { name: "Year 1" });
+    const folderB = await request("/api/subject-folders", "POST", { name: "Year 2" });
+    assert.equal(folderA.status, 201); assert.equal(folderB.status, 201);
+    const placedSubject = await request("/api/subjects", "POST", { name: "Move-safe subject", subjectFolderId: folderA.body.folder.id });
+    assert.equal(placedSubject.status, 201);
+    assert.equal(placedSubject.body.subject.subjectFolderId, folderA.body.folder.id);
+    const searchBeforeMove = await request("/api/subjects?q=move-safe");
+    assert.equal(searchBeforeMove.body.subjects[0].folderName, "Year 1");
+    const placedPath = `/api/subjects/${placedSubject.body.subject.id}`;
+    const placedTopic = await request(`${placedPath}/topics`, "POST", { name: "Preserved topic" });
+    const placedCard = await request(`${placedPath}/flashcards`, "POST", { topicId: placedTopic.body.topic.id, question: "Preserved question", answer: "Preserved answer" });
+    const countsBeforeMove = await request("/api/subject-folders");
+    const sourceSummary = countsBeforeMove.body.folders.find((folder) => folder.id === folderA.body.folder.id);
+    assert.deepEqual([sourceSummary.subjectCount, sourceSummary.topicCount, sourceSummary.flashcardCount], [1, 1, 1]);
+    assert.equal((await request(placedPath, "PATCH", { subjectFolderId: folderB.body.folder.id })).status, 200);
+    const searchAfterMove = await request("/api/subjects?q=MOVE-SAFE");
+    assert.equal(searchAfterMove.body.subjects[0].folderName, "Year 2");
+    const countsAfterMove = await request("/api/subject-folders");
+    const movedSummary = countsAfterMove.body.folders.find((folder) => folder.id === folderB.body.folder.id);
+    assert.deepEqual([movedSummary.subjectCount, movedSummary.topicCount, movedSummary.flashcardCount], [1, 1, 1]);
+    assert.equal(String((await db.collection("subjects").findOne({ _id: new mongoose.Types.ObjectId(placedSubject.body.subject.id) })).subjectFolderId), folderB.body.folder.id);
+    assert.equal((await db.collection("subjects").findOne({ _id: new mongoose.Types.ObjectId(placedSubject.body.subject.id) })).name, "Move-safe subject");
+    assert.equal((await request(`${placedPath}/topics`)).body.topics[0].id, placedTopic.body.topic.id);
+    assert.equal((await request(`${placedPath}/flashcards`)).body.cards[0].id, placedCard.body.card.id);
+    assert.equal((await request(placedPath, "PATCH", { subjectFolderId: null })).status, 200);
+    assert.equal((await db.collection("subjects").findOne({ _id: new mongoose.Types.ObjectId(placedSubject.body.subject.id) })).subjectFolderId, null);
+    assert.equal((await db.collection("subjects").findOne({ _id: new mongoose.Types.ObjectId(placedSubject.body.subject.id) })).name, "Move-safe subject");
+    const foreignFolderId = new mongoose.Types.ObjectId();
+    await db.collection("subjectfolders").insertOne({ _id: foreignFolderId, userId: foreignUserId, name: "Foreign folder", normalizedName: "foreign folder", description: "", position: 0, createdAt: new Date(), updatedAt: new Date() });
+    assert.equal((await request(placedPath, "PATCH", { subjectFolderId: folderB.body.folder.id })).status, 200);
+    assert.equal((await request(placedPath, "PATCH", { subjectFolderId: String(foreignFolderId) })).status, 404);
+    assert.equal((await request(placedPath, "PATCH", { name: "Renamed move-safe subject" })).status, 200);
+    assert.equal(String((await db.collection("subjects").findOne({ _id: new mongoose.Types.ObjectId(placedSubject.body.subject.id) })).subjectFolderId), folderB.body.folder.id);
+    assert.equal((await request(placedPath, "DELETE")).status, 200);
+
     const materialSubject = await request("/api/subjects", "POST", { name: "Materials cleanup" });
     const materialTopic = await request(`/api/subjects/${materialSubject.body.subject.id}/topics`, "POST", { name: "Cleanup topic" });
     assert.equal((await request(`/api/subjects/${materialSubject.body.subject.id}/flashcards`, "POST", { topicId: materialTopic.body.topic.id, question: "Cleanup card", answer: "Cleanup answer" })).status, 201);
     const materialClear = await request("/api/data/materials", "DELETE", {});
     assert.equal(materialClear.status, 200);
-    for (const collection of ["subjects", "topics", "flashcards", "reviewrecords", "quizsessions"]) assert.equal(await db.collection(collection).countDocuments({ userId }), 0, `${collection} should be cleared for this user`);
+    for (const collection of ["subjects", "topics", "flashcards", "reviewrecords", "quizsessions", "subjectfolders"]) assert.equal(await db.collection(collection).countDocuments({ userId }), 0, `${collection} should be cleared for this user`);
     assert.equal(await db.collection("topics").countDocuments({ userId: foreignUserId }), 1, "clearing materials must preserve another user's topics");
 
     const accountSubject = await request("/api/subjects", "POST", { name: "Account cleanup" });
@@ -207,7 +242,7 @@ test("real authenticated Next.js routes and legacy Subject/Flashcard contracts",
     const accountDelete = await request("/api/account", "DELETE", { confirmation: "DELETE" });
     assert.equal(accountDelete.status, 200);
     assert.equal(await db.collection("users").countDocuments({ _id: userId }), 0);
-    for (const collection of ["subjects", "topics", "flashcards", "reviewrecords", "quizsessions"]) assert.equal(await db.collection(collection).countDocuments({ userId }), 0, `${collection} should be deleted with the account`);
+    for (const collection of ["subjects", "topics", "flashcards", "reviewrecords", "quizsessions", "subjectfolders"]) assert.equal(await db.collection(collection).countDocuments({ userId }), 0, `${collection} should be deleted with the account`);
     assert.equal(await db.collection("topics").countDocuments({ userId: foreignUserId }), 1, "account deletion must preserve another user's topics");
   } catch (error) {
     throw new Error(`${error.message}\nNext server output:\n${output}`, { cause: error });

@@ -22,20 +22,23 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   let body: { name?: unknown; subjectFolderId?: unknown };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Please check the form and try again." }, { status: 400 }); }
   if (!body || typeof body !== "object" || Array.isArray(body) || !Object.keys(body).length) return NextResponse.json({ error: "Provide subject fields to update." }, { status: 400 });
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  if (!name || name.length > 100) return NextResponse.json({ error: "Enter a subject name between 1 and 100 characters." }, { status: 400 });
+  const name = "name" in body ? (typeof body.name === "string" ? body.name.trim() : "") : undefined;
+  if (name !== undefined && (!name || name.length > 100)) return NextResponse.json({ error: "Enter a subject name between 1 and 100 characters." }, { status: 400 });
   if (Object.keys(body).some(key => !["name", "subjectFolderId"].includes(key))) return NextResponse.json({ error: "Unsupported subject fields." }, { status: 400 });
   if ("subjectFolderId" in body && body.subjectFolderId !== null && (typeof body.subjectFolderId !== "string" || !isValidObjectId(body.subjectFolderId))) return NextResponse.json({ error: "Provide a valid subject folder ID." }, { status: 400 });
   try {
     await connectToDatabase();
     if (body.subjectFolderId && !await SubjectFolder.exists({ _id: body.subjectFolderId, userId: user._id })) return NextResponse.json({ error: "This subject folder could not be found." }, { status: 404 });
+    if (name !== undefined) {
     const duplicate = await Subject.findOne({ userId: user._id, _id: { $ne: subjectId }, name: { $regex: `^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" } }).select("_id").lean();
     if (duplicate) return NextResponse.json({ error: "You already have a subject with that name." }, { status: 409 });
-    const update: { name: string; subjectFolderId?: unknown } = { name };
+    }
+    const update: { name?: string; subjectFolderId?: unknown } = {};
+    if (name !== undefined) update.name = name;
     if ("subjectFolderId" in body) update.subjectFolderId = body.subjectFolderId;
     const subject = await Subject.findOneAndUpdate({ _id: subjectId, userId: user._id }, { $set: update }, { new: true, runValidators: true }).select("name subjectFolderId").lean();
     if (!subject) return NextResponse.json({ error: "This subject could not be found." }, { status: 404 });
-    return NextResponse.json({ name: subject.name, subjectFolderId: subject.subjectFolderId ? String(subject.subjectFolderId) : null });
+    return NextResponse.json({ id: String(subject._id), name: subject.name, subjectFolderId: subject.subjectFolderId ? String(subject.subjectFolderId) : null });
   } catch (error) {
     console.error("Unable to update subject.", error);
     return NextResponse.json({ error: "We couldn’t update this subject. Please try again." }, { status: 500 });

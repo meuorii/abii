@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { TypeProgress } from "@/lib/quiz/types";
 import { useRouter } from "next/navigation";
 import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
-import { BookOpen, Plus, Search, ArrowUpRight } from "lucide-react";
+import { BookOpen, Plus, Search, ArrowUpRight, FolderInput } from "lucide-react";
 import { ListChecks, PenLine, CheckCircle2, Shuffle } from "lucide-react";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 import { notifyAchievementActivity } from "@/lib/badges/client-sync";
+import { SubjectFolderCreateModal } from "@/components/subjects/subject-folder-create-modal";
+import type { SubjectFolderSummary } from "@/components/subjects/subject-folders-overview";
 
 export type SubjectItem = {
   id: string;
@@ -22,6 +24,7 @@ export type SubjectItem = {
   totalRequirements?: number;
   usableCount?: number;
   typeMastery: TypeProgress;
+  subjectFolderId?: string | null;
 };
 
 type SubjectLayout = "grid" | "list";
@@ -30,12 +33,13 @@ type SubjectsClientProps = {
   initialSubjects: SubjectItem[];
   initialLayout: SubjectLayout;
   subjectFolderId?: string | null;
+  subjectFolders?: SubjectFolderSummary[];
 };
 
-export function AddSubjectModal({ onClose, onCreated, subjectFolderId }: { onClose: () => void; onCreated: (subject: SubjectItem) => void; subjectFolderId?: string | null }) {
- const [name,setName]=useState(""); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const router=useRouter();
- async function handleSubmit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const trimmedName=name.trim(); if(!trimmedName){setError("Please enter a subject name.");return;} setSaving(true);setError(""); try { const response=await fetch("/api/subjects",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:trimmedName,subjectFolderId:subjectFolderId??null})}); const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data?.error||data?.message||"Could not create subject."); const raw=data?.subject??data?.data?.subject??data; const subjectId=String(raw?.id??raw?._id??""); if(!subjectId)throw new Error("The subject was created, but its details could not be loaded. Please refresh."); onCreated({id:subjectId,name:String(raw?.name??trimmedName),flashcardCount:Number(raw?.flashcardCount??0),topicCount:0,progress:Number(raw?.progress??0),masteredCount:Number(raw?.masteredCount??0),typeMastery:raw?.typeMastery??{"multiple-choice":{done:0,total:0},identification:{done:0,total:0},"true-false":{done:0,total:0},random:{done:0,total:0}}}); notifyAchievementActivity(); router.refresh();onClose(); } catch(cause){setError(cause instanceof Error?cause.message:"Something went wrong. Please try again.");}finally{setSaving(false);} }
- return <Modal open onClose={onClose} action="create" title="Create a subject" description="Give your study materials a place to belong." busy={saving} footer={<><button type="button" onClick={onClose} disabled={saving} className={modalCancelClass}>Cancel</button><button type="submit" form="create-subject-form" disabled={saving} className={modalPrimaryClass}>{saving?"Creating?":"Create Subject"}</button></>}><form id="create-subject-form" onSubmit={handleSubmit} className="space-y-3"><label htmlFor="subject-name" className="block text-[13px] font-semibold text-[#2F2930]">Subject Name <span className="text-[#F04469]">*</span></label><input id="subject-name" required maxLength={100} value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Biology" className="min-h-12 w-full rounded-xl border border-[#E8E2E5] bg-white px-4 text-sm text-[#2F2930] outline-none placeholder:text-[#A49AA0] focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/15"/>{error&&<p role="alert" className="text-sm text-[#C65363]">{error}</p>}</form></Modal>;
+export function AddSubjectModal({ onClose, onCreated, subjectFolderId, subjectFolders=[] }: { onClose: () => void; onCreated: (subject: SubjectItem) => void; subjectFolderId?: string | null; subjectFolders?:SubjectFolderSummary[] }) {
+ const [name,setName]=useState(""); const [selectedFolder,setSelectedFolder]=useState(subjectFolderId??""); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const router=useRouter();
+ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const trimmedName=name.trim(); if(!trimmedName){setError("Please enter a subject name.");return;} setSaving(true);setError(""); try { const response=await fetch("/api/subjects",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:trimmedName,subjectFolderId:selectedFolder||null})}); const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data?.error||data?.message||"Could not create subject."); const raw=data?.subject??data?.data?.subject??data; const subjectId=String(raw?.id??raw?._id??""); if(!subjectId)throw new Error("The subject was created, but its details could not be loaded. Please refresh."); onCreated({id:subjectId,name:String(raw?.name??trimmedName),subjectFolderId:selectedFolder||null,flashcardCount:Number(raw?.flashcardCount??0),topicCount:0,progress:Number(raw?.progress??0),masteredCount:Number(raw?.masteredCount??0),typeMastery:raw?.typeMastery??{"multiple-choice":{done:0,total:0},identification:{done:0,total:0},"true-false":{done:0,total:0},random:{done:0,total:0}}}); notifyAchievementActivity(); router.refresh();onClose(); } catch(cause){setError(cause instanceof Error?cause.message:"Something went wrong. Please try again.");}finally{setSaving(false);} }
+ return <Modal open onClose={onClose} action="create" title="Create a subject" description="Give your study materials a place to belong." busy={saving} footer={<><button type="button" onClick={onClose} disabled={saving} className={modalCancelClass}>Cancel</button><button type="submit" form="create-subject-form" disabled={saving} className={modalPrimaryClass}>{saving?"Creating…":"Create Subject"}</button></>}><form id="create-subject-form" onSubmit={handleSubmit} className="space-y-3"><label htmlFor="subject-name" className="block text-[13px] font-semibold text-[#2F2930]">Subject Name <span className="text-[#F04469]">*</span></label><input id="subject-name" required maxLength={100} value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Data Structures and Algorithms" className="min-h-12 w-full rounded-xl border border-[#E8E2E5] bg-white px-4 text-sm text-[#2F2930] outline-none placeholder:text-[#A49AA0] focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/15"/><label htmlFor="subject-folder-select" className="block text-[13px] font-semibold text-[#2F2930]">Folder (Optional)</label><select id="subject-folder-select" value={selectedFolder} onChange={e=>setSelectedFolder(e.target.value)} className="min-h-12 w-full rounded-xl border border-[#E8E2E5] bg-white px-4 text-sm outline-none focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/10"><option value="">Unfiled Subjects</option>{subjectFolders.map(folder=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select>{error&&<p role="alert" className="text-sm text-[#C65363]">{error}</p>}</form></Modal>;
 }
 
 const masteryIndicators = [
@@ -84,13 +88,19 @@ function TypeMasteryIndicators({ mastery }: { mastery: TypeProgress }) {
   );
 }
 
-export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId }: SubjectsClientProps) {
+export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId, subjectFolders=[] }: SubjectsClientProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [subjects, setSubjects] = useState<SubjectItem[]>(initialSubjects);
   const [query, setQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [layout] = useState<SubjectLayout>(initialLayout);
   const [notice, setNotice] = useState("");
+  const [createFolderOpen,setCreateFolderOpen]=useState(false);
+  const [moving,setMoving]=useState<SubjectItem|null>(null);
+  const [destination,setDestination]=useState("");
+  const [movingBusy,setMovingBusy]=useState(false);
+  useEffect(()=>{const open=()=>setIsModalOpen(true);window.addEventListener("abii:open-add-subject",open);return()=>window.removeEventListener("abii:open-add-subject",open);},[]);
 
   const filteredSubjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -99,6 +109,7 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
   }, [subjects, query]);
 
   function handleCreated(subject: SubjectItem) {
+    if((subject.subjectFolderId??null)!==(subjectFolderId??null))return;
     setSubjects((current) => {
       if (current.some((item) => item.id === subject.id)) return current;
       return [...current, subject].sort((a, b) => a.name.localeCompare(b.name));
@@ -106,6 +117,12 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
     setNotice(`“${subject.name}” was created successfully.`);
     toast({ kind: "success", title: "Subject created", message: `${subject.name} is ready for your flashcards.` });
     window.setTimeout(() => setNotice(""), 3500);
+  }
+  async function moveSubject(){
+    if(!moving||destination===(subjectFolderId??""))return;
+    setMovingBusy(true);
+    try{const res=await fetch("/api/subjects/"+moving.id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({subjectFolderId:destination||null})});const data=await res.json();if(!res.ok)throw new Error(data.error||"Could not move this subject.");setSubjects(current=>current.filter(item=>item.id!==moving.id));toast({kind:"success",title:"Subject moved",message:moving.name+" was moved successfully."});setMoving(null);router.refresh();}
+    catch(error){toast({kind:"error",title:"Could not move subject",message:error instanceof Error?error.message:"Please try again."});}finally{setMovingBusy(false);}
   }
 
   return (
@@ -118,6 +135,8 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
               {subjects.length} {subjects.length === 1 ? "subject" : "subjects"} to organize your learning.
             </p>
           </div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          {subjectFolderId===undefined&&<button type="button" onClick={()=>setCreateFolderOpen(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#F0CBD7] bg-white px-4 py-2.5 text-sm font-semibold text-[#C65380] hover:bg-[#FFF6F8]"><Plus className="h-4 w-4"/>New Folder</button>}
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
@@ -125,7 +144,7 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
           >
             <Plus aria-hidden="true" className="h-4 w-4" />
             Add subject
-          </button>
+          </button></div>
         </div>
 
         {notice ? (
@@ -172,9 +191,8 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
         ) : (
           <div className={layout === "grid" ? "grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3" : "flex flex-col gap-3"}>
             {filteredSubjects.map((subject) => (
-              <Link
+              <article
                 key={subject.id}
-                href={`/subjects/${subject.id}`}
                 className={`group block rounded-2xl border border-[#F0E5E9] bg-white transition duration-200 hover:-translate-y-0.5 hover:border-[#F3C4D3] hover:shadow-[0_8px_28px_rgba(92,49,66,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${
                   layout === "grid" ? "p-5 sm:p-6" : "p-4 sm:flex sm:items-center sm:gap-5 sm:p-5"
                 }`}
@@ -182,27 +200,30 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
                 <div className={`flex min-w-0 items-start gap-3 ${layout === "list" ? "sm:flex-1" : ""}`}>
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFF0F5] text-lg text-[#D85E86] transition group-hover:bg-[#FFE5EE]" aria-hidden="true"><BookOpen className="h-5 w-5" /></div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="line-clamp-2 break-words font-bold text-[#2F2930] group-hover:text-[#C65380]">{subject.name}</h3>
+                    <h3 className="line-clamp-2 break-words font-bold text-[#2F2930]"><Link href={"/subjects/"+subject.id} className="hover:text-[#C65380] focus-visible:outline-none focus-visible:underline">{subject.name}</Link></h3>
                     <p className="mt-1 text-sm text-[#756B72]">
                       {subject.topicCount} {subject.topicCount === 1 ? "topic" : "topics"} <span aria-hidden="true">·</span> {subject.flashcardCount} {subject.flashcardCount === 1 ? "flashcard" : "flashcards"}
                     </p>
                   </div>
-                  <ArrowUpRight className="mt-1 h-4 w-4 text-[#B5A7AE] transition group-hover:translate-x-0.5 group-hover:text-[#D85E86]" aria-hidden="true" />
+                  <Link href={"/subjects/"+subject.id} aria-label={"View "+subject.name} className="mt-1 rounded text-[#B5A7AE] hover:text-[#D85E86] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"><ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link>
                 </div>
 
                 <div className={`${layout === "grid" ? "mt-4" : "mt-4 sm:mt-0 sm:w-[42%] sm:max-w-xs"}`}>
                   <MasteryProgressBar label="Mastery" ariaLabel={`${subject.name} mastery progress`} progress={subject.progress} />
                   <TypeMasteryIndicators mastery={subject.typeMastery} />
+                  <button type="button" onClick={()=>{setMoving(subject);setDestination(subjectFolderId??"");}} className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#F0CBD7] px-3 text-xs font-semibold text-[#C65380] hover:bg-[#FFF6F8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"><FolderInput className="h-4 w-4"/>Move Subject</button>
                 </div>
-              </Link>
+              </article>
             ))}
           </div>
         )}
       </section>
 
       {isModalOpen ? (
-        <AddSubjectModal subjectFolderId={subjectFolderId} onClose={() => setIsModalOpen(false)} onCreated={handleCreated} />
+        <AddSubjectModal subjectFolderId={subjectFolderId} subjectFolders={subjectFolders} onClose={() => setIsModalOpen(false)} onCreated={handleCreated} />
       ) : null}
+      {createFolderOpen&&<SubjectFolderCreateModal onClose={()=>setCreateFolderOpen(false)} onCreated={()=>setCreateFolderOpen(false)}/>}
+      {moving&&<Modal open onClose={()=>!movingBusy&&setMoving(null)} action="update" title="Move Subject" description="Choose where you'd like to organize this subject." busy={movingBusy} footer={<><button type="button" disabled={movingBusy} onClick={()=>setMoving(null)} className={modalCancelClass}>Cancel</button><button type="button" disabled={movingBusy||destination===(subjectFolderId??"")} onClick={moveSubject} className={modalPrimaryClass}>{movingBusy?"Moving…":"Move Subject"}</button></>}><div className="space-y-3"><p className="font-semibold text-[#2F2930]">{moving.name}</p><p className="text-sm text-[#756B72]">Current folder: {subjectFolderId?subjectFolders.find(f=>f.id===subjectFolderId)?.name??"Current folder":"Unfiled Subjects"}</p><label htmlFor="move-subject-destination" className="block text-sm font-semibold">Destination Folder</label><select id="move-subject-destination" value={destination} onChange={e=>setDestination(e.target.value)} className="min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3 text-sm outline-none focus:border-[#FF6F96]"><option value="">Unfiled Subjects</option>{subjectFolders.map(folder=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></div></Modal>}
     </>
   );
 }

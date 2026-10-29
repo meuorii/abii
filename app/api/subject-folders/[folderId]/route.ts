@@ -1,5 +1,6 @@
 import { handleSubjectFolder } from "@/lib/subject-folders/http";
 export const runtime = "nodejs";
-export const GET = handleSubjectFolder;
-export const PATCH = handleSubjectFolder;
-export const DELETE = handleSubjectFolder;
+type RouteContext = { params: Promise<{ folderId: string }> };
+export const GET = (request: Request, context: RouteContext) => handleSubjectFolder(request, context);
+export const PATCH = (request: Request, context: RouteContext) => handleSubjectFolder(request, context);
+export const DELETE = (request: Request, context: RouteContext) => handleSubjectFolder(request, context);

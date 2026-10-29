@@ -5,12 +5,12 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { SubjectFolderError, matchFolderVersion } from "./validation";
 import { changeSubjectFolder, createSubjectFolder, getSubjectFolder, listSubjectFolders } from "./service";
 
-type Context = { params: Promise<{ folderId?: string }> };
-export async function handleSubjectFolder(request: Request, context: Context) {
+type Context = { params?: Promise<{ folderId?: string }> };
+export async function handleSubjectFolder(request: Request, context: Context = {}) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new SubjectFolderError(401, "Please sign in to manage subject folders.");
-    const { folderId } = await context.params;
+    const { folderId } = context.params ? await context.params : {};
     await connectToDatabase();
     const userId = String(user._id);
     if (request.method === "GET") {

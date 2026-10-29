@@ -2,12 +2,12 @@ import "server-only";
 import mongoose, { Schema, type InferSchemaType, type Model } from "mongoose";
 
 export function normalizeSubjectFolderName(value: string) {
-  return value.normalize("NFKC").trim().replace(/\s+/gu, " ").toLocaleLowerCase();
+  return value.normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase();
 }
 
 const subjectFolderSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  name: { type: String, required: true, trim: true, minlength: 1, maxlength: 100 },
+  name: { type: String, required: true, trim: true, set: (value: string) => value.normalize("NFKC").trim().replace(/\s+/gu, " "), minlength: 1, maxlength: 100 },
   normalizedName: { type: String, required: true, maxlength: 100 },
   description: { type: String, default: "", maxlength: 500 },
   position: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },

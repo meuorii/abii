@@ -14,8 +14,8 @@ export async function listSubjectFolders(userId: string) {
   const [folders, subjects, topics, cards] = await Promise.all([
     SubjectFolder.find(s).sort({ position: 1, _id: 1 }).lean(),
     Subject.aggregate<{ _id: Types.ObjectId; count: number }>([{ $match: { ...s, subjectFolderId: { $ne: null } } }, { $group: { _id: "$subjectFolderId", count: { $sum: 1 } } }]),
-    Subject.aggregate<{ _id: Types.ObjectId; count: number }>([{ $match: { ...s, subjectFolderId: { $ne: null } } }, { $lookup: { from: Topic.collection.name, localField: "_id", foreignField: "subjectId", as: "topics" } }, { $unwind: "$topics" }, { $group: { _id: "$subjectFolderId", count: { $sum: 1 } } }]),
-    Subject.aggregate<{ _id: Types.ObjectId; count: number }>([{ $match: { ...s, subjectFolderId: { $ne: null } } }, { $lookup: { from: Flashcard.collection.name, localField: "_id", foreignField: "subjectId", as: "cards" } }, { $unwind: "$cards" }, { $group: { _id: "$subjectFolderId", count: { $sum: 1 } } }]),
+    Subject.aggregate<{ _id: Types.ObjectId; count: number }>([{ $match: { ...s, subjectFolderId: { $ne: null } } }, { $lookup: { from: Topic.collection.name, let: { subjectKey: "$_id", ownerKey: "$userId" }, pipeline: [{ $match: { $expr: { $and: [{ $eq: ["$subjectId", "$$subjectKey"] }, { $eq: ["$userId", "$$ownerKey"] }] } } }], as: "topics" } }, { $unwind: "$topics" }, { $group: { _id: "$subjectFolderId", count: { $sum: 1 } } }]),
+    Subject.aggregate<{ _id: Types.ObjectId; count: number }>([{ $match: { ...s, subjectFolderId: { $ne: null } } }, { $lookup: { from: Flashcard.collection.name, let: { subjectKey: "$_id", ownerKey: "$userId" }, pipeline: [{ $match: { $expr: { $and: [{ $eq: ["$subjectId", "$$subjectKey"] }, { $eq: ["$userId", "$$ownerKey"] }] } } }], as: "cards" } }, { $unwind: "$cards" }, { $group: { _id: "$subjectFolderId", count: { $sum: 1 } } }]),
   ]);
   const toMap = (rows: { _id: Types.ObjectId; count: number }[]) => new Map(rows.map(row => [String(row._id), row.count]));
   const subjectCounts = toMap(subjects), topicCounts = toMap(topics), flashcardCounts = toMap(cards);

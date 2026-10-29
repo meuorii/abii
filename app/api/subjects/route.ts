@@ -8,6 +8,26 @@ import { evaluateAffectedBadges, type NewlyUnlockedBadge } from "@/lib/badges/se
 
 export const runtime = "nodejs";
 
+export async function GET(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Please sign in to search subjects." }, { status: 401 });
+  const query = new URL(request.url).searchParams.get("q")?.trim() ?? "";
+  if (!query) return NextResponse.json({ subjects: [] }, { headers: { "Cache-Control": "no-store" } });
+  if (query.length > 100) return NextResponse.json({ error: "Search must be 100 characters or fewer." }, { status: 400 });
+  try {
+    await connectToDatabase();
+    const escaped = escapeRegex(query);
+    const rows = await Subject.find({ userId: user._id, name: { $regex: escaped, $options: "i" } }).select("_id name subjectFolderId").sort({ name: 1 }).limit(25).lean();
+    const folderIds = [...new Set(rows.flatMap(row => row.subjectFolderId ? [String(row.subjectFolderId)] : []))];
+    const folders = await SubjectFolder.find({ userId: user._id, _id: { $in: folderIds } }).select("_id name").lean();
+    const names = new Map(folders.map(folder => [String(folder._id), folder.name]));
+    return NextResponse.json({ subjects: rows.map(row => ({ id: String(row._id), name: row.name, folderId: row.subjectFolderId ? String(row.subjectFolderId) : null, folderName: row.subjectFolderId ? names.get(String(row.subjectFolderId)) ?? "Unfiled Subjects" : "Unfiled Subjects" })) }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    console.error("Subject search failed.", error);
+    return NextResponse.json({ error: "Could not search subjects." }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Please sign in to create a subject." }, { status: 401 });
@@ -49,7 +69,7 @@ export async function POST(request: Request) {
     let newlyUnlockedBadges: NewlyUnlockedBadge[] = [];
     try { newlyUnlockedBadges = await evaluateAffectedBadges(String(userId)); }
     catch (badgeError) { console.error("Subject saved; badge evaluation will retry during reconciliation.", badgeError); }
-    return NextResponse.json({ subject: { id: String(subject._id), name: subject.name, flashcardCount: 0, progress: 0 }, newlyUnlockedBadges }, { status: 201 });
+    return NextResponse.json({ subject: { id: String(subject._id), name: subject.name, subjectFolderId: subject.subjectFolderId ? String(subject.subjectFolderId) : null, flashcardCount: 0, progress: 0 }, newlyUnlockedBadges }, { status: 201 });
   } catch (error) {
     console.error("Subject creation failed.", error);
     return NextResponse.json({ error: "We couldn’t save that subject right now. Please try again." }, { status: 500 });

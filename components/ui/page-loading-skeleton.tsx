@@ -9,6 +9,7 @@ export type PageLoadingVariant =
   | "subjects"
   | "subject-detail"
   | "folder-detail"
+  | "subject-folder-detail"
   | "topic-detail"
   | "review"
   | "quiz-setup"
@@ -239,6 +240,17 @@ function FolderDetailSkeleton() {
   </div>;
 }
 
+function SubjectFolderDetailSkeleton() {
+  return <div className="min-w-0 space-y-5">
+    <nav aria-label="Breadcrumb" className="flex items-center gap-2"><Bar className="h-3 w-20"/><Bar className="h-4 w-4 rounded-full"/><Bar className="h-3 w-40"/></nav>
+    <section aria-hidden="true" className="relative isolate min-h-[280px] overflow-hidden rounded-[1.35rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[300px]">
+      <div className="relative z-10 flex min-h-[280px] items-center sm:min-h-[300px]"><div className="max-w-[68%] space-y-3 px-5 py-6 sm:max-w-[62%] sm:px-8"><Bar className="h-7 w-full max-w-[270px] bg-[#EED7E0]"/><Bar className="h-3 w-44"/><Bar className="mt-4 h-8 w-full max-w-[380px] bg-[#EED7E0]"/><Bar className="h-8 w-4/5 max-w-[300px] bg-[#EED7E0]"/><Bar className="mt-2 h-3 w-full max-w-[360px]"/><Bar className="h-3 w-4/5 max-w-[280px]"/><Bar className="mt-2 h-11 w-32 rounded-xl bg-[#F3D4DF]"/></div></div>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-[36%] items-end justify-center"><Bar className="absolute bottom-0 right-[8%] h-[66%] w-[76%] rounded-t-[48%] rounded-b-[2rem] bg-[#FFE6EE]"/><Bar className="absolute bottom-[42%] right-[19%] h-[48%] w-[58%] rounded-full bg-[#F7D5E0]"/><Bar className="absolute bottom-[63%] right-[62%] h-6 w-6 rounded-full bg-[#F7D5E0]"/><Bar className="absolute bottom-[63%] right-[9%] h-6 w-6 rounded-full bg-[#F7D5E0]"/></div>
+    </section>
+    <section className="space-y-4" aria-hidden="true"><div className="flex flex-wrap items-center justify-between gap-3"><div className="space-y-2"><Bar className="h-5 w-32"/><Bar className="h-3 w-64 max-w-[75vw]"/></div><Bar className="h-11 w-32 rounded-xl"/></div><Bar className="h-11 w-full max-w-xl rounded-xl"/><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[0,1,2,3,4,5].map(i=><CardSkeleton key={i} className="min-h-[170px]"><div className="flex gap-3"><Bar className="h-11 w-11 shrink-0 rounded-xl bg-[#FFF0F5]"/><div className="flex-1 space-y-2"><Bar className="h-4 w-4/5"/><Bar className="h-3 w-2/3"/></div></div><Bar className="mt-5 h-2.5 w-full rounded-full"/><div className="mt-4 flex gap-2"><Bar className="h-8 w-8 rounded-full"/><Bar className="h-8 w-8 rounded-full"/><Bar className="h-8 w-8 rounded-full"/><Bar className="h-8 w-8 rounded-full"/></div></CardSkeleton>)}</div></section>
+  </div>;
+}
+
 function Content({ variant }: { variant: PageLoadingVariant }) {
   switch (variant) {
     case "dashboard":
@@ -249,6 +261,8 @@ function Content({ variant }: { variant: PageLoadingVariant }) {
       return <div className="space-y-5"><Bar className="h-4 w-44" /><Hero /><MetricCards count={4} /><div className="flex items-center justify-between"><Bar className="h-5 w-40" /><Bar className="h-9 w-28 rounded-full" /></div><div className="grid gap-3 md:grid-cols-2"><CardSkeleton className="min-h-[150px]"><Bar className="h-3 w-24" /><Bar className="mt-5 h-4 w-full" /><Bar className="mt-3 h-3 w-2/3" /></CardSkeleton><CardSkeleton className="min-h-[150px]"><Bar className="h-3 w-24" /><Bar className="mt-5 h-4 w-full" /><Bar className="mt-3 h-3 w-2/3" /></CardSkeleton></div></div>;
     case "folder-detail":
       return <FolderDetailSkeleton />;
+    case "subject-folder-detail":
+      return <SubjectFolderDetailSkeleton />;
     case "topic-detail":
       return <TopicDetailSkeleton />;
     case "review":
@@ -267,7 +281,7 @@ function Content({ variant }: { variant: PageLoadingVariant }) {
 }
 
 export function PageLoadingSkeleton({ variant, withShell = true }: { variant: PageLoadingVariant; withShell?: boolean }) {
-  const pageSpacing = variant === "folder-detail"
+  const pageSpacing = variant === "folder-detail" || variant === "subject-folder-detail"
     ? "min-w-0 space-y-4 p-4 pb-24 sm:p-5 xl:p-6"
     : variant === "finish"
     ? "w-full px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 lg:px-7 lg:pb-7"
