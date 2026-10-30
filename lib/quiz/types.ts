@@ -62,6 +62,8 @@ export type PublicQuestion = {
   itemCount?: number;
   round: number;
   cardIndex: number;
+  previouslyIncorrect?: boolean;
+  incorrectLastRound?: boolean;
 };
 export type QuestionResult = {
   correct: boolean;

@@ -10,7 +10,7 @@ import { TypeIcon } from "@/components/review/review-setup";
 import { Mascot } from "@/components/ui/mascot";
 import { PageLoadingSkeleton } from "@/components/ui/page-loading-skeleton";
 import { QUIZ_TYPE_LABELS, type PublicSession, type QuestionResult, type QuizSummary, type QuizType } from "@/lib/quiz/types";
-import { Check, X, Lightbulb } from "lucide-react";
+import { Check, X, Lightbulb, RotateCcw } from "lucide-react";
 import { QuizAnswerFeedback } from "@/components/review/quiz-answer-feedback";
 import { QuizCompletion } from "@/components/review/quiz-completion";
 import { classifyFinishResponse, isPublicSessionForId, isQuizSummary } from "@/lib/quiz/finish-response.mjs";
@@ -313,8 +313,10 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         const retrySession = outcome.session;
         const nextQuestions = retrySession.questions;
         const nextResults = retrySession.results;
-        const first = nextQuestions.findIndex((q) => !nextResults[q.index]);
+        const first = firstUnansweredQuestion(nextQuestions.map((q) => ({ ...q, answered: Boolean(nextResults[q.index]) })));
         const round = nextQuestions[first >= 0 ? first : nextQuestions.length - 1]?.round ?? 2;
+        const roundQuestions = nextQuestions.filter((q) => q.round === round);
+        const hasIncorrectToReview = roundQuestions.some((q) => q.incorrectLastRound);
         setCurrentSession(retrySession);
         setQuestions(nextQuestions);
         setResults(nextResults);
@@ -326,8 +328,8 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         setItemAnswers([]);
         setHintOpen(false);
         setAnswerExpanded(false);
-        setRoundNotice(`Round ${round}: these cards still need ${target} consecutive correct answers in ${QUIZ_TYPE_LABELS[initial.type]}. A wrong answer resets this quiz type’s streak.`);
-        toast({ kind: "info", title: `Round ${round} started`, message: "Keep going — these cards need a little more practice." });
+        setRoundNotice(`${hasIncorrectToReview ? `Round ${round} — Let's review your mistakes first. Questions you missed in the previous round will appear first, followed by cards that still need more practice.` : `Round ${round} — Keep building your mastery. You're making progress! A few more correct answers will help you complete these cards.`} These cards need ${target} consecutive correct answers in ${QUIZ_TYPE_LABELS[initial.type]}; a wrong answer resets this quiz type's streak.`);
+        toast({ kind: "info", title: `Round ${round} started`, message: hasIncorrectToReview ? "Questions you missed will appear first." : "Keep going — these cards need a little more practice." });
         return;
       }
       if (outcome.kind === "complete") {
@@ -439,10 +441,11 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         </div>
 
         <section aria-labelledby="question-heading" className="order-2 min-w-0 rounded-2xl border border-[#E8EAF0] bg-white p-4 sm:p-6 lg:order-none lg:col-start-1 lg:row-start-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm text-[#6C879C]" aria-live="polite">Question <span className="font-bold text-[#153B56]">{index + 1}</span> of <span className="font-bold text-[#153B56]">{total}</span></p>
             <span className="inline-flex items-center gap-1" aria-label={`Card mastery ${currentStreak} of ${target}`} title="Correct in a row for this card"><span className="mr-1 text-[11px] text-[#8B7C84]">Mastery</span>{Array.from({ length: target }).map((_, i) => <span key={i} className={`h-2 w-2 rounded-full ${i < currentStreak ? "bg-[#FF6F96]" : "bg-[#F3E9ED]"}`} />)}</span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1DDE4] bg-[#FFF7F9] px-3 py-1 text-xs font-medium text-[#C65380]"><TypeIcon type={question.type} className="h-3.5 w-3.5" />{currentRound > 1 ? `Retry · ${questionTypeLabel(question.type)}` : questionTypeLabel(question.type)}</span>
+            {question.previouslyIncorrect === true && <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1DDE4] bg-[#FFF7F9] px-2.5 py-1 text-xs font-medium text-[#C65380]"><RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />Previously Incorrect</span>}
           </div>
           {roundNotice && currentRound > 1 && <p role="status" className="mt-3 rounded-xl border border-[#F1DDE4] bg-[#FFF7F9] px-3.5 py-3 text-sm text-[#6C4A58]">{roundNotice}</p>}
 

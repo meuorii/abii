@@ -11,6 +11,7 @@ import { ACTIVE_SESSION_INACTIVITY_DAYS, ENUM_MAX_ITEMS, ENUM_ORDER_MATTERS, MAS
 import { normalizeText, sanitizeTyped } from "./normalize";
 import { computeNextReviewAt } from "./schedule";
 import { currentRoundProgress } from "./resume-state";
+import { priorMistakeState, prioritizePending } from "./round-priority";
 import { recordAchievementEvent } from "@/lib/badges/repository";
 import { studyDayKey } from "@/lib/badges/study-day";
 import { User } from "@/models/User";
@@ -433,6 +434,7 @@ export function toPublicSession(session: SessionDoc, streaks?: Map<string, numbe
     type: questionType(q, session),
     round: q.round ?? 1,
     cardIndex: q.origin ?? index,
+    ...priorMistakeState(q, session.questions),
     prompt: q.prompt,
     hint: q.hint ?? null,
     ...(["multiple-choice", "enumeration-multiple-choice"].includes(questionType(q, session)) ? { options: q.options ?? [] } : {}),
@@ -610,7 +612,8 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
       const usable = await loadUsableCards(userId);
       const byId = new Map(usable.map((c) => [c.id, c]));
       const round = session.questions.reduce((max, q) => Math.max(max, q.round ?? 1), 1) + 1;
-      const next = shuffle(pending).flatMap(([origin, q]) => {
+      const prioritized = prioritizePending(pending.map(([origin, question]) => ({ origin, question, correct: question.correct })), shuffle);
+      const next = prioritized.flatMap(({ origin, question: q }) => {
         const card = byId.get(String(q.flashcardId));
         const built = card ? buildQuestionForCard(card, usable, session.type) : null;
         return built ? [{ ...built, flashcardId: new Types.ObjectId(built.flashcardId), round, origin, answered: false }] : [];
