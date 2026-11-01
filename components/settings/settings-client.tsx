@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast-provider";
 import { Modal, modalCancelClass, modalDangerClass } from "@/components/ui/modal";
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -27,6 +28,7 @@ function SectionCard({ icon, title, description, children }: { icon: React.React
 function InlineNotice({ notice }: { notice: Notice }) { if (!notice) return null; return <p role={notice.kind === "error" ? "alert" : "status"} className={`mt-3 rounded-xl px-3.5 py-2.5 text-sm ${notice.kind === "error" ? "bg-[#FFF1F1] text-[#B84352]" : "bg-[#EAF8F0] text-[#28734A]"}`}>{notice.text}</p>; }
 
 export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
+  const router = useRouter();
   const { toast } = useToast();
   const [preferences, setPreferences] = useState<Preferences>(() => ({ ...defaultPreferences, ...(initialUser.settings ?? {}), defaultLandingPage: initialUser.settings?.defaultLandingPage === "/favorites" ? "/dashboard" : initialUser.settings?.defaultLandingPage ?? defaultPreferences.defaultLandingPage }));
   const [profile, setProfile] = useState({ name: initialUser.name, email: initialUser.email });
@@ -88,7 +90,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
   }
   async function saveProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving("profile"); setNoticeFor("profile", null);
-    try { const data = await request("/api/account/profile", "PATCH", profile); setProfile(data.user); setNoticeFor("profile", { kind: "success", text: data.message || "Account details updated." }); }
+    try { const data = await request("/api/account/profile", "PATCH", profile); setProfile(data.user); window.dispatchEvent(new CustomEvent("abii-profile-name-updated", { detail: { name: data.user.name } })); setNoticeFor("profile", { kind: "success", text: data.message || "Account details updated." }); }
     catch (error) { setNoticeFor("profile", { kind: "error", text: error instanceof Error ? error.message : "Could not update account details." }); }
     finally { setSaving(""); }
   }
@@ -143,7 +145,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
 
   async function changePassword(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving("password"); setNoticeFor("password", null);
-    try { const data = await request("/api/account/password", "PATCH", { currentPassword, newPassword, confirmPassword }); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); setNoticeFor("password", { kind: "success", text: data.message }); window.setTimeout(() => { window.location.href = data.redirectTo || "/login"; }, 1200); }
+    try { const data = await request("/api/account/password", "PATCH", { currentPassword, newPassword, confirmPassword }); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); setNoticeFor("password", { kind: "success", text: data.message }); window.setTimeout(() => { router.replace(data.redirectTo || "/login"); }, 1200); }
     catch (error) { setNoticeFor("password", { kind: "error", text: error instanceof Error ? error.message : "Could not change password." }); }
     finally { setSaving(""); }
   }
@@ -156,7 +158,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
         const blob = await response.blob(); const objectUrl = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = objectUrl; link.download = `abii-study-data-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(link); link.click(); link.remove(); window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000); setNoticeFor("export", { kind: "success", text: "Your study data export is ready." });
       } else {
         const data = await request(url, method, body); setNoticeFor(key === "history" || key === "materials" || key === "account" ? key : "export", { kind: "success", text: data.message || "Done." }); if (key === "history" || key === "materials") setConfirmAction(null);
-        if (data.redirectTo) window.setTimeout(() => { window.location.href = data.redirectTo; }, 900);
+        if (data.redirectTo) window.setTimeout(() => { router.replace(data.redirectTo); }, 900);
       }
     } catch (error) { setNoticeFor(key === "history" || key === "materials" || key === "account" ? key : "export", { kind: "error", text: error instanceof Error ? error.message : "Something went wrong." }); }
     finally { setSaving(""); }

@@ -57,7 +57,7 @@ export async function getCurrentUser() {
   const userId = await readSessionUserId();
   if (!userId) return null;
   await connectToDatabase();
-  return User.findById(userId).select("name email createdAt").lean();
+  return User.findById(userId).select("name email createdAt profileImage").lean();
 }
 
 export async function destroySession(): Promise<void> {

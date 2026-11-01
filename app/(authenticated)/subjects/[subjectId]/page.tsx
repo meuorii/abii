@@ -2,7 +2,6 @@ import { isValidObjectId } from "mongoose";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { AppShell } from "@/components/app-shell";
 import { SubjectDetailClient, type SubjectDetailData } from "@/components/subjects/subject-detail-client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -75,7 +74,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
     })),
   };
   return (
-    <AppShell pageTitle={subject.name} pageDescription="Your subject and study cards" userName={user.name}>
+    
       <div className="space-y-3 p-4 pb-24 sm:space-y-4 sm:p-5 sm:pb-24 xl:p-6">
         <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs sm:text-sm">
           <Link href="/subjects" className="font-medium text-[#75889A] transition-colors hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] rounded">My Subjects</Link>
@@ -107,7 +106,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
 
     <SubjectDetailClient initialData={data} />
       </div>
-    </AppShell>
+    
   );
 }
 

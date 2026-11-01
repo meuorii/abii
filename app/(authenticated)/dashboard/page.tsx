@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { AppShell } from "@/components/app-shell";
 import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -121,7 +120,7 @@ export default async function DashboardPage() {
   const firstName = user.name.trim().split(/\s+/)[0] || "there";
 
   return (
-    <AppShell userName={user.name}>
+    
       <DashboardOverview
         firstName={firstName}
         dueCount={dueCount}
@@ -134,6 +133,6 @@ export default async function DashboardPage() {
         featuredShowcaseError={featuredShowcaseError}
         loadFailed={loadFailed}
       />
-    </AppShell>
+    
   );
 }

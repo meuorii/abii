@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { AppShell } from "@/components/app-shell";
 import { SubjectsClient, type SubjectItem } from "@/components/subjects/subjects-client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -71,7 +70,7 @@ export default async function SubjectsPage() {
   const firstName = user.name.trim().split(/\s+/)[0] || "there";
 
   return (
-    <AppShell pageTitle="My Subjects" pageDescription="Organize your study cards" userName={user.name}>
+    
       <div className="space-y-7 p-4 sm:p-6 xl:p-7">
         <section
           aria-labelledby="subjects-hero-title"
@@ -107,6 +106,6 @@ export default async function SubjectsPage() {
         </section>
         {loadFailed ? <SubjectLoadError /> : folderSummaries.length ? <SubjectFoldersOverview initialFolders={folderSummaries} initialUnfiledCount={unfiledCount} /> : <SubjectsClient initialSubjects={subjects} initialLayout={preferredLayout} />}
       </div>
-    </AppShell>
+    
   );
 }

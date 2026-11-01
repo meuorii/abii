@@ -197,7 +197,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   }, [index, questionType, hasResult]);
 
   if (busy && result && isLast && !summary) {
-    return <PageLoadingSkeleton variant="finish" withShell={false} />;
+    return <PageLoadingSkeleton variant="finish" />;
   }
 
   if (summary || currentSession.status === "completed") {

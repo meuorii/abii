@@ -3,7 +3,6 @@ import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import { isValidObjectId } from "mongoose";
 import { ChevronRight, FolderOpen } from "lucide-react";
-import { AppShell } from "@/components/app-shell";
 import { TopicDetailClient } from "@/components/subjects/topic-detail-client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -36,7 +35,7 @@ export default async function TopicPage({ params }: Props) {
   const reviewed = mastery.reviewedCardIds;
   const topicMastery = mastery.byTopic.get(String(topic._id)) ?? { total: cards.length, usable: 0, reviewed: 0, mastered: 0, completedRequirements: 0, totalRequirements: 0, due: cards.length, correct: 0, incorrect: 0, progress: 0 };
   const topicTypeMastery = mastery.byTypeByTopic.get(String(topic._id)) ?? emptyTypeProgress();
-  return <AppShell pageTitle={topic.name} pageDescription="Flashcards in this topic" userName={user.name}>
+  return (
     <div className="min-w-0 space-y-5 p-4 pb-24 sm:p-6 xl:p-7">
       <nav aria-label="Breadcrumb" className="flex min-w-0 flex-wrap items-center gap-2 text-xs sm:text-sm">
         <Link href="/subjects" className="font-medium text-[#71869A] hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">My Subjects</Link>
@@ -61,5 +60,5 @@ export default async function TopicPage({ params }: Props) {
       </section>
       <TopicDetailClient subjectId={String(subject._id)} subjectName={subject.name} topic={{ id: String(topic._id), name: topic.name, count: cards.length }} mastery={topicMastery} typeMastery={topicTypeMastery} topicOptions={topicDocs.map((item) => ({ id: String(item._id), name: item.name }))} initialCards={cards.map((card) => ({ id: String(card._id), topicId: String(topic._id), topicName: topic.name, flashcardType: card.flashcardType === "items" ? "items" as const : "standard" as const, question: card.question, answer: card.answer, hint: card.hint ?? "", reviewed: reviewed.has(String(card._id)) }))}/>
     </div>
-  </AppShell>;
+  );
 }

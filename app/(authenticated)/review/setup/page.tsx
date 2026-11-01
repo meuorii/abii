@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { AppShell } from "@/components/app-shell";
 import { ReviewSetup } from "@/components/review/review-setup";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -94,7 +93,7 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
   const initialTopicId = requestedTopicSubjectId && (!validRequestedSubjectId || validRequestedSubjectId === requestedTopicSubjectId) ? requestedTopicId ?? null : null;
 
   return (
-    <AppShell pageTitle="Review" pageDescription="Choose what to review" userName={user.name}>
+    
       <ReviewSetup
         firstName={firstName}
         subjects={subjects}
@@ -106,7 +105,7 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
         initialTopicId={initialTopicId}
         loadFailed={loadFailed}
       />
-    </AppShell>
+    
   );
 }
 

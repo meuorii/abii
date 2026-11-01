@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import mongoose from "mongoose";
 import Image from "next/image";
-import { AppShell } from "@/components/app-shell";
 import { ProgressDashboard, type ProgressPayload } from "@/components/progress/progress-dashboard";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -172,8 +171,6 @@ export default async function ProgressPage() {
   catch (error) { console.error("Progress achievements could not be loaded.", error); featuredShowcaseError = true; }
 
   return (
-    <AppShell pageTitle="Progress" pageDescription="Your learning journey, at a glance" userName={user.name}>
-      {/* Match the shared content gutters used by Dashboard, My Subjects, and Review. */}
       <div className="w-full min-w-0 p-4 sm:p-6 xl:p-7">
       <section className="relative mb-5 flex min-h-[210px] items-center overflow-hidden rounded-2xl border border-[#F8E6EC] bg-[#FFF0F4] px-5 py-7 sm:min-h-[230px] sm:px-8 sm:py-8 xl:min-h-[250px] xl:px-10">
         <div className="relative z-10 max-w-[62%] sm:max-w-[58%]">
@@ -187,6 +184,6 @@ export default async function ProgressPage() {
       </section>
       <ProgressDashboard data={payload} featuredShowcase={featuredShowcase} featuredShowcaseError={featuredShowcaseError} />
       </div>
-    </AppShell>
+    
   );
 }

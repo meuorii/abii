@@ -4,7 +4,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { LayoutDashboard, BookOpen, RotateCcw, ChartNoAxesColumn, Settings, Bell, ChevronDown, Award } from "lucide-react";
 
@@ -30,7 +30,9 @@ type AppShellProps = {
   children: React.ReactNode;
   pageTitle?: string;
   pageDescription?: string;
-  userName?: string;
+  userId: string;
+  userName: string;
+  profileImage: string;
 };
 
 function isActive(pathname: string, href: string) {
@@ -72,32 +74,42 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function AppShell({ children, userName }: AppShellProps) {
+export function AppShell({ children, userId, userName: initialUserName, profileImage: initialProfileImage }: AppShellProps) {
   const pathname = usePathname();
+  const mainRef = useRef<HTMLElement>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [profileImage, setProfileImage] = useState("");
+  const [userName, setUserName] = useState(initialUserName);
+  const [profileImage, setProfileImage] = useState(initialProfileImage);
 
   useEffect(() => {
-    let active = true;
-    let updatedInThisTab = false;
-
-    fetch("/api/account/profile-picture")
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        if (active && !updatedInThisTab) setProfileImage(data?.profileImage ?? "");
-      })
-      .catch(() => {});
-
     const syncProfileImage = (event: Event) => {
       const image = (event as CustomEvent<{ profileImage?: string }>).detail?.profileImage;
-      if (typeof image === "string") { updatedInThisTab = true; setProfileImage(image); }
+      if (typeof image === "string") setProfileImage(image);
+    };
+    const syncProfileName = (event: Event) => {
+      const name = (event as CustomEvent<{ name?: string }>).detail?.name;
+      if (typeof name === "string" && name.trim()) setUserName(name.trim());
     };
     window.addEventListener("abii-profile-image-updated", syncProfileImage);
+    window.addEventListener("abii-profile-name-updated", syncProfileName);
     return () => {
-      active = false;
       window.removeEventListener("abii-profile-image-updated", syncProfileImage);
+      window.removeEventListener("abii-profile-name-updated", syncProfileName);
     };
-  }, []);
+  }, [userId]);
+
+  useEffect(() => {
+    setProfileMenuOpen(false);
+    mainRef.current?.scrollTo({ top: 0 });
+  }, [pathname]);
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setProfileMenuOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [profileMenuOpen]);
 
   const firstLetter = userName?.trim().charAt(0).toUpperCase() || "A";
 
@@ -218,6 +230,7 @@ export function AppShell({ children, userName }: AppShellProps) {
           </header>
 
           <main
+            ref={mainRef}
             aria-label="Dashboard content"
             className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-white pb-20 lg:pb-0"
           >

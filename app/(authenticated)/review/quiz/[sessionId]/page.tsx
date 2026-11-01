@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell } from "@/components/app-shell";
 import { QuizSession } from "@/components/review/quiz-session";
 import { getCurrentUser } from "@/lib/auth/session";
 import { loadSession, sessionMastery, toPublicSession } from "@/lib/quiz/service";
@@ -37,9 +36,7 @@ export default async function QuizSessionPage({ params }: PageProps) {
     console.error("Quiz session could not be loaded.", error);
   }
 
-  return (
-    <AppShell pageTitle="Review" pageDescription="Active recall quiz" userName={user.name}>
-      {session && session.questions.length > 0 ? <QuizSession key={session.id} initial={session} firstName={firstName} /> : <SessionUnavailable />}
-    </AppShell>
-  );
+  return session && session.questions.length > 0
+    ? <QuizSession key={session.id} initial={session} firstName={firstName} />
+    : <SessionUnavailable />;
 }

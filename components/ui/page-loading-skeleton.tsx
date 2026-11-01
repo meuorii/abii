@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 
-import { AppShell } from "@/components/app-shell";
 
 export type PageLoadingVariant =
   | "dashboard"
@@ -280,7 +279,7 @@ function Content({ variant }: { variant: PageLoadingVariant }) {
   }
 }
 
-export function PageLoadingSkeleton({ variant, withShell = true }: { variant: PageLoadingVariant; withShell?: boolean }) {
+export function PageLoadingSkeleton({ variant }: { variant: PageLoadingVariant }) {
   const pageSpacing = variant === "folder-detail" || variant === "subject-folder-detail"
     ? "min-w-0 space-y-4 p-4 pb-24 sm:p-5 xl:p-6"
     : variant === "finish"
@@ -297,6 +296,5 @@ export function PageLoadingSkeleton({ variant, withShell = true }: { variant: Pa
     </div>
   );
 
-  if (!withShell) return content;
-  return <AppShell userName="Abii learner">{content}</AppShell>;
+  return content;
 }

@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { AppShell } from "@/components/app-shell";
 import { BadgeHero } from "@/components/badges/badge-hero";
 import { BadgesPage } from "@/components/badges/badges-page";
 import type { BadgePageData } from "@/components/badges/types";
@@ -38,10 +37,10 @@ export default async function BadgesRoute() {
     initialError = true;
   }
 
-  return <AppShell userName={user.name}>
+  return (
     <div className="w-full min-w-0 p-4 pb-24 sm:p-6 sm:pb-6 xl:p-7">
       <BadgeHero />
       <BadgesPage initialData={initialData} initialError={initialError} />
     </div>
-  </AppShell>;
+  );
 }

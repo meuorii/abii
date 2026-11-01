@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { AppShell } from "@/components/app-shell";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
@@ -201,7 +200,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
   }
 
   return (
-    <AppShell pageTitle="Review" pageDescription="Review your cards and track progress" userName={user.name}>
+    
       <div className="space-y-6 p-4 sm:p-6 xl:p-7">
         <section aria-labelledby="review-hero-title" className="relative isolate min-h-[225px] overflow-hidden rounded-[1.4rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[245px] lg:min-h-[265px]">
           <div className="relative z-10 max-w-[64%] px-5 py-6 sm:max-w-[58%] sm:px-7 sm:py-8 lg:max-w-[57%] lg:px-8 lg:py-8">
@@ -237,7 +236,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
           />
         )}
       </div>
-    </AppShell>
+    
   );
 }
 
