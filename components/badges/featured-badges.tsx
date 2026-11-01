@@ -81,7 +81,7 @@ export function FeaturedBadges({ surface, initialShowcase, initialError = false 
     });
     setLoadError("");
     setSelectionOpen(false);
-    toast({ kind: "success", title: "Showcase updated", message: `Your ${showcaseName.toLowerCase()} badges have been saved.` });
+    toast({ kind: "success", title: "Badges Updated", message: `Your featured badges have been updated on the ${showcaseName}.` });
   }
 
   return <section aria-labelledby={`${surface}-featured-title`} className="min-w-0 rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5">

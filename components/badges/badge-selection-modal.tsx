@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, LoaderCircle } from "lucide-react";
 import { BadgeImage } from "./badge-image";
 import { RarityIndicator } from "./rarity-indicator";
 import type { BadgePageItem } from "./types";
@@ -40,12 +40,12 @@ export function BadgeSelectionModal({ surface, earnedBadges, selectedIds, loadEr
     finally { setSaving(false); }
   }
 
-  return <Modal open action="update" size="lg" title="Choose Your Badges" description="Select up to 3 unlocked achievements to display." busy={saving} onClose={onClose} footer={<><button type="button" disabled={saving} onClick={onClose} className={modalCancelClass}>Cancel</button><button type="button" disabled={saving || loading} onClick={() => void save()} className={modalPrimaryClass}>{saving ? "Saving…" : "Save Changes"}</button></>}>
+  return <Modal open action="update" size="lg" title="Choose Your Badges" description={`Select up to three unlocked badges to showcase on your ${showcaseName}.`} busy={saving} onClose={onClose} footer={<><button type="button" disabled={saving} onClick={onClose} className={modalCancelClass}>Cancel</button><button type="button" disabled={saving || loading} onClick={() => void save()} className={modalPrimaryClass}>{saving ? <><LoaderCircle aria-hidden="true" className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />Saving Your Badges…</> : "Save Changes"}</button></>}>
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-[#183653]">{showcaseName} showcase</p><p aria-live="polite" className="shrink-0 text-xs font-bold tabular-nums text-[#C65380]">{draft.length} / 3 selected</p></div>
       {loadError && <div role="alert" className="rounded-xl border border-[#F0C7D3] bg-[#FFF8FA] p-3"><p className="text-xs leading-5 text-[#8A4D62]">{loadError}</p><button type="button" onClick={onRetry} disabled={loading} className="mt-2 inline-flex min-h-9 items-center rounded-lg px-2 text-xs font-bold text-[#C65380] underline underline-offset-2 disabled:opacity-60">{loading ? "Refreshing…" : "Retry loading badges"}</button></div>}
       {loading && <div role="status" className="rounded-xl bg-[#FFF8FA] px-4 py-5 text-center text-sm text-[#756B72]">Refreshing your earned badges…</div>}
-      {!loading && earnedBadges.length === 0 ? <div className="rounded-xl bg-[#FFF7F9] px-4 py-8 text-center"><p className="text-sm font-semibold text-[#183653]">No unlocked badges yet</p><p className="mt-1 text-xs leading-5 text-[#756B72]">Earn an achievement and it will be available to feature here.</p></div> : <div className="grid max-h-[48dvh] grid-cols-1 gap-2 overflow-y-auto overscroll-contain pr-1 min-[440px]:grid-cols-2">
+      {!loading && earnedBadges.length === 0 ? <div className="rounded-xl bg-[#FFF7F9] px-4 py-8 text-center"><p className="text-sm font-semibold text-[#183653]">No unlocked badges yet</p><p className="mt-1 text-xs leading-5 text-[#756B72]">Check each badge’s requirement and keep studying to make progress. Unlocked badges will be available to feature here.</p></div> : <div className="grid max-h-[48dvh] grid-cols-1 gap-2 overflow-y-auto overscroll-contain pr-1 min-[440px]:grid-cols-2">
         {earnedBadges.map((badge) => {
           const isSelected = selected.has(badge.id);
           const disabled = !isSelected && draft.length >= 3;

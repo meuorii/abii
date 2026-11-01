@@ -51,7 +51,7 @@ export function LogoutButton() {
         Log out
       </button>
 
-      <Modal open={confirmOpen} onClose={closeConfirmation} action="logout" title="Leaving already?" description="Are you sure you want to log out of Abii?" busy={busy} alert footer={<><button type="button" disabled={busy} onClick={closeConfirmation} className={modalCancelClass}>Cancel</button><button type="button" disabled={busy} onClick={logout} className={modalPrimaryClass}>{busy ? "Logging out?" : "Log Out"}</button></>}><p className="text-sm leading-6 text-[#756B72]">Your study progress is saved. You can sign in again anytime to continue learning.</p></Modal>
+      <Modal open={confirmOpen} onClose={closeConfirmation} action="logout" title="Log Out of Abii?" description="End your current session on this browser." busy={busy} alert footer={<><button type="button" disabled={busy} onClick={closeConfirmation} className={modalCancelClass}>Stay Signed In</button><button type="button" disabled={busy} onClick={logout} className={modalPrimaryClass}>{busy ? "Logging Out…" : "Log Out"}</button></>}><p className="text-sm leading-6 text-[#756B72]">Your saved study progress will be here when you sign in again.</p></Modal>
     </>
   );
 }

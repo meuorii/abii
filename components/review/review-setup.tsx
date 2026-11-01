@@ -102,7 +102,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
         setStarting(false);
         return;
       }
-      toast({ kind: "success", title: "Quiz ready", message: "Your review session is starting." });
+      toast({ kind: "success", title: "Review Ready", message: "Your review session is starting." });
       router.push(`/review/quiz/${data.sessionId}`);
     } catch {
       const message = "You seem to be offline. Check your connection and try again.";
@@ -220,7 +220,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
             )}            {error && <p role="alert" className="mt-2 text-sm text-[#A43E5C]">{error}</p>}
           </div>
           <button type="button" onClick={start} disabled={!canStart} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#FF477D] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">
-            {starting ? "Starting…" : "Start Quiz"} {!starting && <span aria-hidden="true">→</span>}
+            {starting ? <span role="status" className="inline-flex items-center gap-2"><span className="sr-only">Starting Your Review…</span><span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/50 border-t-white motion-reduce:animate-none" />Starting Your Review…</span> : <>Start Review <span aria-hidden="true">→</span></>}
           </button>
         </div>
       </section>

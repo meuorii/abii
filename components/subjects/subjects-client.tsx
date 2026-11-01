@@ -6,7 +6,7 @@ import type { TypeProgress } from "@/lib/quiz/types";
 import { useRouter } from "next/navigation";
 import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
-import { BookOpen, Plus, Search, ArrowUpRight, FolderInput } from "lucide-react";
+import { BookOpen, Plus, Search, ArrowUpRight, FolderInput, LoaderCircle } from "lucide-react";
 import { ListChecks, PenLine, CheckCircle2, Shuffle } from "lucide-react";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 import { notifyAchievementActivity } from "@/lib/badges/client-sync";
@@ -38,8 +38,32 @@ type SubjectsClientProps = {
 
 export function AddSubjectModal({ onClose, onCreated, subjectFolderId, subjectFolders=[] }: { onClose: () => void; onCreated: (subject: SubjectItem) => void; subjectFolderId?: string | null; subjectFolders?:SubjectFolderSummary[] }) {
  const [name,setName]=useState(""); const [selectedFolder,setSelectedFolder]=useState(subjectFolderId??""); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const router=useRouter();
- async function handleSubmit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const trimmedName=name.trim(); if(!trimmedName){setError("Please enter a subject name.");return;} setSaving(true);setError(""); try { const response=await fetch("/api/subjects",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:trimmedName,subjectFolderId:selectedFolder||null})}); const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data?.error||data?.message||"Could not create subject."); const raw=data?.subject??data?.data?.subject??data; const subjectId=String(raw?.id??raw?._id??""); if(!subjectId)throw new Error("The subject was created, but its details could not be loaded. Please refresh."); onCreated({id:subjectId,name:String(raw?.name??trimmedName),subjectFolderId:selectedFolder||null,flashcardCount:Number(raw?.flashcardCount??0),topicCount:0,progress:Number(raw?.progress??0),masteredCount:Number(raw?.masteredCount??0),typeMastery:raw?.typeMastery??{"multiple-choice":{done:0,total:0},identification:{done:0,total:0},"true-false":{done:0,total:0},random:{done:0,total:0}}}); notifyAchievementActivity(); router.refresh();onClose(); } catch(cause){setError(cause instanceof Error?cause.message:"Something went wrong. Please try again.");}finally{setSaving(false);} }
- return <Modal open onClose={onClose} action="create" title="Create a subject" description="Give your study materials a place to belong." busy={saving} footer={<><button type="button" onClick={onClose} disabled={saving} className={modalCancelClass}>Cancel</button><button type="submit" form="create-subject-form" disabled={saving} className={modalPrimaryClass}>{saving?"Creating…":"Create Subject"}</button></>}><form id="create-subject-form" onSubmit={handleSubmit} className="space-y-3"><label htmlFor="subject-name" className="block text-[13px] font-semibold text-[#2F2930]">Subject Name <span className="text-[#F04469]">*</span></label><input id="subject-name" required maxLength={100} value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Data Structures and Algorithms" className="min-h-12 w-full rounded-xl border border-[#E8E2E5] bg-white px-4 text-sm text-[#2F2930] outline-none placeholder:text-[#A49AA0] focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/15"/><label htmlFor="subject-folder-select" className="block text-[13px] font-semibold text-[#2F2930]">Folder (Optional)</label><select id="subject-folder-select" value={selectedFolder} onChange={e=>setSelectedFolder(e.target.value)} className="min-h-12 w-full rounded-xl border border-[#E8E2E5] bg-white px-4 text-sm outline-none focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/10"><option value="">Unfiled Subjects</option>{subjectFolders.map(folder=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select>{error&&<p role="alert" className="text-sm text-[#C65363]">{error}</p>}</form></Modal>;
+ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+  const trimmedName = name.trim();
+  if (!trimmedName) { setError("Enter a subject name to continue."); document.getElementById("subject-name")?.focus(); return; }
+  setSaving(true); setError("");
+  try {
+   const response = await fetch("/api/subjects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: trimmedName, subjectFolderId: selectedFolder || null }) });
+   const data = await response.json().catch(() => ({}));
+   if (!response.ok) throw new Error(data?.error || data?.message || "Couldn’t create the subject. Check your connection and try again.");
+   const raw = data?.subject ?? data?.data?.subject ?? data;
+   const subjectId = String(raw?.id ?? raw?._id ?? "");
+   if (!subjectId) throw new Error("The subject was created, but its details didn’t load. Refresh the page to check your subjects.");
+   onCreated({ id: subjectId, name: String(raw?.name ?? trimmedName), subjectFolderId: selectedFolder || null, flashcardCount: Number(raw?.flashcardCount ?? 0), topicCount: 0, progress: Number(raw?.progress ?? 0), masteredCount: Number(raw?.masteredCount ?? 0), typeMastery: raw?.typeMastery ?? { "multiple-choice": { done: 0, total: 0 }, identification: { done: 0, total: 0 }, "true-false": { done: 0, total: 0 }, random: { done: 0, total: 0 } } });
+   notifyAchievementActivity(); router.refresh(); onClose();
+  } catch (cause) { setError(cause instanceof Error ? cause.message : "Couldn’t create the subject. Check your connection and try again."); }
+  finally { setSaving(false); }
+ }
+ return <Modal open onClose={onClose} action="create" title="Create a Subject" description="Give your subject a name to keep your topics and flashcards organized." busy={saving} footer={<><button type="button" onClick={onClose} disabled={saving} className={modalCancelClass}>Cancel</button><button type="submit" form="create-subject-form" disabled={saving} className={modalPrimaryClass}>{saving ? <><LoaderCircle aria-hidden="true" className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none"/>Creating Subject…</> : "Create Subject"}</button></>}>
+  <form id="create-subject-form" onSubmit={handleSubmit} className="space-y-3">
+   <label htmlFor="subject-name" className="block text-[13px] font-semibold text-[#2F2930]">Subject Name <span className="text-[#F04469]">*</span></label>
+   <input id="subject-name" required maxLength={100} value={name} onChange={event => { setName(event.target.value); setError(""); }} aria-invalid={Boolean(error)} aria-describedby={error ? "create-subject-error" : undefined} placeholder="e.g. Data Structures and Algorithms" className="min-h-12 w-full rounded-xl border border-[#E8E2E5] bg-white px-4 text-sm text-[#2F2930] outline-none placeholder:text-[#A49AA0] focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/15"/>
+   <label htmlFor="subject-folder-select" className="block text-[13px] font-semibold text-[#2F2930]">Subject Folder (Optional)</label>
+   <select id="subject-folder-select" value={selectedFolder} onChange={event => setSelectedFolder(event.target.value)} className="min-h-12 w-full rounded-xl border border-[#E8E2E5] bg-white px-4 text-sm outline-none focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/10"><option value="">Unfiled Subjects</option>{subjectFolders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select>
+   {error && <p id="create-subject-error" role="alert" className="text-sm text-[#C65363]">{error}</p>}
+  </form>
+ </Modal>;
 }
 
 const masteryIndicators = [
@@ -115,7 +139,7 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
       return [...current, subject].sort((a, b) => a.name.localeCompare(b.name));
     });
     setNotice(`“${subject.name}” was created successfully.`);
-    toast({ kind: "success", title: "Subject created", message: `${subject.name} is ready for your flashcards.` });
+    toast({ kind: "success", title: "Subject Created", message: "Your new subject is ready. Start adding topics and flashcards." });
     window.setTimeout(() => setNotice(""), 3500);
   }
   async function moveSubject(){
@@ -170,21 +194,21 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
         {filteredSubjects.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#E8D7DE] bg-white px-5 py-12 text-center sm:px-8">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF0F5] text-2xl text-[#E9577D]" aria-hidden="true"><BookOpen className="h-7 w-7" /></div>
-            <h3 className="mt-4 text-base font-bold text-[#2F2930]">
-              {query.trim() ? "No matching subjects" : "Your study space starts here"}
+          <h3 className="mt-4 text-base font-bold text-[#2F2930]">
+              {query.trim() ? "No Matches Found" : "Your Study Space Starts Here"}
             </h3>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[#756B72]">
               {query.trim()
-                ? "Try another search term or clear your search."
-                : "Create your first subject to keep your flashcards organized."}
+                ? "Try a different keyword or clear your search to see all subjects."
+                : "Create your first subject to organize your topics and flashcards."}
             </p>
             {query.trim() ? (
               <button type="button" onClick={() => setQuery("")} className="mt-4 text-sm font-semibold text-[#D94F7B] hover:underline">
-                Clear search
+                Clear Search
               </button>
             ) : (
               <button type="button" onClick={() => setIsModalOpen(true)} className="mt-4 rounded-xl bg-[#FF6F96] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#E9577D]">
-                Add your first subject
+                Create Your First Subject
               </button>
             )}
           </div>
