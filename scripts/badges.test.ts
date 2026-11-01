@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import { BADGE_BY_ID, BADGE_CATALOG, BADGE_CATEGORIES_METADATA, BADGE_RARITIES } from "../lib/badges/catalog";
-import { BADGE_IMAGES, getBadgeImagePath } from "../lib/badges/images";
+import { BADGE_IMAGES, getBadgeImagePath, RARITY_DEFINITIONS } from "../lib/badges/images";
 import { BADGE_CATEGORIES, BADGE_IDS, BADGE_RARITIES as RARITY_IDS } from "../lib/badges/types";
 import { defaultFeaturedBadgeIds } from "../lib/badges/featured-selection";
 
@@ -36,6 +36,20 @@ test("badge catalog is complete, unique, ordered, and uses only supported catego
   for (const rarity of RARITY_IDS) assert.ok(existsSync(resolve(root, `public${BADGE_RARITIES[rarity].medalImage}`)), `Missing medal for ${rarity}`);
   assert.equal(BADGE_BY_ID["hello-abii"].images.unlocked, "/badges/unlocked/hello-abi-unlocked.png");
   assert.equal(BADGE_BY_ID["hello-abii"].images.locked, "/badges/locked/hello-abi-locked.png");
+});
+
+test("every mapped badge image and rarity medal is a valid PNG", () => {
+  const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  for (const paths of Object.values(BADGE_IMAGES)) {
+    for (const imagePath of [paths.locked, paths.unlocked]) {
+      const image = readFileSync(resolve(root, `public${imagePath}`));
+      assert.ok(image.subarray(0, 8).equals(pngSignature), `${imagePath} should contain PNG data`);
+    }
+  }
+  for (const rarity of Object.values(RARITY_DEFINITIONS)) {
+    const image = readFileSync(resolve(root, `public${rarity.medalImage}`));
+    assert.ok(image.subarray(0, 8).equals(pngSignature), `${rarity.medalImage} should contain PNG data`);
+  }
 });
 
 test("default showcase picks the three most recently earned badges with catalog-order tie breaking", () => {

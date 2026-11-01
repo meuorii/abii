@@ -45,6 +45,30 @@ test("real authenticated Next.js routes and legacy Subject/Flashcard contracts",
       assert.ok(response.headers.get("content-type")?.includes("application/json"), `Non-JSON response: ${text.slice(0, 500)}\n${output}`);
       return { status: response.status, body: JSON.parse(text), etag: response.headers.get("etag") };
     };
+    const protectedBadges = await fetch(`${base}/badges`, { redirect: "manual" });
+    assert.equal(protectedBadges.status, 307, "/badges should remain protected");
+    assert.match(protectedBadges.headers.get("location") ?? "", /\/login\?/);
+
+    for (const imagePath of [
+      "/badges/unlocked/hello-abi-unlocked.png",
+      "/badges/locked/quiz-rookie-locked.png",
+    ]) {
+      const rawImage = await fetch(`${base}${imagePath}`, { redirect: "manual" });
+      assert.equal(rawImage.status, 200, `${imagePath} should be public`);
+      assert.match(rawImage.headers.get("content-type") ?? "", /^image\/png/);
+      const rawBytes = Buffer.from(await rawImage.arrayBuffer());
+      assert.deepEqual(rawBytes.subarray(0, 8), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+
+      const optimizedImage = await fetch(`${base}/_next/image?url=${encodeURIComponent(imagePath)}&w=256&q=75`, {
+        headers: { Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8" },
+        redirect: "manual",
+      });
+      assert.equal(optimizedImage.status, 200, `Next image optimization should succeed for ${imagePath}`);
+      assert.match(optimizedImage.headers.get("content-type") ?? "", /^image\//);
+      assert.ok((await optimizedImage.arrayBuffer()).byteLength > 0);
+    }
+    assert.doesNotMatch(output, /requested resource isn't a valid image/i);
+
     const subject = await request("/api/subjects", "POST", { name: "HTTP compatibility" });
     assert.equal(subject.status, 201);
     const path = `/api/subjects/${subject.body.subject.id}`;

@@ -36,7 +36,7 @@ export const config = {
     "/subjects/:path*",
     "/review/:path*",
     "/progress/:path*",
-    "/badges/:path*",
+    "/badges",
     "/profile/:path*",
     "/settings/:path*",
   ],
