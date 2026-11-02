@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { useRouter } from "next/navigation";
 import { ListChecks, PenLine, ListOrdered, Shuffle, CheckCircle2, BookOpen, Layers3, FolderOpen } from "lucide-react";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
+import { ScrollReveal, StaggerItem } from "@/components/motion/scroll-reveal";
 import {
   QUIZ_MODES,
   QUIZ_TYPE_DESCRIPTIONS,
@@ -113,7 +114,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
   }
 
   const hero = (
-    <section aria-labelledby="setup-hero-title" className="relative isolate min-h-[170px] overflow-hidden rounded-[1.4rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[210px]">
+    <section aria-labelledby="setup-hero-title" className="abii-enter relative isolate min-h-[170px] overflow-hidden rounded-[1.4rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[210px]">
       <div className="relative z-10 max-w-[64%] px-5 py-6 sm:max-w-[58%] sm:px-8 sm:py-8">
         <p className="text-sm font-semibold text-[#C65380]">Ready, {firstName}? <span aria-hidden="true">👋</span></p>
         <h1 id="setup-hero-title" className="mt-2 text-[clamp(1.5rem,3vw,2.3rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#173B55]">Let’s <span className="text-[#E9577D]">review!</span></h1>
@@ -161,10 +162,10 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
       </nav>
       {hero}
 
-      <section aria-labelledby="choose-scope" className="space-y-3">
+      <ScrollReveal><section aria-labelledby="choose-scope" className="space-y-3">
         <h2 id="choose-scope" className="text-base font-bold tracking-tight text-[#153B56] sm:text-lg"><span className="mr-2 text-[#E9577D]">1</span>Choose review scope</h2>
         <div role="radiogroup" aria-labelledby="choose-scope" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {([ ["all", "All Subjects and Topics", Layers3], ["subject", "Specific Subject", BookOpen], ["topic", "Specific Topic", FolderOpen] ] as const).map(([value, label, Icon]) => <button key={value} type="button" role="radio" aria-checked={scope === value} onClick={() => { setScope(value); setError(""); }} className={`flex min-h-16 min-w-0 items-center gap-3 rounded-2xl border p-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${scope === value ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}><span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><Icon className="h-5 w-5"/></span><span className="min-w-0 text-sm font-bold text-[#153B56]">{label}</span></button>)}
+          {([ ["all", "All Subjects and Topics", Layers3], ["subject", "Specific Subject", BookOpen], ["topic", "Specific Topic", FolderOpen] ] as const).map(([value, label, Icon], index) => <StaggerItem key={value} index={index}><button type="button" role="radio" aria-checked={scope === value} onClick={() => { setScope(value); setError(""); }} className={`flex min-h-16 min-w-0 w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${scope === value ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}><span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><Icon className="h-5 w-5"/></span><span className="min-w-0 text-sm font-bold text-[#153B56]">{label}</span></button></StaggerItem>)}
         </div>
         {scope !== "all" && <div className={`grid min-w-0 gap-3 ${scope === "topic" ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
           <label className="block text-sm font-semibold text-[#294A60]">Subject<select value={subjectId} onChange={(event) => { setSubjectId(event.target.value); setTopicId(""); setError(""); }} className="mt-1.5 min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3 text-sm font-normal text-[#153B56] focus:border-[#E9577D] focus:outline-none focus:ring-4 focus:ring-[#FF9FBA]/15"><option value="">Choose a subject…</option>{subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select></label>
@@ -176,16 +177,16 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
         {scope === "topic" && selectedTopic && <MasteryProgressBar label="Mastery" ariaLabel={`${selectedTopic.name} mastery progress`} progress={selectedTopic.masteryProgress} />}
         {scope === "all" && <MasteryPills progress={allTypeMastery} />}
         {scope === "subject" && selectedSubject && <MasteryPills progress={selectedSubject.typeMastery} />}
-      </section>
-      <section aria-labelledby="choose-type">
+      </section></ScrollReveal>
+      <ScrollReveal><section aria-labelledby="choose-type">
         <h2 id="choose-type" className="text-base font-bold tracking-tight text-[#153B56] sm:text-lg"><span className="mr-2 text-[#E9577D]">2</span>Choose a quiz type</h2>
         <p className="mt-1 text-xs leading-5 text-[#7890A4]">Each question type, including Mixed / Random, has its own 3-correct-answer streak. Complete every type that applies to a card, plus Random, to earn the <span className="font-semibold text-[#207A4B]">Mastered</span> indicator.</p>
         <div role="radiogroup" aria-labelledby="choose-type" className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {QUIZ_MODES.map((t) => {
+          {QUIZ_MODES.map((t, index) => {
             const selected = type === t;
             const n = counts ? counts[t] : null;
             return (
-              <button key={t} type="button" role="radio" aria-checked={selected} onClick={() => { setType(t); setError(""); if (hasRequiredScope && counts && counts[t] === 0) toast({ kind: "error", title: "No eligible flashcards", message: `There are no cards ready for ${QUIZ_TYPE_LABELS[t]} in ${scopeLabel ?? "this scope"}. Choose another quiz type or update your flashcards.` }); }} className={`flex min-h-[132px] min-w-0 flex-col items-start gap-3 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${selected ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}>
+              <StaggerItem key={t} index={index}><button type="button" role="radio" aria-checked={selected} onClick={() => { setType(t); setError(""); if (hasRequiredScope && counts && counts[t] === 0) toast({ kind: "error", title: "No eligible flashcards", message: `There are no cards ready for ${QUIZ_TYPE_LABELS[t]} in ${scopeLabel ?? "this scope"}. Choose another quiz type or update your flashcards.` }); }} className={`flex h-full min-h-[132px] min-w-0 w-full flex-col items-start gap-3 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${selected ? "border-[#FF6F96] bg-[#FFF0F5] shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-[#E8E2E5] bg-white hover:border-[#F0B6C9]"}`}>
                 <span className="flex w-full items-center justify-between">
                   <span className={`flex h-11 w-11 items-center justify-center rounded-full ${selected ? "bg-[#FF6F96] text-white" : "bg-[#FFE8EF] text-[#E9577D]"}`}><TypeIcon type={t} /></span>
                   <span className="flex flex-wrap items-center justify-end gap-1.5">
@@ -201,13 +202,13 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
                   <span className="block text-sm font-bold text-[#153B56]">{QUIZ_TYPE_LABELS[t]}{t === "random" && <span className="ml-2 rounded-full bg-[#FFF0F5] px-2 py-0.5 text-[10px] font-semibold text-[#C65380]">Optional</span>}</span>
                   <span className="mt-1 block text-xs leading-5 text-[#6C879C]">{QUIZ_TYPE_DESCRIPTIONS[t]}</span>
                 </span>
-              </button>
+              </button></StaggerItem>
             );
           })}
         </div>
-      </section>
+      </section></ScrollReveal>
 
-      <section aria-live="polite" className="rounded-2xl border border-[#F1DDE4] bg-[#FFFAFC] p-4 sm:p-5">
+      <ScrollReveal><section aria-live="polite" className="rounded-2xl border border-[#F1DDE4] bg-[#FFFAFC] p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h2 className="text-sm font-bold text-[#153B56]">Quiz summary</h2>
@@ -223,7 +224,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
             {starting ? <span role="status" className="inline-flex items-center gap-2"><span className="sr-only">Preparing Your Review…</span><span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/50 border-t-white motion-reduce:animate-none" />Preparing Your Review…</span> : <>Start Review <span aria-hidden="true">→</span></>}
           </button>
         </div>
-      </section>
+      </section></ScrollReveal>
     </div>
   );
 }

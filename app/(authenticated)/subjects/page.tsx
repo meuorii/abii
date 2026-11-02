@@ -74,25 +74,25 @@ export default async function SubjectsPage() {
       <div className="space-y-7 p-4 sm:p-6 xl:p-7">
         <section
           aria-labelledby="subjects-hero-title"
-          className="relative isolate min-h-[236px] overflow-hidden rounded-[1.15rem] border border-[#F7DFE7] bg-[#FFF0F5] sm:min-h-[238px] lg:min-h-[242px]"
+          className="abii-enter relative isolate min-h-[236px] overflow-hidden rounded-[1.15rem] border border-[#F7DFE7] bg-[#FFF0F5] sm:min-h-[238px] lg:min-h-[242px]"
         >
           <div className="relative z-10 flex min-h-[236px] items-center sm:min-h-[238px] lg:min-h-[242px]">
             <div className="w-full max-w-[66%] px-5 py-7 sm:max-w-[61%] sm:px-8 sm:py-8 lg:max-w-[59%] lg:px-9">
-              <p className="text-sm font-semibold tracking-[-0.01em] text-[#24445A] sm:text-[15px]">
+              <p className="abii-enter abii-enter-1 text-sm font-semibold tracking-[-0.01em] text-[#24445A] sm:text-[15px]">
                 Hello, {firstName}! <span aria-hidden="true">👋</span>
               </p>
               <h1
                 id="subjects-hero-title"
-                className="mt-2.5 text-[clamp(1.85rem,3vw,2.55rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#18384D]"
+                className="abii-enter abii-enter-2 mt-2.5 text-[clamp(1.85rem,3vw,2.55rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#18384D]"
               >
                 Your subjects,<br />
                 your <span className="text-[#F06491]">progress.</span>
               </h1>
-              <p className="mt-3 max-w-[390px] text-[13px] leading-[1.65] text-[#557187] sm:text-[15px] sm:leading-[1.6]">
+              <p className="abii-enter abii-enter-3 mt-3 max-w-[390px] text-[13px] leading-[1.65] text-[#557187] sm:text-[15px] sm:leading-[1.6]">
                 Organize your flashcards, review regularly,<br className="hidden lg:block" /> and make it happen!
               </p>
             </div>
-            <div className="pointer-events-none absolute bottom-0 right-0 h-[88%] w-[48%] sm:h-full sm:w-[45%] lg:w-[43%]">
+            <div className="abii-enter-art pointer-events-none absolute bottom-0 right-0 h-[88%] w-[48%] sm:h-full sm:w-[45%] lg:w-[43%]">
               <Image
                 src="/dashboard-hero/my-subjects.png"
                 alt="Abii the pink otter holding a book"

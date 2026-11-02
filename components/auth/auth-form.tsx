@@ -61,17 +61,17 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
   return (
     <form onSubmit={submit} className="space-y-5" noValidate>
-      {isRegister && <div>
+      {isRegister && <div className="abii-enter abii-enter-1">
         <label htmlFor="name" className="text-sm font-semibold text-[#39323A]">Your name</label>
         <input id="name" name="name" autoComplete="name" placeholder="What should we call you?" value={name} onChange={e => setName(e.target.value)} className={fieldClass} maxLength={80} required aria-invalid={!!errors.name} aria-describedby={errors.name ? "name-error" : undefined} />
         {errors.name && <p id="name-error" className="mt-1.5 text-sm text-[#B42345]">{errors.name}</p>}
       </div>}
-      <div>
+      <div className="abii-enter abii-enter-2">
         <label htmlFor="email" className="text-sm font-semibold text-[#39323A]">Email address</label>
         <input id="email" name="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} className={fieldClass} maxLength={254} required aria-invalid={!!errors.email} aria-describedby={errors.email ? "email-error" : undefined} />
         {errors.email && <p id="email-error" className="mt-1.5 text-sm text-[#B42345]">{errors.email}</p>}
       </div>
-      <div>
+      <div className="abii-enter abii-enter-3">
         <label htmlFor="password" className="text-sm font-semibold text-[#39323A]">Password</label>
         <div className="relative mt-2">
           <input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete={isRegister ? "new-password" : "current-password"} placeholder={isRegister ? "At least 8 characters" : "Enter your password"} value={password} onChange={e => setPassword(e.target.value)} className={`${fieldClass} mt-0 pr-12`} minLength={isRegister ? 8 : undefined} maxLength={128} required aria-invalid={!!errors.password} aria-describedby={errors.password ? "password-error" : undefined} />
@@ -81,7 +81,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         {isRegister && <p className="mt-2 text-xs text-[#8B818A]">Use 8–128 characters.</p>}
       </div>
       {message && <p role="alert" aria-live="assertive" className="rounded-lg border border-[#F1C9D4] bg-[#FFF4F6] px-3.5 py-3 text-sm leading-5 text-[#963A55]">{message}</p>}
-      <button type="submit" disabled={busy} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#C65380] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#AA416B] active:translate-y-px focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#F4C4D7] disabled:cursor-not-allowed disabled:opacity-65">
+      <button type="submit" disabled={busy} className="abii-enter abii-enter-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#C65380] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#AA416B] active:translate-y-px focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#F4C4D7] disabled:cursor-not-allowed disabled:opacity-65">
         {busy && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />}
         {busy ? (isRegister ? "Creating Your Account…" : "Signing You In…") : (isRegister ? "Create Account" : "Sign In")}
       </button>

@@ -420,7 +420,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       </nav>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_290px] xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section aria-labelledby="quiz-hero-title" className="relative isolate order-1 min-h-[150px] overflow-hidden rounded-[1.4rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[200px] lg:col-start-1 lg:row-start-1">
+        <section aria-labelledby="quiz-hero-title" className="abii-enter relative isolate order-1 min-h-[150px] overflow-hidden rounded-[1.4rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[200px] lg:col-start-1 lg:row-start-1">
           <div className="relative z-10 max-w-[66%] px-4 py-4 sm:max-w-[60%] sm:px-7 sm:py-6">
             <div className="flex items-center gap-3">
               <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FFE0E9] text-lg text-[#E9577D] sm:h-11 sm:w-11">▤</span>
@@ -449,7 +449,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
           </div>
           {roundNotice && currentRound > 1 && <p role="status" className="mt-3 rounded-xl border border-[#F1DDE4] bg-[#FFF7F9] px-3.5 py-3 text-sm text-[#6C4A58]">{roundNotice}</p>}
 
-          <h2 id="question-heading" className="mt-5 whitespace-pre-wrap break-words text-lg font-semibold leading-snug tracking-[-0.02em] text-[#153B56] sm:text-xl">{question.type === "true-false" ? "Is this the correct answer to the question below?" : question.prompt}</h2>
+          <h2 id="question-heading" className="mt-5 whitespace-pre-wrap break-words text-lg font-semibold leading-snug tracking-[-0.02em] text-[#153B56] sm:text-xl"><span key={`${question.index}-${currentRound}`} className="abii-question-enter">{question.type === "true-false" ? "Is this the correct answer to the question below?" : question.prompt}</span></h2>
           {result && gradedAnswer !== undefined && (
             <QuizAnswerFeedback
               correct={result.correct}

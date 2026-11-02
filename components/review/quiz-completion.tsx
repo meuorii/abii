@@ -92,7 +92,7 @@ export function QuizCompletion({ session, firstName, onAgain, againBusy, againEr
   return <div className="mx-auto w-full min-w-0 max-w-[1600px] space-y-3 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 lg:px-7 lg:pb-7">
     <Link href="/review" className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-[13px] font-semibold text-[#123657] transition hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"><ArrowLeft aria-hidden="true" className="h-4 w-4 text-[#FF6F96]" />Back to Review</Link>
 
-    <section className="relative isolate min-h-[220px] overflow-hidden rounded-[24px] border border-[#F8E5EC] bg-[linear-gradient(112deg,#FFF7F9_0%,#FFE8EF_58%,#FFDCE9_100%)] px-5 py-7 sm:min-h-[250px] sm:px-8 sm:py-8 lg:min-h-[280px] lg:px-10">
+    <section className="abii-enter relative isolate min-h-[220px] overflow-hidden rounded-[24px] border border-[#F8E5EC] bg-[linear-gradient(112deg,#FFF7F9_0%,#FFE8EF_58%,#FFDCE9_100%)] px-5 py-7 sm:min-h-[250px] sm:px-8 sm:py-8 lg:min-h-[280px] lg:px-10">
       <div className="relative z-10 max-w-[69%] sm:max-w-[62%] lg:max-w-[58%]">
         <h1 className="text-[27px] font-extrabold leading-[1.08] tracking-[-.045em] text-[#123657] sm:text-4xl lg:text-[46px]">{greeting}, {firstName}!<br/><span className="text-[#F34F82]">You did it!</span></h1>
         <p className="mt-4 max-w-[440px] text-[13px] leading-5 text-[#355D7B] sm:text-[15px] sm:leading-6">Every review brings you one step closer to mastering what you’ve learned. Keep up the great work!</p>

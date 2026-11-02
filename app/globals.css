@@ -119,13 +119,40 @@
 
 .quiz-answer-feedback-enter { animation: quiz-answer-feedback-in 200ms ease-out both; }
 
+@media (prefers-reduced-motion: no-preference) {
+  .abii-enter { animation: abii-enter 640ms cubic-bezier(.22, 1, .36, 1) both; }
+  .abii-enter-1 { animation-delay: 70ms; }
+  .abii-enter-2 { animation-delay: 125ms; }
+  .abii-enter-3 { animation-delay: 180ms; }
+  .abii-enter-4 { animation-delay: 235ms; }
+  .abii-enter-art { animation: abii-enter-art 680ms cubic-bezier(.22, 1, .36, 1) 130ms both; }
+  .abii-modal-content { animation: abii-modal-content-in 360ms cubic-bezier(.22, 1, .36, 1) 45ms both; }
+  .abii-scroll-enter { animation: abii-scroll-enter 600ms cubic-bezier(.22, 1, .36, 1) both; }
+  .abii-card-enter { animation: abii-card-enter 500ms cubic-bezier(.22, 1, .36, 1) both; }
+  button:not(:disabled):active { scale: .985; }
+}
+
+@keyframes abii-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes abii-enter-art { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes abii-modal-content-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes abii-question-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes abii-scroll-enter { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes abii-card-enter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+.abii-question-enter { animation: abii-question-enter 180ms ease-out both; }
+
 @keyframes quiz-answer-feedback-in {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .quiz-answer-feedback-enter { animation: none; }
+  .quiz-answer-feedback-enter, .abii-enter, .abii-enter-art, .abii-modal-content, .abii-scroll-enter, .abii-card-enter { animation: none; }
+  .animate-pulse, .animate-bounce { animation: none !important; }
+  .abii-enter-1, .abii-enter-2, .abii-enter-3, .abii-enter-4 { animation-delay: 0ms; }
+  button:not(:disabled):active { scale: 1; }
+  .abii-question-enter { animation: none; }
+  .abii-motion-reveal { opacity: 1 !important; transform: none !important; }
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
 
 @theme inline {

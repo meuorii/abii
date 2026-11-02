@@ -76,13 +76,13 @@ export default async function SubjectDetailPage({ params }: PageProps) {
   return (
     
       <div className="space-y-3 p-4 pb-24 sm:space-y-4 sm:p-5 sm:pb-24 xl:p-6">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs sm:text-sm">
+        <nav aria-label="Breadcrumb" className="abii-enter abii-enter-1 flex items-center gap-2 text-xs sm:text-sm">
           <Link href="/subjects" className="font-medium text-[#75889A] transition-colors hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] rounded">My Subjects</Link>
           <ChevronRight aria-hidden="true" className="h-4 w-4 text-[#B4A5AC]" />
           <span aria-current="page" className="max-w-[55vw] truncate font-semibold text-[#2F2930]">{subject.name}</span>
         </nav>
 
-        <section aria-labelledby="subject-hero-title" className="relative isolate min-h-[270px] overflow-hidden rounded-[1.35rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[285px] lg:min-h-[300px]">
+        <section aria-labelledby="subject-hero-title" className="abii-enter relative isolate min-h-[270px] overflow-hidden rounded-[1.35rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[285px] lg:min-h-[300px]">
           <div className="relative z-10 flex min-h-[270px] items-center sm:min-h-[285px] lg:min-h-[300px]">
             <div className="max-w-[70%] px-5 py-6 sm:max-w-[62%] sm:px-7 sm:py-7 lg:max-w-[60%] lg:px-8">
               <div className="flex items-center gap-3">
@@ -99,7 +99,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
               <Link href={`/review?subjectId=${subject._id}`} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#F05B87] px-5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:min-h-11 sm:px-6 sm:text-sm">Study Subject <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>
             </div>
           </div>
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-[42%] items-end justify-center sm:w-[40%] lg:w-[39%]">
+          <div aria-hidden="true" className="abii-enter-art pointer-events-none absolute inset-y-0 right-0 flex w-[42%] items-end justify-center sm:w-[40%] lg:w-[39%]">
             <Image src="/dashboard-hero/my-subjects.png" alt="" fill priority sizes="(max-width: 640px) 43vw, 420px" className="object-contain object-bottom" />
           </div>
         </section>

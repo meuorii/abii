@@ -37,7 +37,7 @@ export function Modal({ open, onClose, action, title, description, children, foo
         <div className={`pointer-events-none absolute -bottom-1 right-0 sm:right-5 ${badgeDetailsHeader ? "h-[120px] w-[30%] sm:h-[168px] sm:w-[42%]" : "h-[132px] w-[34%] sm:h-[168px] sm:w-[42%]"}`}><Image src={mascotSrc ?? mascot[action]} alt="" fill sizes="(max-width: 640px) 34vw, 240px" className="object-contain object-bottom" priority /></div>
         <button type="button" aria-label="Close dialog" disabled={busy} onClick={onClose} className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-xl leading-none text-[#51464D] shadow-[0_2px_10px_rgba(47,41,48,.12)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] disabled:opacity-50"><X aria-hidden="true" className="h-4 w-4" /></button>
       </header>
-      <div className="min-h-0 overflow-y-auto px-5 py-5 sm:px-7 sm:py-5">{children}</div>
+      <div className="abii-modal-content min-h-0 overflow-y-auto px-5 py-5 sm:px-7 sm:py-5">{children}</div>
       {footer && <footer className="grid shrink-0 grid-cols-2 gap-3 border-t border-[#F6F0F2] px-5 pb-[max(18px,env(safe-area-inset-bottom))] pt-3 sm:px-7 [&>button]:min-h-11 [&>button]:rounded-xl [&>button]:px-4 [&>button]:text-sm [&>button]:font-semibold [&>button]:transition [&>button]:focus-visible:outline-none [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-[#E9577D]">{footer}</footer>}
     </section>
   </div>;

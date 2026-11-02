@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal, modalCancelClass, modalDangerClass } from "@/components/ui/modal";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { SlidersHorizontal, ShieldCheck, UserRound, Grid2X2, List, Download, Clock3, Layers3, Volume2, Play } from "lucide-react";
 import { getAbiiSoundVolume, isAbiiSoundEnabled, playAbiiSound, setAbiiSoundEnabled, setAbiiSoundVolume } from "@/lib/sounds";
 import { ProfilePictureCropModal } from "@/components/settings/profile-picture-crop-modal";
@@ -22,7 +23,7 @@ const secondaryButton = "inline-flex min-h-10 items-center justify-center rounde
 const dangerButton = "inline-flex min-h-10 items-center justify-center rounded-xl border border-[#F0C7D3] bg-white px-4 py-2 text-sm font-semibold text-[#C94B66] transition hover:bg-[#FFF1F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] disabled:opacity-60";
 
 function SectionCard({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) {
-  return <section className="min-w-0 rounded-2xl border border-[#E8E2E5] bg-white p-4 shadow-[0_2px_10px_rgba(47,41,48,0.025)] sm:p-5"><div className="flex items-start gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF0F4] text-xl text-[#E9577D]" aria-hidden="true">{icon}</span><div className="min-w-0 pt-0.5"><h2 className="text-[16px] font-semibold tracking-[-0.02em] text-[#18384D]">{title}</h2><p className="mt-1 text-xs leading-5 text-[#6E879A] sm:text-[13px]">{description}</p></div></div><div className="mt-4">{children}</div></section>;
+  return <ScrollReveal><section className="min-w-0 rounded-2xl border border-[#E8E2E5] bg-white p-4 shadow-[0_2px_10px_rgba(47,41,48,0.025)] sm:p-5"><div className="flex items-start gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF0F4] text-xl text-[#E9577D]" aria-hidden="true">{icon}</span><div className="min-w-0 pt-0.5"><h2 className="text-[16px] font-semibold tracking-[-0.02em] text-[#18384D]">{title}</h2><p className="mt-1 text-xs leading-5 text-[#6E879A] sm:text-[13px]">{description}</p></div></div><div className="mt-4">{children}</div></section></ScrollReveal>;
 }
 function InlineNotice({ notice }: { notice: Notice }) { if (!notice) return null; return <p role={notice.kind === "error" ? "alert" : "status"} className={`mt-3 rounded-xl px-3.5 py-2.5 text-sm ${notice.kind === "error" ? "bg-[#FFF1F1] text-[#B84352]" : "bg-[#EAF8F0] text-[#28734A]"}`}>{notice.text}</p>; }
 
@@ -150,15 +151,15 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
   }
 
   return <div className="mx-auto w-full min-w-0 space-y-4 p-4 sm:space-y-5 sm:p-6 xl:p-7">
-    <section aria-labelledby="settings-hero-title" className="relative isolate min-h-[210px] overflow-hidden rounded-2xl border border-[#F8E4EB] bg-[#FFF0F4] sm:min-h-[230px] lg:min-h-[248px]">
+    <section aria-labelledby="settings-hero-title" className="abii-enter relative isolate min-h-[210px] overflow-hidden rounded-2xl border border-[#F8E4EB] bg-[#FFF0F4] sm:min-h-[230px] lg:min-h-[248px]">
       <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#FFF0F4] via-[#FFF3F6] to-[#FFE8EF]" />
       <div className="relative z-10 flex min-h-[210px] items-center px-5 py-5 sm:min-h-[230px] sm:px-7 lg:min-h-[248px] lg:px-8">
         <div className="max-w-[62%] sm:max-w-[58%] lg:max-w-[60%]">
-          <div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF6F96] text-xl text-white shadow-sm sm:h-12 sm:w-12 sm:text-2xl" aria-hidden="true">⚙</div>
-          <h1 id="settings-hero-title" className="text-[clamp(1.45rem,2.6vw,2.15rem)] font-bold leading-[1.12] tracking-[-0.04em] text-[#18384D]">Make Abii Feel Like Yours</h1>
-          <p className="mt-2 max-w-[390px] text-[12px] leading-[1.6] text-[#557187] sm:mt-3 sm:text-sm">Customize your study experience, manage your account, and keep your learning data under control.</p>
+          <div className="abii-enter abii-enter-1 mb-2.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF6F96] text-xl text-white shadow-sm sm:h-12 sm:w-12 sm:text-2xl" aria-hidden="true">⚙</div>
+          <h1 id="settings-hero-title" className="abii-enter abii-enter-2 text-[clamp(1.45rem,2.6vw,2.15rem)] font-bold leading-[1.12] tracking-[-0.04em] text-[#18384D]">Make Abii Feel Like Yours</h1>
+          <p className="abii-enter abii-enter-3 mt-2 max-w-[390px] text-[12px] leading-[1.6] text-[#557187] sm:mt-3 sm:text-sm">Customize your study experience, manage your account, and keep your learning data under control.</p>
         </div>
-        <div className="pointer-events-none absolute bottom-0 right-0 h-[94%] w-[43%] sm:h-full sm:w-[40%] lg:w-[38%]">
+        <div className="abii-enter-art pointer-events-none absolute bottom-0 right-0 h-[94%] w-[43%] sm:h-full sm:w-[40%] lg:w-[38%]">
           <Image src="/dashboard-hero/settings.png" alt="Abii holding a settings gear" fill priority sizes="(max-width: 640px) 43vw, (max-width: 1024px) 40vw, 390px" className="object-contain object-right-bottom" />
         </div>
       </div>

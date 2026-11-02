@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { BookOpen, Plus, Search, ArrowUpRight, FolderInput, LoaderCircle } from "lucide-react";
 import { ListChecks, PenLine, CheckCircle2, Shuffle } from "lucide-react";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
+import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/motion/scroll-reveal";
 import { notifyAchievementActivity } from "@/lib/badges/client-sync";
 import { SubjectFolderCreateModal } from "@/components/subjects/subject-folder-create-modal";
 import type { SubjectFolderSummary } from "@/components/subjects/subject-folders-overview";
@@ -151,7 +152,7 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
 
   return (
     <>
-      <section aria-label="Manage subjects" className="space-y-5">
+      <ScrollReveal><section aria-label="Manage subjects" className="space-y-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-bold tracking-tight text-[#2F2930]">All subjects</h2>
@@ -213,10 +214,10 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
             )}
           </div>
         ) : (
-          <div className={layout === "grid" ? "grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3" : "flex flex-col gap-3"}>
-            {filteredSubjects.map((subject) => (
+          <StaggerContainer className={layout === "grid" ? "grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3" : "flex flex-col gap-3"}>
+            {filteredSubjects.map((subject, index) => (
+              <StaggerItem key={subject.id} index={index}>
               <article
-                key={subject.id}
                 className={`group block rounded-2xl border border-[#F0E5E9] bg-white transition duration-200 hover:-translate-y-0.5 hover:border-[#F3C4D3] hover:shadow-[0_8px_28px_rgba(92,49,66,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${
                   layout === "grid" ? "p-5 sm:p-6" : "p-4 sm:flex sm:items-center sm:gap-5 sm:p-5"
                 }`}
@@ -237,11 +238,11 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
                   <TypeMasteryIndicators mastery={subject.typeMastery} />
                   <button type="button" onClick={()=>{setMoving(subject);setDestination(subjectFolderId??"");}} className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#F0CBD7] px-3 text-xs font-semibold text-[#C65380] hover:bg-[#FFF6F8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"><FolderInput className="h-4 w-4"/>Move Subject</button>
                 </div>
-              </article>
+              </article></StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         )}
-      </section>
+      </section></ScrollReveal>
 
       {isModalOpen ? (
         <AddSubjectModal subjectFolderId={subjectFolderId} subjectFolders={subjectFolders} onClose={() => setIsModalOpen(false)} onCreated={handleCreated} />

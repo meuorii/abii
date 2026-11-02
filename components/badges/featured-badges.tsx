@@ -11,6 +11,7 @@ import type { BadgePageItem } from "./types";
 import type { BadgeId } from "@/lib/badges/types";
 import { useToast } from "@/components/ui/toast-provider";
 import { subscribeToAchievementActivity } from "@/lib/badges/client-sync";
+import { ScrollReveal, StaggerItem } from "@/components/motion/scroll-reveal";
 
 async function readShowcase(surface: BadgeShowcaseSurface): Promise<FeaturedBadgeShowcase> {
   const response = await fetch(`/api/badges/featured?surface=${surface}`, { cache: "no-store" });
@@ -85,17 +86,17 @@ export function FeaturedBadges({ surface, initialShowcase, initialError = false 
   }
 
   return <section aria-labelledby={`${surface}-featured-title`} className="min-w-0 rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5">
-    <div className="mb-4 flex min-w-0 flex-wrap items-center justify-between gap-3">
+    <ScrollReveal className="mb-4 flex min-w-0 flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2.5">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FFF0F5] text-[#E9577D]"><Award aria-hidden="true" className="h-[19px] w-[19px]" /></span>
         <div className="min-w-0"><h2 id={`${surface}-featured-title`} className="text-base font-semibold tracking-[-0.025em] text-[#2F2930] sm:text-lg">{title}</h2><p className="mt-0.5 text-[11px] leading-4 text-[#756B72] sm:text-xs">{subtitle}</p></div>
       </div>
       <button type="button" onClick={() => void customize()} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#F2C8D5] bg-white px-3 py-2 text-xs font-semibold text-[#C65380] transition hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2"><Pencil aria-hidden="true" className="h-3.5 w-3.5" />Customize</button>
-    </div>
+    </ScrollReveal>
 
     {loadError && !showcase ? <div role="alert" className="rounded-xl border border-[#F0C7D3] bg-[#FFF8FA] p-4"><p className="text-xs leading-5 text-[#8A4D62]">{loadError}</p><button type="button" onClick={() => void refresh().catch(() => {})} disabled={loading} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-bold text-[#C65380] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] disabled:opacity-60">{loading ? <RotateCw aria-hidden="true" className="h-3.5 w-3.5 animate-spin" /> : <RotateCw aria-hidden="true" className="h-3.5 w-3.5" />}{loading ? "Loading…" : "Try again"}</button></div>
       : showcase?.earnedBadges.length === 0 ? <div className="rounded-xl border border-dashed border-[#E8DDE2] bg-[#FFFAFC] px-4 py-6 text-center"><p className="text-sm font-semibold text-[#183653]">Your first achievement is waiting</p><p className="mt-1 text-xs leading-5 text-[#756B72]">Earn a badge as you study, then feature it here.</p><Link href="/badges" className="mt-3 inline-flex min-h-9 items-center rounded-full px-3 text-xs font-semibold text-[#C65380] underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Explore Badges</Link></div>
-      : showcase?.featuredBadges.length ? <div className="grid min-w-0 grid-cols-1 gap-2.5 min-[390px]:grid-cols-2 xl:grid-cols-3">{showcase.featuredBadges.map((badge) => <FeaturedBadgeCard key={badge.id} badge={badge} onSelect={(item) => setDetailsBadgeId(item.id)} />)}</div>
+      : showcase?.featuredBadges.length ? <div className="grid min-w-0 grid-cols-1 items-stretch gap-2.5 min-[390px]:grid-cols-2 xl:grid-cols-3">{showcase.featuredBadges.map((badge, index) => <StaggerItem key={badge.id} index={index} className="h-full w-full"><FeaturedBadgeCard badge={badge} onSelect={(item) => setDetailsBadgeId(item.id)} /></StaggerItem>)}</div>
       : <div className="rounded-xl bg-[#FFF8FA] px-4 py-6 text-center"><p className="text-sm font-semibold text-[#183653]">No badges selected</p><p className="mt-1 text-xs leading-5 text-[#756B72]">Choose up to three earned badges to feature on your {showcaseName.toLowerCase()}.</p></div>}
 
     <div className="mt-3 flex justify-end"><Link href="/badges" className="inline-flex min-h-9 items-center rounded-lg px-2 text-xs font-semibold text-[#E9577D] hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">View All Badges <span aria-hidden="true" className="ml-1">→</span></Link></div>

@@ -6,6 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { PageTransition } from "@/components/motion/page-transition";
+import { ScrollRootProvider } from "@/components/motion/scroll-root-context";
 import { LayoutDashboard, BookOpen, RotateCcw, ChartNoAxesColumn, Settings, Bell, ChevronDown, Award } from "lucide-react";
 
 const desktopNavigation = [
@@ -234,7 +236,9 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
             aria-label="Dashboard content"
             className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-white pb-20 lg:pb-0"
           >
-            {children}
+            <ScrollRootProvider rootRef={mainRef}>
+              <PageTransition>{children}</PageTransition>
+            </ScrollRootProvider>
           </main>
 
           <nav

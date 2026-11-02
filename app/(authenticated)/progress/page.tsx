@@ -11,6 +11,7 @@ import { QuizSession } from "@/models/QuizSession";
 import { Topic } from "@/models/Topic";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { getFeaturedBadgeShowcase } from "@/lib/badges/featured";
+import { ScrollReveal } from "@/components/motion/scroll-reveal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -172,7 +173,7 @@ export default async function ProgressPage() {
 
   return (
       <div className="w-full min-w-0 p-4 sm:p-6 xl:p-7">
-      <section className="relative mb-5 flex min-h-[210px] items-center overflow-hidden rounded-2xl border border-[#F8E6EC] bg-[#FFF0F4] px-5 py-7 sm:min-h-[230px] sm:px-8 sm:py-8 xl:min-h-[250px] xl:px-10">
+      <ScrollReveal><section className="relative mb-5 flex min-h-[210px] items-center overflow-hidden rounded-2xl border border-[#F8E6EC] bg-[#FFF0F4] px-5 py-7 sm:min-h-[230px] sm:px-8 sm:py-8 xl:min-h-[250px] xl:px-10">
         <div className="relative z-10 max-w-[62%] sm:max-w-[58%]">
           <h2 className="text-2xl font-bold leading-tight text-[#183653] sm:text-3xl xl:text-4xl">Your Learning Journey</h2>
           <p className="mt-1 text-3xl font-extrabold leading-tight text-[#F15D8A] sm:text-4xl xl:text-[42px]">Looks Great!</p>
@@ -181,7 +182,7 @@ export default async function ProgressPage() {
         <div className="absolute inset-y-0 right-0 w-[43%] sm:w-[40%] xl:w-[38%]">
           <Image src="/dashboard-hero/progress.png" alt="Abii cheering you on" fill priority sizes="(max-width: 640px) 43vw, 440px" className="object-contain object-bottom" />
         </div>
-      </section>
+      </section></ScrollReveal>
       <ProgressDashboard data={payload} featuredShowcase={featuredShowcase} featuredShowcaseError={featuredShowcaseError} />
       </div>
     

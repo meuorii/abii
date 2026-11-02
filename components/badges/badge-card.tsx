@@ -8,7 +8,7 @@ export function BadgeCard({ badge, onSelect }: { badge: BadgePageItem; onSelect:
   const StatusIcon = badge.unlocked ? CheckCircle2 : LockKeyhole;
 
   return (
-    <button type="button" onClick={() => onSelect(badge)} aria-haspopup="dialog" aria-label={`${badge.name}, ${badge.unlocked ? "unlocked" : "locked"}. View details.`} className="group flex h-full min-w-0 flex-col rounded-2xl border border-[#E8E2E5] bg-white p-2.5 text-left shadow-[0_2px_10px_rgba(47,41,48,.035)] transition hover:border-[#F1C7D5] hover:shadow-[0_8px_24px_rgba(47,41,48,.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 motion-reduce:transition-none sm:p-3.5 lg:p-4">
+    <button type="button" onClick={() => onSelect(badge)} aria-haspopup="dialog" aria-label={`${badge.name}, ${badge.unlocked ? "unlocked" : "locked"}. View details.`} className="group flex h-full w-full min-w-0 flex-col rounded-2xl border border-[#E8E2E5] bg-white p-2.5 text-left shadow-[0_2px_10px_rgba(47,41,48,.035)] transition hover:border-[#F1C7D5] hover:shadow-[0_8px_24px_rgba(47,41,48,.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 motion-reduce:transition-none sm:p-3.5 lg:p-4">
       <span className="flex min-h-5 w-full min-w-0 flex-nowrap items-center justify-between gap-1">
         <span role="img" aria-label={badge.unlocked ? "Unlocked" : "Locked"} title={badge.unlocked ? "Unlocked" : "Locked"} className="flex h-5 w-5 shrink-0 items-center justify-center">
           <StatusIcon aria-hidden="true" className={`h-4 w-4 ${badge.unlocked ? "text-[#E9577D]" : "text-[#756B72]"}`} strokeWidth={2} />

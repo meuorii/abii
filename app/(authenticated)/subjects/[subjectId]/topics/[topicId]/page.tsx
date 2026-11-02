@@ -37,14 +37,14 @@ export default async function TopicPage({ params }: Props) {
   const topicTypeMastery = mastery.byTypeByTopic.get(String(topic._id)) ?? emptyTypeProgress();
   return (
     <div className="min-w-0 space-y-5 p-4 pb-24 sm:p-6 xl:p-7">
-      <nav aria-label="Breadcrumb" className="flex min-w-0 flex-wrap items-center gap-2 text-xs sm:text-sm">
+      <nav aria-label="Breadcrumb" className="abii-enter abii-enter-1 flex min-w-0 flex-wrap items-center gap-2 text-xs sm:text-sm">
         <Link href="/subjects" className="font-medium text-[#71869A] hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">My Subjects</Link>
         <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[#B4A5AC]"/>
         <Link href={`/subjects/${subject._id}`} className="max-w-[40vw] truncate font-medium text-[#71869A] hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">{subject.name}</Link>
         <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[#B4A5AC]"/>
         <span aria-current="page" className="max-w-[38vw] truncate font-semibold text-[#153B56]">{topic.name}</span>
       </nav>
-      <section aria-labelledby="topic-hero-title" className="relative isolate min-h-[270px] overflow-hidden rounded-[1.35rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[285px] lg:min-h-[300px]">
+      <section aria-labelledby="topic-hero-title" className="abii-enter relative isolate min-h-[270px] overflow-hidden rounded-[1.35rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[285px] lg:min-h-[300px]">
         <div className="relative z-10 flex min-h-[270px] items-center sm:min-h-[285px] lg:min-h-[300px]">
           <div className="w-full max-w-[64%] px-5 py-7 sm:max-w-[62%] sm:px-7 sm:py-8 lg:max-w-[60%] lg:px-8">
             <span aria-hidden="true" className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFE0E9] text-[#E9577D] sm:h-12 sm:w-12"><FolderOpen className="h-5 w-5"/></span>
@@ -54,7 +54,7 @@ export default async function TopicPage({ params }: Props) {
             <p className="mt-4 text-sm font-semibold text-[#C65380]">{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}</p>
           </div>
         </div>
-        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-[36%] items-end justify-center sm:w-[40%] lg:w-[39%]">
+        <div aria-hidden="true" className="abii-enter-art pointer-events-none absolute inset-y-0 right-0 flex w-[36%] items-end justify-center sm:w-[40%] lg:w-[39%]">
           <Image src="/dashboard-hero/my-subjects.png" alt="" fill priority sizes="(max-width: 640px) 43vw, 420px" className="object-contain object-bottom" />
         </div>
       </section>

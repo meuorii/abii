@@ -14,7 +14,7 @@ export function AuthLayout({ mode, children }: AuthLayoutProps) {
       <div className="grid min-h-dvh w-full grid-cols-1 lg:grid-cols-[minmax(0,1.08fr)_minmax(420px,0.92fr)]">
         
         {/* Left Panel: Full height & width image mascot container */}
-        <section className="relative hidden h-full w-full min-h-0 overflow-hidden lg:block">
+        <section className="abii-enter-art relative hidden h-full w-full min-h-0 overflow-hidden lg:block">
           <img
             src={isRegister ? "/auth/register.png" : "/auth/login.png"}
             alt={
@@ -46,7 +46,7 @@ export function AuthLayout({ mode, children }: AuthLayoutProps) {
 
         {/* Right Panel: Form area */}
         <section className="relative flex h-full min-h-0 items-center justify-center overflow-y-auto px-5 py-8 sm:px-10 lg:overflow-hidden lg:px-12 xl:px-16">
-          <div className="w-full max-w-[410px]">
+          <div className="abii-enter w-full max-w-[410px]">
             {/* Small brand header for mobile view only */}
             <div className="mb-7 flex items-center gap-2 lg:hidden">
               <span className="flex h-9 w-9 items-center justify-center bg-transparent text-2xl text-[#C65380]">
