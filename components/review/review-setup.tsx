@@ -117,7 +117,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
       <div className="relative z-10 max-w-[64%] px-5 py-6 sm:max-w-[58%] sm:px-8 sm:py-8">
         <p className="text-sm font-semibold text-[#C65380]">Ready, {firstName}? <span aria-hidden="true">👋</span></p>
         <h1 id="setup-hero-title" className="mt-2 text-[clamp(1.5rem,3vw,2.3rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#173B55]">Let’s <span className="text-[#E9577D]">review!</span></h1>
-        <p className="mt-2 max-w-sm text-xs leading-5 text-[#45647A] sm:text-sm sm:leading-6">Pick a subject and a quiz type. Your questions come from your own flashcards.</p>
+        <p className="mt-2 max-w-sm text-xs leading-5 text-[#45647A] sm:text-sm sm:leading-6">Choose which flashcards to practice and a review mode. Available modes depend on the questions and answers in your library.</p>
       </div>
       <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-[42%] sm:w-[40%]">
         <Image src="/dashboard-hero/my-subjects.png" alt="" fill priority sizes="(max-width: 640px) 42vw, 380px" className="object-contain object-bottom" />
@@ -220,7 +220,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
             )}            {error && <p role="alert" className="mt-2 text-sm text-[#A43E5C]">{error}</p>}
           </div>
           <button type="button" onClick={start} disabled={!canStart} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#FF477D] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">
-            {starting ? <span role="status" className="inline-flex items-center gap-2"><span className="sr-only">Starting Your Review…</span><span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/50 border-t-white motion-reduce:animate-none" />Starting Your Review…</span> : <>Start Review <span aria-hidden="true">→</span></>}
+            {starting ? <span role="status" className="inline-flex items-center gap-2"><span className="sr-only">Preparing Your Review…</span><span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/50 border-t-white motion-reduce:animate-none" />Preparing Your Review…</span> : <>Start Review <span aria-hidden="true">→</span></>}
           </button>
         </div>
       </section>

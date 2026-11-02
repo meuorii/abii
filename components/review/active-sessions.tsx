@@ -23,11 +23,12 @@ export function ActiveSessions({ sessions }: { sessions: ActiveQuizSummary[] }) 
   const [items, setItems] = useState(sessions);
   const [discarding, setDiscarding] = useState<ActiveQuizSummary | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ id: string; kind: "resume" | "discard" } | null>(null);
   const [error, setError] = useState("");
   const router = useRouter();
   const { toast } = useToast();
   async function resume(session: ActiveQuizSummary) {
-    setBusy(true); setError("");
+    setBusy(true); setPendingAction({ id: session.id, kind: "resume" }); setError("");
     try {
       const response = await fetch(`/api/quiz/${session.id}/resume`, { method: "POST" });
       const data = await response.json().catch(() => ({})) as { sessionId?: string; error?: string };
@@ -38,11 +39,11 @@ export function ActiveSessions({ sessions }: { sessions: ActiveQuizSummary[] }) 
       }
       router.push(`/review/quiz/${data.sessionId}`);
     } catch { setError("Could not connect. Your saved quiz answers are unchanged."); }
-    finally { setBusy(false); }
+    finally { setBusy(false); setPendingAction(null); }
   }
   async function discard() {
     if (!discarding) return;
-    setBusy(true);
+    setBusy(true); setPendingAction({ id: discarding.id, kind: "discard" });
     try {
       const response = await fetch(`/api/quiz/${discarding.id}`, { method: "DELETE" });
       const data = await response.json().catch(() => ({})) as { error?: string };
@@ -50,7 +51,7 @@ export function ActiveSessions({ sessions }: { sessions: ActiveQuizSummary[] }) 
       setItems((current) => current.filter((item) => item.id !== discarding.id)); setDiscarding(null);
       toast({ kind: "success", title: "Quiz discarded", message: "Submitted answers remain in your study history." }); router.refresh();
     } catch (cause) { toast({ kind: "error", title: "Could not discard quiz", message: cause instanceof Error ? cause.message : "Please try again." }); }
-    finally { setBusy(false); }
+    finally { setBusy(false); setPendingAction(null); }
   }
   return <>
     <section aria-labelledby="continue-learning-title">
@@ -62,9 +63,9 @@ export function ActiveSessions({ sessions }: { sessions: ActiveQuizSummary[] }) 
         <div className="mt-4 flex items-center justify-between gap-3 text-xs"><span className="text-[#557087]">{session.readyToFinish ? "Ready to finish" : "Questions answered"}</span><span className="font-bold tabular-nums text-[#153B56]">{session.progress}%</span></div>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#F3E9ED]" role="progressbar" aria-label="Quiz completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={session.progress}><div className="h-full rounded-full bg-[#F0789A]" style={{ width: `${session.progress}%` }} /></div>
         <div className="mt-2 flex justify-between gap-2 text-[11px] text-[#7890A4]"><span>{session.answeredCount} of {session.totalQuestions} answered</span><span className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" aria-hidden="true" />{relativeDate(session.lastActivityAt)}</span></div>
-        <div className="mt-4 flex items-center justify-between gap-2"><button type="button" disabled={busy} onClick={() => void resume(session)} className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#FF477D] px-4 text-xs font-semibold text-white hover:bg-[#E9577D] disabled:opacity-60"><Play className="h-3.5 w-3.5" aria-hidden="true" />Resume Quiz</button><button type="button" disabled={busy} onClick={() => setDiscarding(session)} className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-[#A43E5C] hover:bg-[#FFF1F4] disabled:opacity-60"><Trash2 className="h-3.5 w-3.5" aria-hidden="true" />Discard</button></div>
+        <div className="mt-4 flex items-center justify-between gap-2"><button type="button" disabled={busy} onClick={() => void resume(session)} className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#FF477D] px-4 text-xs font-semibold text-white hover:bg-[#E9577D] disabled:opacity-60"><Play className="h-3.5 w-3.5" aria-hidden="true" />{pendingAction?.id === session.id && pendingAction.kind === "resume" ? "Resuming Review…" : "Resume Review"}</button><button type="button" disabled={busy} onClick={() => setDiscarding(session)} className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-[#A43E5C] hover:bg-[#FFF1F4] disabled:opacity-60"><Trash2 className="h-3.5 w-3.5" aria-hidden="true" />Discard</button></div>
       </article>)}</div> : <div className="rounded-2xl border border-dashed border-[#E9D9E0] bg-white px-5 py-7 text-center"><p className="font-semibold text-[#153B56]">You’re all caught up!</p><p className="mt-1 text-sm text-[#7890A4]">No unfinished quizzes. Start a new review whenever you’re ready.</p><a href="/review/setup" className="mt-4 inline-flex min-h-10 items-center rounded-full bg-[#FF477D] px-4 text-sm font-semibold text-white hover:bg-[#E9577D]">Start New Quiz</a></div>}
     </section>
-    <Modal open={Boolean(discarding)} onClose={() => !busy && setDiscarding(null)} action="delete" title="Discard this unfinished quiz?" description="This will remove the unfinished session." busy={busy} alert footer={<><button type="button" disabled={busy} onClick={() => setDiscarding(null)} className={modalCancelClass}>Keep Session</button><button type="button" disabled={busy} onClick={() => void discard()} className={modalDangerClass}>{busy ? "Discarding…" : "Discard Quiz"}</button></>}><p className="text-sm leading-6 text-[#756B72]">Answers you already submitted will remain in your study history.</p></Modal>
+    <Modal open={Boolean(discarding)} onClose={() => !busy && setDiscarding(null)} action="delete" title="Discard this unfinished quiz?" description="This will remove the unfinished session." busy={busy} alert footer={<><button type="button" disabled={busy} onClick={() => setDiscarding(null)} className={modalCancelClass}>Keep Session</button><button type="button" disabled={busy} onClick={() => void discard()} className={modalDangerClass}>{busy ? "Discarding Quiz…" : "Discard Quiz"}</button></>}><p className="text-sm leading-6 text-[#756B72]">Answers you already submitted will remain in your study history.</p></Modal>
   </>;
 }

@@ -32,13 +32,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
     event.preventDefault();
     setBusy(true); setMessage(""); setErrors({});
     if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) {
-      setErrors({ email: "Enter a valid email address." }); toast({ kind: "error", title: "Check your email", message: "Enter a valid email address to continue." }); setBusy(false); return;
+      setErrors({ email: email.trim() ? "Enter a valid email address, such as name@example.com." : "Enter your email address to continue." }); setBusy(false); return;
     }
     if (isRegister && name.trim().length < 2) {
-      setErrors({ name: "Please enter your name (at least 2 characters)." }); toast({ kind: "error", title: "Name needed", message: "Enter your name using at least 2 characters." }); setBusy(false); return;
+      setErrors({ name: "Enter your name using at least 2 characters." }); setBusy(false); return;
     }
     if (password.length < (isRegister ? 8 : 1)) {
-      setErrors({ password: isRegister ? "Use at least 8 characters." : "Enter your password." }); toast({ kind: "error", title: "Check your password", message: isRegister ? "Use at least 8 characters." : "Enter your password to sign in." }); setBusy(false); return;
+      setErrors({ password: isRegister ? "Your password must contain at least 8 characters." : "Enter your password to sign in." }); setBusy(false); return;
     }
     try {
       const response = await fetch(`/api/auth/${mode}`, {
@@ -47,17 +47,15 @@ export function AuthForm({ mode }: { mode: Mode }) {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(result.message || "We couldn't sign you in just now. Check your details and try again.");
+        setMessage(isRegister ? (result.message || "Couldn't create your account. Check your details and try again.") : "Couldn't sign in. Check your details and try again.");
         setErrors(result.errors || {});
-        toast({ kind: "error", title: isRegister ? "Account not created" : "Sign-in failed", message: result.message || "Please check your details and try again." });
         return;
       }
-      toast({ kind: "success", title: isRegister ? "Welcome to Abii!" : "Welcome back!", message: isRegister ? "Your account is ready. Let’s start learning." : "You’ve signed in successfully." });
+      toast({ kind: "success", title: isRegister ? "Welcome to Abii!" : "Welcome back!", message: isRegister ? "Your account is ready. Let's start building your study space." : "You're signed in and ready to continue." });
       const next = new URLSearchParams(window.location.search).get("next");
       router.replace(safeNextPath(next));
     } catch {
       setMessage("We couldn't connect just now. Please try again in a moment.");
-      toast({ kind: "error", title: "Connection problem", message: "Please check your connection and try again." });
     } finally { setBusy(false); }
   }
 
@@ -82,10 +80,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
         {errors.password && <p id="password-error" className="mt-1.5 text-sm text-[#B42345]">{errors.password}</p>}
         {isRegister && <p className="mt-2 text-xs text-[#8B818A]">Use 8–128 characters.</p>}
       </div>
-      {message && <p role="alert" className="rounded-lg border border-[#F1C9D4] bg-[#FFF4F6] px-3.5 py-3 text-sm leading-5 text-[#963A55]">{message}</p>}
+      {message && <p role="alert" aria-live="assertive" className="rounded-lg border border-[#F1C9D4] bg-[#FFF4F6] px-3.5 py-3 text-sm leading-5 text-[#963A55]">{message}</p>}
       <button type="submit" disabled={busy} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#C65380] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#AA416B] active:translate-y-px focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#F4C4D7] disabled:cursor-not-allowed disabled:opacity-65">
         {busy && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />}
-        {busy ? (isRegister ? "Creating your account…" : "Signing you in…") : (isRegister ? "Create account" : "Sign in")}
+        {busy ? (isRegister ? "Creating Your Account…" : "Signing You In…") : (isRegister ? "Create Account" : "Sign In")}
       </button>
       <p className="pt-1 text-center text-sm text-[#77717A]">
         {isRegister ? "Already have an account? " : "New to Abii? "}

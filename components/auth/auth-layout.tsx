@@ -61,12 +61,12 @@ export function AuthLayout({ mode, children }: AuthLayoutProps) {
               {isRegister ? "A fresh start" : "Your study space awaits"}
             </p>
             <h1 className="mt-2 text-[2rem] font-semibold leading-tight tracking-[-0.055em] sm:text-[2.35rem]">
-              {isRegister ? "Create your account." : "Welcome back."}
+              {isRegister ? "Start Learning with Abii" : "Welcome Back!"}
             </h1>
             <p className="mb-7 mt-2 text-sm leading-6 text-[#77717A]">
               {isRegister
-                ? "Let’s make remembering a little easier."
-                : "Sign in to continue your learning journey."}
+                ? "Create your account to organize subjects, make flashcards, and practice active recall."
+                : "Sign in to continue studying, review your flashcards, and pick up where you left off."}
             </p>
 
             {children}

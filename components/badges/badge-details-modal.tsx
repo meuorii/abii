@@ -4,12 +4,12 @@ import { BadgeImage } from "./badge-image";
 import { BadgeProgress, remainingRequirement } from "./badge-progress";
 import { RarityIndicator } from "./rarity-indicator";
 import type { BadgePageItem } from "./types";
-import { Modal, modalCancelClass } from "@/components/ui/modal";
+import { Modal } from "@/components/ui/modal";
 
 export function BadgeDetailsModal({ badge, onClose }: { badge: BadgePageItem | null; onClose: () => void }) {
   if (!badge) return null;
   return (
-    <Modal open onClose={onClose} action="view" size="lg" title={badge.name} description={badge.unlocked ? "Achievement unlocked" : "Achievement details"} footer={<button type="button" onClick={onClose} className={`col-span-2 ${modalCancelClass}`}>Close</button>}>
+    <Modal open onClose={onClose} action="view" size="lg" title={badge.name} description={badge.unlocked ? "You’ve unlocked this achievement. See how it was earned and when." : "See what this achievement represents and what you need to do to unlock it."}>
       <div className="space-y-5">
         <div className="flex flex-col items-center gap-3 rounded-2xl bg-[#FFF7F9] px-4 py-5 sm:flex-row sm:items-center sm:gap-5 sm:px-5">
           <div className="flex aspect-square w-32 shrink-0 items-center justify-center sm:w-40">

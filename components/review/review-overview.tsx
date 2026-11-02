@@ -79,13 +79,13 @@ export function ReviewOverview({ subjects, topics, totalCards, totalMastered, du
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="flex items-start gap-3">
           <span className="mt-1 text-[#FF5B8B]"><RefreshCw className="h-7 w-7" aria-hidden="true"/></span>
-          <div><h2 id="review-overview-title" className="text-lg font-bold tracking-tight text-[#153B56] sm:text-xl">Review Overview</h2><p className="mt-0.5 text-xs text-[#6C879C] sm:text-sm">See your progress and stay on track with your learning goals.</p></div>
+          <div><h2 id="review-overview-title" className="text-lg font-bold tracking-tight text-[#153B56] sm:text-xl">Review Overview</h2><p className="mt-0.5 text-xs text-[#6C879C] sm:text-sm">Practice flashcards that are due, or choose a subject and review mode to practice any eligible cards.</p></div>
         </div>
         <span className="inline-flex items-center gap-2 rounded-full border border-[#E8EAF0] bg-white px-3 py-2 text-xs font-medium text-[#557087]"><Icon name="calendar" /> Today</span>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard title="Cards Due Today" value={dueCount} detail={`${totalCards} total cards`} icon="calendar" progress={totalCards ? Math.round(((totalCards - dueCount) / totalCards) * 100) : 0} />
-        <SummaryCard title="In Review" value={reviewAttemptsToday} detail="Review attempts today" icon="clock" progress={totalCards ? Math.min(100, Math.round((reviewAttemptsToday / totalCards) * 100)) : 0} />
+        <SummaryCard title="Answer Attempts Today" value={reviewAttemptsToday} detail="Answers submitted in review sessions" icon="clock" />
         <SummaryCard title="Reviewed Today" value={reviewedTodayUnique} detail="Unique cards reviewed today" icon="check" progress={completedTodayProgress} />
         <article className="min-w-0 rounded-2xl border border-[#E8EAF0] bg-white p-4 transition-colors hover:border-[#F1C3D2] sm:p-5"><div className="flex items-start gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF0F5] text-[#FF5B8B]"><Icon name="flame" /></span><div><p className="text-xs font-medium text-[#557087] sm:text-sm">Study Streak</p><p className="mt-1 text-2xl font-bold tracking-tight text-[#153B56]">{streak} {streak === 1 ? "day" : "days"}</p><p className="mt-0.5 text-xs text-[#7890A4]">{streak ? "Keep your momentum going!" : "Your next study day starts a streak."}</p></div></div></article>
       </div>

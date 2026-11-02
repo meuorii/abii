@@ -58,7 +58,7 @@ export function DashboardOverview({ firstName, dueCount, totalCards, overallMast
           <div className="w-full max-w-full px-5 pb-[145px] pt-6 sm:max-w-[57%] sm:px-8 sm:py-8 sm:pb-8 lg:max-w-[56%] lg:px-9">
             <p className="text-xs font-medium text-[#2F4658] sm:text-sm">{greeting}, {firstName}! <span aria-hidden="true">👋</span></p>
             <h1 id="dashboard-hero-title" className="mt-2 max-w-[490px] text-[clamp(1.7rem,3.3vw,2.8rem)] font-bold leading-[1.08] tracking-[-0.055em] text-[#203D50]">What should you <span className="text-[#E9577D]">study</span> today?</h1>
-            <p className="mt-3 max-w-[340px] text-xs leading-5 text-[#6C8192] sm:text-sm sm:leading-6">A little review today helps you remember more tomorrow.</p>
+            <p className="mt-3 max-w-[340px] text-xs leading-5 text-[#6C8192] sm:text-sm sm:leading-6">Pick up where you left off, review your flashcards, and keep your learning progress moving forward.</p>
             <Link href="/review" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#FF6F96] px-4 py-2.5 text-xs font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.15)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:mt-5 sm:min-h-11 sm:px-5 sm:text-sm">Start Review <Icon name="arrow" className="h-4 w-4" /></Link>
           </div>
           <div className="pointer-events-none absolute bottom-0 right-0 h-[48%] w-[58%] sm:inset-y-0 sm:h-auto sm:w-[49%] lg:w-[48%]">
@@ -76,7 +76,7 @@ export function DashboardOverview({ firstName, dueCount, totalCards, overallMast
       ) : (
         <>
           <section aria-label="Overall mastery" className="rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-4">
-            <MasteryProgressBar label="Overall Mastery" ariaLabel="Overall mastery progress" progress={overallMastery.progress} size="md" />
+            <div className="space-y-1"><MasteryProgressBar label="Overall Mastery" ariaLabel="Overall mastery progress" progress={overallMastery.progress} size="md" /><p className="text-xs text-[#8392A0]">How much of your study material you’ve mastered through practice.</p></div>
           </section>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.45fr_1fr]">
             <section className="min-w-0 rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5" aria-labelledby="today-review-heading">
@@ -85,7 +85,7 @@ export function DashboardOverview({ firstName, dueCount, totalCards, overallMast
                 <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><Icon name="cards" className="h-7 w-7" /></span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2"><span className="text-3xl font-bold tracking-[-0.06em] text-[#203D50] tabular-nums">{dueCount}</span><span className="text-xs text-[#536B7F]">{dueCount === 1 ? "card due" : "cards due"}</span></div>
-                  <p className="mt-1 text-xs text-[#8392A0]">{dueCount > 0 ? "Keep your study momentum going." : totalCards > 0 ? "You’re all caught up for now." : "Add flashcards to start your first review."}</p>
+                  <p className="mt-1 text-xs text-[#8392A0]">{dueCount > 0 ? "You have flashcards ready for review. Practice them to strengthen your recall." : totalCards > 0 ? "You’re all caught up! Come back when your next flashcards are ready." : "Create flashcards to begin your first review."}</p>
                 </div>
                 <Link href={dueCount > 0 ? "/review" : "/subjects"} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-[#FF6F96] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2">{dueCount > 0 ? "Start Review" : totalCards > 0 ? "Review" : "Add Cards"}<Icon name="arrow" className="h-4 w-4" /></Link>
               </div>
@@ -96,7 +96,7 @@ export function DashboardOverview({ firstName, dueCount, totalCards, overallMast
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 text-[#E9577D]"><span aria-hidden="true" className="text-xl">♨</span><h2 id="study-streak-heading" className="text-base font-semibold text-[#2F4658]">Study Streak</h2></div>
                   <p className="mt-2 text-2xl font-bold tracking-[-0.05em] text-[#203D50]">{currentStreak} {currentStreak === 1 ? "day" : "days"}</p>
-                  <p className="mt-1 text-xs text-[#536B7F]">{currentStreak > 0 ? "You’re showing up for yourself." : "A small session can start your streak."}</p>
+                  <p className="mt-1 text-xs text-[#536B7F]">{currentStreak > 0 ? "Keep showing up and build on your study routine." : "Complete a study activity to start building your streak."}</p>
                 </div>
                 <div className="relative h-[58px] w-[70px] shrink-0 overflow-hidden rounded-xl bg-[#FFF7F9] sm:h-[70px] sm:w-[82px]">
                   <Image src="/dashboard-hero/dashboard.png" alt="" fill sizes="82px" className="object-contain object-bottom" />
