@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/toast-provider";
 import { useRouter } from "next/navigation";
+import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { ListChecks, PenLine, ListOrdered, Shuffle, CheckCircle2, BookOpen, Layers3, FolderOpen } from "lucide-react";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 import { ScrollReveal, StaggerItem } from "@/components/motion/scroll-reveal";
@@ -114,16 +115,16 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
   }
 
   const hero = (
-    <section aria-labelledby="setup-hero-title" className="abii-enter relative isolate min-h-[170px] overflow-hidden rounded-[1.4rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[210px]">
-      <div className="relative z-10 max-w-[64%] px-5 py-6 sm:max-w-[58%] sm:px-8 sm:py-8">
-        <p className="text-sm font-semibold text-[#C65380]">Ready, {firstName}? <span aria-hidden="true">👋</span></p>
-        <h1 id="setup-hero-title" className="mt-2 text-[clamp(1.5rem,3vw,2.3rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#173B55]">Let’s <span className="text-[#E9577D]">review!</span></h1>
-        <p className="mt-2 max-w-sm text-xs leading-5 text-[#45647A] sm:text-sm sm:leading-6">Choose which flashcards to practice and a review mode. Available modes depend on the questions and answers in your library.</p>
-      </div>
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-[42%] sm:w-[40%]">
-        <Image src="/dashboard-hero/my-subjects.png" alt="" fill priority sizes="(max-width: 640px) 42vw, 380px" className="object-contain object-bottom" />
-      </div>
-    </section>
+    <AbiiPageHero
+      variant="review-setup"
+      headingId="setup-hero-title"
+      eyebrow={<p className="text-sm font-semibold text-[#C65380]">Ready, {firstName}? <span aria-hidden="true">👋</span></p>}
+      title={<h1 className="mt-2 text-[clamp(1.5rem,3vw,2.3rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#173B55]">Let’s <span className="text-[#E9577D]">review!</span></h1>}
+      description={<p className="mt-2 max-w-sm text-xs leading-5 text-[#45647A] sm:text-sm sm:leading-6">Choose which flashcards to practice and a review mode. Available modes depend on the questions and answers in your library.</p>}
+      mascotSrc="/dashboard-hero/my-subjects.png"
+      mascotAlt=""
+      priority
+    />
   );
 
   if (loadFailed) {

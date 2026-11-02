@@ -5,6 +5,7 @@ import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 import { FeaturedBadges } from "@/components/badges/featured-badges";
 import type { FeaturedBadgeShowcase } from "@/components/badges/featured-types";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/motion/scroll-reveal";
+import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 
 type SubjectOverview = { id: string; name: string; flashcardCount: number; progress: number };
 
@@ -53,20 +54,18 @@ export function DashboardOverview({ firstName, dueCount, totalCards, overallMast
 
   return (
     <div className="mx-auto w-full max-w-[1500px] space-y-5 px-4 py-4 pb-24 sm:space-y-6 sm:px-6 sm:py-6 lg:px-6 lg:py-5 lg:pb-8">
-      <section className="relative isolate min-h-[370px] overflow-hidden rounded-[20px] border border-[#F6DCE5] bg-[#FFF0F5] sm:min-h-[248px] lg:min-h-[254px]" aria-labelledby="dashboard-hero-title">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_70%_45%,rgba(255,255,255,0.86),transparent_58%)]" />
-        <div className="relative z-10 flex min-h-[370px] items-start sm:min-h-[248px] sm:items-center lg:min-h-[254px]">
-          <div className="w-full max-w-full px-5 pb-[145px] pt-6 sm:max-w-[57%] sm:px-8 sm:py-8 sm:pb-8 lg:max-w-[56%] lg:px-9">
-            <p className="abii-enter abii-enter-1 text-xs font-medium text-[#2F4658] sm:text-sm">{greeting}, {firstName}! <span aria-hidden="true">👋</span></p>
-            <h1 id="dashboard-hero-title" className="abii-enter abii-enter-2 mt-2 max-w-[490px] text-[clamp(1.7rem,3.3vw,2.8rem)] font-bold leading-[1.08] tracking-[-0.055em] text-[#203D50]">What should you <span className="text-[#E9577D]">study</span> today?</h1>
-            <p className="abii-enter abii-enter-3 mt-3 max-w-[340px] text-xs leading-5 text-[#6C8192] sm:text-sm sm:leading-6">Pick up where you left off, review your flashcards, and keep your learning progress moving forward.</p>
-            <Link href="/review" className="abii-enter abii-enter-4 mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#FF6F96] px-4 py-2.5 text-xs font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.15)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:mt-5 sm:min-h-11 sm:px-5 sm:text-sm">Start Review <Icon name="arrow" className="h-4 w-4" /></Link>
-          </div>
-          <div className="abii-enter-art pointer-events-none absolute bottom-0 right-0 h-[48%] w-[58%] sm:inset-y-0 sm:h-auto sm:w-[49%] lg:w-[48%]">
-            <Image src="/dashboard-hero/dashboard.png" alt="Abii the pink otter waving hello" fill priority sizes="(max-width: 640px) 48vw, (max-width: 1024px) 42vw, 520px" className="object-contain object-[right_bottom] sm:object-[right_bottom]" />
-          </div>
-        </div>
-      </section>
+      <AbiiPageHero
+        variant="dashboard"
+        headingId="dashboard-hero-title"
+        eyebrow={<p className="text-xs font-medium text-[#2F4658] sm:text-sm">{greeting}, {firstName}! <span aria-hidden="true">👋</span></p>}
+        title={<h1 className="mt-2 max-w-[490px] text-[clamp(1.7rem,3.3vw,2.8rem)] font-bold leading-[1.08] tracking-[-0.055em] text-[#203D50]">What should you <span className="text-[#E9577D]">study</span> today?</h1>}
+        description={<p className="mt-3 max-w-[340px] text-xs leading-5 text-[#6C8192] sm:text-sm sm:leading-6">Pick up where you left off, review your flashcards, and keep your learning progress moving forward.</p>}
+        actions={<Link href="/review" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#FF6F96] px-4 py-2.5 text-xs font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.15)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:mt-5 sm:min-h-11 sm:px-5 sm:text-sm">Start Review <Icon name="arrow" className="h-4 w-4" /></Link>}
+        mascotSrc="/dashboard-hero/dashboard.png"
+        mascotAlt="Abii the pink otter waving hello"
+        priority
+        decoration={<div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_70%_45%,rgba(255,255,255,0.86),transparent_58%)]" />}
+      />
 
       {loadFailed ? (
         <section role="alert" className="rounded-2xl border border-[#F2C9D5] bg-white p-5 sm:p-7">
@@ -82,13 +81,15 @@ export function DashboardOverview({ firstName, dueCount, totalCards, overallMast
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.45fr_1fr]">
             <ScrollReveal className="min-w-0"><section className="min-w-0 rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5" aria-labelledby="today-review-heading">
               <SectionHeading icon="calendar" title="Today’s Review" href="/review" />
-              <div className="flex min-h-[100px] flex-wrap items-center gap-4 rounded-2xl border border-[#F6E8ED] bg-[#FFFCFD] p-4 sm:flex-nowrap sm:gap-5 sm:px-5">
-                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><Icon name="cards" className="h-7 w-7" /></span>
-                <div className="min-w-0 flex-1">
+                <div className="flex min-h-[100px] flex-col items-stretch gap-3 rounded-2xl border border-[#F6E8ED] bg-[#FFFCFD] p-4 sm:flex-row sm:items-center sm:gap-5 sm:px-5">
+                  <div className="flex min-w-0 items-center gap-4 sm:flex-1">
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><Icon name="cards" className="h-7 w-7" /></span>
+                    <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2"><span className="text-3xl font-bold tracking-[-0.06em] text-[#203D50] tabular-nums">{dueCount}</span><span className="text-xs text-[#536B7F]">{dueCount === 1 ? "card due" : "cards due"}</span></div>
                   <p className="mt-1 text-xs text-[#8392A0]">{dueCount > 0 ? "You have flashcards ready for review. Practice them to strengthen your recall." : totalCards > 0 ? "You’re all caught up! Come back when your next flashcards are ready." : "Create flashcards to begin your first review."}</p>
+                    </div>
                 </div>
-                <Link href={dueCount > 0 ? "/review" : "/subjects"} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-[#FF6F96] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2">{dueCount > 0 ? "Start Review" : totalCards > 0 ? "Review" : "Add Cards"}<Icon name="arrow" className="h-4 w-4" /></Link>
+                  <Link href={dueCount > 0 ? "/review" : "/subjects"} className="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-[#FF6F96] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:ml-auto sm:w-auto">{dueCount > 0 ? "Start Review" : totalCards > 0 ? "Review" : "Add Cards"}<Icon name="arrow" className="h-4 w-4" /></Link>
               </div>
             </section></ScrollReveal>
 

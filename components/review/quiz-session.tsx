@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { useToast } from "@/components/ui/toast-provider";
 import { notifyAchievementActivity } from "@/lib/badges/client-sync";
 import { TypeIcon } from "@/components/review/review-setup";
@@ -419,22 +419,30 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
         <button type="button" disabled={busy} onClick={() => hasDraft ? setExitConfirm(true) : router.push("/review")} className="ml-auto inline-flex min-h-9 shrink-0 items-center rounded-full border border-[#F1DDE4] bg-white px-3 text-[11px] font-semibold text-[#C65380] hover:bg-[#FFF7F9] disabled:opacity-50 sm:px-4 sm:text-xs">Save &amp; Exit</button>
       </nav>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_290px] xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section aria-labelledby="quiz-hero-title" className="abii-enter relative isolate order-1 min-h-[150px] overflow-hidden rounded-[1.4rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[200px] lg:col-start-1 lg:row-start-1">
-          <div className="relative z-10 max-w-[66%] px-4 py-4 sm:max-w-[60%] sm:px-7 sm:py-6">
-            <div className="flex items-center gap-3">
-              <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FFE0E9] text-lg text-[#E9577D] sm:h-11 sm:w-11">▤</span>
-              <div className="min-w-0">
-                <h2 id="quiz-hero-title" className="truncate text-base font-bold tracking-[-0.03em] text-[#2F2930] sm:text-xl">{initial.subjectName}</h2>
-                <p className="text-[11px] text-[#6E8497] sm:text-xs">{total} {total === 1 ? "question" : "questions"} · {typeLabel}</p>
-              </div>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_290px] xl:grid-cols-[minmax(0,1fr)_320px]">
+        <AbiiPageHero
+          variant="quiz-session"
+          headingId="quiz-hero-title"
+          eyebrow={<div className="flex min-w-0 items-center gap-3">
+            <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FFE0E9] text-lg text-[#E9577D] sm:h-11 sm:w-11">{"\u25A4"}</span>
+            <div className="min-w-0">
+              <div className="break-words text-sm font-bold tracking-[-0.03em] text-[#2F2930] sm:text-xl">{initial.subjectName}</div>
+              <div className="break-words text-[11px] text-[#6E8497] sm:text-xs">{total} {total === 1 ? "question" : "questions"} &middot; {typeLabel}</div>
             </div>
-            <div className="mt-2.5 flex items-center gap-2"><div className="h-1.5 w-32 overflow-hidden rounded-full bg-white/90 sm:w-48" role="progressbar" aria-label="Quiz progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPct}><div className="h-full rounded-full bg-[#F0789A] transition-[width]" style={{ width: `${progressPct}%` }} /></div><span className="text-[11px] font-semibold text-[#6E8497]">{progressPct}%</span></div>
-            <p className="mt-3 text-[clamp(1.3rem,2.6vw,2rem)] font-bold leading-[1.1] tracking-[-0.045em] text-[#173B52]">Let’s review!</p>
-            <p className="mt-1 hidden max-w-xs text-xs leading-5 text-[#526F83] sm:block sm:text-sm sm:leading-6">Take your time, think it through, you’ll do great!</p>
-          </div>
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-[36%] sm:w-[38%]"><Image src="/dashboard-hero/my-subjects.png" alt="" fill priority sizes="(max-width: 640px) 36vw, 320px" className="object-contain object-bottom" /></div>
-        </section>
+          </div>}
+          preTitle={<div className="flex w-full max-w-[220px] min-w-0 items-center gap-2 sm:mt-2">
+            <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/90" role="progressbar" aria-label="Quiz progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPct}>
+              <div className="h-full rounded-full bg-[#F0789A] transition-[width]" style={{ width: `${progressPct}%` }} />
+            </div>
+            <span className="shrink-0 text-[11px] font-semibold tabular-nums text-[#6E8497]">{progressPct}%</span>
+          </div>}
+          title={<h1 className="text-[clamp(1.35rem,2.3vw,1.8rem)] font-bold leading-[1.1] tracking-[-0.045em] text-[#173B52] sm:mt-2">Let&apos;s review!</h1>}
+          description={<p className="max-w-xs text-xs leading-5 text-[#526F83] sm:mt-1 sm:text-sm sm:leading-6">Take your time, think it through, you&apos;ll do great!</p>}
+          mascotSrc="/dashboard-hero/my-subjects.png"
+          mascotAlt=""
+          priority
+          className="order-1 lg:col-start-1 lg:row-start-1"
+        />
 
         <div className="order-3 lg:order-none lg:col-start-2 lg:row-start-1">
           <ProgressPanel total={total} answered={answeredCount} correct={correctCount} incorrect={incorrectCount} mastered={masteredCount} cards={cardTotal} round={currentRound} firstName={firstName} />

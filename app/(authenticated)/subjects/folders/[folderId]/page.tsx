@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import Link from "next/link";
 import { isValidObjectId } from "mongoose";
 import { notFound, redirect } from "next/navigation";
@@ -30,6 +30,15 @@ export default async function SubjectFolderPage({params}:Props){
  const topicCount=topics.reduce((sum,row)=>sum+row.count,0),flashcardCount=cards.reduce((sum,row)=>sum+row.count,0);
  const title=folder?.name??"Unfiled Subjects";
  return <div className="space-y-5 p-4 pb-24 sm:p-6 xl:p-7"><nav aria-label="Breadcrumb" className="abii-enter abii-enter-1 flex min-w-0 items-center gap-2 text-sm"><Link href="/subjects" className="shrink-0 text-[#75889A] hover:text-[#E9577D]">My Subjects</Link><ChevronRight className="h-4 w-4 shrink-0 text-[#B4A5AC]"/><span aria-current="page" className="truncate font-semibold text-[#2F2930]">{title}</span></nav>
- <section className="abii-enter relative isolate min-h-[260px] overflow-hidden rounded-[1.35rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[280px]"><div className="relative z-10 flex min-h-[260px] items-center sm:min-h-[280px]"><div className="max-w-[70%] px-5 py-6 sm:max-w-[62%] sm:px-8"><h1 className="break-words text-2xl font-bold text-[#2F2930]">{title}</h1><p className="mt-1 text-xs text-[#6E8497]">{subjects.length} subjects · {topicCount} topics · {flashcardCount} flashcards</p><h2 className="mt-5 max-w-[430px] text-3xl font-bold leading-tight tracking-tight text-[#173B52]">Your subjects,<br/><span className="text-[#E9577D]">one organized space.</span></h2><p className="mt-2 text-sm text-[#526F83]">Keep your subjects together and make every study session count.</p><AddSubjectTrigger className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#FF6F96] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2"/></div></div><div aria-hidden className="abii-enter-art pointer-events-none absolute inset-y-0 right-0 w-[39%]"><Image src="/dashboard-hero/my-subjects.png" alt="" fill priority sizes="(max-width: 640px) 40vw, 420px" className="object-contain object-bottom"/></div></section>
+ <AbiiPageHero
+   variant="subject-folder"
+   headingId="subject-folder-hero-title"
+   title={<><h1 className="break-words text-2xl font-bold text-[#2F2930]">{title}</h1><p className="mt-1 text-xs text-[#6E8497]">{subjects.length} subjects &middot; {topicCount} topics &middot; {flashcardCount} flashcards</p><h2 className="mt-5 max-w-[430px] text-3xl font-bold leading-tight tracking-tight text-[#173B52]">Your subjects,<br /><span className="text-[#E9577D]">one organized space.</span></h2></>}
+   description={<p className="mt-2 text-sm text-[#526F83]">Keep your subjects together and make every study session count.</p>}
+   actions={<AddSubjectTrigger className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#FF6F96] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2" />}
+   mascotSrc="/dashboard-hero/my-subjects.png"
+   mascotAlt=""
+   priority
+ />
  <SubjectsClient initialSubjects={subjects} initialLayout={settings?.settings?.subjectLayout==="list"?"list":"grid"} subjectFolderId={unfiled?null:String(folder!._id)} subjectFolders={subjectFolders}/></div>;
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { ImagePlus, Minus, Plus, RotateCcw } from "lucide-react";
 import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
+import { ModalButtonContent } from "@/components/ui/modal-button-content";
 
 const VIEW_SIZE = 320;
 const MAX_FINAL_BYTES = 1024 * 1024;
@@ -191,7 +192,7 @@ export function ProfilePictureCropModal({ file, onClose, onSave }: { file: File;
   const fitHeight = dimensions.height * baseScale;
   const percentage = Math.round((zoom - 1) / 2 * 100);
 
-  return <Modal open onClose={() => { if (!busy) onClose(); }} action="update" size="lg" title="Edit Profile Picture" description="Move and zoom your photo to get the perfect fit." busy={busy} footer={<><button type="button" disabled={busy} onClick={onClose} className={modalCancelClass}>Cancel</button><button type="button" disabled={busy || !dimensions.width} onClick={() => void save()} className={modalPrimaryClass}>{busy ? "Saving Photo…" : "Save Photo"}</button></>}>
+  return <Modal open onClose={() => { if (!busy) onClose(); }} action="update" size="lg" title="Edit Profile Picture" description="Move and zoom your photo to get the perfect fit." busy={busy} footer={<><button type="button" disabled={busy} onClick={onClose} className={modalCancelClass}>Cancel</button><button type="button" disabled={busy || !dimensions.width} onClick={() => void save()} className={modalPrimaryClass}><ModalButtonContent loading={busy} label="Save Photo" loadingLabel="Saving Photo…" /></button></>}>
     <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_140px] sm:items-start">
       <div className="min-w-0">
         <div ref={viewportRef} tabIndex={0} role="application" aria-label="Photo crop editor. Drag to reposition. Use arrow keys to adjust." onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={finishDrag} onPointerCancel={finishDrag} className={`relative mx-auto aspect-square w-full max-w-[340px] touch-none select-none overflow-hidden rounded-2xl border border-[#F4DCE4] bg-[#FFF7F9] outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] ${dragging ? "cursor-grabbing" : "cursor-grab"}`}>

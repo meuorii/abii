@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
@@ -202,22 +202,18 @@ export default async function ReviewPage({ searchParams }: PageProps) {
   return (
     
       <div className="space-y-6 p-4 sm:p-6 xl:p-7">
-        <section aria-labelledby="review-hero-title" className="relative isolate min-h-[225px] overflow-hidden rounded-[1.4rem] border border-[#F5DDE5] bg-[#FFF1F5] sm:min-h-[245px] lg:min-h-[265px]">
-          <div className="relative z-10 max-w-[64%] px-5 py-6 sm:max-w-[58%] sm:px-7 sm:py-8 lg:max-w-[57%] lg:px-8 lg:py-8">
-            <p className="text-sm font-semibold text-[#C65380]">Keep going, {firstName}! <span aria-hidden="true">👋</span></p>
-            <h1 id="review-hero-title" className="mt-3 text-[clamp(1.65rem,3vw,2.35rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#173B55]">
-              Review your cards<br />and make them <span className="text-[#E9577D]">stick!</span>
-            </h1>
-            <p className="mt-3 max-w-sm text-xs leading-5 text-[#45647A] sm:text-sm sm:leading-6">A little review today helps you remember more tomorrow.</p>
-            <Link href="/review/setup" className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#FF477D] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:-translate-y-0.5 hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:min-h-11 sm:px-6">
-              Start Review <span aria-hidden="true">→</span>
-            </Link>
-          </div>
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-[48%] sm:w-[45%] lg:w-[43%]">
-            <Image src="/dashboard-hero/review.png" alt="" fill priority sizes="(max-width: 640px) 48vw, (max-width: 1024px) 45vw, 440px" className="object-contain object-bottom" />
-          </div>
-          <div aria-hidden="true" className="pointer-events-none absolute -bottom-14 right-[-1rem] h-36 w-44 rounded-full bg-[#FFE2EB]/80" />
-        </section>
+        <AbiiPageHero
+          variant="review"
+          headingId="review-hero-title"
+          eyebrow={<p className="text-sm font-semibold text-[#C65380]">Keep going, {firstName}! <span aria-hidden="true">👋</span></p>}
+          title={<h1 className="mt-3 text-[clamp(1.65rem,3vw,2.35rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#173B55]">Review your cards<br />and make them <span className="text-[#E9577D]">stick!</span></h1>}
+          description={<p className="mt-3 max-w-sm text-xs leading-5 text-[#45647A] sm:text-sm sm:leading-6">A little review today helps you remember more tomorrow.</p>}
+          actions={<Link href="/review/setup" className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#FF477D] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:-translate-y-0.5 hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:min-h-11 sm:px-6">Start Review <span aria-hidden="true">→</span></Link>}
+          mascotSrc="/dashboard-hero/review.png"
+          mascotAlt=""
+          priority
+          decoration={<div aria-hidden="true" className="pointer-events-none absolute -bottom-14 right-[-1rem] h-36 w-44 rounded-full bg-[#FFE2EB]/80" />}
+        />
 
         {loadFailed ? <ReviewLoadError /> : (
           <ReviewOverview

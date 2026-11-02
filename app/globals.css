@@ -1,5 +1,31 @@
 @import "tailwindcss";
 
+@media (max-width: 639.98px) {
+  .abii-page-hero__content { gap: 8px; }
+  .abii-page-hero__eyebrow > * { margin-block: 0 !important; }
+  .abii-page-hero__eyebrow :is(p, span) { font-size: 11.5px !important; line-height: 1.4 !important; }
+  .abii-page-hero__title { display: flex; min-width: 0; flex-direction: column; gap: 6px; }
+  .abii-page-hero__title > * { margin-block: 0 !important; }
+  .abii-page-hero__title h1 { font-size: clamp(19px, 5.35vw, 21px) !important; line-height: 1.17 !important; letter-spacing: -0.035em !important; }
+  .abii-page-hero__title > h2,
+  .abii-page-hero__title .abii-page-hero__title-emphasis { font-size: clamp(19px, 5.35vw, 21px) !important; line-height: 1.17 !important; letter-spacing: -0.035em !important; }
+  .abii-page-hero[data-variant="quiz-session"] .abii-page-hero__title h2 { font-size: 16px !important; line-height: 1.25 !important; }
+  .abii-page-hero__description,
+  .abii-page-hero__description > p { font-size: 12.5px !important; line-height: 1.5 !important; }
+  .abii-page-hero__description > *,
+  .abii-page-hero__metadata > * { margin-block: 0 !important; }
+  .abii-page-hero__actions > :is(a, button) {
+    width: fit-content;
+    max-width: 100%;
+    min-height: 40px;
+    padding-inline: 12px !important;
+    padding-block: 9px !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    margin-block: 0 !important;
+  }
+}
+
 .abii-volume-slider {
   --volume-progress: 0%;
   appearance: none;

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast-provider";
 import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
+import { ModalButtonContent } from "@/components/ui/modal-button-content";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -51,7 +52,7 @@ export function LogoutButton() {
         Log out
       </button>
 
-      <Modal open={confirmOpen} onClose={closeConfirmation} action="logout" title="Log Out of Abii?" description="End your current session on this browser." busy={busy} alert footer={<><button type="button" disabled={busy} onClick={closeConfirmation} className={modalCancelClass}>Stay Signed In</button><button type="button" disabled={busy} onClick={logout} className={modalPrimaryClass}>{busy ? "Logging Out…" : "Log Out"}</button></>}><p className="text-sm leading-6 text-[#756B72]">Your saved study progress will be here when you sign in again.</p></Modal>
+      <Modal open={confirmOpen} onClose={closeConfirmation} action="logout" title="Log Out of Abii?" description="End your current session on this browser." busy={busy} alert footer={<><button type="button" disabled={busy} onClick={closeConfirmation} className={modalCancelClass}>Stay Signed In</button><button type="button" disabled={busy} onClick={logout} className={modalPrimaryClass}><ModalButtonContent loading={busy} label="Log Out" loadingLabel="Logging Out…" /></button></>}><p className="text-sm leading-6 text-[#756B72]">Your saved study progress will be here when you sign in again.</p></Modal>
     </>
   );
 }

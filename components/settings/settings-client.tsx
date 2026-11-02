@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal, modalCancelClass, modalDangerClass } from "@/components/ui/modal";
+import { ModalButtonContent } from "@/components/ui/modal-button-content";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { SlidersHorizontal, ShieldCheck, UserRound, Grid2X2, List, Download, Clock3, Layers3, Volume2, Play } from "lucide-react";
@@ -151,19 +153,17 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
   }
 
   return <div className="mx-auto w-full min-w-0 space-y-4 p-4 sm:space-y-5 sm:p-6 xl:p-7">
-    <section aria-labelledby="settings-hero-title" className="abii-enter relative isolate min-h-[210px] overflow-hidden rounded-2xl border border-[#F8E4EB] bg-[#FFF0F4] sm:min-h-[230px] lg:min-h-[248px]">
-      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#FFF0F4] via-[#FFF3F6] to-[#FFE8EF]" />
-      <div className="relative z-10 flex min-h-[210px] items-center px-5 py-5 sm:min-h-[230px] sm:px-7 lg:min-h-[248px] lg:px-8">
-        <div className="max-w-[62%] sm:max-w-[58%] lg:max-w-[60%]">
-          <div className="abii-enter abii-enter-1 mb-2.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF6F96] text-xl text-white shadow-sm sm:h-12 sm:w-12 sm:text-2xl" aria-hidden="true">⚙</div>
-          <h1 id="settings-hero-title" className="abii-enter abii-enter-2 text-[clamp(1.45rem,2.6vw,2.15rem)] font-bold leading-[1.12] tracking-[-0.04em] text-[#18384D]">Make Abii Feel Like Yours</h1>
-          <p className="abii-enter abii-enter-3 mt-2 max-w-[390px] text-[12px] leading-[1.6] text-[#557187] sm:mt-3 sm:text-sm">Customize your study experience, manage your account, and keep your learning data under control.</p>
-        </div>
-        <div className="abii-enter-art pointer-events-none absolute bottom-0 right-0 h-[94%] w-[43%] sm:h-full sm:w-[40%] lg:w-[38%]">
-          <Image src="/dashboard-hero/settings.png" alt="Abii holding a settings gear" fill priority sizes="(max-width: 640px) 43vw, (max-width: 1024px) 40vw, 390px" className="object-contain object-right-bottom" />
-        </div>
-      </div>
-    </section>
+    <AbiiPageHero
+      variant="settings"
+      headingId="settings-hero-title"
+      eyebrow={<div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF6F96] text-xl text-white shadow-sm sm:h-12 sm:w-12 sm:text-2xl" aria-hidden="true">⚙</div>}
+      title={<h1 className="text-[clamp(1.45rem,2.6vw,2.15rem)] font-bold leading-[1.12] tracking-[-0.04em] text-[#18384D]">Make Abii Feel Like Yours</h1>}
+      description={<p className="mt-2 max-w-[390px] text-[12px] leading-[1.6] text-[#557187] sm:mt-3 sm:text-sm">Customize your study experience, manage your account, and keep your learning data under control.</p>}
+      mascotSrc="/dashboard-hero/settings.png"
+      mascotAlt="Abii holding a settings gear"
+      priority
+      decoration={<div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#FFF0F4] via-[#FFF3F6] to-[#FFE8EF]" />}
+    />
     <div className="space-y-2">{(Object.entries(notices) as [NoticeKey, Notice][]).filter((entry) => entry[1]).map(([key, item]) => <div key={key}><InlineNotice notice={item} /></div>)}</div>
 
     <div className="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2 xl:gap-5">
@@ -226,7 +226,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
 
     <Modal open={privacyOpen} onClose={() => setPrivacyOpen(false)} action="information" title="Your data, your choice" description="What these controls do"><ul className="space-y-3 text-sm leading-6 text-[#756B72]"><li><strong className="text-[#2F2930]">Export:</strong> downloads available profile details, subjects, flashcards, review records, and completed sessions as JSON. Password hashes and session tokens are excluded.</li><li><strong className="text-[#2F2930]">Clear Study History:</strong> removes review records and completed sessions while preserving your subjects and flashcards.</li><li><strong className="text-[#2F2930]">Delete Study Materials:</strong> removes subjects, flashcards, and associated review/session records while preserving your account.</li><li><strong className="text-[#2F2930]">Delete Account:</strong> removes your account and associated study data. Confirm before proceeding because this cannot be undone.</li></ul><p className="mt-4 rounded-xl bg-[#FFF7F9] p-3 text-xs leading-5 text-[#756B72]">This panel describes the controls currently implemented in Abii; it is not a substitute for a full published privacy policy.</p></Modal>
     {cropFile && <ProfilePictureCropModal file={cropFile} onClose={() => setCropFile(null)} onSave={saveCroppedPhoto} />}
-    <Modal open={confirmAction !== null} onClose={() => { if (!saving) setConfirmAction(null); }} action="delete" alert busy={Boolean(saving)} title={confirmAction === "history" ? "Clear Study History?" : confirmAction === "materials" ? "Delete All Study Materials?" : "Delete Your Account?"} description={confirmAction === "history" ? "Review history will be removed while your subjects and flashcards stay." : confirmAction === "materials" ? "Your subjects, topics, flashcards, and related study history will be deleted. Your account will remain." : "Your account and all associated study data will be permanently deleted."} footer={<><button type="button" disabled={Boolean(saving)} onClick={() => setConfirmAction(null)} className={modalCancelClass}>Cancel</button><button type="button" disabled={Boolean(saving) || (confirmAction === "account" && deleteAccountText !== "DELETE")} onClick={() => { if (confirmAction === "history") void runAction("history", "/api/data/history", "DELETE"); else if (confirmAction === "materials") void runAction("materials", "/api/data/materials", "DELETE"); else if (confirmAction === "account") void runAction("account", "/api/account", "DELETE", { confirmation: "DELETE" }); }} className={modalDangerClass}>{saving === "history" ? "Clearing Study History…" : saving === "materials" ? "Deleting Study Materials…" : saving === "account" ? "Deleting Account…" : confirmAction === "history" ? "Clear Study History" : confirmAction === "materials" ? "Delete Study Materials" : "Delete Account"}</button></>}>
+    <Modal open={confirmAction !== null} onClose={() => { if (!saving) setConfirmAction(null); }} action="delete" alert busy={Boolean(saving)} title={confirmAction === "history" ? "Clear Study History?" : confirmAction === "materials" ? "Delete All Study Materials?" : "Delete Your Account?"} description={confirmAction === "history" ? "Review history will be removed while your subjects and flashcards stay." : confirmAction === "materials" ? "Your subjects, topics, flashcards, and related study history will be deleted. Your account will remain." : "Your account and all associated study data will be permanently deleted."} footer={<><button type="button" disabled={Boolean(saving)} onClick={() => setConfirmAction(null)} className={modalCancelClass}>Cancel</button><button type="button" disabled={Boolean(saving) || (confirmAction === "account" && deleteAccountText !== "DELETE")} onClick={() => { if (confirmAction === "history") void runAction("history", "/api/data/history", "DELETE"); else if (confirmAction === "materials") void runAction("materials", "/api/data/materials", "DELETE"); else if (confirmAction === "account") void runAction("account", "/api/account", "DELETE", { confirmation: "DELETE" }); }} className={modalDangerClass}><ModalButtonContent loading={Boolean(saving)} label={confirmAction === "history" ? "Clear Study History" : confirmAction === "materials" ? "Delete Study Materials" : "Delete Account"} loadingLabel={saving === "history" ? "Clearing Study History…" : saving === "materials" ? "Deleting Study Materials…" : "Deleting Account…"} /></button></>}>
       {confirmAction === "history" ? <p className="text-sm leading-6 text-[#756B72]">Review records and completed session history will be removed. Your subjects and flashcards remain.</p> : confirmAction === "materials" ? <p className="text-sm leading-6 text-[#756B72]">Subjects, topics, flashcards, review records, and quiz sessions will be deleted. Your user account remains.</p> : <div><p className="text-sm leading-6 text-[#756B72]">Your account, subjects, topics, flashcards, review history, and study sessions will be permanently deleted.</p><label htmlFor="deleteAccountConfirm" className="mt-4 block text-[13px] font-semibold text-[#2F2930]">Type DELETE to confirm</label><input id="deleteAccountConfirm" value={deleteAccountText} onChange={e=>setDeleteAccountText(e.target.value)} className={inputClass} placeholder="DELETE" autoComplete="off"/></div>}
     </Modal>
   </div>;

@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, LoaderCircle } from "lucide-react";
+import { Check } from "lucide-react";
 import { BadgeImage } from "./badge-image";
 import { RarityIndicator } from "./rarity-indicator";
 import type { BadgePageItem } from "./types";
 import type { BadgeShowcaseSurface } from "./featured-types";
 import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
+import { ModalButtonContent } from "@/components/ui/modal-button-content";
 
 export function BadgeSelectionModal({ surface, earnedBadges, selectedIds, loadError, loading, onRetry, onClose, onSave }: {
   surface: BadgeShowcaseSurface;
@@ -40,7 +41,7 @@ export function BadgeSelectionModal({ surface, earnedBadges, selectedIds, loadEr
     finally { setSaving(false); }
   }
 
-  return <Modal open action="update" size="lg" title="Choose Your Badges" description={`Select up to three unlocked badges to showcase on your ${showcaseName}.`} busy={saving} onClose={onClose} footer={<><button type="button" disabled={saving} onClick={onClose} className={modalCancelClass}>Cancel</button><button type="button" disabled={saving || loading} onClick={() => void save()} className={modalPrimaryClass}>{saving ? <><LoaderCircle aria-hidden="true" className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />Saving Your Badges…</> : "Save Changes"}</button></>}>
+  return <Modal open action="update" size="lg" title="Choose Your Badges" description={`Select up to three unlocked badges to showcase on your ${showcaseName}.`} busy={saving} onClose={onClose} footer={<><button type="button" disabled={saving} onClick={onClose} className={modalCancelClass}>Cancel</button><button type="button" disabled={saving || loading} onClick={() => void save()} aria-busy={saving} className={modalPrimaryClass}><ModalButtonContent loading={saving} label="Save Changes" loadingLabel="Saving Your Badges…" /></button></>}>
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-[#183653]">{showcaseName} showcase</p><p aria-live="polite" className="shrink-0 text-xs font-bold tabular-nums text-[#C65380]">{draft.length} / 3 selected</p></div>
       {loadError && <div role="alert" className="rounded-xl border border-[#F0C7D3] bg-[#FFF8FA] p-3"><p className="text-xs leading-5 text-[#8A4D62]">{loadError}</p><button type="button" onClick={onRetry} disabled={loading} className="mt-2 inline-flex min-h-9 items-center rounded-lg px-2 text-xs font-bold text-[#C65380] underline underline-offset-2 disabled:opacity-60">{loading ? "Refreshing…" : "Retry loading badges"}</button></div>}

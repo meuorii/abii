@@ -6,12 +6,13 @@ import type { TypeProgress } from "@/lib/quiz/types";
 import { useRouter } from "next/navigation";
 import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
-import { BookOpen, Plus, Search, ArrowUpRight, FolderInput, LoaderCircle } from "lucide-react";
+import { BookOpen, Plus, Search, ArrowUpRight, FolderInput } from "lucide-react";
 import { ListChecks, PenLine, CheckCircle2, Shuffle } from "lucide-react";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/motion/scroll-reveal";
 import { notifyAchievementActivity } from "@/lib/badges/client-sync";
 import { SubjectFolderCreateModal } from "@/components/subjects/subject-folder-create-modal";
+import { ModalButtonContent } from "@/components/ui/modal-button-content";
 import type { SubjectFolderSummary } from "@/components/subjects/subject-folders-overview";
 
 export type SubjectItem = {
@@ -56,7 +57,7 @@ export function AddSubjectModal({ onClose, onCreated, subjectFolderId, subjectFo
   } catch (cause) { setError(cause instanceof Error ? cause.message : "Couldn’t create the subject. Check your connection and try again."); }
   finally { setSaving(false); }
  }
- return <Modal open onClose={onClose} action="create" title="Create a Subject" description="Give your subject a name to keep your topics and flashcards organized." busy={saving} footer={<><button type="button" onClick={onClose} disabled={saving} className={modalCancelClass}>Cancel</button><button type="submit" form="create-subject-form" disabled={saving} className={modalPrimaryClass}>{saving ? <><LoaderCircle aria-hidden="true" className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none"/>Creating Subject…</> : "Create Subject"}</button></>}>
+ return <Modal open onClose={onClose} action="create" title="Create a Subject" description="Give your subject a name to keep your topics and flashcards organized." busy={saving} footer={<><button type="button" onClick={onClose} disabled={saving} className={modalCancelClass}>Cancel</button><button type="submit" form="create-subject-form" disabled={saving} aria-busy={saving} className={modalPrimaryClass}><ModalButtonContent loading={saving} label="Create Subject" loadingLabel="Creating Subject…" /></button></>}>
   <form id="create-subject-form" onSubmit={handleSubmit} className="space-y-3">
    <label htmlFor="subject-name" className="block text-[13px] font-semibold text-[#2F2930]">Subject Name <span className="text-[#F04469]">*</span></label>
    <input id="subject-name" required maxLength={100} value={name} onChange={event => { setName(event.target.value); setError(""); }} aria-invalid={Boolean(error)} aria-describedby={error ? "create-subject-error" : undefined} placeholder="e.g. Data Structures and Algorithms" className="min-h-12 w-full rounded-xl border border-[#E8E2E5] bg-white px-4 text-sm text-[#2F2930] outline-none placeholder:text-[#A49AA0] focus:border-[#FF6F96] focus:ring-4 focus:ring-[#FF6F96]/15"/>
@@ -160,14 +161,14 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
               {subjects.length} {subjects.length === 1 ? "subject" : "subjects"} to organize your learning.
             </p>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          {subjectFolderId===undefined&&<button type="button" onClick={()=>setCreateFolderOpen(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#F0CBD7] bg-white px-4 py-2.5 text-sm font-semibold text-[#C65380] hover:bg-[#FFF6F8]"><Plus className="h-4 w-4"/>New Folder</button>}
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
+          {subjectFolderId===undefined&&<button type="button" onClick={()=>setCreateFolderOpen(true)} className="inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#F0CBD7] bg-white px-2.5 py-2.5 text-xs font-semibold text-[#C65380] hover:bg-[#FFF6F8] sm:w-auto sm:px-4 sm:text-sm"><Plus className="h-4 w-4 shrink-0"/>New Folder</button>}
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-[#FF6F96] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:self-auto"
+            className={`inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#FF6F96] px-2.5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:w-auto sm:px-4 sm:text-sm ${subjectFolderId === undefined ? "" : "col-span-2 sm:col-span-1"}`}
           >
-            <Plus aria-hidden="true" className="h-4 w-4" />
+            <Plus aria-hidden="true" className="h-4 w-4 shrink-0" />
             Add subject
           </button></div>
         </div>
@@ -248,7 +249,7 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
         <AddSubjectModal subjectFolderId={subjectFolderId} subjectFolders={subjectFolders} onClose={() => setIsModalOpen(false)} onCreated={handleCreated} />
       ) : null}
       {createFolderOpen&&<SubjectFolderCreateModal onClose={()=>setCreateFolderOpen(false)} onCreated={()=>setCreateFolderOpen(false)}/>}
-      {moving&&<Modal open onClose={()=>!movingBusy&&setMoving(null)} action="update" title="Move Subject" description="Choose where you'd like to organize this subject." busy={movingBusy} footer={<><button type="button" disabled={movingBusy} onClick={()=>setMoving(null)} className={modalCancelClass}>Cancel</button><button type="button" disabled={movingBusy||destination===(subjectFolderId??"")} onClick={moveSubject} className={modalPrimaryClass}>{movingBusy?"Moving…":"Move Subject"}</button></>}><div className="space-y-3"><p className="font-semibold text-[#2F2930]">{moving.name}</p><p className="text-sm text-[#756B72]">Current folder: {subjectFolderId?subjectFolders.find(f=>f.id===subjectFolderId)?.name??"Current folder":"Unfiled Subjects"}</p><label htmlFor="move-subject-destination" className="block text-sm font-semibold">Destination Folder</label><select id="move-subject-destination" value={destination} onChange={e=>setDestination(e.target.value)} className="min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3 text-sm outline-none focus:border-[#FF6F96]"><option value="">Unfiled Subjects</option>{subjectFolders.map(folder=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></div></Modal>}
+      {moving&&<Modal open onClose={()=>!movingBusy&&setMoving(null)} action="update" title="Move Subject" description="Choose where you'd like to organize this subject." busy={movingBusy} footer={<><button type="button" disabled={movingBusy} onClick={()=>setMoving(null)} className={modalCancelClass}>Cancel</button><button type="button" disabled={movingBusy||destination===(subjectFolderId??"")} onClick={moveSubject} className={modalPrimaryClass}><ModalButtonContent loading={movingBusy} label="Move Subject" loadingLabel="Moving Subject…" /></button></>}><div className="space-y-3"><p className="font-semibold text-[#2F2930]">{moving.name}</p><p className="text-sm text-[#756B72]">Current folder: {subjectFolderId?subjectFolders.find(f=>f.id===subjectFolderId)?.name??"Current folder":"Unfiled Subjects"}</p><label htmlFor="move-subject-destination" className="block text-sm font-semibold">Destination Folder</label><select id="move-subject-destination" value={destination} onChange={e=>setDestination(e.target.value)} className="min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3 text-sm outline-none focus:border-[#FF6F96]"><option value="">Unfiled Subjects</option>{subjectFolders.map(folder=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></div></Modal>}
     </>
   );
 }

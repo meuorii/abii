@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
+import { ModalButtonContent } from "@/components/ui/modal-button-content";
 import { useToast } from "@/components/ui/toast-provider";
 import { normalizeText, parseEnumeration } from "@/lib/quiz/normalize";
 import { ENUM_MAX_ITEMS, ENUM_MIN_ITEMS, MAX_ENUM_ANSWER_LENGTH, MAX_ENUM_ITEM_LENGTH } from "@/lib/quiz/config";
@@ -59,7 +60,7 @@ export function FlashcardEditorModal({ subjectId, subjectName, topicId, topicOpt
     finally { setSaving(false); }
   }
 
-  return <Modal open onClose={() => !saving && onClose()} action={initial ? "update" : "create"} title={initial ? "Edit Flashcard" : "Create a Flashcard"} description={initial ? "Update your flashcard's question, answer, or hint to keep your study material accurate." : "Turn important information into a question and answer you can practice later."} busy={saving} footer={<><button type="button" disabled={saving} onClick={onClose} className={modalCancelClass}>Cancel</button><button type="submit" form="flashcard-editor-form" disabled={saving} className={modalPrimaryClass}>{saving ? <><LoaderCircle aria-hidden="true" className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none"/>{initial ? "Saving Changes…" : "Creating Flashcard…"}</> : initial ? "Save Changes" : "Create Flashcard"}</button></>}>
+ return <Modal open onClose={() => !saving && onClose()} action={initial ? "update" : "create"} title={initial ? "Edit Flashcard" : "Create a Flashcard"} description={initial ? "Update your flashcard's question, answer, or hint to keep your study material accurate." : "Turn important information into a question and answer you can practice later."} busy={saving} footer={<><button type="button" disabled={saving} onClick={onClose} className={modalCancelClass}>Cancel</button><button type="submit" form="flashcard-editor-form" disabled={saving} aria-busy={saving} className={modalPrimaryClass}><ModalButtonContent loading={saving} label={initial ? "Save Changes" : "Create Flashcard"} loadingLabel={initial ? "Saving Changes…" : "Creating Flashcard…"} /></button></>}>
     <form id="flashcard-editor-form" onSubmit={submit} className="space-y-3">
       <label className="block text-[13px] font-semibold text-[#2F2930]">Topic (Required)<select ref={topicRef} required value={selectedTopicId} onChange={(event) => { setSelectedTopicId(event.target.value); clearError(); }} disabled={topicOptions.length === 0} aria-invalid={errorField === "topic"} aria-describedby={errorField === "topic" ? "flashcard-editor-error" : "topic-help"} className="mt-1.5 h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3 disabled:bg-[#F4F2F4]">{topicOptions.length === 0 ? <option value="">Create a topic first</option> : <><option value="">Choose a topic…</option>{topicOptions.map((topic) => <option key={topic.id} value={topic.id}>{topic.name}</option>)}</>}</select><span id="topic-help" className="mt-1 block text-xs font-normal text-[#756B72]">Choose where this flashcard belongs.</span></label>
       <label className="block text-[13px] font-semibold text-[#2F2930]">Flashcard Type<select value={type} onChange={(event) => { setType(event.target.value as "standard" | "items"); clearError(); }} className="mt-1.5 h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3"><option value="standard">Standard Flashcard</option><option value="items">Enumeration Flashcard</option></select><span className="mt-1 block text-xs font-normal text-[#756B72]">{type === "items" ? `A question that requires ${ENUM_MIN_ITEMS} to ${ENUM_MAX_ITEMS} answer items, separated by commas, semicolons, or new lines.` : "A question with one answer."}</span></label>

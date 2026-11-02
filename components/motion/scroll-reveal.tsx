@@ -7,6 +7,12 @@ import { useScrollRoot } from "./scroll-root-context";
 type ObserverPool = { observer: IntersectionObserver; callbacks: Map<Element, () => void> };
 const observerPools = new Map<Element | null, Map<number, ObserverPool>>();
 
+function removePoolIfCurrent(root: Element | null, thresholds: Map<number, ObserverPool>, threshold: number, pool: ObserverPool) {
+  if (observerPools.get(root) !== thresholds || thresholds.get(threshold) !== pool) return;
+  thresholds.delete(threshold);
+  if (thresholds.size === 0 && observerPools.get(root) === thresholds) observerPools.delete(root);
+}
+
 function observeOnce(element: Element, root: Element | null, threshold: number, onVisible: () => void) {
   let thresholds = observerPools.get(root);
   if (!thresholds) {
@@ -16,6 +22,7 @@ function observeOnce(element: Element, root: Element | null, threshold: number, 
   let pool = thresholds.get(threshold);
   if (!pool) {
     const callbacks = new Map<Element, () => void>();
+    const poolReference: { pool?: ObserverPool } = {};
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
@@ -27,11 +34,12 @@ function observeOnce(element: Element, root: Element | null, threshold: number, 
       }
       if (callbacks.size === 0) {
         observer.disconnect();
-        thresholds?.delete(threshold);
-        if (thresholds?.size === 0) observerPools.delete(root);
+        const registeredPool = poolReference.pool;
+        if (registeredPool) removePoolIfCurrent(root, thresholds, threshold, registeredPool);
       }
     }, { root, threshold });
     pool = { observer, callbacks };
+    poolReference.pool = pool;
     thresholds.set(threshold, pool);
   }
 
@@ -43,8 +51,7 @@ function observeOnce(element: Element, root: Element | null, threshold: number, 
     currentPool.callbacks.delete(element);
     if (currentPool.callbacks.size === 0) {
       currentPool.observer.disconnect();
-      thresholds.delete(threshold);
-      if (thresholds.size === 0) observerPools.delete(root);
+      removePoolIfCurrent(root, thresholds, threshold, currentPool);
     }
     throw error;
   }
@@ -53,8 +60,7 @@ function observeOnce(element: Element, root: Element | null, threshold: number, 
     currentPool.observer.unobserve(element);
     if (currentPool.callbacks.size === 0) {
       currentPool.observer.disconnect();
-      thresholds?.delete(threshold);
-      if (thresholds?.size === 0) observerPools.delete(root);
+      removePoolIfCurrent(root, thresholds!, threshold, currentPool);
     }
   };
 }
@@ -111,7 +117,7 @@ function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number) {
     } catch {
       // Observation can fail in constrained/older browsers. Never leave content hidden.
       const thresholds = observerPools.get(root);
-      if (thresholds?.size === 0) observerPools.delete(root);
+      if (thresholds && thresholds.size === 0 && observerPools.get(root) === thresholds) observerPools.delete(root);
       setVisible(true);
       setAnimateOnMount(false);
       setSkipTransition(true);
