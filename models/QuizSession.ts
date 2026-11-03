@@ -25,6 +25,9 @@ const quizQuestionSchema = new Schema(
     origin: { type: Number, default: undefined },
     // Answer state (written once, atomically).
     answered: { type: Boolean, default: false },
+    reviewRecordPending: { type: Boolean, default: false },
+    achievementSubjectId: { type: Schema.Types.ObjectId, ref: "Subject", default: undefined },
+    achievementDayKey: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },
     correct: { type: Boolean, default: undefined },
     selectedIndex: { type: Number, default: undefined },
     userAnswer: { type: String, default: undefined },
@@ -63,7 +66,7 @@ quizSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "quiz_s
 {
   const cached = mongoose.models.QuizSession;
   const questionSchema = (cached?.schema.path("questions") as unknown as { schema?: { path: (p: string) => unknown } } | undefined)?.schema;
-  if (cached && (!questionSchema?.path("expectedItems") || !cached.schema.path("scope") || !cached.schema.path("lastActivityAt") || !cached.schema.path("resumedAt"))) delete mongoose.models.QuizSession;
+  if (cached && (!questionSchema?.path("expectedItems") || !questionSchema.path("reviewRecordPending") || !questionSchema.path("achievementDayKey") || !cached.schema.path("scope") || !cached.schema.path("lastActivityAt") || !cached.schema.path("resumedAt"))) delete mongoose.models.QuizSession;
 }
 
 export type QuizSessionDocument = InferSchemaType<typeof quizSessionSchema>;

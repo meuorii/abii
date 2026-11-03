@@ -52,7 +52,7 @@ export default async function DashboardPage() {
     const now = new Date();
     const [subjectDocs, mastery] = await measureServerOperation("dashboard data retrieval", () => Promise.all([
       Subject.find({ userId }).select("_id name").sort({ name: 1 }).lean(),
-      getSubjectMastery(userId),
+      getSubjectMastery(userId, undefined, { includeHistory: false }),
     ]));
     overallMastery = { progress: mastery.overall.progress };
 

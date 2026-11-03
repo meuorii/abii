@@ -36,7 +36,7 @@ export async function retryPendingAchievementEvents(userId: mongoose.Types.Objec
   const [account, pending] = await Promise.all([
     User.findById(userId).select("settings.studyTimezone").lean(),
     ReviewRecord.find({ userId, quizSessionId: { $type: "objectId" }, achievementEventsRecorded: { $ne: true } })
-      .select("_id flashcardId result reviewedAt quizSessionId questionIdentity quizQuestionIndex quizRound enumerationFullyCorrect")
+      .select("_id flashcardId result reviewedAt quizSessionId questionIdentity quizQuestionIndex quizRound achievementSubjectId achievementDayKey enumerationFullyCorrect")
       .lean(),
   ]);
   if (!pending.length) return;
@@ -46,16 +46,17 @@ export async function retryPendingAchievementEvents(userId: mongoose.Types.Objec
     const sessionId = String(record.quizSessionId);
     const identity = record.questionIdentity ?? String(record.quizQuestionIndex);
     const occurredAt = new Date(record.reviewedAt);
-    const dayKey = studyDayKey(occurredAt, timezone);
+    const dayKey = record.achievementDayKey ?? studyDayKey(occurredAt, timezone);
+    const subjectId = record.achievementSubjectId ? String(record.achievementSubjectId) : undefined;
     await recordAchievementEvent(String(userId), {
       idempotencyKey: `quiz-answer:${sessionId}:${record.quizQuestionIndex}`,
-      kind: "quiz-answer", occurredAt, dayKey, sessionId, questionIdentity: identity,
+      kind: "quiz-answer", occurredAt, dayKey, sessionId, questionIdentity: identity, ...(subjectId ? { subjectId } : {}),
       correct: record.result === "correct" && record.quizRound === 1,
     });
     if (record.enumerationFullyCorrect && await Flashcard.exists({ _id: record.flashcardId, userId, flashcardType: "items" })) {
       await recordAchievementEvent(String(userId), {
         idempotencyKey: `enumeration-correct:${sessionId}:${identity}`,
-        kind: "quiz-answer", occurredAt, dayKey, sessionId, questionIdentity: identity,
+        kind: "quiz-answer", occurredAt, dayKey, sessionId, questionIdentity: identity, ...(subjectId ? { subjectId } : {}),
         correct: false, enumerationFullyCorrect: true,
       });
     }

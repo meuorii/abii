@@ -11,7 +11,7 @@ import { ReviewRecord } from "../models/ReviewRecord";
 import { Subject } from "../models/Subject";
 import { User } from "../models/User";
 
-test("concurrent duplicate answers persist one review and wrong answers reset mastery", { timeout: 60000 }, async () => {
+test("concurrent and interrupted answer writes recover exactly once and preserve streak resets", { timeout: 60000 }, async () => {
   const mongo = await MongoMemoryServer.create();
   try {
     process.env.MONGODB_URI = mongo.getUri("abii_quiz_answer_test");
@@ -40,8 +40,43 @@ test("concurrent duplicate answers persist one review and wrong answers reset ma
     await AchievementEvent.deleteOne({ userId: user._id, idempotencyKey: `quiz-answer:${String(session._id)}:0` });
     await ReviewRecord.updateOne({ userId: user._id, quizSessionId: session._id, quizQuestionIndex: 0 }, { $set: { achievementEventsRecorded: false } });
     await retryPendingAchievementEvents(user._id);
+    const recoveredEvent = await AchievementEvent.findOne({ userId: user._id, idempotencyKey: `quiz-answer:${String(session._id)}:0` }).lean();
+    const recoveredRecord = await ReviewRecord.findOne({ userId: user._id, quizSessionId: session._id, quizQuestionIndex: 0 }).lean();
     assert.equal(await AchievementEvent.countDocuments({ userId: user._id, idempotencyKey: `quiz-answer:${String(session._id)}:0` }), 1);
-    assert.equal((await ReviewRecord.findOne({ userId: user._id, quizSessionId: session._id, quizQuestionIndex: 0 }).lean())?.achievementEventsRecorded, true);
+    assert.equal(String(recoveredEvent?.subjectId), String(subject._id));
+    assert.equal(recoveredEvent?.dayKey, recoveredRecord?.achievementDayKey);
+    assert.equal(recoveredRecord?.achievementEventsRecorded, true);
+
+    const interruptedSession = await QuizSession.create({
+      userId: user._id, subjectId: subject._id, subjectName: subject.name, type: "identification", status: "active",
+      expiresAt: new Date(Date.now() + 86_400_000),
+      questions: [{ flashcardId: card._id, prompt: "Prompt", expectedAnswer: "target", answered: false }],
+    });
+    const reviewModel = ReviewRecord as unknown as { findOneAndUpdate: (...args: unknown[]) => unknown };
+    const originalFindOneAndUpdate = ReviewRecord.findOneAndUpdate;
+    let injectFailure = true;
+    reviewModel.findOneAndUpdate = function (...args: unknown[]) {
+      const filter = args[0] as { quizSessionId?: unknown } | undefined;
+      if (injectFailure && filter?.quizSessionId) {
+        injectFailure = false;
+        throw new Error("injected ReviewRecord outage");
+      }
+      return originalFindOneAndUpdate.apply(this as never, args as never);
+    };
+    let interrupted;
+    try {
+      interrupted = await submitAnswer(user._id, String(interruptedSession._id), { questionIndex: 0, answer: "target" });
+    } finally {
+      reviewModel.findOneAndUpdate = originalFindOneAndUpdate as unknown as (...args: unknown[]) => unknown;
+    }
+    assert.ok(!interrupted.ok, "answer must not be reported saved while its ReviewRecord is unavailable");
+    const pendingSession = await QuizSession.findById(interruptedSession._id).lean();
+    assert.equal(pendingSession?.questions[0]?.answered, true);
+    assert.equal(pendingSession?.questions[0]?.reviewRecordPending, true);
+    const repairedRetry = await submitAnswer(user._id, String(interruptedSession._id), { questionIndex: 0, answer: "target" });
+    assert.ok(repairedRetry.ok && repairedRetry.duplicate);
+    assert.equal(await ReviewRecord.countDocuments({ userId: user._id, quizSessionId: interruptedSession._id, quizQuestionIndex: 0 }), 1);
+    assert.equal((await QuizSession.findById(interruptedSession._id).lean())?.questions[0]?.reviewRecordPending, false);
 
     await ReviewRecord.create([
       { userId: user._id, flashcardId: card._id, questionType: "identification", result: "correct", reviewedAt: new Date(Date.now() - 2000), nextReviewAt: new Date() },

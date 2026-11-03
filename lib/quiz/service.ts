@@ -48,6 +48,9 @@ type StoredQuestionDoc = {
   round?: number;
   origin?: number;
   answered?: boolean;
+  reviewRecordPending?: boolean;
+  achievementSubjectId?: Types.ObjectId | null;
+  achievementDayKey?: string | null;
   correct?: boolean | null;
   selectedIndex?: number | null;
   userAnswer?: string | null;
@@ -291,7 +294,7 @@ export async function computeStreaks(userId: Types.ObjectId | string, flashcardI
  * Computes streak mastery once per owned card, then aggregates it by topic,
  * subject, and account. Type applicability uses the exact question builder rules.
  */
-async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds?: Types.ObjectId[]) {
+async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds?: Types.ObjectId[], options: { includeHistory?: boolean } = {}) {
   await connectToDatabase();
   const scopedSubjectFilter = subjectIds ? { $in: subjectIds } : undefined;
   const [rawCards, subjects, topics] = await Promise.all([
@@ -300,7 +303,29 @@ async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds
     Topic.find({ userId, ...(scopedSubjectFilter ? { subjectId: scopedSubjectFilter } : {}) }).select("_id subjectId").lean(),
   ]);
   const cardIds = rawCards.map(card => card._id);
-  const records = cardIds.length ? await ReviewRecord.find({ userId, flashcardId: { $in: cardIds } }).select("flashcardId result reviewedAt nextReviewAt questionType").sort({ reviewedAt: -1, _id: -1 }).lean() : [];
+  const includeHistory = options.includeHistory !== false;
+  const reviewFilter = { userId, flashcardId: { $in: cardIds } };
+  const [records, precomputedCounts, compactReviewDays] = includeHistory || !cardIds.length
+    ? [cardIds.length ? await ReviewRecord.find(reviewFilter).select("flashcardId result reviewedAt nextReviewAt questionType").sort({ reviewedAt: -1, _id: -1 }).lean() : [], new Map<string, { correct: number; incorrect: number }>(), null]
+    : await Promise.all([
+      ReviewRecord.aggregate<{ _id: { cardId: Types.ObjectId; mode: QuizMode }; correct: number; incorrect: number; recent: Array<{ result: "correct" | "wrong"; reviewedAt: Date; nextReviewAt: Date; questionType: QuizMode }> }>([
+        { $match: reviewFilter },
+        { $group: { _id: { cardId: "$flashcardId", mode: "$questionType" }, correct: { $sum: { $cond: [{ $eq: ["$result", "correct"] }, 1, 0] } }, incorrect: { $sum: { $cond: [{ $eq: ["$result", "wrong"] }, 1, 0] } }, recent: { $topN: { n: MASTERY_STREAK, sortBy: { reviewedAt: -1, _id: -1 }, output: { result: "$result", reviewedAt: "$reviewedAt", nextReviewAt: "$nextReviewAt", questionType: "$questionType" } } } } },
+      ]),
+      ReviewRecord.distinct("reviewedAt", reviewFilter),
+    ]).then(([groups, days]) => {
+      const counts = new Map<string, { correct: number; incorrect: number }>();
+      const bounded: Array<{ flashcardId: Types.ObjectId; result: "correct" | "wrong"; reviewedAt: Date; nextReviewAt: Date; questionType: QuizMode }> = [];
+      for (const group of groups) {
+        const cardId = String(group._id.cardId);
+        const total = counts.get(cardId) ?? { correct: 0, incorrect: 0 };
+        total.correct += group.correct;
+        total.incorrect += group.incorrect;
+        counts.set(cardId, total);
+        for (const record of group.recent) bounded.push({ flashcardId: group._id.cardId, ...record });
+      }
+      return [bounded, counts, new Set(days.map((day) => new Date(day).toISOString().slice(0, 10)))] as const;
+    });
   const cards = rawCards.map(prepareCard);
   const usable = cards.filter(isUsableCard);
   const usableIds = new Set(usable.map((card) => card.id));
@@ -314,16 +339,18 @@ async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds
   const allByType = emptyTypeProgress();
   const overall = stats();
   const latestByCard = new Map<string, (typeof records)[number]>();
-  const recordCounts = new Map<string, { correct: number; incorrect: number }>();
+  const recordCounts = new Map<string, { correct: number; incorrect: number }>(precomputedCounts);
   const streakByMode = new Map<QuizMode, Map<string, number>>();
   for (const record of records) {
     const id = String(record.flashcardId);
     if (!cardById.has(id)) continue;
     if (!latestByCard.has(id)) latestByCard.set(id, record);
-    const totals = recordCounts.get(id) ?? { correct: 0, incorrect: 0 };
-    if (record.result === "correct") totals.correct += 1;
-    else totals.incorrect += 1;
-    recordCounts.set(id, totals);
+    if (includeHistory) {
+      const totals = recordCounts.get(id) ?? { correct: 0, incorrect: 0 };
+      if (record.result === "correct") totals.correct += 1;
+      else totals.incorrect += 1;
+      recordCounts.set(id, totals);
+    }
   }
   for (const mode of QUIZ_MODES) {
     const streaks = new Map<string, number>();
@@ -403,15 +430,15 @@ async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds
     reviewedCardIds: new Set(latestByCard.keys()),
     cardSummaries: rawCards.map((card) => ({ id: String(card._id), subjectId: String(card.subjectId), topicId: card.topicId ? String(card.topicId) : null, question: card.question, flashcardType: card.flashcardType })),
     latestReviewByCard: new Map([...latestByCard].map(([id, record]) => [id, { reviewedAt: record.reviewedAt, nextReviewAt: record.nextReviewAt }])),
-    reviewDays: new Set(records.map((record) => new Date(record.reviewedAt).toISOString().slice(0, 10))),
-    reviewHistory: records,
+    reviewDays: compactReviewDays ?? new Set(records.map((record) => new Date(record.reviewedAt).toISOString().slice(0, 10))),
+    reviewHistory: includeHistory ? records : [],
     // Compatibility aliases retained for existing quiz and progress consumers.
     all: overall.mastered,
   };
 }
 
-export function getSubjectMastery(userId: Types.ObjectId | string, subjectIds?: Types.ObjectId[]) {
-  return measureServerOperation("mastery calculation", () => computeSubjectMastery(userId, subjectIds));
+export function getSubjectMastery(userId: Types.ObjectId | string, subjectIds?: Types.ObjectId[], options: { includeHistory?: boolean } = {}) {
+  return measureServerOperation("mastery calculation", () => computeSubjectMastery(userId, subjectIds, options));
 }
 
 /** Current consecutive-correct streak for cards in this session's selected quiz type. */
@@ -486,7 +513,50 @@ export async function loadSession(userId: Types.ObjectId | string, sessionId: st
   if (!isValidObjectId(sessionId)) return null;
   await measureServerOperation("quiz database connection", connectToDatabase);
   const session = await measureServerOperation("quiz session retrieval", () => QuizSession.findOne({ _id: sessionId, userId, expiresAt: { $gt: new Date() } }).lean());
-  return (session as unknown as SessionDoc | null) ?? null;
+  const loaded = (session as unknown as SessionDoc | null) ?? null;
+  if (!loaded) return null;
+  const pendingIndexes = loaded.questions.flatMap((question, index) => question.reviewRecordPending ? [index] : []);
+  for (const index of pendingIndexes) {
+    await ensureReviewRecord(userId, loaded, index);
+    await QuizSession.updateOne(
+      { _id: loaded._id, userId, [`questions.${index}.reviewRecordPending`]: true },
+      { $set: { [`questions.${index}.reviewRecordPending`]: false } },
+    );
+    loaded.questions[index].reviewRecordPending = false;
+  }
+  return loaded;
+}
+
+/** Idempotently finish the durable half of an answer after a crash or transient write failure. */
+async function ensureReviewRecord(userId: Types.ObjectId | string, session: SessionDoc, index: number) {
+  const q = session.questions[index];
+  if (!q?.answered || typeof q.correct !== "boolean") throw new Error("An incomplete saved quiz answer cannot be repaired.");
+  const type = questionType(q, session);
+  const isEnumeration = type === "enumeration-identification" || type === "enumeration-multiple-choice";
+  const identity = String(q.origin ?? index);
+  const reviewedAt = q.answeredAt ?? new Date();
+  const result = await ReviewRecord.findOneAndUpdate(
+    { userId, quizSessionId: session._id, quizQuestionIndex: index },
+    { $setOnInsert: {
+      userId,
+      flashcardId: q.flashcardId,
+      result: q.correct ? "correct" : "wrong",
+      questionType: session.type,
+      reviewedAt,
+      nextReviewAt: computeNextReviewAt(q.correct ? "correct" : "wrong", reviewedAt),
+      quizSessionId: session._id,
+      questionIdentity: identity,
+      quizQuestionIndex: index,
+      quizRound: q.round ?? 1,
+      achievementSubjectId: q.achievementSubjectId ?? undefined,
+      achievementDayKey: q.achievementDayKey ?? undefined,
+      enumerationFullyCorrect: isEnumeration && q.correct && (q.round ?? 1) >= 1,
+      achievementEventsRecorded: false,
+    } },
+    { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true },
+  ).lean();
+  if (!result) throw new Error("The durable answer record could not be confirmed.");
+  return result;
 }
 
 type AnswerInput = { questionIndex?: unknown; selectedIndex?: unknown; answer?: unknown; answers?: unknown; truth?: unknown };
@@ -540,7 +610,12 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   set[`${prefix}.correct`] = correct;
   set[`${prefix}.answered`] = true;
   const now = new Date();
+  const account = await measureServerOperation("answer timezone lookup", () => User.findById(userId).select("settings.studyTimezone").lean());
+  const dayKey = studyDayKey(now, account?.settings?.studyTimezone ?? "UTC");
   set[`${prefix}.answeredAt`] = now;
+  set[`${prefix}.reviewRecordPending`] = true;
+  set[`${prefix}.achievementDayKey`] = dayKey;
+  if (session.subjectId) set[`${prefix}.achievementSubjectId`] = session.subjectId;
 
   // Atomic claim: only the first request for this question can flip answered false -> true.
   const claimed = await measureServerOperation("quiz answer persistence", () => QuizSession.findOneAndUpdate(
@@ -556,29 +631,15 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
     return fail(409, "This answer could not be saved. Please try again.");
   }
 
-  const resultValue = correct ? "correct" : "wrong";
   const isEnumeration = qType === "enumeration-identification" || qType === "enumeration-multiple-choice";
-  const questionIdentity = String(q.origin ?? index);
   const enumerationFullyCorrect = isEnumeration && correct && (q.round ?? 1) >= 1;
   try {
-    await measureServerOperation("review record persistence", () => ReviewRecord.create({
-      userId,
-      flashcardId: q.flashcardId,
-      result: resultValue,
-      // Mixed / Random answers are recorded under "random" so that mode keeps its own streak.
-      questionType: session.type,
-      reviewedAt: now,
-      nextReviewAt: computeNextReviewAt(resultValue, now),
-      quizSessionId: session._id,
-      questionIdentity,
-      quizQuestionIndex: index,
-      quizRound: q.round ?? 1,
-      enumerationFullyCorrect,
-      achievementEventsRecorded: false,
-    }));
+    await measureServerOperation("review record persistence", () => ensureReviewRecord(userId, claimed as unknown as SessionDoc, index));
+    await QuizSession.updateOne(
+      { _id: session._id, userId, [`${prefix}.reviewRecordPending`]: true },
+      { $set: { [`${prefix}.reviewRecordPending`]: false } },
+    );
     try {
-      const account = await User.findById(userId).select("settings.studyTimezone").lean();
-      const dayKey = studyDayKey(now, account?.settings?.studyTimezone ?? "UTC");
       await measureServerOperation("achievement event persistence", () => recordAchievementEvent(String(userId), {
         idempotencyKey: `quiz-answer:${String(session._id)}:${index}`,
         kind: "quiz-answer",
@@ -606,10 +667,7 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
     }
   } catch (error) {
     // Undo the claim so the learner can retry and no answer is lost or scored without a record.
-    await QuizSession.updateOne(
-      { _id: session._id, userId },
-      { $set: { [`${prefix}.answered`]: false }, $unset: { [`${prefix}.correct`]: "", [`${prefix}.selectedIndex`]: "", [`${prefix}.userAnswer`]: "", [`${prefix}.userAnswers`]: "", [`${prefix}.answeredAt`]: "" } },
-    );
+    // Leave the saved answer claimed; loadSession repairs its pending ReviewRecord on retry.
     console.error("Unable to save review record.", error);
     return fail(500, "We couldn’t save that answer. Please try again.");
   }

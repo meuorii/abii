@@ -48,6 +48,8 @@ const reviewRecordSchema = new Schema(
     questionIdentity: { type: String, maxlength: 40 },
     quizQuestionIndex: { type: Number, min: 0 },
     quizRound: { type: Number, min: 1 },
+    achievementSubjectId: { type: Schema.Types.ObjectId, ref: "Subject" },
+    achievementDayKey: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },
     enumerationFullyCorrect: { type: Boolean, default: false },
     achievementEventsRecorded: { type: Boolean, default: false },
   },
@@ -73,7 +75,7 @@ reviewRecordSchema.index(
 );
 
 // Drop a stale cached model (dev hot reload) whose enum lacks the newer question types.
-if (mongoose.models.ReviewRecord && !(mongoose.models.ReviewRecord.schema.path("questionType") as unknown as { enumValues?: string[] }).enumValues?.includes("random")) {
+if (mongoose.models.ReviewRecord && (!(mongoose.models.ReviewRecord.schema.path("questionType") as unknown as { enumValues?: string[] }).enumValues?.includes("random") || !mongoose.models.ReviewRecord.schema.path("quizQuestionIndex") || !mongoose.models.ReviewRecord.schema.path("achievementDayKey"))) {
   delete mongoose.models.ReviewRecord;
 }
 
