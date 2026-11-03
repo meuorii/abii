@@ -48,6 +48,16 @@ try {
     const stats = explain.executionStats ?? explain.stages?.at(-1)?.$cursor?.executionStats;
     process.stdout.write(`Populated streak query ($topN retains at most 3 results per card): docsExamined=${stats?.totalDocsExamined ?? "n/a"} keysExamined=${stats?.totalKeysExamined ?? "n/a"} returned=${stats?.nReturned ?? "n/a"}\n`);
 
+    const cardIds = await db.collection("flashcards").distinct("_id", { userId: owner });
+    const masteryMatch = { $match: { userId: owner, flashcardId: { $in: cardIds } } };
+    const compactPipeline = [
+      masteryMatch,
+      { $group: { _id: { cardId: "$flashcardId", mode: "$questionType" }, correct: { $sum: { $cond: [{ $eq: ["$result", "correct"] }, 1, 0] } }, incorrect: { $sum: { $cond: [{ $eq: ["$result", "wrong"] }, 1, 0] } }, recent: { $topN: { n: 3, sortBy: { reviewedAt: -1, _id: -1 }, output: { _id: "$_id", result: "$result", reviewedAt: "$reviewedAt", nextReviewAt: "$nextReviewAt", questionType: "$questionType" } } } } },
+    ];
+    const compactExplain = await db.command({ explain: { aggregate: "reviewrecords", pipeline: compactPipeline, cursor: {} }, verbosity: "executionStats" });
+    const compactStats = compactExplain.executionStats ?? compactExplain.stages?.at(-1)?.$cursor?.executionStats;
+    process.stdout.write(`Compact mastery aggregation: docsExamined=${compactStats?.totalDocsExamined ?? "n/a"} keysExamined=${compactStats?.totalKeysExamined ?? "n/a"} documentsReturned=${compactStats?.nReturned ?? "n/a"}\n`);
+
     await client.close();
     // Load the actual application services only after the driver has selected the sample owner.
     const { connectToDatabase } = await import("../lib/mongodb.ts");
@@ -57,17 +67,23 @@ try {
     const streakTimes = [];
     const masteryTimes = [];
     const compactMasteryTimes = [];
+    const fullPayloadBytes = [];
+    const compactPayloadBytes = [];
     const badgeTimes = [];
     for (let i = 0; i < 7; i++) {
       let start = performance.now();
       await computeStreaks(owner, undefined, mode);
       streakTimes.push(performance.now() - start);
       start = performance.now();
-      await getSubjectMastery(owner);
+      const full = await getSubjectMastery(owner);
       masteryTimes.push(performance.now() - start);
       start = performance.now();
-      await getSubjectMastery(owner, undefined, { includeHistory: false });
+      const compact = await getSubjectMastery(owner, undefined, { includeHistory: false });
       compactMasteryTimes.push(performance.now() - start);
+      const { reviewHistory: fullHistory, ...fullSummary } = full;
+      const { reviewHistory: compactHistory, ...compactSummary } = compact;
+      fullPayloadBytes.push(Buffer.byteLength(JSON.stringify({ summary: fullSummary, reviewHistory: fullHistory })));
+      compactPayloadBytes.push(Buffer.byteLength(JSON.stringify({ summary: compactSummary, reviewHistory: compactHistory })));
       start = performance.now();
       await reconcileUserBadges(String(owner), { dryRun: true, force: true });
       badgeTimes.push(performance.now() - start);
@@ -75,6 +91,7 @@ try {
     report("computeStreaks", streakTimes);
     report("computeSubjectMastery", masteryTimes);
     report("dashboard compact mastery", compactMasteryTimes);
+    process.stdout.write(`Service result bytes (median): full=${percentile(fullPayloadBytes, .5)} compact=${percentile(compactPayloadBytes, .5)}\n`);
     report("badge reconciliation dry-run", badgeTimes);
   }
 } finally {

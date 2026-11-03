@@ -114,3 +114,60 @@ test("streak mastery aggregates consistently by topic, subject, type, and accoun
   }
 });
 
+test("compact dashboard mastery matches full history across modes, ties, due dates, and dense study days", { timeout: 60000 }, async () => {
+  const server = await MongoMemoryServer.create();
+  try {
+    process.env.MONGODB_URI = server.getUri("abii_compact_mastery_parity");
+    await mongoose.connect(process.env.MONGODB_URI);
+    const userId = new Types.ObjectId();
+    await mongoose.connection.db!.collection("users").insertOne({ _id: userId, name: "Compact parity" });
+    const subject = await Subject.create({ userId, name: "Parity" });
+    const topic = await Topic.create({ userId, subjectId: subject._id, name: "Mixed modes" });
+    const [card, secondCard] = await Flashcard.create([
+      { userId, subjectId: subject._id, topicId: topic._id, flashcardType: "standard", question: "Mixed prompt", answer: "Answer" },
+      { userId, subjectId: subject._id, topicId: topic._id, flashcardType: "standard", question: "Second prompt", answer: "Answer" },
+    ]);
+    const sameTimestamp = new Date("2026-04-09T12:00:00.000Z");
+    const rows: Array<Record<string, unknown>> = [
+      { _id: new Types.ObjectId("000000000000000000000001"), userId, flashcardId: card._id, questionType: "identification", result: "correct", reviewedAt: new Date("2026-04-01T10:00:00Z"), nextReviewAt: new Date("2020-01-01Z") },
+      { _id: new Types.ObjectId("000000000000000000000002"), userId, flashcardId: card._id, questionType: "identification", result: "correct", reviewedAt: new Date("2026-04-02T10:00:00Z"), nextReviewAt: new Date("2020-01-01Z") },
+      { _id: new Types.ObjectId("000000000000000000000003"), userId, flashcardId: card._id, questionType: "identification", result: "wrong", reviewedAt: new Date("2026-04-03T10:00:00Z"), nextReviewAt: new Date("2020-01-01Z") },
+      { _id: new Types.ObjectId("000000000000000000000004"), userId, flashcardId: card._id, questionType: "identification", result: "correct", reviewedAt: new Date("2026-04-04T10:00:00Z"), nextReviewAt: new Date("2020-01-01Z") },
+      { _id: new Types.ObjectId("000000000000000000000005"), userId, flashcardId: card._id, questionType: "identification", result: "correct", reviewedAt: new Date("2026-04-05T10:00:00Z"), nextReviewAt: new Date("2020-01-01Z") },
+      ...[1, 2, 3].map((day, i) => ({ _id: new Types.ObjectId(`00000000000000000000000${6 + i}`), userId, flashcardId: card._id, questionType: "multiple-choice", result: "correct", reviewedAt: new Date(`2026-04-0${day + 2}T11:00:00Z`), nextReviewAt: new Date("2020-01-01Z") })),
+      { _id: new Types.ObjectId("000000000000000000000010"), userId, flashcardId: card._id, questionType: "true-false", result: "wrong", reviewedAt: new Date("2026-04-08T12:00:00Z"), nextReviewAt: new Date("2099-01-01Z") },
+      { _id: new Types.ObjectId("000000000000000000000011"), userId, flashcardId: card._id, questionType: "random", result: "correct", reviewedAt: sameTimestamp, nextReviewAt: new Date("2020-01-01Z") },
+      { _id: new Types.ObjectId("000000000000000000000012"), userId, flashcardId: card._id, questionType: "random", result: "wrong", reviewedAt: sameTimestamp, nextReviewAt: new Date("2099-01-01Z") },
+      { userId, flashcardId: secondCard._id, questionType: "identification", result: "wrong", reviewedAt: new Date("2026-04-08T13:00:00Z"), nextReviewAt: new Date("2020-01-01Z") },
+      ...Array.from({ length: 120 }, (_, i) => ({ userId, flashcardId: secondCard._id, questionType: "multiple-choice", result: i % 7 === 0 ? "wrong" : "correct", reviewedAt: new Date(`2026-04-09T${String(Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}:00Z`), nextReviewAt: new Date("2020-01-01Z") })),
+    ];
+    await ReviewRecord.insertMany(rows);
+
+    const full = await getSubjectMastery(userId);
+    const compact = await getSubjectMastery(userId, undefined, { includeHistory: false });
+    const comparable = (value: typeof full) => ({
+      overall: value.overall,
+      bySubject: [...value.bySubject],
+      byTopic: [...value.byTopic],
+      byTypeBySubject: [...value.byTypeBySubject],
+      byTypeByTopic: [...value.byTypeByTopic],
+      allByType: value.allByType,
+      reviewedCardIds: [...value.reviewedCardIds].sort(),
+      latestReviewByCard: [...value.latestReviewByCard].sort(([a], [b]) => a.localeCompare(b)),
+      reviewDays: [...value.reviewDays].sort(),
+    });
+    assert.deepEqual(comparable(compact), comparable(full));
+    assert.equal(compact.reviewHistory.length, 0, "dashboard path must not return review history");
+    assert.equal(full.reviewHistory.length, rows.length);
+    assert.equal(compact.latestReviewByCard.get(String(card._id))?.nextReviewAt.toISOString(), "2099-01-01T00:00:00.000Z", "latest timestamp ties use the larger _id regardless of mode group order");
+    assert.equal(compact.overall.correct, full.overall.correct);
+    assert.equal(compact.overall.incorrect, full.overall.incorrect);
+    assert.equal(compact.byTypeByTopic.get(String(topic._id))?.identification.done, full.byTypeByTopic.get(String(topic._id))?.identification.done, "wrong answers reset the mode streak in both paths");
+    assert.equal(compact.reviewDays.size, 7, "many records on one UTC date contribute one study day");
+  } finally {
+    await mongoose.disconnect();
+    await server.stop();
+    delete process.env.MONGODB_URI;
+  }
+});
+

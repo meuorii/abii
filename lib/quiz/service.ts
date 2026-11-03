@@ -308,14 +308,18 @@ async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds
   const [records, precomputedCounts, compactReviewDays] = includeHistory || !cardIds.length
     ? [cardIds.length ? await ReviewRecord.find(reviewFilter).select("flashcardId result reviewedAt nextReviewAt questionType").sort({ reviewedAt: -1, _id: -1 }).lean() : [], new Map<string, { correct: number; incorrect: number }>(), null]
     : await Promise.all([
-      ReviewRecord.aggregate<{ _id: { cardId: Types.ObjectId; mode: QuizMode }; correct: number; incorrect: number; recent: Array<{ result: "correct" | "wrong"; reviewedAt: Date; nextReviewAt: Date; questionType: QuizMode }> }>([
+      ReviewRecord.aggregate<{ _id: { cardId: Types.ObjectId; mode: QuizMode }; correct: number; incorrect: number; recent: Array<{ _id: Types.ObjectId; result: "correct" | "wrong"; reviewedAt: Date; nextReviewAt: Date; questionType: QuizMode }> }>([
         { $match: reviewFilter },
-        { $group: { _id: { cardId: "$flashcardId", mode: "$questionType" }, correct: { $sum: { $cond: [{ $eq: ["$result", "correct"] }, 1, 0] } }, incorrect: { $sum: { $cond: [{ $eq: ["$result", "wrong"] }, 1, 0] } }, recent: { $topN: { n: MASTERY_STREAK, sortBy: { reviewedAt: -1, _id: -1 }, output: { result: "$result", reviewedAt: "$reviewedAt", nextReviewAt: "$nextReviewAt", questionType: "$questionType" } } } } },
+        { $group: { _id: { cardId: "$flashcardId", mode: "$questionType" }, correct: { $sum: { $cond: [{ $eq: ["$result", "correct"] }, 1, 0] } }, incorrect: { $sum: { $cond: [{ $eq: ["$result", "wrong"] }, 1, 0] } }, recent: { $topN: { n: MASTERY_STREAK, sortBy: { reviewedAt: -1, _id: -1 }, output: { _id: "$_id", result: "$result", reviewedAt: "$reviewedAt", nextReviewAt: "$nextReviewAt", questionType: "$questionType" } } } } },
       ]),
-      ReviewRecord.distinct("reviewedAt", reviewFilter),
+      ReviewRecord.aggregate<{ day: string }>([
+        { $match: reviewFilter },
+        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$reviewedAt", timezone: "UTC" } } } },
+        { $project: { _id: 0, day: "$_id" } },
+      ]),
     ]).then(([groups, days]) => {
       const counts = new Map<string, { correct: number; incorrect: number }>();
-      const bounded: Array<{ flashcardId: Types.ObjectId; result: "correct" | "wrong"; reviewedAt: Date; nextReviewAt: Date; questionType: QuizMode }> = [];
+      const bounded: Array<{ _id: Types.ObjectId; flashcardId: Types.ObjectId; result: "correct" | "wrong"; reviewedAt: Date; nextReviewAt: Date; questionType: QuizMode }> = [];
       for (const group of groups) {
         const cardId = String(group._id.cardId);
         const total = counts.get(cardId) ?? { correct: 0, incorrect: 0 };
@@ -324,7 +328,7 @@ async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds
         counts.set(cardId, total);
         for (const record of group.recent) bounded.push({ flashcardId: group._id.cardId, ...record });
       }
-      return [bounded, counts, new Set(days.map((day) => new Date(day).toISOString().slice(0, 10)))] as const;
+      return [bounded, counts, new Set(days.map(({ day }) => day))] as const;
     });
   const cards = rawCards.map(prepareCard);
   const usable = cards.filter(isUsableCard);
@@ -344,7 +348,10 @@ async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds
   for (const record of records) {
     const id = String(record.flashcardId);
     if (!cardById.has(id)) continue;
-    if (!latestByCard.has(id)) latestByCard.set(id, record);
+    const latest = latestByCard.get(id);
+    if (!latest || record.reviewedAt.getTime() > latest.reviewedAt.getTime() || (record.reviewedAt.getTime() === latest.reviewedAt.getTime() && String(record._id) > String(latest._id))) {
+      latestByCard.set(id, record);
+    }
     if (includeHistory) {
       const totals = recordCounts.get(id) ?? { correct: 0, incorrect: 0 };
       if (record.result === "correct") totals.correct += 1;
