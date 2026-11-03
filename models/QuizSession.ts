@@ -55,6 +55,7 @@ const quizSessionSchema = new Schema(
 
 quizSessionSchema.index({ userId: 1, createdAt: -1 }, { name: "quiz_session_owner" });
 quizSessionSchema.index({ userId: 1, status: 1, expiresAt: 1, lastActivityAt: -1 }, { name: "quiz_active_owner_activity" });
+quizSessionSchema.index({ userId: 1, status: 1, lastActivityAt: -1, expiresAt: 1 }, { name: "quiz_active_owner_recent_sort" });
 quizSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "quiz_session_ttl" });
 
 // In dev, hot reload can keep an older cached model whose schema lacks newer fields

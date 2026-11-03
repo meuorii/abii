@@ -44,6 +44,12 @@ const reviewRecordSchema = new Schema(
         message: "Next review date must be a valid date",
       },
     },
+    quizSessionId: { type: Schema.Types.ObjectId, ref: "QuizSession" },
+    questionIdentity: { type: String, maxlength: 40 },
+    quizQuestionIndex: { type: Number, min: 0 },
+    quizRound: { type: Number, min: 1 },
+    enumerationFullyCorrect: { type: Boolean, default: false },
+    achievementEventsRecorded: { type: Boolean, default: false },
   },
   { timestamps: true, versionKey: false },
 );
@@ -52,7 +58,19 @@ reviewRecordSchema.index(
   { userId: 1, flashcardId: 1, nextReviewAt: 1 },
   { name: "review_owner_card_next_review" },
 );
+reviewRecordSchema.index(
+  { userId: 1, quizSessionId: 1, quizQuestionIndex: 1 },
+  { unique: true, name: "review_owner_quiz_question_unique", partialFilterExpression: { quizSessionId: { $type: "objectId" } } },
+);
+reviewRecordSchema.index(
+  { userId: 1, achievementEventsRecorded: 1 },
+  { name: "review_owner_pending_achievement", partialFilterExpression: { quizSessionId: { $type: "objectId" } } },
+);
 reviewRecordSchema.index({ userId: 1, reviewedAt: -1 }, { name: "review_owner_reviewed_at" });
+reviewRecordSchema.index(
+  { userId: 1, questionType: 1, flashcardId: 1, reviewedAt: -1, _id: -1 },
+  { name: "review_owner_mode_card_recent" },
+);
 
 // Drop a stale cached model (dev hot reload) whose enum lacks the newer question types.
 if (mongoose.models.ReviewRecord && !(mongoose.models.ReviewRecord.schema.path("questionType") as unknown as { enumValues?: string[] }).enumValues?.includes("random")) {

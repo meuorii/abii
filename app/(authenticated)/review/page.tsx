@@ -3,8 +3,6 @@ import Link from "next/link";
 import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
-import { Flashcard } from "@/models/Flashcard";
-import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { Topic } from "@/models/Topic";
 import { ReviewOverview, type ReviewSubjectItem, type ReviewTopicItem } from "@/components/review/review-overview";
@@ -84,24 +82,17 @@ export default async function ReviewPage({ searchParams }: PageProps) {
     const now = new Date();
     const todayStart = utcDayStart(now);
     const tomorrowStart = new Date(todayStart.getTime() + 86_400_000);
-    const [subjectDocs, cards, topicDocs, mastery] = await Promise.all([
+    const [subjectDocs, topicDocs, mastery] = await Promise.all([
       Subject.find({ userId }).select("_id name").lean(),
-      Flashcard.find({ userId }).select("_id subjectId topicId").lean(),
       Topic.find({ userId }).select("_id subjectId name position").sort({ position: 1, name: 1 }).lean(),
       getSubjectMastery(userId),
     ]);
+    const cards = mastery.cardSummaries;
+    const records = mastery.reviewHistory as ReviewRecordRow[];
     activeSessions = await listActiveSessions(userId);
 
     totalCards = cards.length;
     masteryTotal = mastery.overall.mastered;
-    const cardIds = cards.map((card) => card._id);
-    const records = (cardIds.length
-      ? await ReviewRecord.find({ userId, flashcardId: { $in: cardIds } })
-          .select("flashcardId result reviewedAt nextReviewAt")
-          .sort({ reviewedAt: -1, createdAt: -1 })
-          .lean()
-      : []) as ReviewRecordRow[];
-
     const latestByCard = new Map<string, ReviewRecordRow>();
     const reviewedCardIds = new Set<string>();
     const reviewedTodayCardIds = new Set<string>();
@@ -113,10 +104,10 @@ export default async function ReviewPage({ searchParams }: PageProps) {
     const latestSubjectActivity = new Map<string, number>();
 
     for (const card of cards) {
-      const subjectId = String(card.subjectId);
+      const subjectId = card.subjectId;
       cardsBySubject.set(subjectId, (cardsBySubject.get(subjectId) ?? 0) + 1);
-      if (card.topicId && topicSubjectById.get(String(card.topicId)) === subjectId) {
-        const topicId = String(card.topicId);
+      if (card.topicId && topicSubjectById.get(card.topicId) === subjectId) {
+        const topicId = card.topicId;
         cardsByTopic.set(topicId, (cardsByTopic.get(topicId) ?? 0) + 1);
       }
     }
@@ -137,7 +128,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
       if (record.result === "wrong") wrongCount += 1;
     }
 
-    const subjectByCard = new Map(cards.map((card) => [String(card._id), String(card.subjectId)]));
+    const subjectByCard = new Map(cards.map((card) => [card.id, card.subjectId]));
     for (const record of records) {
       const subjectId = subjectByCard.get(String(record.flashcardId));
       if (!subjectId) continue;
@@ -149,7 +140,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
     }
 
     for (const card of cards) {
-      const latest = latestByCard.get(String(card._id));
+      const latest = latestByCard.get(card.id);
       if (!latest || new Date(latest.nextReviewAt).getTime() <= now.getTime()) dueCount += 1;
     }
 

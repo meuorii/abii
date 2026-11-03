@@ -1,16 +1,13 @@
 import { redirect } from "next/navigation";
-import mongoose from "mongoose";
 import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { ProgressDashboard, type ProgressPayload } from "@/components/progress/progress-dashboard";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
-import { Flashcard } from "@/models/Flashcard";
-import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { QuizSession } from "@/models/QuizSession";
 import { Topic } from "@/models/Topic";
 import { getSubjectMastery } from "@/lib/quiz/service";
-import { getFeaturedBadgeShowcase } from "@/lib/badges/featured";
+import { FeaturedBadgesStream } from "@/components/badges/featured-badges-stream";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,22 +27,16 @@ export default async function ProgressPage() {
   const today = startOfDay(now);
   const chartStart = new Date(today.getTime() - 89 * DAY);
 
-  const [subjects, topics, flashcards, reviews, sessions, recentSessions, groupedCardReviews, mastery] = await Promise.all([
+  const [subjects, topics, sessions, mastery] = await Promise.all([
     Subject.find({ userId }).select("_id name").lean(),
     Topic.find({ userId }).select("_id subjectId name").sort({ subjectId: 1, name: 1 }).lean(),
-    Flashcard.find({ userId }).select("_id subjectId topicId question flashcardType").lean(),
-    ReviewRecord.find({ userId, reviewedAt: { $gte: chartStart } }).select("flashcardId result questionType reviewedAt").sort({ reviewedAt: -1 }).lean(),
     QuizSession.find({ userId, status: "completed" }).select("_id subjectId subjectName type questions completedAt createdAt").lean(),
-    QuizSession.find({ userId, status: "completed" }).select("_id subjectName type questions completedAt createdAt").sort({ completedAt: -1, createdAt: -1 }).limit(5).lean(),
-    ReviewRecord.aggregate([
-      { $match: { userId: mongoose.isValidObjectId(userId) ? new mongoose.Types.ObjectId(userId) : userId } },
-      { $group: { _id: "$flashcardId", total: { $sum: 1 }, wrong: { $sum: { $cond: [{ $eq: ["$result", "wrong"] }, 1, 0] } }, correct: { $sum: { $cond: [{ $eq: ["$result", "correct"] }, 1, 0] } } } },
-      { $match: { total: { $gte: 2 } } },
-      { $sort: { wrong: -1, total: -1 } },
-      { $limit: 20 },
-    ]),
     getSubjectMastery(userId),
   ]);
+
+  const flashcards = mastery.cardSummaries;
+  const reviews = mastery.reviewHistory;
+  const recentSessions = [...sessions].sort((a, b) => (new Date(b.completedAt ?? b.createdAt).getTime() - new Date(a.completedAt ?? a.createdAt).getTime())).slice(0, 5);
 
   const subjectNameById = new Map(subjects.map((s) => [String(s._id), s.name]));
   const topicCardCounts = new Map<string, number>();
@@ -55,13 +46,13 @@ export default async function ProgressPage() {
   const cardSubject = new Map<string, string>();
   const cardById = new Map<string, (typeof flashcards)[number]>();
   for (const card of flashcards) {
-    const subjectId = String(card.subjectId);
+    const subjectId = card.subjectId;
     const stats = subjectStats.get(subjectId);
     if (stats) stats.total += 1;
-    cardSubject.set(String(card._id), subjectId);
-    cardById.set(String(card._id), card);
-    if (card.topicId && topicSubjectById.get(String(card.topicId)) === subjectId) {
-      const topicId = String(card.topicId);
+    cardSubject.set(card.id, subjectId);
+    cardById.set(card.id, card);
+    if (card.topicId && topicSubjectById.get(card.topicId) === subjectId) {
+      const topicId = card.topicId;
       topicCardCounts.set(topicId, (topicCardCounts.get(topicId) ?? 0) + 1);
     }
   }
@@ -77,7 +68,7 @@ export default async function ProgressPage() {
   const cardAttemptTotals = new Map<string, { wrong: number; total: number }>();
 
   // Full-history summary is based on actual saved answer records.
-  const allReviews = await ReviewRecord.find({ userId }).select("flashcardId result reviewedAt").lean();
+  const allReviews = reviews;
   for (const record of allReviews) {
     const key = String(record.flashcardId);
     const subjectId = cardSubject.get(key);
@@ -131,17 +122,18 @@ export default async function ProgressPage() {
     return { id, subjectId, subject: subjectNameById.get(subjectId) ?? "Subject", name: topic.name, totalCards: topicCardCounts.get(id) ?? 0, mastered: stats?.mastered ?? 0, usable: stats?.usable ?? 0, progress: stats?.progress ?? 0, completedRequirements: stats?.completedRequirements ?? 0, totalRequirements: stats?.totalRequirements ?? 0 };
   });
 
-  const challengingCards = groupedCardReviews.map((item: { _id: unknown; total: number; wrong: number; correct: number }) => {
+  const groupedCardReviews = [...cardAttemptTotals].map(([id, value]) => ({ _id: id, total: value.total, wrong: value.wrong })).filter((item) => item.total >= 2).sort((a, b) => b.wrong - a.wrong || b.total - a.total).slice(0, 20);
+  const challengingCards = groupedCardReviews.map((item) => {
     const card = cardById.get(String(item._id));
     if (!card) return null;
     return {
-      id: String(card._id),
+    id: card.id,
       question: card.question,
-      subject: subjectNameById.get(cardSubject.get(String(card._id)) ?? "") ?? "Subject",
+      subject: subjectNameById.get(card.subjectId) ?? "Subject",
       wrong: item.wrong,
       total: item.total,
       wrongRate: percent(item.wrong, item.total) ?? 0,
-      subjectId: cardSubject.get(String(card._id)) ?? "",
+      subjectId: card.subjectId,
     };
   }).filter((item): item is NonNullable<typeof item> => Boolean(item)).slice(0, 2);
 
@@ -165,11 +157,6 @@ export default async function ProgressPage() {
     recentSessions: serializedSessions,
   };
 
-  let featuredShowcase = null;
-  let featuredShowcaseError = false;
-  try { featuredShowcase = await getFeaturedBadgeShowcase(String(user._id), "progress"); }
-  catch (error) { console.error("Progress achievements could not be loaded.", error); featuredShowcaseError = true; }
-
   return (
       <div className="w-full min-w-0 p-4 sm:p-6 xl:p-7">
         <AbiiPageHero
@@ -182,7 +169,7 @@ export default async function ProgressPage() {
           priority
           className="mb-5"
         />
-      <ProgressDashboard data={payload} featuredShowcase={featuredShowcase} featuredShowcaseError={featuredShowcaseError} />
+      <ProgressDashboard data={payload} featuredBadges={<FeaturedBadgesStream surface="progress" userId={String(user._id)} />} />
       </div>
     
   );

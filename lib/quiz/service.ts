@@ -15,6 +15,7 @@ import { priorMistakeState, prioritizePending } from "./round-priority";
 import { recordAchievementEvent } from "@/lib/badges/repository";
 import { studyDayKey } from "@/lib/badges/study-day";
 import { User } from "@/models/User";
+import { measureServerOperation } from "@/lib/performance/server-timing";
 import {
   ALL_SUBJECTS,
   QUIZ_MODES,
@@ -269,15 +270,19 @@ export async function computeStreaks(userId: Types.ObjectId | string, flashcardI
   // Keep streaks independent by question type so a perfect Multiple Choice round
   // cannot accidentally complete Identification or True or False.
   filter.questionType = type;
-  const records = await ReviewRecord.find(filter).select("flashcardId result reviewedAt questionType").sort({ reviewedAt: -1, _id: -1 }).lean();
+  const records = await ReviewRecord.aggregate<{ _id: Types.ObjectId; results: Array<"correct" | "wrong"> }>([
+    { $match: filter },
+    { $group: { _id: "$flashcardId", results: { $topN: { n: MASTERY_STREAK, sortBy: { reviewedAt: -1, _id: -1 }, output: "$result" } } } },
+  ]);
   const streaks = new Map<string, number>();
-  const ended = new Set<string>();
   for (const record of records) {
-    const id = String(record.flashcardId);
-    const key = `${id}:${type}`;
-    if (ended.has(key)) continue;
-    if (record.result === "correct") streaks.set(id, (streaks.get(id) ?? 0) + 1);
-    else ended.add(key);
+    const id = String(record._id);
+    let streak = 0;
+    for (const result of record.results) {
+      if (result !== "correct") break;
+      streak += 1;
+    }
+    if (streak) streaks.set(id, streak);
   }
   return streaks;
 }
@@ -286,7 +291,7 @@ export async function computeStreaks(userId: Types.ObjectId | string, flashcardI
  * Computes streak mastery once per owned card, then aggregates it by topic,
  * subject, and account. Type applicability uses the exact question builder rules.
  */
-export async function getSubjectMastery(userId: Types.ObjectId | string, subjectIds?: Types.ObjectId[]) {
+async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds?: Types.ObjectId[]) {
   await connectToDatabase();
   const scopedSubjectFilter = subjectIds ? { $in: subjectIds } : undefined;
   const [rawCards, subjects, topics] = await Promise.all([
@@ -396,10 +401,19 @@ export async function getSubjectMastery(userId: Types.ObjectId | string, subject
     byTypeBySubject,
     allByType,
     reviewedCardIds: new Set(latestByCard.keys()),
+    cardSummaries: rawCards.map((card) => ({ id: String(card._id), subjectId: String(card.subjectId), topicId: card.topicId ? String(card.topicId) : null, question: card.question, flashcardType: card.flashcardType })),
+    latestReviewByCard: new Map([...latestByCard].map(([id, record]) => [id, { reviewedAt: record.reviewedAt, nextReviewAt: record.nextReviewAt }])),
+    reviewDays: new Set(records.map((record) => new Date(record.reviewedAt).toISOString().slice(0, 10))),
+    reviewHistory: records,
     // Compatibility aliases retained for existing quiz and progress consumers.
     all: overall.mastered,
   };
 }
+
+export function getSubjectMastery(userId: Types.ObjectId | string, subjectIds?: Types.ObjectId[]) {
+  return measureServerOperation("mastery calculation", () => computeSubjectMastery(userId, subjectIds));
+}
+
 /** Current consecutive-correct streak for cards in this session's selected quiz type. */
 export async function sessionMastery(userId: Types.ObjectId | string, session: SessionDoc): Promise<Map<string, number>> {
   return computeStreaks(userId, [...new Set(session.questions.map((q) => String(q.flashcardId)))], session.type);
@@ -470,8 +484,8 @@ export function toPublicSession(session: SessionDoc, streaks?: Map<string, numbe
 
 export async function loadSession(userId: Types.ObjectId | string, sessionId: string): Promise<SessionDoc | null> {
   if (!isValidObjectId(sessionId)) return null;
-  await connectToDatabase();
-  const session = await QuizSession.findOne({ _id: sessionId, userId, expiresAt: { $gt: new Date() } }).lean();
+  await measureServerOperation("quiz database connection", connectToDatabase);
+  const session = await measureServerOperation("quiz session retrieval", () => QuizSession.findOne({ _id: sessionId, userId, expiresAt: { $gt: new Date() } }).lean());
   return (session as unknown as SessionDoc | null) ?? null;
 }
 
@@ -529,11 +543,12 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   set[`${prefix}.answeredAt`] = now;
 
   // Atomic claim: only the first request for this question can flip answered false -> true.
-  const claimed = await QuizSession.updateOne(
+  const claimed = await measureServerOperation("quiz answer persistence", () => QuizSession.findOneAndUpdate(
     { _id: session._id, userId, status: "active", expiresAt: { $gt: now }, [`${prefix}.answered`]: false },
     { $set: { ...set, lastActivityAt: now, expiresAt: activeExpiry(now) } },
-  );
-  if (claimed.modifiedCount === 0) {
+    { new: true, projection: { _id: 1, userId: 1, subjectId: 1, subjectName: 1, scope: 1, topicId: 1, topicName: 1, type: 1, status: 1, questions: 1, expiresAt: 1, lastActivityAt: 1 } },
+  ).lean());
+  if (!claimed) {
     const fresh = await loadSession(userId, sessionId);
     if (fresh?.questions[index]?.answered) {
       return { ok: true as const, duplicate: true, result: resultFor(fresh.questions[index], fresh), progress: summarize(fresh), mastery: toPublicSession(fresh, await sessionMastery(userId, fresh)).mastery };
@@ -542,8 +557,11 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   }
 
   const resultValue = correct ? "correct" : "wrong";
+  const isEnumeration = qType === "enumeration-identification" || qType === "enumeration-multiple-choice";
+  const questionIdentity = String(q.origin ?? index);
+  const enumerationFullyCorrect = isEnumeration && correct && (q.round ?? 1) >= 1;
   try {
-    await ReviewRecord.create({
+    await measureServerOperation("review record persistence", () => ReviewRecord.create({
       userId,
       flashcardId: q.flashcardId,
       result: resultValue,
@@ -551,11 +569,17 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
       questionType: session.type,
       reviewedAt: now,
       nextReviewAt: computeNextReviewAt(resultValue, now),
-    });
+      quizSessionId: session._id,
+      questionIdentity,
+      quizQuestionIndex: index,
+      quizRound: q.round ?? 1,
+      enumerationFullyCorrect,
+      achievementEventsRecorded: false,
+    }));
     try {
       const account = await User.findById(userId).select("settings.studyTimezone").lean();
       const dayKey = studyDayKey(now, account?.settings?.studyTimezone ?? "UTC");
-      await recordAchievementEvent(String(userId), {
+      await measureServerOperation("achievement event persistence", () => recordAchievementEvent(String(userId), {
         idempotencyKey: `quiz-answer:${String(session._id)}:${index}`,
         kind: "quiz-answer",
         occurredAt: now,
@@ -565,10 +589,9 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
         questionIdentity: String(q.origin ?? index),
         // Recall milestones count original first-round answers; retries never inflate this total.
         correct: (q.round ?? 1) === 1 && correct,
-      });
-      const isEnumeration = qType === "enumeration-identification" || qType === "enumeration-multiple-choice";
-      if (isEnumeration && correct && (q.round ?? 1) >= 1) {
-        const originalCard = await Flashcard.findOne({ _id: q.flashcardId, userId }).select("flashcardType").lean();
+      }));
+      if (enumerationFullyCorrect) {
+      const originalCard = await Flashcard.findOne({ _id: q.flashcardId, userId }).select("flashcardType").lean();
         if (originalCard?.flashcardType === "items") await recordAchievementEvent(String(userId), {
           idempotencyKey: `enumeration-correct:${String(session._id)}:${String(q.origin ?? index)}`,
           kind: "quiz-answer", occurredAt: now, dayKey, ...(session.subjectId ? { subjectId: String(session.subjectId) } : {}), sessionId: String(session._id),
@@ -576,8 +599,9 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
         });
       }
       await recordAchievementEvent(String(userId), { idempotencyKey: `study-day:${dayKey}`, kind: "study-day", occurredAt: now, dayKey });
+      await ReviewRecord.updateOne({ userId, quizSessionId: session._id, quizQuestionIndex: index }, { $set: { achievementEventsRecorded: true } });
     } catch (eventError) {
-      // ReviewRecord remains the source for reconciliation if the compact ledger is temporarily unavailable.
+      // The persisted ReviewRecord carries a retry marker for badge reconciliation.
       console.error("Achievement activity could not be recorded; it can be reconciled from study records.", eventError);
     }
   } catch (error) {
@@ -590,10 +614,9 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
     return fail(500, "We couldn’t save that answer. Please try again.");
   }
 
-  const fresh = await loadSession(userId, sessionId);
-  if (!fresh) return fail(404, "This quiz session has expired or could not be found.");
-  const streaks = await sessionMastery(userId, fresh);
-  return { ok: true as const, duplicate: false, result: resultFor(fresh.questions[index], fresh), progress: summarize(fresh), mastery: toPublicSession(fresh, streaks).mastery };
+  const savedSession = claimed as unknown as SessionDoc;
+  const streaks = await measureServerOperation("mastery calculation", () => sessionMastery(userId, savedSession));
+  return { ok: true as const, duplicate: false, result: resultFor(savedSession.questions[index], savedSession), progress: summarize(savedSession), mastery: toPublicSession(savedSession, streaks).mastery };
 }
 
 export async function finishSession(userId: Types.ObjectId | string, sessionId: string) {

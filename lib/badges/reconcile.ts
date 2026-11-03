@@ -6,11 +6,15 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { AchievementEvent } from "@/models/AchievementEvent";
 import { BadgeReconciliation } from "@/models/BadgeReconciliation";
 import { ReviewRecord } from "@/models/ReviewRecord";
-import { awardBadgeIdempotently, fetchEarnedBadges } from "./repository";
+import { User } from "@/models/User";
+import { Flashcard } from "@/models/Flashcard";
+import { awardBadgeIdempotently, fetchEarnedBadges, recordAchievementEvent } from "./repository";
+import { studyDayKey } from "./study-day";
 import { BADGE_BY_ID } from "./catalog";
 import { calculateAchievementMetrics, createAchievementBaseline, type AchievementBaseline } from "./metrics";
 import { evaluateBadgeCatalog, type BadgeEvaluation } from "./evaluator";
 import type { BadgeId } from "./types";
+import { measureServerOperation } from "@/lib/performance/server-timing";
 
 export const BADGE_RECONCILIATION_VERSION = 1;
 const RECONCILE_FRESH_MS = 6 * 60 * 60 * 1000;
@@ -19,11 +23,45 @@ const LOCK_MS = 2 * 60 * 1000;
 export type ReconcileResult = { cached: boolean; dryRun: boolean; evaluatedAt: Date; results: BadgeEvaluation[]; newlyAwardedBadgeIds: BadgeId[] };
 
 async function hasEvidenceAfter(userId: mongoose.Types.ObjectId, after: Date) {
-  const [event, review] = await Promise.all([
+  const [event, review, pending] = await Promise.all([
     AchievementEvent.exists({ userId, createdAt: { $gt: after } }),
     ReviewRecord.exists({ userId, reviewedAt: { $gt: after } }),
+    ReviewRecord.exists({ userId, quizSessionId: { $type: "objectId" }, achievementEventsRecorded: { $ne: true } }),
   ]);
-  return Boolean(event || review);
+  return Boolean(event || review || pending);
+}
+
+/** Replay durable answer evidence after an interrupted event write or process restart. */
+export async function retryPendingAchievementEvents(userId: mongoose.Types.ObjectId): Promise<void> {
+  const [account, pending] = await Promise.all([
+    User.findById(userId).select("settings.studyTimezone").lean(),
+    ReviewRecord.find({ userId, quizSessionId: { $type: "objectId" }, achievementEventsRecorded: { $ne: true } })
+      .select("_id flashcardId result reviewedAt quizSessionId questionIdentity quizQuestionIndex quizRound enumerationFullyCorrect")
+      .lean(),
+  ]);
+  if (!pending.length) return;
+  const timezone = account?.settings?.studyTimezone ?? "UTC";
+  for (const record of pending) {
+    if (!record.quizSessionId || record.quizQuestionIndex === undefined) continue;
+    const sessionId = String(record.quizSessionId);
+    const identity = record.questionIdentity ?? String(record.quizQuestionIndex);
+    const occurredAt = new Date(record.reviewedAt);
+    const dayKey = studyDayKey(occurredAt, timezone);
+    await recordAchievementEvent(String(userId), {
+      idempotencyKey: `quiz-answer:${sessionId}:${record.quizQuestionIndex}`,
+      kind: "quiz-answer", occurredAt, dayKey, sessionId, questionIdentity: identity,
+      correct: record.result === "correct" && record.quizRound === 1,
+    });
+    if (record.enumerationFullyCorrect && await Flashcard.exists({ _id: record.flashcardId, userId, flashcardType: "items" })) {
+      await recordAchievementEvent(String(userId), {
+        idempotencyKey: `enumeration-correct:${sessionId}:${identity}`,
+        kind: "quiz-answer", occurredAt, dayKey, sessionId, questionIdentity: identity,
+        correct: false, enumerationFullyCorrect: true,
+      });
+    }
+    await recordAchievementEvent(String(userId), { idempotencyKey: `study-day:${dayKey}`, kind: "study-day", occurredAt, dayKey });
+    await ReviewRecord.updateOne({ _id: record._id, userId, achievementEventsRecorded: { $ne: true } }, { $set: { achievementEventsRecorded: true } });
+  }
 }
 
 function cachedResults(record: { results?: unknown[] } | null): BadgeEvaluation[] | null {
@@ -65,7 +103,7 @@ function readBaseline(value: unknown): AchievementBaseline | undefined {
   };
 }
 
-export async function reconcileUserBadges(userId: string, options: { dryRun?: boolean; force?: boolean; now?: Date; source?: "live" | "backfill" } = {}): Promise<ReconcileResult> {
+async function reconcileUserBadgesInternal(userId: string, options: { dryRun?: boolean; force?: boolean; now?: Date; source?: "live" | "backfill" } = {}): Promise<ReconcileResult> {
   if (!mongoose.isValidObjectId(userId)) throw new TypeError("A valid authenticated user ID is required.");
   await connectToDatabase();
   const owner = new mongoose.Types.ObjectId(userId);
@@ -113,8 +151,21 @@ export async function reconcileUserBadges(userId: string, options: { dryRun?: bo
   }
 
   try {
+    if (!dryRun) await measureServerOperation("pending achievement recovery", () => retryPendingAchievementEvents(owner));
     const baseline = readBaseline(currentRecord?.baseline);
-    const metrics = await calculateAchievementMetrics(userId, now, baseline);
+    const metrics = await measureServerOperation("achievement metrics calculation", () => calculateAchievementMetrics(userId, now, baseline));
+    if (!dryRun) {
+      const milestoneOperations = ([25, 50, 75, 100] as const).flatMap((threshold) =>
+        metrics.masteryThresholdSubjectIds[threshold].map((subjectId) => ({
+          updateOne: {
+            filter: { userId: owner, idempotencyKey: `mastery-milestone:${subjectId}:${threshold}` },
+            update: { $setOnInsert: { userId: owner, idempotencyKey: `mastery-milestone:${subjectId}:${threshold}`, kind: "mastery-milestone" as const, occurredAt: now, subjectId: new mongoose.Types.ObjectId(subjectId), masteryPercent: threshold, masteryThreshold: threshold } },
+            upsert: true,
+          },
+        })),
+      );
+      if (milestoneOperations.length) await AchievementEvent.bulkWrite(milestoneOperations, { ordered: false });
+    }
     if (!dryRun && !baseline) {
       const initialBaseline = createAchievementBaseline(metrics);
       await BadgeReconciliation.updateOne({ userId: owner, lockToken }, { $set: { baseline: initialBaseline } }, { runValidators: true });
@@ -151,4 +202,8 @@ export async function reconcileUserBadges(userId: string, options: { dryRun?: bo
     if (!dryRun) await BadgeReconciliation.updateOne({ userId: owner, lockToken }, { $unset: { lockToken: "", lockUntil: "" } });
     throw error;
   }
+}
+
+export function reconcileUserBadges(userId: string, options: { dryRun?: boolean; force?: boolean; now?: Date; source?: "live" | "backfill" } = {}): Promise<ReconcileResult> {
+  return measureServerOperation("badge reconciliation", () => reconcileUserBadgesInternal(userId, options));
 }

@@ -1,8 +1,10 @@
 import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { User } from "@/models/User";
 import { connectToDatabase } from "@/lib/mongodb";
+import { measureServerOperation } from "@/lib/performance/server-timing";
 import { SESSION_AUDIENCE, SESSION_COOKIE, SESSION_COOKIE_OPTIONS, SESSION_DURATION_SECONDS, SESSION_ISSUER } from "@/lib/auth/constants";
 
 export { SESSION_COOKIE, SESSION_DURATION_SECONDS } from "@/lib/auth/constants";
@@ -53,12 +55,12 @@ export async function readSessionUserId(token?: string): Promise<string | null> 
   }
 }
 
-export async function getCurrentUser() {
-  const userId = await readSessionUserId();
+export const getCurrentUser = cache(async function getCurrentUser() {
+  const userId = await measureServerOperation("authentication lookup", readSessionUserId);
   if (!userId) return null;
-  await connectToDatabase();
-  return User.findById(userId).select("name email createdAt profileImage").lean();
-}
+  await measureServerOperation("authentication database connection", connectToDatabase);
+  return measureServerOperation("authentication user query", () => User.findById(userId).select("name email createdAt profileImage").lean());
+});
 
 export async function destroySession(): Promise<void> {
   const cookieStore = await cookies();

@@ -2,12 +2,9 @@ import { redirect } from "next/navigation";
 import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
-import { Flashcard } from "@/models/Flashcard";
-import { ReviewRecord } from "@/models/ReviewRecord";
 import { Subject } from "@/models/Subject";
 import { getSubjectMastery } from "@/lib/quiz/service";
-import { getFeaturedBadgeShowcase } from "@/lib/badges/featured";
-import type { FeaturedBadgeShowcase } from "@/components/badges/featured-types";
+import { logServerDuration, measureServerOperation } from "@/lib/performance/server-timing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +34,7 @@ function getCurrentStreak(studyDayKeys: Set<string>, today: Date) {
 }
 
 export default async function DashboardPage() {
+  const pageStartedAt = performance.now();
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -47,47 +45,28 @@ export default async function DashboardPage() {
   let currentStreak = 0;
   let lastSevenDays: { label: string; completed: boolean }[] = [];
   let loadFailed = false;
-  let featuredShowcase: FeaturedBadgeShowcase | null = null;
-  let featuredShowcaseError = false;
 
   try {
     await connectToDatabase();
     const userId = user._id;
     const now = new Date();
-    const [subjectDocs, cards, mastery] = await Promise.all([
+    const [subjectDocs, mastery] = await measureServerOperation("dashboard data retrieval", () => Promise.all([
       Subject.find({ userId }).select("_id name").sort({ name: 1 }).lean(),
-      Flashcard.find({ userId }).select("_id subjectId").lean(),
       getSubjectMastery(userId),
-    ]);
+    ]));
     overallMastery = { progress: mastery.overall.progress };
 
+    const cards = mastery.cardSummaries;
+    const studyDays = mastery.reviewDays;
     totalCards = cards.length;
-    const cardIds = cards.map((card) => card._id);
-    const reviewRecords = cardIds.length
-      ? await ReviewRecord.find({ userId, flashcardId: { $in: cardIds } })
-          .select("flashcardId result reviewedAt nextReviewAt")
-          .sort({ reviewedAt: -1, createdAt: -1 })
-          .lean()
-      : [];
-
-    const latestReviewByCard = new Map<string, (typeof reviewRecords)[number]>();
-    const studyDays = new Set<string>();
-
-    for (const record of reviewRecords) {
-      const cardId = String(record.flashcardId);
-      if (!latestReviewByCard.has(cardId)) latestReviewByCard.set(cardId, record);
-      if (record.reviewedAt instanceof Date) studyDays.add(dateKey(record.reviewedAt));
-      else if (record.reviewedAt) studyDays.add(dateKey(new Date(record.reviewedAt)));
-    }
-
     for (const card of cards) {
-      const latest = latestReviewByCard.get(String(card._id));
+      const latest = mastery.latestReviewByCard.get(card.id);
       if (!latest || new Date(latest.nextReviewAt).getTime() <= now.getTime()) dueCount += 1;
     }
 
     const countBySubject = new Map<string, number>();
     for (const card of cards) {
-      const key = String(card.subjectId);
+      const key = card.subjectId;
       countBySubject.set(key, (countBySubject.get(key) ?? 0) + 1);
     }
 
@@ -114,23 +93,20 @@ export default async function DashboardPage() {
     loadFailed = true;
   }
 
-  try { featuredShowcase = await getFeaturedBadgeShowcase(String(user._id), "dashboard"); }
-  catch (error) { console.error("Dashboard achievements could not be loaded.", error); featuredShowcaseError = true; }
-
   const firstName = user.name.trim().split(/\s+/)[0] || "there";
 
+  logServerDuration("dashboard server rendering", pageStartedAt);
   return (
     
       <DashboardOverview
         firstName={firstName}
+        userId={String(user._id)}
         dueCount={dueCount}
         totalCards={totalCards}
         overallMastery={overallMastery}
         currentStreak={currentStreak}
         lastSevenDays={lastSevenDays}
         subjects={subjects}
-        featuredShowcase={featuredShowcase}
-        featuredShowcaseError={featuredShowcaseError}
         loadFailed={loadFailed}
       />
     

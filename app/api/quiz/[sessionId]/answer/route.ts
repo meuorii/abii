@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { submitAnswer } from "@/lib/quiz/service";
-import { evaluateAffectedBadges, refreshMasteryMilestones, type NewlyUnlockedBadge } from "@/lib/badges/service";
+import { logServerDuration, measureServerOperation } from "@/lib/performance/server-timing";
 
 export const runtime = "nodejs";
 type RouteContext = { params: Promise<{ sessionId: string }> };
 
 export async function POST(request: Request, { params }: RouteContext) {
+  const startedAt = performance.now();
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Please sign in to continue." }, { status: 401 });
   const { sessionId } = await params;
@@ -19,16 +20,11 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   try {
-    const result = await submitAnswer(user._id, sessionId, body);
+    const result = await measureServerOperation("answer processing", () => submitAnswer(user._id, sessionId, body));
     if (!result.ok) return NextResponse.json({ error: result.message }, { status: result.status });
-    let newlyUnlockedBadges: NewlyUnlockedBadge[] = [];
-    if (!result.duplicate) {
-      try { await refreshMasteryMilestones(String(user._id)); }
-      catch (masteryError) { console.error("Answer saved; mastery milestone refresh will retry during reconciliation.", masteryError); }
-      try { newlyUnlockedBadges = await evaluateAffectedBadges(String(user._id)); }
-      catch (badgeError) { console.error("Answer saved; badge evaluation will retry during reconciliation.", badgeError); }
-    }
-    return NextResponse.json({ result: result.result, progress: result.progress, mastery: result.mastery, duplicate: result.duplicate, newlyUnlockedBadges });
+    const response = NextResponse.json({ result: result.result, progress: result.progress, mastery: result.mastery, duplicate: result.duplicate, newlyUnlockedBadges: [] });
+    logServerDuration("total answer API", startedAt);
+    return response;
   } catch (error) {
     console.error("Unable to submit quiz answer.", error);
     return NextResponse.json({ error: "We couldn’t save that answer. Please try again." }, { status: 500 });
