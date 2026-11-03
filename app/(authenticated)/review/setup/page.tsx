@@ -7,13 +7,18 @@ import { QUIZ_MODES, emptyTypeProgress, type QuizMode, type SetupSubject, type S
 import { Flashcard } from "@/models/Flashcard";
 import { Subject } from "@/models/Subject";
 import { Topic } from "@/models/Topic";
+import { measureServerOperation, withServerPagePerformanceTrace } from "@/lib/performance/server-timing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type PageProps = { searchParams: Promise<{ subjectId?: string | string[]; topicId?: string | string[] }> };
 
-export default async function ReviewSetupPage({ searchParams }: PageProps) {
+export default function ReviewSetupPage(props: PageProps) {
+  return withServerPagePerformanceTrace("review.setup", () => renderReviewSetupPage(props));
+}
+
+async function renderReviewSetupPage({ searchParams }: PageProps) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -33,10 +38,10 @@ export default async function ReviewSetupPage({ searchParams }: PageProps) {
     await connectToDatabase();
     const userId = user._id;
     const [subjectDocs, cards, topicDocs, counts, mastery] = await Promise.all([
-      Subject.find({ userId }).select("_id name").sort({ name: 1 }).lean(),
-      Flashcard.find({ userId }).select("_id subjectId topicId").lean(),
-      Topic.find({ userId }).select("_id subjectId name").sort({ position: 1, name: 1 }).lean(),
-      getEligibilityCounts(userId),
+      measureServerOperation("review setup subject query", () => Subject.find({ userId }).select("_id name").sort({ name: 1 }).lean(), { database: true }),
+      measureServerOperation("review setup card count query", () => Flashcard.find({ userId }).select("_id subjectId topicId").lean(), { database: true }),
+      measureServerOperation("review setup topic query", () => Topic.find({ userId }).select("_id subjectId name").sort({ position: 1, name: 1 }).lean(), { database: true }),
+      measureServerOperation("review setup eligibility calculation", () => getEligibilityCounts(userId)),
       getSubjectMastery(userId),
     ]);
     allProgress = mastery.overall.progress;

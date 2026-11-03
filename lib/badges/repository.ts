@@ -6,6 +6,7 @@ import { AchievementEvent, type ACHIEVEMENT_EVENT_KINDS } from "@/models/Achieve
 import { UserBadge } from "@/models/UserBadge";
 import { User } from "@/models/User";
 import { longestConsecutiveDayStreak } from "./study-day";
+import { measureServerOperation } from "@/lib/performance/server-timing";
 
 const validBadgeIds = new Set<string>(BADGE_IDS);
 export type AchievementEventKind = (typeof ACHIEVEMENT_EVENT_KINDS)[number];
@@ -37,11 +38,11 @@ function ownedUserId(userId: string) {
 }
 
 export async function fetchEarnedBadges(userId: string) {
-  return UserBadge.find({ userId: ownedUserId(userId) }).sort({ unlockedAt: 1, badgeId: 1 }).lean();
+  return measureServerOperation("earned badge query", () => UserBadge.find({ userId: ownedUserId(userId) }).sort({ unlockedAt: 1, badgeId: 1 }).lean(), { database: true });
 }
 
 export async function findEarnedBadge(userId: string, badgeId: BadgeId) {
-  return UserBadge.findOne({ userId: ownedUserId(userId), badgeId }).lean();
+  return measureServerOperation("earned badge lookup", () => UserBadge.findOne({ userId: ownedUserId(userId), badgeId }).lean(), { database: true });
 }
 
 /** First award wins: repeated/concurrent calls cannot replace unlockedAt or evidence. */
@@ -56,12 +57,12 @@ export async function awardBadgeIdempotently(userId: string, input: { badgeId: B
   const setOnInsert = { userId: owner, ...input };
   let created = false;
   try {
-    await UserBadge.create(setOnInsert);
+    await measureServerOperation("badge award insert", () => UserBadge.create(setOnInsert), { database: true });
     created = true;
   } catch (error) {
     if (!(error instanceof mongoose.mongo.MongoServerError) || error.code !== 11000) throw error;
   }
-  const record = await UserBadge.findOne({ userId: owner, badgeId: input.badgeId }).lean();
+  const record = await measureServerOperation("badge award confirmation", () => UserBadge.findOne({ userId: owner, badgeId: input.badgeId }).lean(), { database: true });
   if (!record) throw new Error("Badge award could not be confirmed.");
   return { record, created };
 }
@@ -70,14 +71,14 @@ export async function awardBadgeIdempotently(userId: string, input: { badgeId: B
 export async function recordAchievementEvent(userId: string, input: AchievementEventInput, session?: ClientSession) {
   const owner = ownedUserId(userId);
   try {
-    return await AchievementEvent.findOneAndUpdate(
+    return await measureServerOperation("achievement event upsert", () => AchievementEvent.findOneAndUpdate(
       { userId: owner, idempotencyKey: input.idempotencyKey },
       { $setOnInsert: { userId: owner, ...input } },
       { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true, ...(session ? { session } : {}) },
-    ).lean();
+    ).lean(), { database: true });
   } catch (error) {
     if (!(error instanceof mongoose.mongo.MongoServerError) || error.code !== 11000) throw error;
-    return AchievementEvent.findOne({ userId: owner, idempotencyKey: input.idempotencyKey }).lean();
+    return measureServerOperation("achievement event idempotency lookup", () => AchievementEvent.findOne({ userId: owner, idempotencyKey: input.idempotencyKey }).lean(), { database: true });
   }
 }
 

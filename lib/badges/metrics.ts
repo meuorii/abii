@@ -8,6 +8,7 @@ import { Subject } from "@/models/Subject";
 import { User } from "@/models/User";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { currentConsecutiveDayStreak, longestConsecutiveDayStreak, normalizeStudyTimezone, studyDayKey } from "./study-day";
+import { measureServerOperation } from "@/lib/performance/server-timing";
 
 export type EvidenceCompleteness = "current-state" | "verified-minimum" | "incomplete";
 export type QuizScoreEvidence = { scorePercent: number; originalQuestionCount: number; completedAt: Date; evidenceId: string };
@@ -111,15 +112,15 @@ function isValidCardId(value: string) { return mongoose.isValidObjectId(value); 
 export async function calculateAchievementMetrics(userId: string, now = new Date(), baseline?: AchievementBaseline): Promise<AchievementMetrics> {
   if (!mongoose.isValidObjectId(userId)) throw new TypeError("A valid authenticated user ID is required.");
   const owner = new mongoose.Types.ObjectId(userId);
-  const account = await User.findById(owner).select("settings.studyTimezone").lean();
+  const account = await measureServerOperation("badge timezone lookup", () => User.findById(owner).select("settings.studyTimezone").lean(), { database: true });
   if (!account) throw new Error("User was not found.");
   const timezone = normalizeStudyTimezone(account.settings?.studyTimezone);
 
   const [subjects, cards, creationEvents, factsRows, reviewRows, completedSessions, mastery] = await Promise.all([
-    Subject.find({ userId: owner }).select("_id createdAt").lean(),
-    Flashcard.find({ userId: owner }).select("_id subjectId flashcardType createdAt").lean(),
-    AchievementEvent.find({ userId: owner, kind: { $in: ["subject-created", "flashcard-created"] }, ...(baseline ? { createdAt: { $gt: baseline.recordedAt } } : {}) }).select("kind idempotencyKey subjectId occurredAt").lean(),
-    AchievementEvent.aggregate<CompactEventFacts>([
+    measureServerOperation("badge subjects query", () => Subject.find({ userId: owner }).select("_id createdAt").lean(), { database: true }),
+    measureServerOperation("badge flashcards query", () => Flashcard.find({ userId: owner }).select("_id subjectId flashcardType createdAt").lean(), { database: true }),
+    measureServerOperation("badge creation events query", () => AchievementEvent.find({ userId: owner, kind: { $in: ["subject-created", "flashcard-created"] }, ...(baseline ? { createdAt: { $gt: baseline.recordedAt } } : {}) }).select("kind idempotencyKey subjectId occurredAt").lean(), { database: true }),
+    measureServerOperation("badge event facts aggregation", () => AchievementEvent.aggregate<CompactEventFacts>([
       { $match: { userId: owner, ...(baseline ? { createdAt: { $gt: baseline.recordedAt } } : {}) } },
       { $group: {
         _id: null,
@@ -135,8 +136,8 @@ export async function calculateAchievementMetrics(userId: string, now = new Date
         resumedKeys: { $addToSet: { $cond: [{ $eq: ["$kind", "resumed-quiz-completed"] }, "$idempotencyKey", null] } },
         masteryFacts: { $addToSet: { $cond: [{ $eq: ["$kind", "mastery-milestone"] }, { subjectId: "$subjectId", threshold: "$masteryThreshold" }, null] } },
       } },
-    ]),
-    ReviewRecord.aggregate<ReviewFacts>([
+    ]), { database: true }),
+    measureServerOperation("badge review facts aggregation", () => ReviewRecord.aggregate<ReviewFacts>([
       { $match: { userId: owner, ...(baseline ? { reviewedAt: { $gt: baseline.recordedAt } } : {}) } },
       { $facet: {
         studyDays: [{ $group: { _id: { $dateToString: { date: "$reviewedAt", format: "%Y-%m-%d", timezone } } } }],
@@ -150,8 +151,8 @@ export async function calculateAchievementMetrics(userId: string, now = new Date
         ],
       } },
       { $project: { studyDays: { $map: { input: "$studyDays", as: "day", in: "$$day._id" } }, correctAnswers: { $ifNull: [{ $arrayElemAt: ["$correctAnswers.count", 0] }, 0] }, enumerationCorrect: { $ifNull: [{ $arrayElemAt: ["$enumerationCorrect.count", 0] }, 0] } } },
-    ]),
-    QuizSession.find({ userId: owner, status: "completed", completedAt: { $type: "date" }, expiresAt: { $gt: now } }).select("_id completedAt resumedAt questions.flashcardId questions.type questions.round questions.origin questions.answered questions.correct questions.answeredAt").lean(),
+    ]), { database: true }),
+    measureServerOperation("badge completed sessions query", () => QuizSession.find({ userId: owner, status: "completed", completedAt: { $type: "date" }, expiresAt: { $gt: now } }).select("_id completedAt resumedAt questions.flashcardId questions.type questions.round questions.origin questions.answered questions.correct questions.answeredAt").lean(), { database: true }),
     getSubjectMastery(owner),
   ]);
 

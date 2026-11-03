@@ -44,11 +44,11 @@ export async function readSessionUserId(token?: string): Promise<string | null> 
   if (!sessionToken) return null;
 
   try {
-    const { payload } = await jwtVerify(sessionToken, getSessionSecret(), {
+    const { payload } = await measureServerOperation("JWT verification", () => jwtVerify(sessionToken!, getSessionSecret(), {
       algorithms: ["HS256"],
       issuer: SESSION_ISSUER,
       audience: SESSION_AUDIENCE,
-    });
+    }));
     return typeof payload.sub === "string" ? payload.sub : null;
   } catch {
     return null;
@@ -59,7 +59,7 @@ export const getCurrentUser = cache(async function getCurrentUser() {
   const userId = await measureServerOperation("authentication lookup", readSessionUserId);
   if (!userId) return null;
   await measureServerOperation("authentication database connection", connectToDatabase);
-  return measureServerOperation("authentication user query", () => User.findById(userId).select("name email createdAt profileImage").lean());
+  return measureServerOperation("user lookup", () => User.findById(userId).select("name email createdAt profileImage settings.studyTimezone").lean(), { database: true });
 });
 
 export async function destroySession(): Promise<void> {

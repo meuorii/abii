@@ -24,9 +24,9 @@ export type ReconcileResult = { cached: boolean; dryRun: boolean; evaluatedAt: D
 
 async function hasEvidenceAfter(userId: mongoose.Types.ObjectId, after: Date) {
   const [event, review, pending] = await Promise.all([
-    AchievementEvent.exists({ userId, createdAt: { $gt: after } }),
-    ReviewRecord.exists({ userId, reviewedAt: { $gt: after } }),
-    ReviewRecord.exists({ userId, quizSessionId: { $type: "objectId" }, achievementEventsRecorded: { $ne: true } }),
+    measureServerOperation("badge recent event check", () => AchievementEvent.exists({ userId, createdAt: { $gt: after } }), { database: true }),
+    measureServerOperation("badge recent review check", () => ReviewRecord.exists({ userId, reviewedAt: { $gt: after } }), { database: true }),
+    measureServerOperation("badge pending recovery check", () => ReviewRecord.exists({ userId, quizSessionId: { $type: "objectId" }, achievementEventsRecorded: { $ne: true } }), { database: true }),
   ]);
   return Boolean(event || review || pending);
 }
@@ -34,10 +34,10 @@ async function hasEvidenceAfter(userId: mongoose.Types.ObjectId, after: Date) {
 /** Replay durable answer evidence after an interrupted event write or process restart. */
 export async function retryPendingAchievementEvents(userId: mongoose.Types.ObjectId): Promise<void> {
   const [account, pending] = await Promise.all([
-    User.findById(userId).select("settings.studyTimezone").lean(),
-    ReviewRecord.find({ userId, quizSessionId: { $type: "objectId" }, achievementEventsRecorded: { $ne: true } })
+    measureServerOperation("badge recovery timezone query", () => User.findById(userId).select("settings.studyTimezone").lean(), { database: true }),
+    measureServerOperation("pending achievement records query", () => ReviewRecord.find({ userId, quizSessionId: { $type: "objectId" }, achievementEventsRecorded: { $ne: true } })
       .select("_id flashcardId result reviewedAt quizSessionId questionIdentity quizQuestionIndex quizRound achievementSubjectId achievementDayKey enumerationFullyCorrect")
-      .lean(),
+      .lean(), { database: true }),
   ]);
   if (!pending.length) return;
   const timezone = account?.settings?.studyTimezone ?? "UTC";
@@ -48,20 +48,20 @@ export async function retryPendingAchievementEvents(userId: mongoose.Types.Objec
     const occurredAt = new Date(record.reviewedAt);
     const dayKey = record.achievementDayKey ?? studyDayKey(occurredAt, timezone);
     const subjectId = record.achievementSubjectId ? String(record.achievementSubjectId) : undefined;
-    await recordAchievementEvent(String(userId), {
+    await measureServerOperation("recovered answer event upsert", () => recordAchievementEvent(String(userId), {
       idempotencyKey: `quiz-answer:${sessionId}:${record.quizQuestionIndex}`,
       kind: "quiz-answer", occurredAt, dayKey, sessionId, questionIdentity: identity, ...(subjectId ? { subjectId } : {}),
       correct: record.result === "correct" && record.quizRound === 1,
-    });
-    if (record.enumerationFullyCorrect && await Flashcard.exists({ _id: record.flashcardId, userId, flashcardType: "items" })) {
-      await recordAchievementEvent(String(userId), {
+    }));
+    if (record.enumerationFullyCorrect && await measureServerOperation("recovery enumeration metadata lookup", () => Flashcard.exists({ _id: record.flashcardId, userId, flashcardType: "items" }), { database: true })) {
+      await measureServerOperation("recovered enumeration event upsert", () => recordAchievementEvent(String(userId), {
         idempotencyKey: `enumeration-correct:${sessionId}:${identity}`,
         kind: "quiz-answer", occurredAt, dayKey, sessionId, questionIdentity: identity, ...(subjectId ? { subjectId } : {}),
         correct: false, enumerationFullyCorrect: true,
-      });
+      }));
     }
-    await recordAchievementEvent(String(userId), { idempotencyKey: `study-day:${dayKey}`, kind: "study-day", occurredAt, dayKey });
-    await ReviewRecord.updateOne({ _id: record._id, userId, achievementEventsRecorded: { $ne: true } }, { $set: { achievementEventsRecorded: true } });
+    await measureServerOperation("recovered study-day event upsert", () => recordAchievementEvent(String(userId), { idempotencyKey: `study-day:${dayKey}`, kind: "study-day", occurredAt, dayKey }));
+    await measureServerOperation("recovery pending marker update", () => ReviewRecord.updateOne({ _id: record._id, userId, achievementEventsRecorded: { $ne: true } }, { $set: { achievementEventsRecorded: true } }), { database: true });
   }
 }
 
@@ -112,7 +112,7 @@ async function reconcileUserBadgesInternal(userId: string, options: { dryRun?: b
   const dryRun = Boolean(options.dryRun);
   const previous = await fetchEarnedBadges(userId);
   const alreadyEarned = new Set(previous.map((badge) => badge.badgeId));
-  const currentRecord = await BadgeReconciliation.findOne({ userId: owner }).lean();
+  const currentRecord = await measureServerOperation("badge reconciliation record lookup", () => BadgeReconciliation.findOne({ userId: owner }).lean(), { database: true });
 
   if (!dryRun) {
     const current = currentRecord;
@@ -127,24 +127,24 @@ async function reconcileUserBadgesInternal(userId: string, options: { dryRun?: b
   if (!dryRun) {
     for (let attempt = 0; attempt < 30 && !locked; attempt += 1) {
       try {
-        const claimed = await BadgeReconciliation.findOneAndUpdate(
+        const claimed = await measureServerOperation("badge reconciliation lock claim", () => BadgeReconciliation.findOneAndUpdate(
           { userId: owner, $or: [{ lockUntil: { $exists: false } }, { lockUntil: { $lte: new Date() } }] },
           { $set: { lockToken, lockUntil: new Date(Date.now() + LOCK_MS) }, $setOnInsert: { userId: owner } },
           { upsert: true, new: true, runValidators: true },
-        ).lean();
+        ).lean(), { database: true });
         locked = claimed?.lockToken === lockToken;
       } catch (error) {
         if (!(error instanceof mongoose.mongo.MongoServerError) || error.code !== 11000) throw error;
       }
       if (locked) break;
-      const active = await BadgeReconciliation.findOne({ userId: owner }).lean();
+      const active = await measureServerOperation("badge reconciliation lock check", () => BadgeReconciliation.findOne({ userId: owner }).lean(), { database: true });
       const saved = cachedResults(active);
       const activeLease = Boolean(active?.lockUntil && active.lockUntil > new Date());
       if (saved && active?.version === BADGE_RECONCILIATION_VERSION && !activeLease) return { cached: true, dryRun: false, evaluatedAt: active?.evaluatedAt ?? now, results: saved, newlyAwardedBadgeIds: [] };
       if (attempt < 29) await delay(100);
     }
     if (!locked) {
-      const active = await BadgeReconciliation.findOne({ userId: owner }).lean();
+      const active = await measureServerOperation("badge reconciliation status lookup", () => BadgeReconciliation.findOne({ userId: owner }).lean(), { database: true });
       const saved = cachedResults(active);
       if (saved) return { cached: true, dryRun: false, evaluatedAt: active?.evaluatedAt ?? now, results: saved, newlyAwardedBadgeIds: [] };
       throw new Error("Badge reconciliation is already running for this user. Please retry shortly.");
@@ -165,11 +165,11 @@ async function reconcileUserBadgesInternal(userId: string, options: { dryRun?: b
           },
         })),
       );
-      if (milestoneOperations.length) await AchievementEvent.bulkWrite(milestoneOperations, { ordered: false });
+      if (milestoneOperations.length) await measureServerOperation("badge milestone event bulk write", () => AchievementEvent.bulkWrite(milestoneOperations, { ordered: false }), { database: true });
     }
     if (!dryRun && !baseline) {
       const initialBaseline = createAchievementBaseline(metrics);
-      await BadgeReconciliation.updateOne({ userId: owner, lockToken }, { $set: { baseline: initialBaseline } }, { runValidators: true });
+      await measureServerOperation("badge baseline persistence", () => BadgeReconciliation.updateOne({ userId: owner, lockToken }, { $set: { baseline: initialBaseline } }, { runValidators: true }), { database: true });
     }
     const results = evaluateBadgeCatalog(metrics, alreadyEarned);
     if (dryRun) return { cached: false, dryRun: true, evaluatedAt: now, results, newlyAwardedBadgeIds: [] };
@@ -193,11 +193,11 @@ async function reconcileUserBadgesInternal(userId: string, options: { dryRun?: b
       return { badgeId: result.badgeId as BadgeId, created: award.created };
     }));
     const savedResults = results.map((result) => newAwards.some((award) => award.badgeId === result.badgeId) ? { ...result, alreadyEarned: true } : result);
-    await BadgeReconciliation.updateOne(
+    await measureServerOperation("badge reconciliation persistence", () => BadgeReconciliation.updateOne(
       { userId: owner, lockToken },
       { $set: { version: BADGE_RECONCILIATION_VERSION, evaluatedAt: now, results: savedResults }, $unset: { lockToken: "", lockUntil: "" } },
       { runValidators: true },
-    );
+    ), { database: true });
     return { cached: false, dryRun: false, evaluatedAt: now, results: savedResults, newlyAwardedBadgeIds: awardResults.filter((award) => award.created).map((award) => award.badgeId) };
   } catch (error) {
     if (!dryRun) await BadgeReconciliation.updateOne({ userId: owner, lockToken }, { $unset: { lockToken: "", lockUntil: "" } });

@@ -15,7 +15,7 @@ import { priorMistakeState, prioritizePending } from "./round-priority";
 import { recordAchievementEvent } from "@/lib/badges/repository";
 import { studyDayKey } from "@/lib/badges/study-day";
 import { User } from "@/models/User";
-import { measureServerOperation } from "@/lib/performance/server-timing";
+import { measureServerOperation, measureSyncServerOperation } from "@/lib/performance/server-timing";
 import {
   ALL_SUBJECTS,
   QUIZ_MODES,
@@ -143,8 +143,8 @@ const fail = (status: number, message: string): ServiceError => ({ ok: false, st
 
 /** All of a user's usable cards, prepared for quiz generation. Always scoped to the owner. */
 export async function loadUsableCards(userId: Types.ObjectId | string): Promise<PreparedCard[]> {
-  const cards = await Flashcard.find({ userId }).select("_id subjectId topicId flashcardType question answer hint").lean();
-  return cards.map(prepareCard).filter(isUsableCard);
+  const cards = await measureServerOperation("quiz flashcard retrieval", () => Flashcard.find({ userId }).select("_id subjectId topicId flashcardType question answer hint").lean(), { database: true });
+  return measureSyncServerOperation("quiz card preparation", () => cards.map(prepareCard).filter(isUsableCard));
 }
 
 export async function startSession(userId: Types.ObjectId | string, input: { scope?: unknown; subjectId?: unknown; topicId?: unknown; type?: unknown }) {
@@ -171,7 +171,7 @@ export async function startSession(userId: Types.ObjectId | string, input: { sco
   let subjectName = "All Subjects";
   if (scope !== "all") {
     if (!isValidObjectId(input.subjectId)) return fail(400, "Choose a valid subject.");
-    const subject = await Subject.findOne({ _id: input.subjectId, userId }).select("_id name").lean();
+    const subject = await measureServerOperation("quiz subject lookup", () => Subject.findOne({ _id: input.subjectId, userId }).select("_id name").lean(), { database: true });
     if (!subject) return fail(404, "This subject could not be found.");
     subjectId = subject._id as Types.ObjectId;
     subjectName = subject.name;
@@ -179,7 +179,7 @@ export async function startSession(userId: Types.ObjectId | string, input: { sco
   let topicId: Types.ObjectId | null = null;
   let topicName: string | null = null;
   if (scope === "topic") {
-    const topic = await Topic.findOne({ _id: input.topicId, subjectId, userId }).select("_id name").lean();
+    const topic = await measureServerOperation("quiz topic lookup", () => Topic.findOne({ _id: input.topicId, subjectId, userId }).select("_id name").lean(), { database: true });
     if (!topic) return fail(404, "This topic could not be found in the selected subject.");
     topicId = topic._id as Types.ObjectId;
     topicName = topic.name;
@@ -190,12 +190,12 @@ export async function startSession(userId: Types.ObjectId | string, input: { sco
     : scope === "subject"
       ? usable.filter((card) => card.subjectId === String(subjectId))
       : usable;
-  const questions = buildQuestions(scopedCards, usable, type);
+  const questions = measureSyncServerOperation("quiz question generation", () => buildQuestions(scopedCards, usable, type));
   if (questions.length === 0) {
     return fail(422, `There are no eligible flashcards for this ${scope} and quiz type.`);
   }
 
-  const session = await QuizSession.create({
+  const session = await measureServerOperation("quiz session insertion", () => QuizSession.create({
     userId,
     subjectId,
     subjectName,
@@ -206,7 +206,7 @@ export async function startSession(userId: Types.ObjectId | string, input: { sco
     questions: questions.map((q, i) => ({ ...q, flashcardId: new Types.ObjectId(q.flashcardId), round: 1, origin: i, answered: false })),
     lastActivityAt: new Date(),
     expiresAt: activeExpiry(),
-  });
+  }), { database: true });
   return { ok: true as const, sessionId: String(session._id), total: questions.length };
 }
 
@@ -273,10 +273,10 @@ export async function computeStreaks(userId: Types.ObjectId | string, flashcardI
   // Keep streaks independent by question type so a perfect Multiple Choice round
   // cannot accidentally complete Identification or True or False.
   filter.questionType = type;
-  const records = await ReviewRecord.aggregate<{ _id: Types.ObjectId; results: Array<"correct" | "wrong"> }>([
+  const records = await measureServerOperation("streak mastery aggregation", () => ReviewRecord.aggregate<{ _id: Types.ObjectId; results: Array<"correct" | "wrong"> }>([
     { $match: filter },
     { $group: { _id: "$flashcardId", results: { $topN: { n: MASTERY_STREAK, sortBy: { reviewedAt: -1, _id: -1 }, output: "$result" } } } },
-  ]);
+  ]), { database: true });
   const streaks = new Map<string, number>();
   for (const record of records) {
     const id = String(record._id);
@@ -298,25 +298,25 @@ async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds
   await connectToDatabase();
   const scopedSubjectFilter = subjectIds ? { $in: subjectIds } : undefined;
   const [rawCards, subjects, topics] = await Promise.all([
-    Flashcard.find({ userId, ...(scopedSubjectFilter ? { subjectId: scopedSubjectFilter } : {}) }).select("_id subjectId topicId flashcardType question answer hint").lean(),
-    Subject.find({ userId, ...(scopedSubjectFilter ? { _id: scopedSubjectFilter } : {}) }).select("_id").lean(),
-    Topic.find({ userId, ...(scopedSubjectFilter ? { subjectId: scopedSubjectFilter } : {}) }).select("_id subjectId").lean(),
+    measureServerOperation("mastery flashcard query", () => Flashcard.find({ userId, ...(scopedSubjectFilter ? { subjectId: scopedSubjectFilter } : {}) }).select("_id subjectId topicId flashcardType question answer hint").lean(), { database: true }),
+    measureServerOperation("mastery subject query", () => Subject.find({ userId, ...(scopedSubjectFilter ? { _id: scopedSubjectFilter } : {}) }).select("_id").lean(), { database: true }),
+    measureServerOperation("mastery topic query", () => Topic.find({ userId, ...(scopedSubjectFilter ? { subjectId: scopedSubjectFilter } : {}) }).select("_id subjectId").lean(), { database: true }),
   ]);
   const cardIds = rawCards.map(card => card._id);
   const includeHistory = options.includeHistory !== false;
   const reviewFilter = { userId, flashcardId: { $in: cardIds } };
   const [records, precomputedCounts, compactReviewDays] = includeHistory || !cardIds.length
-    ? [cardIds.length ? await ReviewRecord.find(reviewFilter).select("flashcardId result reviewedAt nextReviewAt questionType").sort({ reviewedAt: -1, _id: -1 }).lean() : [], new Map<string, { correct: number; incorrect: number }>(), null]
+    ? [cardIds.length ? await measureServerOperation("mastery review history query", () => ReviewRecord.find(reviewFilter).select("flashcardId result reviewedAt nextReviewAt questionType").sort({ reviewedAt: -1, _id: -1 }).lean(), { database: true }) : [], new Map<string, { correct: number; incorrect: number }>(), null]
     : await Promise.all([
-      ReviewRecord.aggregate<{ _id: { cardId: Types.ObjectId; mode: QuizMode }; correct: number; incorrect: number; recent: Array<{ _id: Types.ObjectId; result: "correct" | "wrong"; reviewedAt: Date; nextReviewAt: Date; questionType: QuizMode }> }>([
+      measureServerOperation("compact mastery aggregation", () => ReviewRecord.aggregate<{ _id: { cardId: Types.ObjectId; mode: QuizMode }; correct: number; incorrect: number; recent: Array<{ _id: Types.ObjectId; result: "correct" | "wrong"; reviewedAt: Date; nextReviewAt: Date; questionType: QuizMode }> }>([
         { $match: reviewFilter },
         { $group: { _id: { cardId: "$flashcardId", mode: "$questionType" }, correct: { $sum: { $cond: [{ $eq: ["$result", "correct"] }, 1, 0] } }, incorrect: { $sum: { $cond: [{ $eq: ["$result", "wrong"] }, 1, 0] } }, recent: { $topN: { n: MASTERY_STREAK, sortBy: { reviewedAt: -1, _id: -1 }, output: { _id: "$_id", result: "$result", reviewedAt: "$reviewedAt", nextReviewAt: "$nextReviewAt", questionType: "$questionType" } } } } },
-      ]),
-      ReviewRecord.aggregate<{ day: string }>([
+      ]), { database: true }),
+      measureServerOperation("review day aggregation", () => ReviewRecord.aggregate<{ day: string }>([
         { $match: reviewFilter },
         { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$reviewedAt", timezone: "UTC" } } } },
         { $project: { _id: 0, day: "$_id" } },
-      ]),
+      ]), { database: true }),
     ]).then(([groups, days]) => {
       const counts = new Map<string, { correct: number; incorrect: number }>();
       const bounded: Array<{ _id: Types.ObjectId; flashcardId: Types.ObjectId; result: "correct" | "wrong"; reviewedAt: Date; nextReviewAt: Date; questionType: QuizMode }> = [];
@@ -519,16 +519,16 @@ export function toPublicSession(session: SessionDoc, streaks?: Map<string, numbe
 export async function loadSession(userId: Types.ObjectId | string, sessionId: string): Promise<SessionDoc | null> {
   if (!isValidObjectId(sessionId)) return null;
   await measureServerOperation("quiz database connection", connectToDatabase);
-  const session = await measureServerOperation("quiz session retrieval", () => QuizSession.findOne({ _id: sessionId, userId, expiresAt: { $gt: new Date() } }).lean());
+  const session = await measureServerOperation("quiz session query", () => QuizSession.findOne({ _id: sessionId, userId, expiresAt: { $gt: new Date() } }).lean(), { database: true });
   const loaded = (session as unknown as SessionDoc | null) ?? null;
   if (!loaded) return null;
   const pendingIndexes = loaded.questions.flatMap((question, index) => question.reviewRecordPending ? [index] : []);
   for (const index of pendingIndexes) {
     await ensureReviewRecord(userId, loaded, index);
-    await QuizSession.updateOne(
+    await measureServerOperation("recovered answer pending marker update", () => QuizSession.updateOne(
       { _id: loaded._id, userId, [`questions.${index}.reviewRecordPending`]: true },
       { $set: { [`questions.${index}.reviewRecordPending`]: false } },
-    );
+    ), { database: true });
     loaded.questions[index].reviewRecordPending = false;
   }
   return loaded;
@@ -542,7 +542,7 @@ async function ensureReviewRecord(userId: Types.ObjectId | string, session: Sess
   const isEnumeration = type === "enumeration-identification" || type === "enumeration-multiple-choice";
   const identity = String(q.origin ?? index);
   const reviewedAt = q.answeredAt ?? new Date();
-  const result = await ReviewRecord.findOneAndUpdate(
+  const result = await measureServerOperation("review record persistence", () => ReviewRecord.findOneAndUpdate(
     { userId, quizSessionId: session._id, quizQuestionIndex: index },
     { $setOnInsert: {
       userId,
@@ -561,15 +561,15 @@ async function ensureReviewRecord(userId: Types.ObjectId | string, session: Sess
       achievementEventsRecorded: false,
     } },
     { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true },
-  ).lean();
+  ).lean(), { database: true });
   if (!result) throw new Error("The durable answer record could not be confirmed.");
   return result;
 }
 
 type AnswerInput = { questionIndex?: unknown; selectedIndex?: unknown; answer?: unknown; answers?: unknown; truth?: unknown };
 
-export async function submitAnswer(userId: Types.ObjectId | string, sessionId: string, input: AnswerInput) {
-  const session = await loadSession(userId, sessionId);
+export async function submitAnswer(userId: Types.ObjectId | string, sessionId: string, input: AnswerInput, studyTimezone?: string) {
+  const session = await measureServerOperation("quiz session retrieval", () => loadSession(userId, sessionId));
   if (!session) return fail(404, "This quiz session has expired or could not be found.");
   if (session.status === "completed") return fail(409, "This quiz is already finished.");
   if (session.expiresAt && session.expiresAt.getTime() <= Date.now()) return fail(404, "This quiz session has expired or could not be found.");
@@ -581,7 +581,7 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   const q = session.questions[index];
 
   // Repeated request for an answered question: return the saved result, record nothing.
-  if (q.answered) return { ok: true as const, duplicate: true, result: resultFor(q, session), progress: summarize(session), mastery: toPublicSession(session, await sessionMastery(userId, session)).mastery };
+  if (q.answered) return { ok: true as const, duplicate: true, result: resultFor(q, session), progress: summarize(session), mastery: toPublicSession(session, await measureServerOperation("mastery calculation", () => sessionMastery(userId, session))).mastery };
 
   let correct: boolean;
   const set: Record<string, unknown> = {};
@@ -617,23 +617,25 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   set[`${prefix}.correct`] = correct;
   set[`${prefix}.answered`] = true;
   const now = new Date();
-  const account = await measureServerOperation("answer timezone lookup", () => User.findById(userId).select("settings.studyTimezone").lean());
-  const dayKey = studyDayKey(now, account?.settings?.studyTimezone ?? "UTC");
+  const account = studyTimezone === undefined
+    ? await measureServerOperation("answer timezone lookup", () => User.findById(userId).select("settings.studyTimezone").lean(), { database: true })
+    : null;
+  const dayKey = studyDayKey(now, studyTimezone ?? account?.settings?.studyTimezone ?? "UTC");
   set[`${prefix}.answeredAt`] = now;
   set[`${prefix}.reviewRecordPending`] = true;
   set[`${prefix}.achievementDayKey`] = dayKey;
   if (session.subjectId) set[`${prefix}.achievementSubjectId`] = session.subjectId;
 
   // Atomic claim: only the first request for this question can flip answered false -> true.
-  const claimed = await measureServerOperation("quiz answer persistence", () => QuizSession.findOneAndUpdate(
+  const claimed = await measureServerOperation("atomic answer update", () => QuizSession.findOneAndUpdate(
     { _id: session._id, userId, status: "active", expiresAt: { $gt: now }, [`${prefix}.answered`]: false },
     { $set: { ...set, lastActivityAt: now, expiresAt: activeExpiry(now) } },
     { new: true, projection: { _id: 1, userId: 1, subjectId: 1, subjectName: 1, scope: 1, topicId: 1, topicName: 1, type: 1, status: 1, questions: 1, expiresAt: 1, lastActivityAt: 1 } },
-  ).lean());
+  ).lean(), { database: true });
   if (!claimed) {
-    const fresh = await loadSession(userId, sessionId);
+    const fresh = await measureServerOperation("duplicate answer recovery lookup", () => loadSession(userId, sessionId));
     if (fresh?.questions[index]?.answered) {
-      return { ok: true as const, duplicate: true, result: resultFor(fresh.questions[index], fresh), progress: summarize(fresh), mastery: toPublicSession(fresh, await sessionMastery(userId, fresh)).mastery };
+      return { ok: true as const, duplicate: true, result: resultFor(fresh.questions[index], fresh), progress: summarize(fresh), mastery: toPublicSession(fresh, await measureServerOperation("mastery calculation", () => sessionMastery(userId, fresh))).mastery };
     }
     return fail(409, "This answer could not be saved. Please try again.");
   }
@@ -641,13 +643,13 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   const isEnumeration = qType === "enumeration-identification" || qType === "enumeration-multiple-choice";
   const enumerationFullyCorrect = isEnumeration && correct && (q.round ?? 1) >= 1;
   try {
-    await measureServerOperation("review record persistence", () => ensureReviewRecord(userId, claimed as unknown as SessionDoc, index));
-    await QuizSession.updateOne(
+    await ensureReviewRecord(userId, claimed as unknown as SessionDoc, index);
+    await measureServerOperation("answer pending marker update", () => QuizSession.updateOne(
       { _id: session._id, userId, [`${prefix}.reviewRecordPending`]: true },
       { $set: { [`${prefix}.reviewRecordPending`]: false } },
-    );
+    ), { database: true });
     try {
-      await measureServerOperation("achievement event persistence", () => recordAchievementEvent(String(userId), {
+      await measureServerOperation("answer achievement event persistence", () => recordAchievementEvent(String(userId), {
         idempotencyKey: `quiz-answer:${String(session._id)}:${index}`,
         kind: "quiz-answer",
         occurredAt: now,
@@ -659,15 +661,15 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
         correct: (q.round ?? 1) === 1 && correct,
       }));
       if (enumerationFullyCorrect) {
-      const originalCard = await Flashcard.findOne({ _id: q.flashcardId, userId }).select("flashcardType").lean();
-        if (originalCard?.flashcardType === "items") await recordAchievementEvent(String(userId), {
+        const originalCard = await measureServerOperation("enumeration metadata lookup", () => Flashcard.findOne({ _id: q.flashcardId, userId }).select("flashcardType").lean(), { database: true });
+        if (originalCard?.flashcardType === "items") await measureServerOperation("enumeration achievement persistence", () => recordAchievementEvent(String(userId), {
           idempotencyKey: `enumeration-correct:${String(session._id)}:${String(q.origin ?? index)}`,
           kind: "quiz-answer", occurredAt: now, dayKey, ...(session.subjectId ? { subjectId: String(session.subjectId) } : {}), sessionId: String(session._id),
           questionIdentity: String(q.origin ?? index), correct: false, enumerationFullyCorrect: true,
-        });
+        }));
       }
-      await recordAchievementEvent(String(userId), { idempotencyKey: `study-day:${dayKey}`, kind: "study-day", occurredAt: now, dayKey });
-      await ReviewRecord.updateOne({ userId, quizSessionId: session._id, quizQuestionIndex: index }, { $set: { achievementEventsRecorded: true } });
+      await measureServerOperation("study-day achievement persistence", () => recordAchievementEvent(String(userId), { idempotencyKey: `study-day:${dayKey}`, kind: "study-day", occurredAt: now, dayKey }));
+      await measureServerOperation("achievement pending marker update", () => ReviewRecord.updateOne({ userId, quizSessionId: session._id, quizQuestionIndex: index }, { $set: { achievementEventsRecorded: true } }), { database: true });
     } catch (eventError) {
       // The persisted ReviewRecord carries a retry marker for badge reconciliation.
       console.error("Achievement activity could not be recorded; it can be reconciled from study records.", eventError);
@@ -684,12 +686,12 @@ export async function submitAnswer(userId: Types.ObjectId | string, sessionId: s
   return { ok: true as const, duplicate: false, result: resultFor(savedSession.questions[index], savedSession), progress: summarize(savedSession), mastery: toPublicSession(savedSession, streaks).mastery };
 }
 
-export async function finishSession(userId: Types.ObjectId | string, sessionId: string) {
-  const session = await loadSession(userId, sessionId);
+export async function finishSession(userId: Types.ObjectId | string, sessionId: string, studyTimezone?: string) {
+  const session = await measureServerOperation("finish session retrieval", () => loadSession(userId, sessionId));
   if (!session) return fail(404, "This quiz session has expired or could not be found.");
   if (session.questions.some((q) => !q.answered)) return fail(409, "Answer every question before finishing.");
 
-  let streaks = await sessionMastery(userId, session);
+  let streaks = await measureServerOperation("finish mastery calculation", () => sessionMastery(userId, session));
   let transitioned = false;
 
   if (session.status === "active") {
@@ -710,23 +712,23 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
         const n = session.questions.length;
         const activityAt = new Date();
         // Guard: only one concurrent finish can append this round.
-        await QuizSession.updateOne(
+        await measureServerOperation("retry round persistence", () => QuizSession.updateOne(
           { _id: session._id, userId, status: "active", [`questions.${n}`]: { $exists: false } },
           { $push: { questions: { $each: next } }, $set: { lastActivityAt: activityAt, expiresAt: activeExpiry(activityAt) } },
-        );
-        const fresh = await loadSession(userId, sessionId);
+        ), { database: true });
+        const fresh = await measureServerOperation("retry round reload", () => loadSession(userId, sessionId));
         if (!fresh) return fail(404, "This quiz session has expired or could not be found.");
-        streaks = await sessionMastery(userId, fresh);
+        streaks = await measureServerOperation("retry round mastery calculation", () => sessionMastery(userId, fresh));
         return { ok: true as const, done: false as const, session: toPublicSession(fresh, streaks) };
       }
     }
     const completedAt = new Date();
-    const completionUpdate = await QuizSession.updateOne({ _id: session._id, userId, status: "active" }, { $set: { status: "completed", completedAt, lastActivityAt: completedAt, expiresAt: new Date(completedAt.getTime() + SESSION_TTL_HOURS * 3_600_000) } });
+    const completionUpdate = await measureServerOperation("finish session persistence", () => QuizSession.updateOne({ _id: session._id, userId, status: "active" }, { $set: { status: "completed", completedAt, lastActivityAt: completedAt, expiresAt: new Date(completedAt.getTime() + SESSION_TTL_HOURS * 3_600_000) } }), { database: true });
     transitioned = completionUpdate.modifiedCount > 0;
   }
-  const fresh = await loadSession(userId, sessionId);
+  const fresh = await measureServerOperation("completed session reload", () => loadSession(userId, sessionId));
   if (!fresh || fresh.status !== "completed") return fail(500, "We couldn’t finish this review. Please try again.");
-  const finalStreaks = await sessionMastery(userId, fresh);
+  const finalStreaks = await measureServerOperation("completed session mastery calculation", () => sessionMastery(userId, fresh));
   const publicSession = toPublicSession(fresh, finalStreaks);
   if (publicSession.status !== "completed" || !publicSession.summary) return fail(500, "Could not load the completed review results. Please try again.");
   // Capture compact durable evidence while the temporary completed session is still available.
@@ -734,11 +736,11 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
   const originalQuestions = fresh.questions.filter((question) => (question.round ?? 1) === 1);
   const firstAttemptCorrectCount = originalQuestions.filter((question) => question.correct === true).length;
   const scorePercent = originalQuestions.length ? (firstAttemptCorrectCount / originalQuestions.length) * 100 : 0;
-  const account = await User.findById(userId).select("settings.studyTimezone").lean();
-  const timezone = account?.settings?.studyTimezone ?? "UTC";
+  const account = studyTimezone === undefined ? await measureServerOperation("finish timezone lookup", () => User.findById(userId).select("settings.studyTimezone").lean(), { database: true }) : null;
+  const timezone = studyTimezone ?? account?.settings?.studyTimezone ?? "UTC";
   const completedDay = studyDayKey(fresh.completedAt ?? new Date(), timezone);
   try {
-    await recordAchievementEvent(String(userId), {
+    await measureServerOperation("quiz completion event persistence", () => recordAchievementEvent(String(userId), {
       idempotencyKey: `quiz-completed:${String(fresh._id)}`,
       kind: "quiz-completed",
       occurredAt: fresh.completedAt ?? new Date(),
@@ -747,16 +749,16 @@ export async function finishSession(userId: Types.ObjectId | string, sessionId: 
       originalQuestionCount: originalQuestions.length,
       firstAttemptCorrectCount,
       scorePercent,
-    });
+    }));
     const resumedAfterWork = Boolean(fresh.resumedAt && originalQuestions.some((question) => question.answeredAt && question.answeredAt <= fresh.resumedAt!));
-    if (resumedAfterWork) await recordAchievementEvent(String(userId), {
+    if (resumedAfterWork) await measureServerOperation("resumed completion event persistence", () => recordAchievementEvent(String(userId), {
       idempotencyKey: `resumed-quiz-completed:${String(fresh._id)}`,
       kind: "resumed-quiz-completed",
       occurredAt: fresh.completedAt ?? new Date(),
       dayKey: completedDay,
       ...(fresh.subjectId ? { subjectId: String(fresh.subjectId) } : {}),
       resumed: true,
-    });
+    }));
   } catch (eventError) {
     // Completion is already committed. The surviving session or a client retry can repair its compact evidence.
     console.error("Quiz completed; durable achievement evidence could not be recorded yet.", eventError);
