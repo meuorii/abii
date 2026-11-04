@@ -11,6 +11,7 @@ import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { SlidersHorizontal, ShieldCheck, UserRound, Grid2X2, List, Download, Clock3, Layers3, Volume2, Play } from "lucide-react";
 import { getAbiiSoundVolume, isAbiiSoundEnabled, playAbiiSound, setAbiiSoundEnabled, setAbiiSoundVolume } from "@/lib/sounds";
 import { ProfilePictureCropModal } from "@/components/settings/profile-picture-crop-modal";
+import { useToast } from "@/components/ui/toast-provider";
 
 type Preferences = { targetSubjects: number; defaultLandingPage: string; subjectLayout: "grid" | "list" };
 type InitialUser = { name: string; email: string; profileImage: string; createdAt: string; settings?: Partial<Preferences> | null };
@@ -31,6 +32,7 @@ function InlineNotice({ notice }: { notice: Notice }) { if (!notice) return null
 
 export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [preferences, setPreferences] = useState<Preferences>(() => ({ ...defaultPreferences, ...(initialUser.settings ?? {}), defaultLandingPage: initialUser.settings?.defaultLandingPage === "/favorites" ? "/dashboard" : initialUser.settings?.defaultLandingPage ?? defaultPreferences.defaultLandingPage }));
   const [profile, setProfile] = useState({ name: initialUser.name, email: initialUser.email });
   const [profileImage, setProfileImage] = useState(initialUser.profileImage);
@@ -115,9 +117,10 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
     setSaving("photo"); setNoticeFor("photo", null);
     try {
       const data = await request("/api/account/profile-picture", "PATCH", { image });
+      if (typeof data.profileImage !== "string" || !data.profileImage) throw new Error("The saved profile photo URL was missing. Please try again.");
       setProfileImage(data.profileImage);
       window.dispatchEvent(new CustomEvent("abii-profile-image-updated", { detail: { profileImage: data.profileImage } }));
-      setNoticeFor("photo", { kind: "success", text: data.message || "Profile photo updated." });
+      toast({ kind: "success", title: "Profile photo updated!", message: "Your new profile picture has been saved." });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not update profile photo.";
       setNoticeFor("photo", { kind: "error", text: message });

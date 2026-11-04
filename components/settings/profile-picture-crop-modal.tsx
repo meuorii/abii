@@ -1,24 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { ImagePlus, Minus, Plus, RotateCcw } from "lucide-react";
 import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
 import { ModalButtonContent } from "@/components/ui/modal-button-content";
+import { boundCrop, clamp, sourceCrop, wheelZoom, zoomAt, type CropState, type Point } from "./crop-geometry";
+import { bindCropViewport } from "./crop-viewport";
 
 const VIEW_SIZE = 320;
 const MAX_FINAL_BYTES = 1024 * 1024;
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-
-function sourceCrop(width: number, height: number, zoom: number, offsetX: number, offsetY: number, viewportSize: number) {
-  const shortSide = Math.min(width, height);
-  const fitScale = viewportSize / shortSide;
-  const size = shortSide / zoom;
-  return {
-    x: clamp((width - size) / 2 - offsetX / (fitScale * zoom), 0, width - size),
-    y: clamp((height - size) / 2 - offsetY / (fitScale * zoom), 0, height - size),
-    size,
-  };
-}
 
 function drawSourceCrop(image: HTMLImageElement, context: CanvasRenderingContext2D, crop: { x: number; y: number; size: number }, outputSize: number) {
   context.clearRect(0, 0, outputSize, outputSize);
@@ -39,33 +29,32 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 export function ProfilePictureCropModal({ file, onClose, onSave }: { file: File; onClose: () => void; onSave: (image: string) => Promise<void> }) {
   const [objectUrl, setObjectUrl] = useState("");
   const imageRef = useRef<HTMLImageElement>(null);
-  const dragRef = useRef<{ pointerId: number; startX: number; startY: number; offsetX: number; offsetY: number } | null>(null);
+  const pointers = useRef(new Map<number, Point>());
+  const gesture = useRef<{ start: CropState; midpoint: Point; distance: number } | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState("");
   const [previewError, setPreviewError] = useState("");
   const [viewportSize, setViewportSize] = useState(VIEW_SIZE);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const [viewportNode, setViewportNode] = useState<HTMLDivElement | null>(null);
+  const attachViewport = useCallback((node: HTMLDivElement | null) => {
+    viewportRef.current = node;
+    setViewportNode(node);
+  }, []);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
-  const zoomRef = useRef(zoom);
-  const updateZoomRef = useRef<(value: number) => void>(() => {});
+  const cropRef = useRef<CropState>({ zoom: 1, offset: { x: 0, y: 0 } });
+  const wheelRef = useRef<(event: WheelEvent) => void>(() => {});
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
     setObjectUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
-  useEffect(() => {
-    const node = viewportRef.current;
-    if (!node || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(([entry]) => setViewportSize(entry.contentRect.width || VIEW_SIZE));
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
   const minDimension = Math.min(dimensions.width, dimensions.height);
   const baseScale = minDimension ? viewportSize / minDimension : 1;
   const renderedWidth = dimensions.width * baseScale;
@@ -75,34 +64,43 @@ export function ProfilePictureCropModal({ file, onClose, onSave }: { file: File;
   const boundedOffset = { x: clamp(offset.x, -maxX, maxX), y: clamp(offset.y, -maxY, maxY) };
   const transform = `translate(calc(-50% + ${boundedOffset.x}px), calc(-50% + ${boundedOffset.y}px)) scale(${zoom})`;
 
-  function updateZoom(value: number) {
-    const nextZoom = clamp(value, 1, 3);
-    zoomRef.current = nextZoom;
-    const nextMaxX = Math.max(0, (renderedWidth * nextZoom - viewportSize) / 2);
-    const nextMaxY = Math.max(0, (renderedHeight * nextZoom - viewportSize) / 2);
-    setZoom(nextZoom);
-    setOffset((current) => ({ x: clamp(current.x, -nextMaxX, nextMaxX), y: clamp(current.y, -nextMaxY, nextMaxY) }));
+  const geometry = { width: dimensions.width, height: dimensions.height, viewport: viewportSize };
+  useEffect(() => {
+    const bounded = boundCrop(cropRef.current, { width: dimensions.width, height: dimensions.height, viewport: viewportSize });
+    cropRef.current = bounded;
+    setOffset(bounded.offset);
+    pointers.current.clear(); gesture.current = null; setDragging(false);
+  }, [dimensions.width, dimensions.height, viewportSize]);
+  function commit(next: CropState) {
+    const bounded = boundCrop(next, geometry);
+    cropRef.current = bounded;
+    setZoom(bounded.zoom); setOffset(bounded.offset);
   }
-  updateZoomRef.current = updateZoom;
+  function updateZoom(value: number) { commit(zoomAt(cropRef.current, value, { x: 0, y: 0 }, { x: 0, y: 0 }, geometry)); }
+  function relative(point: Point) {
+    const rect = viewportRef.current!.getBoundingClientRect();
+    return { x: point.x - rect.left - rect.width / 2, y: point.y - rect.top - rect.height / 2 };
+  }
+  function rebaseGesture() {
+    const points = [...pointers.current.values()];
+    if (!points.length) { gesture.current = null; setDragging(false); return; }
+    const midpoint = points.length === 1 ? points[0] : { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 };
+    gesture.current = { start: cropRef.current, midpoint: relative(midpoint), distance: points.length === 2 ? Math.max(1, Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y)) : 0 };
+    setDragging(true);
+  }
+  wheelRef.current = (event) => {
+    if (busy || !dimensions.width || !imageRef.current?.naturalWidth) return;
+    event.preventDefault();
+    const anchor = relative({ x: event.clientX, y: event.clientY });
+    commit(zoomAt(cropRef.current, wheelZoom(cropRef.current.zoom, event.deltaY, event.deltaMode, viewportSize), anchor, anchor, geometry));
+    if (pointers.current.size) rebaseGesture();
+  };
 
   useEffect(() => {
-    const element = viewportRef.current;
-    if (!element) return;
-    const handleWheel = (event: WheelEvent) => {
-      if (!imageRef.current?.naturalWidth) return;
-      event.preventDefault();
-      const delta = event.deltaMode === WheelEvent.DOM_DELTA_LINE
-        ? event.deltaY * 16
-        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
-          ? event.deltaY * viewportSize
-          : event.deltaY;
-      const normalizedSteps = clamp(delta / 100, -3, 3);
-      if (!normalizedSteps) return;
-      updateZoomRef.current(zoomRef.current * Math.pow(1.12, -normalizedSteps));
-    };
-    element.addEventListener("wheel", handleWheel, { passive: false });
-    return () => element.removeEventListener("wheel", handleWheel);
-  }, [viewportSize]);
+    if (!viewportNode) return;
+    const handleWheel = (event: WheelEvent) => wheelRef.current(event);
+    return bindCropViewport(viewportNode, handleWheel, setViewportSize);
+  }, [viewportNode]);
 
   useEffect(() => {
     const image = imageRef.current;
@@ -123,30 +121,29 @@ export function ProfilePictureCropModal({ file, onClose, onSave }: { file: File;
     return () => window.cancelAnimationFrame(frame);
   }, [dimensions, zoom, boundedOffset.x, boundedOffset.y, viewportSize, objectUrl]);
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!dimensions.width || busy) return;
+    if (!dimensions.width || busy || pointers.current.size >= 2 || (event.pointerType === "mouse" && event.button !== 0)) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, offsetX: boundedOffset.x, offsetY: boundedOffset.y };
-    setDragging(true);
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    rebaseGesture();
   }
   function onPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
-    const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    setOffset({ x: clamp(drag.offsetX + event.clientX - drag.startX, -maxX, maxX), y: clamp(drag.offsetY + event.clientY - drag.startY, -maxY, maxY) });
+    if (!pointers.current.has(event.pointerId) || !gesture.current || busy) return;
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const points = [...pointers.current.values()], start = gesture.current;
+    const midpoint = points.length === 1 ? points[0] : { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 };
+    const distance = points.length === 2 ? Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y) : 0;
+    commit(zoomAt(start.start, start.distance ? start.start.zoom * distance / start.distance : start.start.zoom, start.midpoint, relative(midpoint), geometry));
   }
   function finishDrag(event: ReactPointerEvent<HTMLDivElement>) {
-    if (dragRef.current?.pointerId !== event.pointerId) return;
-    dragRef.current = null;
-    setDragging(false);
+    if (!pointers.current.delete(event.pointerId)) return;
+    rebaseGesture();
   }
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const step = event.shiftKey ? 24 : 8;
     if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
     event.preventDefault();
-    setOffset((current) => ({
-      x: clamp(current.x + (event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0), -maxX, maxX),
-      y: clamp(current.y + (event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0), -maxY, maxY),
-    }));
+    commit({ ...cropRef.current, offset: { x: cropRef.current.offset.x + (event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0), y: cropRef.current.offset.y + (event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0) } });
   }
 
   function exportCrop(): Promise<Blob> {
@@ -181,11 +178,11 @@ export function ProfilePictureCropModal({ file, onClose, onSave }: { file: File;
   }
 
   async function save() {
-    if (busy || !dimensions.width) return;
-    setBusy(true); setError("");
+    if (savingRef.current || !dimensions.width) return;
+    savingRef.current = true; setBusy(true); setError("");
     try { await onSave(await blobToDataUrl(await exportCrop())); onClose(); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save this photo. Please try again."); }
-    finally { setBusy(false); }
+    finally { savingRef.current = false; setBusy(false); }
   }
 
   const fitWidth = dimensions.width * baseScale;
@@ -195,9 +192,9 @@ export function ProfilePictureCropModal({ file, onClose, onSave }: { file: File;
   return <Modal open onClose={() => { if (!busy) onClose(); }} action="update" size="lg" title="Edit Profile Picture" description="Move and zoom your photo to get the perfect fit." busy={busy} footer={<><button type="button" disabled={busy} onClick={onClose} className={modalCancelClass}>Cancel</button><button type="button" disabled={busy || !dimensions.width} onClick={() => void save()} className={modalPrimaryClass}><ModalButtonContent loading={busy} label="Save Photo" loadingLabel="Saving Photo…" /></button></>}>
     <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_140px] sm:items-start">
       <div className="min-w-0">
-        <div ref={viewportRef} tabIndex={0} role="application" aria-label="Photo crop editor. Drag to reposition. Use arrow keys to adjust." onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={finishDrag} onPointerCancel={finishDrag} className={`relative mx-auto aspect-square w-full max-w-[340px] touch-none select-none overflow-hidden rounded-2xl border border-[#F4DCE4] bg-[#FFF7F9] outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] ${dragging ? "cursor-grabbing" : "cursor-grab"}`}>
+        <div ref={attachViewport} tabIndex={0} role="application" aria-label="Photo crop editor. Drag to reposition, pinch or scroll to zoom, or use arrow keys and the zoom controls." onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={finishDrag} onPointerCancel={finishDrag} onLostPointerCapture={finishDrag} className={`relative mx-auto aspect-square w-full max-w-[340px] touch-none select-none overflow-hidden rounded-2xl border border-[#F4DCE4] bg-[#FFF7F9] outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] ${dragging ? "cursor-grabbing" : "cursor-grab"}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img ref={imageRef} src={objectUrl || undefined} alt="Selected photo to crop" draggable={false} onLoad={(event) => { setDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }); setOffset({ x: 0, y: 0 }); setPreviewError(""); }} onError={() => { const message = "This image could not be decoded. Choose another JPG, PNG, or WebP file."; setError(message); setPreviewError(message); }} className={`profile-crop-image pointer-events-none absolute left-1/2 top-1/2 max-w-none ${dragging ? "" : "profile-crop-image-rest"}`} style={{ width: fitWidth, height: fitHeight, transform }} />
+          <img ref={imageRef} src={objectUrl || undefined} alt="Selected photo to crop" draggable={false} onLoad={(event) => { setDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }); cropRef.current = { zoom: 1, offset: { x: 0, y: 0 } }; setZoom(1); setOffset({ x: 0, y: 0 }); setPreviewError(""); }} onError={() => { const message = "This image could not be decoded. Choose another JPG, PNG, or WebP file."; setError(message); setPreviewError(message); }} className="profile-crop-image pointer-events-none absolute left-1/2 top-1/2 max-w-none" style={{ width: fitWidth, height: fitHeight, transform }} />
           <div aria-hidden="true" className="pointer-events-none absolute inset-0">
             <div className="absolute inset-0 bg-[#18384D]/35" style={{ maskImage: "radial-gradient(circle at center, transparent 49.7%, black 50.2%)" }} />
             <div className="absolute inset-[1px] rounded-full border-2 border-white/95 shadow-[0_0_0_1px_rgba(24,56,77,.15)]" />
@@ -207,7 +204,7 @@ export function ProfilePictureCropModal({ file, onClose, onSave }: { file: File;
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[#557087]"><label htmlFor="profilePhotoZoom">Zoom</label><span>{zoom.toFixed(1)}×</span></div>
           <div className="flex items-center gap-3"><button type="button" aria-label="Zoom out" disabled={busy || zoom <= 1} onClick={() => updateZoom(zoom - 0.1)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#F4DCE4] bg-white text-[#E9577D] disabled:opacity-40"><Minus className="h-4 w-4" /></button><input id="profilePhotoZoom" aria-label="Zoom" type="range" min="1" max="3" step="0.01" value={zoom} disabled={busy || !dimensions.width} onChange={(event) => updateZoom(Number(event.target.value))} className="abii-volume-slider min-w-0 flex-1" style={{ "--volume-progress": `${percentage}%` } as React.CSSProperties} /><button type="button" aria-label="Zoom in" disabled={busy || zoom >= 3} onClick={() => updateZoom(zoom + 0.1)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#F4DCE4] bg-white text-[#E9577D] disabled:opacity-40"><Plus className="h-4 w-4" /></button></div>
-          <p className="mt-2 text-[11px] text-[#8A7D84]">Drag the image or focus the crop area and use arrow keys.</p>
+          <p className="mt-2 text-[11px] text-[#8A7D84]">Scroll or pinch with two fingers to zoom. Drag to reposition, or use the arrow keys.</p>
         </div>
       </div>
       <section aria-labelledby="profile-preview-label" className="flex items-center gap-3 rounded-xl border border-[#F4DCE4] bg-[#FFF7F9] p-3 sm:flex-col sm:gap-2 sm:py-4">
@@ -217,7 +214,7 @@ export function ProfilePictureCropModal({ file, onClose, onSave }: { file: File;
           {!dimensions.width && !previewError && <span className="absolute inset-0 grid place-items-center px-1 text-center text-[10px] text-[#6E879A]">Loading preview…</span>}
           {previewError && <span role="alert" className="absolute inset-0 grid place-items-center bg-[#FFF7F9] px-2 text-center text-[10px] leading-4 text-[#A43E5C]">Preview unavailable</span>}
         </div>
-        <button type="button" disabled={busy} onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }); setError(""); }} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-[#C65380] hover:bg-white disabled:opacity-50 sm:mt-1"><RotateCcw className="h-3.5 w-3.5" />Reset</button>
+        <button type="button" disabled={busy} onClick={() => { pointers.current.clear(); gesture.current = null; setDragging(false); commit({ zoom: 1, offset: { x: 0, y: 0 } }); setError(""); }} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-[#C65380] hover:bg-white disabled:opacity-50 sm:mt-1"><RotateCcw className="h-3.5 w-3.5" />Reset</button>
       </section>
     </div>
     <p className="mt-3 text-[11px] text-[#6E879A]">Source: JPG, PNG, or WebP · up to 15 MB and 20 megapixels. Saved crop: square JPEG · up to 1 MB.</p>
