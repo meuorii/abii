@@ -13,6 +13,7 @@ const field = "mt-2 block min-h-12 w-full rounded-xl border border-[#E9DFE4] bg-
 export function AuthFlowForm({ mode, nextPath = "/dashboard" }: { mode: Mode; nextPath?: string }) {
   const router = useRouter(), { toast } = useToast();
   const emailInput = useRef<HTMLInputElement>(null);
+  const inFlight = useRef(false);
   const [email, setEmail] = useState(""), [code, setCode] = useState(""), [password, setPassword] = useState(""), [confirm, setConfirm] = useState("");
   const [step, setStep] = useState<"email" | "code" | "done">(mode === "verify" ? "code" : mode === "reset" ? "done" : "email");
   const [stepChanged, setStepChanged] = useState(false);
@@ -34,6 +35,15 @@ export function AuthFlowForm({ mode, nextPath = "/dashboard" }: { mode: Mode; ne
   }, [mode]);
 
   useEffect(() => {
+    if (mode !== "reset") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("verified") !== "1") return;
+    url.searchParams.delete("verified");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    toast({ kind: "success", title: "Recovery code verified!", message: "You can now create a new password." });
+  }, [mode, toast]);
+
+  useEffect(() => {
     if (mode === "forgot" && stepChanged && step === "email") emailInput.current?.focus();
   }, [mode, step, stepChanged]);
 
@@ -52,7 +62,9 @@ export function AuthFlowForm({ mode, nextPath = "/dashboard" }: { mode: Mode; ne
   }
 
   async function submit(event: FormEvent) {
-    event.preventDefault(); setBusy(true); setError("");
+    event.preventDefault();
+    if (inFlight.current) return;
+    inFlight.current = true; setBusy(true); setError("");
     try {
       if (mode === "verify") {
         if (code.length !== 6) throw new Error("Enter all six digits.");
@@ -62,28 +74,31 @@ export function AuthFlowForm({ mode, nextPath = "/dashboard" }: { mode: Mode; ne
       } else if (mode === "forgot" && step === "email") {
         setCode("");
         await call("/api/auth/forgot-password", { email });
+        toast({ kind: "info", title: "Check your email", message: "If an account exists for this address, we'll send a recovery code." });
         setStep("code"); setStepChanged(true); setSeconds(60);
       } else if (mode === "forgot" && step === "code") {
         if (code.length !== 6) throw new Error("Enter all six digits.");
         await call("/api/auth/forgot-password/verify", { email, code });
-        router.push("/reset-password");
+        router.push("/reset-password?verified=1");
       } else {
         await call("/api/auth/forgot-password/reset", { password, confirmPassword: confirm });
-        toast({ kind: "success", title: "Password updated", message: "Please sign in again." });
+        toast({ kind: "success", title: "Password updated!", message: "Your password has been changed. Please sign in again." });
         router.replace("/login");
       }
     } catch (e) { setError(e instanceof Error ? e.message : "Please try again."); }
-    finally { setBusy(false); }
+    finally { inFlight.current = false; setBusy(false); }
   }
 
   async function resend() {
-    setBusy(true); setError("");
+    if (inFlight.current) return;
+    inFlight.current = true; setBusy(true); setError("");
     try {
       await call(mode === "verify" ? "/api/auth/verify-email/resend" : "/api/auth/forgot-password/resend", mode === "verify" ? {} : { email });
       setSeconds(60); setCode("");
-      toast({ kind: "success", title: "Code sent", message: "Check your inbox." });
+      if (mode === "verify") toast({ kind: "success", title: "Code sent", message: "Check your inbox." });
+      else toast({ kind: "info", title: "Check your email", message: "If the address is registered, a recovery code will be sent when eligible." });
     } catch (e) { setError(e instanceof Error ? e.message : "Please try again."); }
-    finally { setBusy(false); }
+    finally { inFlight.current = false; setBusy(false); }
   }
 
   function changeEmail() { setCode(""); setError(""); setSeconds(0); setStep("email"); setStepChanged(true); }
