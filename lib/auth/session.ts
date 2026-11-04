@@ -18,8 +18,11 @@ function getSessionSecret(): Uint8Array {
 }
 
 export async function createSession(userId: string): Promise<void> {
+  await connectToDatabase();
+  const account = await User.findById(userId).select("emailVerifiedAt sessionVersion").lean();
+  if (!account || !(account.emailVerifiedAt instanceof Date) || !Number.isFinite(account.emailVerifiedAt.getTime())) throw new Error("Email verification is required before signing in.");
   const now = Math.floor(Date.now() / 1000);
-  const token = await new SignJWT({})
+  const token = await new SignJWT({ sv: account.sessionVersion ?? 0 })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(userId)
     .setIssuedAt(now)
@@ -56,10 +59,18 @@ export async function readSessionUserId(token?: string): Promise<string | null> 
 }
 
 export const getCurrentUser = cache(async function getCurrentUser() {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(SESSION_COOKIE)?.value;
   const userId = await measureServerOperation("authentication lookup", readSessionUserId);
   if (!userId) return null;
   await measureServerOperation("authentication database connection", connectToDatabase);
-  return measureServerOperation("user lookup", () => User.findById(userId).select("name email createdAt profileImage settings.studyTimezone").lean(), { database: true });
+  let claims: { sv?: unknown };
+  try { claims = (await jwtVerify(raw!, getSessionSecret(), { algorithms: ["HS256"], issuer: SESSION_ISSUER, audience: SESSION_AUDIENCE })).payload as { sv?: unknown }; } catch { return null; }
+  const user = await measureServerOperation("user lookup", () => User.findById(userId).select("name email createdAt profileImage settings.studyTimezone emailVerifiedAt sessionVersion").lean(), { database: true });
+  // Pre-rollout signed sessions omitted `sv`; they remain valid at version zero
+  // for already verified accounts. Unverified accounts still fail this guard.
+  if (!user || !(user.emailVerifiedAt instanceof Date) || !Number.isFinite(user.emailVerifiedAt.getTime()) || (claims.sv ?? 0) !== (user.sessionVersion ?? 0)) return null;
+  return user;
 });
 
 export async function destroySession(): Promise<void> {

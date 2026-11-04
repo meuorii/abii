@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentUser, readSessionUserId } from "@/lib/auth/session";
+import { connectToDatabase } from "@/lib/mongodb";
+import { User } from "@/models/User";
 import { Sparkles } from "lucide-react";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/motion/scroll-reveal";
 
@@ -30,6 +32,12 @@ const steps = [
 export default async function LandingPage() {
   const user = await getCurrentUser();
   if (user) redirect("/dashboard");
+  const legacyId = await readSessionUserId();
+  if (legacyId) {
+    await connectToDatabase();
+    const account = await User.findById(legacyId).select("emailVerifiedAt").lean();
+    if (account && !(account.emailVerifiedAt instanceof Date)) redirect("/verify-email");
+  }
 
   return (
     <main className="min-h-dvh overflow-x-clip bg-white text-[#2F2930]">

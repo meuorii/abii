@@ -17,8 +17,7 @@ export async function PATCH(request: Request) {
   await connectToDatabase();
   const account = await User.findById(user._id).select("+passwordHash");
   if (!account || !(await bcrypt.compare(currentPassword, account.passwordHash))) return NextResponse.json({ error: "Your current password is incorrect." }, { status: 400 });
-  account.passwordHash = await bcrypt.hash(newPassword, 12);
-  await account.save();
+  await User.updateOne({ _id: account._id }, { $set: { passwordHash: await bcrypt.hash(newPassword, 12) }, $inc: { sessionVersion: 1 } });
   await destroySession();
   return NextResponse.json({ message: "Password changed. Please log in again.", redirectTo: "/login" });
 }

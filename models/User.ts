@@ -22,6 +22,9 @@ const userSchema = new Schema({
   name: { type: String, required: [true, "Name is required"], trim: true, minlength: [1, "Name cannot be empty"], maxlength: [80, "Name must be 80 characters or fewer"] },
   email: { type: String, required: [true, "Email is required"], trim: true, lowercase: true, maxlength: [254, "Email must be 254 characters or fewer"], match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Enter a valid email address"] },
   passwordHash: { type: String, required: [true, "Password hash is required"], select: false, minlength: [1, "Password hash cannot be empty"] },
+  // Missing legacy values remain unverified; never infer verification during migration.
+  emailVerifiedAt: { type: Date, default: null },
+  sessionVersion: { type: Number, default: 0, min: 0 },
   settings: { type: userSettingsSchema, default: () => ({}) },
   profileImage: { type: String, default: undefined, maxlength: 2048 },
   profileImagePublicId: { type: String, default: undefined, maxlength: 255 },
@@ -37,6 +40,8 @@ userSchema.index({ email: 1 }, { unique: true, name: "user_email_unique" });
     (!cached.schema.path("settings") ||
       !cached.schema.path("profileImage") ||
       !cached.schema.path("profileImagePublicId") ||
+      !cached.schema.path("emailVerifiedAt") ||
+      !cached.schema.path("sessionVersion") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("featuredBadges") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("featuredBadges.dashboardCustomized") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("studyTimezone"))

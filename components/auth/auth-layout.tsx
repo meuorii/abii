@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 
 type AuthLayoutProps = {
-  mode: "login" | "register";
+  mode: "login" | "register" | "verify" | "forgot" | "reset";
   children: ReactNode;
 };
 
 export function AuthLayout({ mode, children }: AuthLayoutProps) {
   const isRegister = mode === "register";
+  const isVerify = mode === "verify";
+  const heading = isRegister ? "Start Learning with Abii" : isVerify ? "Verify your email" : mode === "forgot" ? "Forgot your password?" : mode === "reset" ? "Create a new password" : "Welcome Back!";
 
   return (
     <main className="min-h-dvh w-full overflow-x-clip bg-white text-[#29252B]">
@@ -58,14 +60,17 @@ export function AuthLayout({ mode, children }: AuthLayoutProps) {
             </div>
 
             <p className="text-sm font-semibold text-[#C65380]">
-              {isRegister ? "A fresh start" : "Your study space awaits"}
+              {isRegister ? "A fresh start" : isVerify ? "One quick step" : mode === "forgot" || mode === "reset" ? "Account security" : "Your study space awaits"}
             </p>
             <h1 className="mt-2 text-[2rem] font-semibold leading-tight tracking-[-0.055em] sm:text-[2.35rem]">
-              {isRegister ? "Start Learning with Abii" : "Welcome Back!"}
+              {heading}
             </h1>
             <p className="mb-7 mt-2 text-sm leading-6 text-[#77717A]">
               {isRegister
                 ? "Create your account to organize subjects, make flashcards, and practice active recall."
+                : isVerify ? "Enter the code we sent to your email address to continue to your study space."
+                : mode === "forgot" ? "Enter your email and we'll send you a recovery code."
+                : mode === "reset" ? "Choose a secure password for your Abii account."
                 : "Sign in to continue studying, review your flashcards, and pick up where you left off."}
             </p>
 

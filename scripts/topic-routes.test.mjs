@@ -17,7 +17,7 @@ test("real authenticated Next.js routes and legacy Subject/Flashcard contracts",
     await mongoose.connect(uri);
     const db = mongoose.connection.db;
     const userId = new mongoose.Types.ObjectId();
-    await db.collection("users").insertOne({ _id: userId, name: "Integration", email: "test@example.invalid", passwordHash: "never-export-this" });
+    await db.collection("users").insertOne({ _id: userId, name: "Integration", email: "test@example.invalid", passwordHash: "never-export-this", emailVerifiedAt: new Date(), sessionVersion: 0 });
     const secret = "isolated-topic-route-test-secret-at-least-32-characters";
     const token = await new SignJWT({}).setProtectedHeader({ alg: "HS256" }).setSubject(String(userId)).setIssuer("abii").setAudience("abii-web").setIssuedAt().setExpirationTime("10m").sign(new TextEncoder().encode(secret));
     const probe = createServer();
@@ -48,6 +48,12 @@ test("real authenticated Next.js routes and legacy Subject/Flashcard contracts",
     const protectedBadges = await fetch(`${base}/badges`, { redirect: "manual" });
     assert.equal(protectedBadges.status, 307, "/badges should remain protected");
     assert.match(protectedBadges.headers.get("location") ?? "", /\/login\?/);
+
+    const unverifiedId = new mongoose.Types.ObjectId();
+    await db.collection("users").insertOne({ _id: unverifiedId, name: "Legacy unverified", email: "legacy@example.invalid", passwordHash: "preserved" });
+    const legacyToken = await new SignJWT({}).setProtectedHeader({ alg: "HS256" }).setSubject(String(unverifiedId)).setIssuer("abii").setAudience("abii-web").setIssuedAt().setExpirationTime("10m").sign(new TextEncoder().encode(secret));
+    assert.equal((await request("/api/subjects", "GET", undefined, undefined, legacyToken)).status, 401, "signed legacy JWTs must not authorize unverified accounts");
+    assert.equal(await db.collection("subjects").countDocuments({ userId: unverifiedId }), 0);
 
     for (const imagePath of [
       "/badges/unlocked/hello-abi-unlocked.png",

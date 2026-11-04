@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/models/User";
-import { createSession } from "@/lib/auth/session";
 import { validateRegistration } from "@/lib/auth/validation";
+import { deliverChallenge } from "@/lib/auth/challenges";
+import { sendVerificationEmail } from "@/lib/email/brevo";
+import { setPendingIdentity } from "@/lib/auth/tickets";
+import { limited, rateAllowed, rateAllowedByTrustedIp, validOrigin } from "@/lib/auth/http";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  if (!validOrigin(request)) return NextResponse.json({ message: "Invalid request origin." }, { status: 403 });
   let body: unknown;
   try { body = await request.json(); } catch { return NextResponse.json({ message: "Please check the form and try again." }, { status: 400 }); }
   if (!body || typeof body !== "object") return NextResponse.json({ message: "Please check the form and try again." }, { status: 400 });
@@ -17,7 +21,10 @@ export async function POST(request: Request) {
   }
   const { errors, values } = validateRegistration({ name: data.name, email: data.email, password: data.password });
   if (Object.keys(errors).length) return NextResponse.json({ message: "Please check the highlighted fields.", errors }, { status: 400 });
+  if (!(await rateAllowed("register", values.email, 5, 60 * 60_000))) return limited();
+  if (!(await rateAllowedByTrustedIp(request, "register-ip", 20, 60 * 60_000))) return limited();
 
+  let createdUser: { id: string; name: string } | null = null;
   try {
     await connectToDatabase();
     const existing = await User.exists({ email: values.email });
@@ -30,9 +37,16 @@ export async function POST(request: Request) {
       profileImage: null,
       profileImagePublicId: null,
     });
-    await createSession(user.id);
-    return NextResponse.json({ message: "Account created." }, { status: 201 });
+    createdUser = { id: user.id, name: user.name };
+    const delivered = await deliverChallenge(user.id, "email_verification", code => sendVerificationEmail(values.email, user.name, code, "registration"));
+    await setPendingIdentity(user.id);
+    if (!delivered) return NextResponse.json({ code: "EMAIL_VERIFICATION_REQUIRED", message: "Your account was created. Sign in to request a new verification code." }, { status: 503 });
+    return NextResponse.json({ code: "EMAIL_VERIFICATION_REQUIRED", message: "Check your inbox. We've sent your verification code." }, { status: 201 });
   } catch (error) {
+    if (createdUser) {
+      await setPendingIdentity(createdUser.id).catch(() => undefined);
+      return NextResponse.json({ code: "EMAIL_VERIFICATION_REQUIRED", message: "Your account was created, but we couldn't send the code yet. Sign in to request another code." }, { status: 503 });
+    }
     // A unique index also handles simultaneous registrations safely.
     if (typeof error === "object" && error !== null && "code" in error && error.code === 11000) {
       return NextResponse.json({ message: "We couldn't create your account with those details. Try signing in or use another email." }, { status: 409 });

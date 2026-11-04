@@ -47,11 +47,18 @@ export function AuthForm({ mode }: { mode: Mode }) {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (result.code === "EMAIL_VERIFICATION_REQUIRED") {
+          toast({ kind: "success", title: "Verify your email", message: "Check your inbox for your verification code." });
+          const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
+          router.replace(`/verify-email?next=${encodeURIComponent(next)}`);
+          return;
+        }
         setMessage(isRegister ? (result.message || "Couldn't create your account. Check your details and try again.") : "Couldn't sign in. Check your details and try again.");
         setErrors(result.errors || {});
         return;
       }
-      toast({ kind: "success", title: isRegister ? "Welcome to Abii!" : "Welcome back!", message: isRegister ? "Your account is ready. Let's start building your study space." : "You're signed in and ready to continue." });
+      if (isRegister) { const next = safeNextPath(new URLSearchParams(window.location.search).get("next")); router.replace(`/verify-email?next=${encodeURIComponent(next)}`); return; }
+      toast({ kind: "success", title: "Welcome back!", message: "You're signed in and ready to continue." });
       const next = new URLSearchParams(window.location.search).get("next");
       router.replace(safeNextPath(next));
     } catch {
@@ -78,6 +85,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
           <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-xl text-[#827681] transition hover:text-[#C65380] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#C65380]" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword}><EyeIcon visible={showPassword} /></button>
         </div>
         {errors.password && <p id="password-error" className="mt-1.5 text-sm text-[#B42345]">{errors.password}</p>}
+        {!isRegister && <div className="mt-2 text-right"><Link href="/forgot-password" className="text-xs font-semibold text-[#B74672] hover:underline">Forgot password?</Link></div>}
         {isRegister && <p className="mt-2 text-xs text-[#8B818A]">Use 8–128 characters.</p>}
       </div>
       {message && <p role="alert" aria-live="assertive" className="rounded-lg border border-[#F1C9D4] bg-[#FFF4F6] px-3.5 py-3 text-sm leading-5 text-[#963A55]">{message}</p>}
