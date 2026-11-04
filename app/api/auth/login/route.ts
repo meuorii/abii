@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/models/User";
-import { createSession } from "@/lib/auth/session";
+import { createSession, destroySession } from "@/lib/auth/session";
 import { validateLogin } from "@/lib/auth/validation";
-import { setPendingIdentity } from "@/lib/auth/tickets";
+import { clearPendingIdentity, setPendingIdentity } from "@/lib/auth/tickets";
 import { deliverChallenge } from "@/lib/auth/challenges";
 import { sendVerificationEmail } from "@/lib/email/brevo";
 import { limited, rateAllowed, rateAllowedByTrustedIp, validOrigin } from "@/lib/auth/http";
@@ -29,12 +29,32 @@ export async function POST(request: Request) {
     const matches = user ? await bcrypt.compare(values.password, user.passwordHash) : false;
     if (!user || !matches) return NextResponse.json({ message: "Email or password is incorrect. Please try again." }, { status: 401 });
     if (!(user.emailVerifiedAt instanceof Date)) {
-      await setPendingIdentity(user.id);
-      const delivered = await deliverChallenge(user.id, "email_verification", code => sendVerificationEmail(user.email, user.name, code, "existing_account"));
-      return NextResponse.json({ code: "EMAIL_VERIFICATION_REQUIRED", message: delivered ? "Check your inbox. We've sent your verification code." : "Email verification is required. Please request a new code." }, { status: 403 });
+      // A legacy cookie must not survive a successful password check for an
+      // unverified account. The pending ticket below is deliberately not a session.
+      await destroySession();
+      try {
+        await clearPendingIdentity();
+        await setPendingIdentity(user.id);
+      } catch {
+        return NextResponse.json({ code: "VERIFICATION_FLOW_UNAVAILABLE", message: "We couldn't start email verification. Please try again shortly." }, { status: 503 });
+      }
+      // Delivery may fail independently (provider outage, configuration, timeout).
+      // Keep the authenticated pending flow usable so the verification page can
+      // show the existing cooldown or let the user retry from its resend action.
+      let delivered = false;
+      try {
+        delivered = await deliverChallenge(user.id, "email_verification", code => sendVerificationEmail(user.email, user.name, code, "existing_account"));
+      } catch {
+        delivered = false;
+      }
+      return NextResponse.json({
+        code: "EMAIL_VERIFICATION_REQUIRED",
+        redirectTo: "/verify-email",
+        deliveryStatus: delivered ? "sent" : "unavailable",
+      }, { status: 202 });
     }
     await createSession(user.id);
-    return NextResponse.json({ message: "Signed in." });
+    return NextResponse.json({ code: "AUTHENTICATED", redirectTo: "/dashboard" });
   } catch {
     return NextResponse.json({ message: "We couldn't sign you in right now. Please try again." }, { status: 500 });
   }

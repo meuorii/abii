@@ -46,21 +46,38 @@ export function AuthForm({ mode }: { mode: Mode }) {
         body: JSON.stringify(isRegister ? { name: name.trim(), email: email.trim(), password } : { email: email.trim(), password }),
       });
       const result = await response.json().catch(() => ({}));
+      // The response code is authoritative: HTTP 202 is a successful pending
+      // verification step, never a fully authenticated login.
+      if (result.code === "VERIFICATION_FLOW_UNAVAILABLE") {
+        setMessage(result.message || "We couldn't start email verification. Please try again shortly.");
+        return;
+      }
+      if (result.code === "EMAIL_VERIFICATION_REQUIRED") {
+        const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
+        const deliveryUnavailable = result.deliveryStatus === "unavailable" || (isRegister && !response.ok);
+        toast({
+          kind: deliveryUnavailable ? "info" : "success",
+          title: "Verify your email",
+          message: deliveryUnavailable
+            ? "Email verification is required. You can request a code on the verification page."
+            : "Check your inbox for your verification code.",
+        });
+        router.replace(`/verify-email?next=${encodeURIComponent(next)}`);
+        return;
+      }
       if (!response.ok) {
-        if (result.code === "EMAIL_VERIFICATION_REQUIRED") {
-          toast({ kind: "success", title: "Verify your email", message: "Check your inbox for your verification code." });
-          const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
-          router.replace(`/verify-email?next=${encodeURIComponent(next)}`);
-          return;
-        }
         setMessage(isRegister ? (result.message || "Couldn't create your account. Check your details and try again.") : "Couldn't sign in. Check your details and try again.");
         setErrors(result.errors || {});
         return;
       }
       if (isRegister) { const next = safeNextPath(new URLSearchParams(window.location.search).get("next")); router.replace(`/verify-email?next=${encodeURIComponent(next)}`); return; }
+      if (result.code !== "AUTHENTICATED") {
+        setMessage("Couldn't sign in. Check your details and try again.");
+        return;
+      }
       toast({ kind: "success", title: "Welcome back!", message: "You're signed in and ready to continue." });
       const next = new URLSearchParams(window.location.search).get("next");
-      router.replace(safeNextPath(next));
+      router.replace(safeNextPath(next || result.redirectTo));
     } catch {
       setMessage("We couldn't connect just now. Please try again in a moment.");
     } finally { setBusy(false); }
