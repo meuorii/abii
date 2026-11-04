@@ -18,7 +18,16 @@ function config() {
   return { apiKey, email, name, baseUrl: url.origin, assetUrl: assetUrl.origin };
 }
 
-export async function sendTransactionalEmail(message: Message): Promise<{ ok: boolean; messageId?: string }> {
+function providerError(status: number): string {
+  if (status === 400) return "Brevo rejected the request or sender configuration.";
+  if (status === 401) return "Brevo rejected the API credentials.";
+  if (status === 403) return "The Brevo account is not authorized to send this message.";
+  if (status === 429) return "Brevo rate limit reached.";
+  if (status >= 500) return "Brevo returned a temporary server error.";
+  return `Brevo rejected the request (HTTP ${status}).`;
+}
+
+export async function sendTransactionalEmail(message: Message): Promise<{ ok: boolean; status: number; messageId?: string; error?: string }> {
   const settings = config();
   try {
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -29,11 +38,11 @@ export async function sendTransactionalEmail(message: Message): Promise<{ ok: bo
       signal: AbortSignal.timeout(10000),
       cache: "no-store",
     });
-    if (!response.ok) return { ok: false };
+    if (!response.ok) return { ok: false, status: response.status, error: providerError(response.status) };
     const payload = await response.json().catch(() => ({})) as { messageId?: unknown };
-    return { ok: true, ...(typeof payload.messageId === "string" ? { messageId: payload.messageId } : {}) };
+    return { ok: true, status: response.status, ...(typeof payload.messageId === "string" ? { messageId: payload.messageId } : {}) };
   } catch {
-    return { ok: false };
+    return { ok: false, status: 0, error: "Network request failed or timed out." };
   }
 }
 
