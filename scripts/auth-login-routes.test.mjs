@@ -162,6 +162,37 @@ test("existing account login routes unverified users through OTP and preserves v
     assert.equal(verifiedFixtureLogin.body.code, "AUTHENTICATED");
     assert.equal(await db.collection("authchallenges").countDocuments({ userId: verifiedId }), 0, "verified login does not create an OTP challenge");
 
+    // Seed a test-only recovery challenge; no provider or production data is used.
+    const recoveryId = "isolated-recovery-challenge", recoveryCode = "001234";
+    const recoveryHash = createHmac("sha256", otpSecret).update(JSON.stringify([String(unverifiedId), "password_reset", recoveryId, recoveryCode])).digest("hex");
+    await db.collection("authchallenges").insertOne({ userId: unverifiedId, purpose: "password_reset", challengeId: recoveryId, codeHash: recoveryHash, expiresAt: new Date(Date.now() + 600000), resendAvailableAt: new Date(), attemptCount: 0, consumedAt: null, lockedAt: null });
+    const badRecovery = await post("/api/auth/forgot-password/verify", { email: "legacy-auth@example.invalid", code: "999999" });
+    assert.equal(badRecovery.response.status, 400);
+    assert.equal(cookie(badRecovery.response, "abii_password_reset_v2"), null);
+    const recovery = await post("/api/auth/forgot-password/verify", { email: "legacy-auth@example.invalid", code: recoveryCode });
+    assert.equal(recovery.response.status, 200);
+    const resetToken = cookie(recovery.response, "abii_password_reset_v2");
+    assert.ok(resetToken);
+    const resetHeaders = recovery.response.headers.getSetCookie();
+    assert.ok(resetHeaders.some(row => row.startsWith("abii_password_reset_v2=") && /path=\//i.test(row) && /httponly/i.test(row) && /samesite=strict/i.test(row) && /max-age=300/i.test(row)));
+    assert.ok(resetHeaders.some(row => row.startsWith("abii_password_reset=") && /path=\/api\/auth\/forgot-password/i.test(row) && /max-age=0/i.test(row)));
+    assert.equal((await post("/api/auth/forgot-password/verify", { email: "legacy-auth@example.invalid", code: recoveryCode })).response.status, 400);
+    const noGrantPage = await fetch(`${base}/reset-password`, { redirect: "manual" });
+    assert.equal(noGrantPage.status, 307);
+    const resetCookie = `abii_password_reset_v2=${resetToken}`;
+    const resetPage = await fetch(`${base}/reset-password`, { headers: { Cookie: resetCookie }, redirect: "manual" });
+    assert.equal(resetPage.status, 200);
+    assert.match(await resetPage.text(), /Create a new password/);
+    const newPassword = "New-isolated-password-456";
+    const attempts = await Promise.all([1, 2].map(() => post("/api/auth/forgot-password/reset", { password: newPassword, confirmPassword: newPassword }, resetCookie)));
+    assert.deepEqual(attempts.map(x => x.response.status).sort(), [200, 401]);
+    const success = attempts.find(x => x.response.status === 200);
+    assert.equal(cookie(success.response, "abii_password_reset_v2"), "");
+    assert.equal((await post("/api/auth/login", { email: "legacy-auth@example.invalid", password: fixturePassword })).response.status, 401);
+    assert.equal((await post("/api/auth/login", { email: "legacy-auth@example.invalid", password: newPassword })).response.status, 200);
+    assert.equal((await fetch(`${base}/api/subjects`, { headers: { Cookie: `abii_session=${fullSession}` } })).status, 401, "old session is revoked");
+    for (const collection of fixtureCollections) assert.deepEqual(await db.collection(collection).find({ userId: unverifiedId }).sort({ _id: 1 }).toArray(), originalData.get(collection));
+
     const authForm = await readFile(new URL("../components/auth/auth-form.tsx", import.meta.url), "utf8");
     const verificationBranch = authForm.indexOf('if (result.code === "EMAIL_VERIFICATION_REQUIRED")');
     const httpErrorBranch = authForm.indexOf("if (!response.ok)");

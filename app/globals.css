@@ -151,15 +151,36 @@
   .abii-enter-2 { animation-delay: 125ms; }
   .abii-enter-3 { animation-delay: 180ms; }
   .abii-enter-4 { animation-delay: 235ms; }
+  .auth-enter-5 { animation-delay: 290ms; }
+  .auth-enter-6 { animation-delay: 345ms; }
+  .auth-enter-7 { animation-delay: 400ms; }
   .abii-enter-art { animation: abii-enter-art 680ms cubic-bezier(.22, 1, .36, 1) 130ms both; }
+  .auth-brand-enter { animation: abii-enter 600ms cubic-bezier(.22, 1, .36, 1) both; }
+  .auth-flow-step-enter { animation: auth-flow-step-in 320ms cubic-bezier(.22, 1, .36, 1) both; }
+  .auth-error-enter { animation: auth-error-in 180ms ease-out both; }
+  .auth-icon-swap { display: inline-flex; animation: auth-icon-swap-in 150ms cubic-bezier(.22, 1, .36, 1) both; }
+  .auth-otp-enter { animation: abii-enter 400ms cubic-bezier(.22, 1, .36, 1) 255ms both; }
+  .otp-digit-slot { transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease; }
+  .otp-digit-pop { display: inline-block; animation: otp-digit-pop 180ms cubic-bezier(.22, 1, .36, 1) both; }
+  .otp-error-state .otp-visual-slots { animation: otp-error-shake 220ms ease-out both; }
+  .auth-flow-form .auth-error-enter { animation: auth-error-in 180ms ease-out both; }
   .abii-modal-content { animation: abii-modal-content-in 360ms cubic-bezier(.22, 1, .36, 1) 45ms both; }
   .abii-scroll-enter { animation: abii-scroll-enter 600ms cubic-bezier(.22, 1, .36, 1) both; }
   .abii-card-enter { animation: abii-card-enter 500ms cubic-bezier(.22, 1, .36, 1) both; }
   button:not(:disabled):active { scale: .985; }
 }
 
+.otp-slot-filled { border-color: #F1D8E1; background-color: #FFF7F9; }
+.otp-input-shell:focus-within .otp-slot-active { border-color: #C65380; background-color: #FFF7F9; box-shadow: 0 0 0 3px #FCE7F3; }
+.otp-error-state .otp-digit-slot { border-color: #E7A3B1; background-color: #FFF4F6; }
+
 @keyframes abii-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes abii-enter-art { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes auth-flow-step-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes auth-error-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes auth-icon-swap-in { from { opacity: .55; transform: scale(.88); } to { opacity: 1; transform: scale(1); } }
+@keyframes otp-digit-pop { from { opacity: .5; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+@keyframes otp-error-shake { 0%, 100% { transform: translateX(0); } 35% { transform: translateX(-2px); } 70% { transform: translateX(2px); } }
 @keyframes abii-modal-content-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes abii-question-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes abii-scroll-enter { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -172,9 +193,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .quiz-answer-feedback-enter, .abii-enter, .abii-enter-art, .abii-modal-content, .abii-scroll-enter, .abii-card-enter { animation: none; }
+  .quiz-answer-feedback-enter, .abii-enter, .abii-enter-art, .auth-brand-enter, .auth-flow-step-enter, .auth-error-enter, .auth-icon-swap, .auth-otp-enter, .otp-digit-pop, .otp-error-state .otp-visual-slots, .abii-modal-content, .abii-scroll-enter, .abii-card-enter { animation: none; }
   .animate-pulse, .animate-bounce { animation: none !important; }
-  .abii-enter-1, .abii-enter-2, .abii-enter-3, .abii-enter-4 { animation-delay: 0ms; }
+  .abii-enter-1, .abii-enter-2, .abii-enter-3, .abii-enter-4, .auth-enter-5, .auth-enter-6, .auth-enter-7 { animation-delay: 0ms; }
   button:not(:disabled):active { scale: 1; }
   .abii-question-enter { animation: none; }
   .abii-motion-reveal { opacity: 1 !important; transform: none !important; }

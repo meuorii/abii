@@ -8,9 +8,9 @@ import { hashGrant } from "@/lib/auth/challenges";
 export const runtime = "nodejs";
 export default async function ResetPasswordPage() {
   const rawGrant = await readResetGrantCookie();
-  if (!rawGrant) redirect("/forgot-password");
+  if (!rawGrant) redirect("/forgot-password?expired=1");
   await connectToDatabase();
   const grant = await PasswordResetGrant.exists({ tokenHash: hashGrant(rawGrant), expiresAt: { $gt: new Date() }, consumedAt: null });
-  if (!grant) redirect("/forgot-password");
+  if (!grant) redirect("/forgot-password?expired=1");
   return <AuthLayout mode="reset"><AuthFlowForm mode="reset"/></AuthLayout>;
 }

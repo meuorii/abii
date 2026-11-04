@@ -4,7 +4,8 @@ import { cookies } from "next/headers";
 import { SESSION_COOKIE_OPTIONS } from "./constants";
 
 export const PENDING_COOKIE = "abii_pending_verification";
-export const RESET_COOKIE = "abii_password_reset";
+export const RESET_COOKIE = "abii_password_reset_v2";
+const LEGACY_RESET_COOKIE = "abii_password_reset";
 const key = () => {
   const value = process.env.AUTH_SECRET;
   if (!value || value.length < 32) throw new Error("AUTH_SECRET must contain at least 32 characters.");
@@ -23,6 +24,6 @@ export async function setPendingIdentity(userId: string) {
 export async function readPendingIdentity() { return read((await cookies()).get(PENDING_COOKIE)?.value, "email_verification"); }
 export async function clearPendingIdentity() { (await cookies()).set(PENDING_COOKIE, "", { ...SESSION_COOKIE_OPTIONS, maxAge: 0, expires: new Date(0) }); }
 export async function clearAuthFlowCookies() { await clearPendingIdentity(); await clearResetGrantCookie(); }
-export async function setResetGrantCookie(grantId: string) { (await cookies()).set(RESET_COOKIE, await issue(grantId, "password_reset", 5 * 60), { ...SESSION_COOKIE_OPTIONS, maxAge: 5 * 60, path: "/api/auth/forgot-password" }); }
+export async function setResetGrantCookie(grantId: string) { const store = await cookies(); store.set(LEGACY_RESET_COOKIE, "", { ...SESSION_COOKIE_OPTIONS, maxAge: 0, expires: new Date(0), path: "/api/auth/forgot-password" }); store.set(RESET_COOKIE, await issue(grantId, "password_reset", 5 * 60), { ...SESSION_COOKIE_OPTIONS, maxAge: 5 * 60, path: "/" }); }
 export async function readResetGrantCookie() { return read((await cookies()).get(RESET_COOKIE)?.value, "password_reset"); }
-export async function clearResetGrantCookie() { (await cookies()).set(RESET_COOKIE, "", { ...SESSION_COOKIE_OPTIONS, maxAge: 0, expires: new Date(0), path: "/api/auth/forgot-password" }); }
+export async function clearResetGrantCookie() { const store = await cookies(); store.set(LEGACY_RESET_COOKIE, "", { ...SESSION_COOKIE_OPTIONS, maxAge: 0, expires: new Date(0), path: "/api/auth/forgot-password" }); store.set(RESET_COOKIE, "", { ...SESSION_COOKIE_OPTIONS, maxAge: 0, expires: new Date(0), path: "/" }); }

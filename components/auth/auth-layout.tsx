@@ -8,6 +8,7 @@ type AuthLayoutProps = {
 export function AuthLayout({ mode, children }: AuthLayoutProps) {
   const isRegister = mode === "register";
   const isVerify = mode === "verify";
+  const isFlowPage = isVerify || mode === "forgot" || mode === "reset";
   const heading = isRegister ? "Start Learning with Abii" : isVerify ? "Verify your email" : mode === "forgot" ? "Forgot your password?" : mode === "reset" ? "Create a new password" : "Welcome Back!";
 
   return (
@@ -48,9 +49,9 @@ export function AuthLayout({ mode, children }: AuthLayoutProps) {
 
         {/* Right Panel: Form area */}
         <section className="relative flex h-full min-h-0 items-center justify-center overflow-y-auto px-5 py-8 sm:px-10 lg:overflow-hidden lg:px-12 xl:px-16">
-          <div className="abii-enter w-full max-w-[410px]">
+          <div className={`${isFlowPage ? "" : "abii-enter"} w-full max-w-[410px]`}>
             {/* Small brand header for mobile view only */}
-            <div className="mb-7 flex items-center gap-2 lg:hidden">
+            <div className={`mb-7 flex items-center gap-2 lg:hidden ${isFlowPage ? "auth-brand-enter" : ""}`}>
               <span className="flex h-9 w-9 items-center justify-center bg-transparent text-2xl text-[#C65380]">
                 ♡
               </span>
@@ -59,13 +60,13 @@ export function AuthLayout({ mode, children }: AuthLayoutProps) {
               </span>
             </div>
 
-            <p className="text-sm font-semibold text-[#C65380]">
+            <p className={`text-sm font-semibold text-[#C65380] ${isFlowPage ? "abii-enter abii-enter-1" : ""}`}>
               {isRegister ? "A fresh start" : isVerify ? "One quick step" : mode === "forgot" || mode === "reset" ? "Account security" : "Your study space awaits"}
             </p>
-            <h1 className="mt-2 text-[2rem] font-semibold leading-tight tracking-[-0.055em] sm:text-[2.35rem]">
+            <h1 className={`mt-2 text-[2rem] font-semibold leading-tight tracking-[-0.055em] sm:text-[2.35rem] ${isFlowPage ? "abii-enter abii-enter-2" : ""}`}>
               {heading}
             </h1>
-            <p className="mb-7 mt-2 text-sm leading-6 text-[#77717A]">
+            <p className={`mb-7 mt-2 text-sm leading-6 text-[#77717A] ${isFlowPage ? "abii-enter abii-enter-3" : ""}`}>
               {isRegister
                 ? "Create your account to organize subjects, make flashcards, and practice active recall."
                 : isVerify ? "Enter the code we sent to your email address to continue to your study space."

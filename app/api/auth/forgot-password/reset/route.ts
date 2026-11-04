@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { PasswordResetGrant } from "@/models/PasswordResetGrant";
@@ -17,10 +18,21 @@ export async function POST(request: Request) {
   if (password.length < 8 || password.length > 128) return NextResponse.json({ message: "Use a password between 8 and 128 characters." }, { status: 400 });
   if (password !== confirm) return NextResponse.json({ message: "The passwords do not match." }, { status: 400 });
   await connectToDatabase();
-  const grant = await PasswordResetGrant.findOneAndUpdate({ tokenHash: hashGrant(grantId), expiresAt: { $gt: new Date() }, consumedAt: null }, { $set: { consumedAt: new Date() } }, { new: true }).lean() as unknown as { _id: unknown; userId: string } | null;
-  if (!grant) return NextResponse.json({ message: "Your reset session expired. Request a new code." }, { status: 401 });
-  await User.updateOne({ _id: grant.userId }, { $set: { passwordHash: await bcrypt.hash(password, 12) }, $inc: { sessionVersion: 1 } });
-  await PasswordResetGrant.deleteMany({ userId: grant.userId, _id: { $ne: grant._id } });
+  const passwordHash = await bcrypt.hash(password, 12);
+  const session = await mongoose.startSession();
+  let updated = false;
+  try {
+    await session.withTransaction(async () => {
+      updated = false;
+      const grant = await PasswordResetGrant.findOneAndUpdate({ tokenHash: hashGrant(grantId), expiresAt: { $gt: new Date() }, consumedAt: null }, { $set: { consumedAt: new Date() } }, { new: true, session }).lean() as unknown as { _id: unknown; userId: string } | null;
+      if (!grant) return;
+      const result = await User.updateOne({ _id: grant.userId }, { $set: { passwordHash }, $inc: { sessionVersion: 1 } }, { session });
+      if (result.matchedCount !== 1) throw new Error("Reset account no longer exists.");
+      await PasswordResetGrant.deleteMany({ userId: grant.userId, _id: { $ne: grant._id } }, { session });
+      updated = true;
+    });
+  } finally { await session.endSession(); }
+  if (!updated) return NextResponse.json({ message: "Your reset session expired. Request a new code." }, { status: 401 });
   await clearResetGrantCookie();
   return NextResponse.json({ message: "Password updated successfully. Please sign in again.", redirectTo: "/login" });
 }
