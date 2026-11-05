@@ -7,7 +7,11 @@ export function changedOtpPositions(previous: string, next: string) {
 }
 
 export function otpDigitDelay(position: number, pasted: boolean) {
-  return pasted ? position * 16 : 0;
+  return pasted ? position * 30 : 0;
+}
+
+export function shouldCascadeOtp(previous: string, next: string, pasted: boolean) {
+  return pasted || (next.length === 6 && changedOtpPositions(previous, next).filter(index => next[index]).length > 1);
 }
 
 export function nextOtpCaretPosition(position: number, direction: "left" | "right") {

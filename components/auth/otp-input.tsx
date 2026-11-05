@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type CSSProperties, type KeyboardEvent, type SyntheticEvent } from "react";
-import { changedOtpPositions, nextOtpCaretPosition, otpDigitDelay, sanitizeOtpInput } from "./otp-input-state";
+import { changedOtpPositions, nextOtpCaretPosition, otpDigitDelay, sanitizeOtpInput, shouldCascadeOtp } from "./otp-input-state";
 
 type OtpInputProps = {
   value: string;
@@ -26,7 +26,8 @@ export function OtpInput({ value, onChange, disabled = false, label = "Six-digit
     if (clean !== value) {
       const changed = changedOtpPositions(value, clean);
       setDigitVersions(current => current.map((version, index) => changed.includes(index) ? version + 1 : version));
-      setDigitDelays(Array.from({ length: 6 }, (_, index) => changed.includes(index) ? otpDigitDelay(index, pasted) : 0));
+      const cascade = shouldCascadeOtp(value, clean, pasted);
+      setDigitDelays(current => current.map((delay, index) => changed.includes(index) ? otpDigitDelay(index, cascade) : delay));
     }
     setCaretPosition(Math.max(0, Math.min(clean.length, caret)));
     onChange(clean);

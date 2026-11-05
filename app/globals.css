@@ -161,7 +161,7 @@
   .auth-icon-swap { display: inline-flex; animation: auth-icon-swap-in 150ms cubic-bezier(.22, 1, .36, 1) both; }
   .auth-otp-enter { animation: abii-enter 400ms cubic-bezier(.22, 1, .36, 1) 255ms both; }
   .otp-digit-slot { transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease; }
-  .otp-digit-pop { display: inline-block; animation: otp-digit-pop 180ms cubic-bezier(.22, 1, .36, 1) both; }
+  .otp-digit-pop { display: inline-block; transform-origin: center center; animation: abii-otp-digit-bounce 310ms cubic-bezier(.22, 1, .36, 1) both; }
   .otp-error-state .otp-visual-slots { animation: otp-error-shake 220ms ease-out both; }
   .auth-flow-form .auth-error-enter { animation: auth-error-in 180ms ease-out both; }
   .abii-modal-content { animation: abii-modal-content-in 360ms cubic-bezier(.22, 1, .36, 1) 45ms both; }
@@ -179,7 +179,12 @@
 @keyframes auth-flow-step-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes auth-error-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes auth-icon-swap-in { from { opacity: .55; transform: scale(.88); } to { opacity: 1; transform: scale(1); } }
-@keyframes otp-digit-pop { from { opacity: .5; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+@keyframes abii-otp-digit-bounce {
+  0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(.88); }
+  48% { opacity: 1; transform: translate3d(0, -3px, 0) scale(1.045); }
+  72% { opacity: 1; transform: translate3d(0, 1.5px, 0) scale(.985); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
 @keyframes otp-error-shake { 0%, 100% { transform: translateX(0); } 35% { transform: translateX(-2px); } 70% { transform: translateX(2px); } }
 @keyframes abii-modal-content-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes abii-question-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
