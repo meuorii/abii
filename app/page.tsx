@@ -48,7 +48,7 @@ export default async function LandingPage() {
           className="inline-flex items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-4"
         >
           <Sparkles aria-hidden="true" className="h-7 w-7 text-[#E9577D]" />
-          <span className="text-[1.65rem] font-extrabold tracking-[-0.075em]">
+          <span className="font-brand text-[1.65rem]">
             abii<span className="text-[#FF6F96]">.</span>
           </span>
         </Link>
@@ -147,7 +147,7 @@ export default async function LandingPage() {
 
       <footer className="border-t border-[#F0E8EC] bg-white">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-5 py-6 text-xs text-[#8C7F87] sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
-          <Link href="/" className="w-fit font-extrabold tracking-[-0.06em] text-[#2F2930] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">
+          <Link href="/" className="font-brand w-fit text-[#2F2930] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">
             abii<span className="text-[#FF6F96]">.</span>
           </Link>
           <p>Learn a little, remember a lot.</p>

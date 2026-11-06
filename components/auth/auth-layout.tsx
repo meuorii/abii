@@ -64,7 +64,7 @@ export function AuthLayout({ mode, children }: AuthLayoutProps) {
           </picture>
           <div className="auth-brand-copy auth-brand-enter">
             <div className="auth-brand-header">
-              <div className="auth-wordmark">abii<span>.</span></div>
+              <div className="auth-wordmark font-brand">abii<span>.</span></div>
               <p className="auth-brand-descriptor">Your active recall companion</p>
             </div>
             <div className="auth-brand-message">

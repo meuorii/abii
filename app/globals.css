@@ -110,7 +110,7 @@
 .auth-brand-panel::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(0deg, color-mix(in srgb, var(--pink-card) 88%, transparent) 0%, color-mix(in srgb, var(--pink-card) 62%, transparent) 20%, transparent 48%); }
 .auth-brand-copy { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; pointer-events: none; }
 .auth-brand-header { align-self: flex-start; }
-.auth-wordmark { font-size: 25px; font-weight: 800; letter-spacing: -.07em; line-height: 1; }
+.auth-wordmark { font-size: 25px; font-weight: 400; letter-spacing: 0; line-height: 1; }
 .auth-wordmark span { color: var(--pink-active); }
 .auth-brand-descriptor { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.3; }
 .auth-brand-message { position: relative; margin: auto 0 0; }
@@ -138,8 +138,9 @@
   .auth-form-panel { min-height: calc(100dvh - clamp(200px, 58vw, 235px) + 20px); }
 }
 @media (min-width: 1024px) {
-  .auth-card { display: grid; grid-template-columns: minmax(0, 45fr) minmax(0, 55fr); min-height: 100dvh; }
-  .auth-brand-panel { min-height: 100dvh; border-radius: 0; }
+  .auth-page { display: flex; align-items: center; justify-content: center; min-height: 100dvh; padding: 24px; background: var(--pink-soft); }
+  .auth-card { display: grid; grid-template-columns: minmax(0, 45fr) minmax(0, 55fr); width: 80vw; max-width: 1440px; min-height: 80dvh; margin: 0; padding: 0; overflow: hidden; border: none; border-radius: 30px; background: var(--pink-card); box-shadow: 0 20px 60px rgb(47 41 48 / 8%), 0 4px 16px rgb(47 41 48 / 4%); }
+  .auth-brand-panel { min-height: 80dvh; border-radius: 30px 0 0 30px; }
   .auth-brand-panel::after { background: linear-gradient(0deg, color-mix(in srgb, var(--pink-card) 88%, transparent) 0%, color-mix(in srgb, var(--pink-card) 65%, transparent) 22%, transparent 52%); }
   .auth-brand-copy { padding: clamp(32px, 3vw, 56px); }
   .auth-brand-message { max-width: 380px; margin: auto 0 0; }
@@ -147,7 +148,7 @@
   .auth-brand-message h2 { max-width: 16ch; margin-top: 10px; font-size: clamp(28px, 2.6vw, 38px); }
   .auth-brand-description { display: block; max-width: 34ch; margin-top: 10px; color: var(--foreground); font-size: 14px; line-height: 1.55; }
   .auth-brand-art img { object-position: center center; }
-  .auth-form-panel { align-items: center; min-height: 100dvh; margin: 0 0 0 -24px; padding: 48px clamp(32px, 5vw, 80px) 48px calc(clamp(32px, 5vw, 80px) + 24px); border-radius: 32px 0 0 32px; }
+  .auth-form-panel { align-items: center; min-height: 80dvh; margin: 0 0 0 -24px; padding: 40px clamp(20px, 3vw, 48px) 40px calc(clamp(20px, 3vw, 48px) + 24px); border-radius: 32px 0 0 32px; }
 }
 @media (max-width: 359px) {
   .auth-brand-copy { padding: 16px; }
@@ -279,7 +280,7 @@
   --color-pink-active: var(--pink-active);
   --color-success: var(--success);
   --color-error: var(--error);
-  --font-sans: Arial, Helvetica, sans-serif;
+  --font-sans: var(--font-onest), Arial, Helvetica, sans-serif;
 }
 
 * {
@@ -290,7 +291,19 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-onest), Arial, Helvetica, sans-serif;
+}
+
+.font-brand {
+  font-family: var(--font-cute-dino), cursive;
+  font-weight: 400;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 button,

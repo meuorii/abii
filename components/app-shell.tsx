@@ -62,7 +62,7 @@ function Brand({ compact = false }: { compact?: boolean }) {
           />
         </span>
 
-        <span className="text-[29px] font-extrabold leading-none tracking-[-0.07em] text-[#E9577D]">
+        <span className="font-brand text-[29px] leading-none text-[#E9577D]">
           Abii
         </span>
       </span>
