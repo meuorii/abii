@@ -299,6 +299,50 @@ body {
   font-weight: 400;
 }
 
+/* Public landing page: restrained product feedback and editorial type scale. */
+.landing-heading {
+  font-size: clamp(2.25rem, 4.8vw, 3.5rem);
+  font-weight: 600;
+  line-height: .98;
+  letter-spacing: -.04em;
+}
+.landing-hero-title {
+  font-size: clamp(3.25rem, 7.2vw, 6rem);
+  font-weight: 600;
+  line-height: .92;
+  letter-spacing: -.04em;
+}
+.landing-primary {
+  background: var(--pink-primary);
+  transition: background-color 150ms ease, transform 150ms cubic-bezier(.23, 1, .32, 1), box-shadow 150ms ease;
+}
+.landing-primary:hover { background: var(--pink-active); transform: translateY(-1px); }
+.landing-primary:active { transform: scale(.97); }
+.landing-secondary { transition: background-color 150ms ease, border-color 150ms ease, transform 150ms cubic-bezier(.23, 1, .32, 1); }
+.landing-secondary:hover { border-color: var(--pink-accent); background: var(--pink-soft); transform: translateY(-1px); }
+.landing-secondary:active { transform: scale(.97); }
+.landing-link { transition: color 160ms ease, background-color 160ms ease; }
+.landing-link:hover { color: var(--pink-active); }
+.landing-tile { transition: transform 150ms cubic-bezier(.23, 1, .32, 1), filter 150ms ease; }
+.landing-tile-arrow { transition: transform 150ms cubic-bezier(.23, 1, .32, 1); }
+.landing-tile:active { transform: scale(.98); }
+.landing-link:focus-visible, .landing-primary:focus-visible, .landing-secondary:focus-visible {
+  outline: 2px solid var(--pink-active);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-primary, .landing-secondary, .landing-link { transition: none; }
+  .landing-tile, .landing-tile-arrow { transition: none; }
+  .landing-primary:hover, .landing-secondary:hover, .landing-tile:hover { transform: none; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .landing-tile:hover { transform: translateX(3px); filter: brightness(.98); }
+  .landing-tile:hover .landing-tile-arrow { transform: translate(3px, 3px); }
+}
+@media (max-width: 359px) {
+  .landing-hero-title { font-size: clamp(2.8rem, 14vw, 3.25rem); }
+}
+
 button,
 input,
 textarea,
