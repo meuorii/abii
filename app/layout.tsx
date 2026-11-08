@@ -5,9 +5,9 @@ import { MotionProvider } from "@/components/motion/motion-provider";
 import { cuteDino, onest } from "./fonts";
 
 export const metadata: Metadata = {
-  title: "Abii — Learn a little, remember a lot",
+  title: "Abii — Active Recall Study App",
   description:
-    "A calm, friendly study space to practice active recall and remember more.",
+    "Make flashcards, test your knowledge, and see what needs another review with Abii.",
 };
 
 export const viewport: Viewport = {
