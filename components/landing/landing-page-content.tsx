@@ -1,112 +1,28 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
-import { LandingNav } from "@/components/landing/landing-nav";
-import { LandingHero } from "@/components/landing/landing-hero";
-import { ProductExperienceTabs } from "@/components/landing/product-experience-tabs";
-import { ScrollReveal, StaggerItem } from "@/components/motion/scroll-reveal";
+import { LandingNav } from "./landing-nav";
+import { LandingHero } from "./landing-hero";
+import { LandingBrand } from "./landing-brand";
 import styles from "./landing-page.module.css";
-
+const steps = [
+  { image: "1%20organize.png", category: "Organize", title: "Make it yours.", description: "Create subjects, organize topics, and build flashcards that fit the way you study.", alt: "Abii organizing study cards at a desk" },
+  { image: "2%20practice.png", category: "Practice", title: "Put your memory to work.", description: "Choose a review mode and practice recalling what you've learned.", alt: "Abii thinking through a flashcard answer" },
+  { image: "3%20progress.png", category: "Progress", title: "See what sticks.", description: "Follow your mastery and find out what needs a little more practice.", alt: "Abii celebrating learning progress beside a tablet" },
+];
+function Planned({ children }: { children: React.ReactNode }) { return <span className={styles.planned} aria-disabled="true">{children}<small>Planned</small></span>; }
 export function LandingPageContent() {
-  return <div className={styles.page} id="home">
-    <a className={styles.skipLink} href="#main-content">Skip to content</a>
-    <LandingNav />
-    <main id="main-content">
-      <LandingHero />
-
-      <section className={`${styles.section} ${styles.experience}`} id="experience" aria-labelledby="experience-heading">
-        <div className={styles.experienceIntro}>
-          <ScrollReveal className={styles.experienceHeading}>
-            <p className={styles.eyebrow}>A better way to study</p>
-            <h2 id="experience-heading">See how a better study session comes together.</h2>
-          </ScrollReveal>
-          <ScrollReveal className={styles.experienceIntroCopy} delay={0.08}>
-            <p>From organizing your subjects to testing your memory and tracking your progress, Abii helps you make every study session count.</p>
-            <a href="#why-abii" className={styles.textLink}>Why active recall <ArrowDownRight aria-hidden="true" size={17}/></a>
-          </ScrollReveal>
-        </div>
-        <ScrollReveal amount={0.06} delay={0.04}>
-          <ProductExperienceTabs />
-        </ScrollReveal>
+  return <div className={styles.page} id="home"><a className={styles.skipLink} href="#main-content">Skip to content</a><LandingNav />
+    <main id="main-content" tabIndex={-1}><LandingHero />
+      <section className={`${styles.container} ${styles.product}`} id="features" aria-labelledby="product-heading">
+        <Image className={styles.productArt} src="/landing/home/product.png" alt="Abii organizing, reading, recalling, and celebrating in a connected study workspace" width={1448} height={1086} sizes="(max-width: 700px) 100vw, 560px" />
+        <div className={styles.productCopy}><h2 id="product-heading">Your space to learn,<br className={styles.desktopBreak}/> practice, and grow.</h2><p>Keep your subjects organized, turn what you&apos;ve learned into active recall practice, and see your progress along the way. Everything you need for a better study routine, all in one friendly space.</p><a className={styles.textLink} href="#how-abii-works">Explore All Features</a></div>
       </section>
-
-      <section className={styles.why} id="why-abii" aria-labelledby="why-heading">
-        <div className={styles.whyInner}>
-          <p className={styles.eyebrow}>Make your study time count</p>
-          <div className={styles.whyLines}>
-            <ScrollReveal><h2 id="why-heading">Less rereading.</h2></ScrollReveal>
-            <ScrollReveal delay={0.1}><h2 className={styles.whyEmphasis}>More remembering.</h2></ScrollReveal>
-          </div>
-          <ScrollReveal className={styles.whyCopy} delay={0.2}>
-            <p>Highlighting notes feels productive. Remembering them without looking is where learning gets stronger.</p>
-            <p>Abii helps you make active recall part of your everyday study routine, one question and one small win at a time.</p>
-          </ScrollReveal>
-        </div>
+      <section className={styles.why} id="why-abii" aria-labelledby="why-heading"><div className={`${styles.container} ${styles.whyInner}`}><p className={styles.eyebrow}>THE IDEA BEHIND ABII</p><h2 id="why-heading">Don&apos;t just read it.<br/><span>Remember it.</span></h2><p className={styles.whyDescription}>Reading your notes is a good start, but real learning happens when you try to remember what you&apos;ve studied. That&apos;s where active recall comes in. Abii helps you practice what you know, discover what needs more attention, and build stronger understanding one question at a time.</p></div></section>
+      <section className={`${styles.container} ${styles.how}`} id="how-abii-works" aria-labelledby="how-heading"><p className={styles.eyebrow}>HOW ABII WORKS</p><h2 id="how-heading">A little structure. A lot of progress.</h2><p className={styles.howDescription}>Getting started with Abii is simple. Create your study space, challenge what you know, and watch your learning grow one review at a time.</p>
+        <ol className={styles.steps}>{steps.map((step, index) => <li key={step.category}><div className={styles.stepArt}><Image src={`/landing/home/${step.image}`} alt={step.alt} width={1448} height={1086} sizes="(max-width: 700px) 100vw, (max-width: 899px) 44vw, 360px" /><div className={styles.stepLabel}><span>{index + 1}</span>{step.category}</div></div><h3>{step.title}</h3><p>{step.description}</p></li>)}</ol>
       </section>
-
-      <section className={`${styles.section} ${styles.personality}`} id="meet-abii" aria-labelledby="personality-heading">
-        <ScrollReveal className={styles.personalityArt}>
-          <Image src="/landing/home/brand-personality-mascot.png" alt="Abii, your cheerful study companion" width={1254} height={1254} sizes="(max-width: 700px) 78vw, (max-width: 1050px) 42vw, 470px" loading="lazy" />
-        </ScrollReveal>
-        <div className={styles.personalityCopy}>
-          <ScrollReveal>
-            <p className={styles.eyebrow}>A friendlier way to learn</p>
-            <h2 id="personality-heading">Studying feels lighter with Abii around.</h2>
-            <p className={styles.bodyCopy}>Meet Abii, your cheerful study companion who makes showing up, practicing, and celebrating small victories feel a little more rewarding.</p>
-            <p className={styles.personalityAside}>Because studying should feel like progress, not pressure.</p>
-            <span className={styles.plannedLink} aria-disabled="true" title="The About page is planned">Get to Know Abii <ArrowUpRight aria-hidden="true" size={17}/><small>Planned</small></span>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      <section className={`${styles.section} ${styles.discover}`} id="discover" aria-labelledby="discover-heading">
-        <div className={styles.discoverHead}>
-          <ScrollReveal>
-            <p className={styles.eyebrow}>Keep your curiosity going</p>
-            <h2 id="discover-heading">A little help for your next study session.</h2>
-          </ScrollReveal>
-          <ScrollReveal delay={0.08}><p className={styles.bodyCopy}>Discover practical learning guides, helpful study ideas, and small ways to make your next review more effective.</p></ScrollReveal>
-        </div>
-        <ul className={styles.editorialList}>
-          <StaggerItem index={0} as="li" className={styles.editorialRow}>
-            <span className={styles.editorialNumber}>01</span>
-            <div className={styles.editorialType}>Guides</div>
-            <div className={styles.editorialText}><h3>Getting Started with Active Recall</h3><p>Learn how to practice remembering instead of simply rereading your notes.</p></div>
-            <span className={styles.plannedArrow} aria-hidden="true"><ArrowUpRight size={21}/></span>
-            <small className={styles.plannedNote}>Planned</small>
-          </StaggerItem>
-          <StaggerItem index={1} as="li" className={styles.editorialRow}>
-            <span className={styles.editorialNumber}>02</span>
-            <div className={styles.editorialType}>Blog</div>
-            <div className={styles.editorialText}><h3>Why Rereading Isn&apos;t Always Enough</h3><p>Explore why retrieval practice can make studying more meaningful.</p></div>
-            <span className={styles.plannedArrow} aria-hidden="true"><ArrowUpRight size={21}/></span>
-            <small className={styles.plannedNote}>Planned</small>
-          </StaggerItem>
-        </ul>
-      </section>
-
-      <section className={styles.cta} aria-labelledby="cta-heading">
-        <div className={styles.ctaInner}>
-          <div className={styles.ctaCopy}>
-            <ScrollReveal>
-              <p className={styles.eyebrow}>Your next small win</p>
-              <h2 id="cta-heading">Ready to make it stick?</h2>
-              <p className={styles.bodyCopy}>Your next study session could be the start of something better. Bring your subjects, take the first quiz, and let Abii help you along the way.</p>
-              <Link href="/register" className="landing-button landing-button-primary">Start Studying with Abii <ArrowUpRight aria-hidden="true" size={17}/></Link>
-            </ScrollReveal>
-          </div>
-          <ScrollReveal className={styles.ctaArt} delay={0.12}>
-            <Image src="/landing/home/cta-mascot.png" alt="Abii cheering you on as you begin studying" width={1254} height={1254} sizes="(max-width: 700px) 72vw, (max-width: 1050px) 38vw, 440px" loading="lazy" />
-          </ScrollReveal>
-        </div>
-      </section>
+      <section className={`${styles.container} ${styles.cta}`} aria-labelledby="cta-heading"><div className={styles.ctaPanel}><div className={styles.ctaArt}><Image src="/landing/home/cta-mascot.png" alt="Abii welcoming you to your study journey" width={1254} height={1254} sizes="(max-width: 700px) 260px, 400px" /></div><div className={styles.ctaCopy}><h2 id="cta-heading">A little progress starts here.</h2><p>Your study journey is better with Abii by your side.</p><Link href="/register" className={styles.button}>Get Started</Link></div></div></section>
     </main>
-    <footer className={styles.footer}>
-      <div className={styles.footerTop}>
-        <div className={styles.footerBrand}><Link href="/" className="landing-brand" aria-label="Abii home"><span className="font-brand">abii</span><span>.</span></Link><p>A calmer way to remember.</p></div>
-        <nav aria-label="Footer navigation"><a href="#home">Home</a><a href="#experience">Features</a><a href="#meet-abii">About</a><span aria-disabled="true">Blog · Planned</span><span aria-disabled="true">Guides · Planned</span></nav>
-      </div>
-      <small>© {new Date().getFullYear()} Abii. All rights reserved.</small>
-    </footer>
+    <footer className={styles.footer}><div className={styles.container}><div className={styles.footerTop}><div className={styles.footerBrand}><LandingBrand /><p>Learn a little. Remember a lot.</p></div><nav aria-label="Explore"><h2>Explore</h2><Link href="/">Home</Link><a href="#why-abii">About</a><a href="#features">Features</a><Planned>Blogs</Planned></nav><nav aria-label="Support"><h2>Support</h2><Planned>Help Center</Planned><Planned>FAQs</Planned><Planned>Contact Us</Planned></nav></div><div className={styles.footerBottom}><small>© 2026 Abii. All rights reserved.</small><div><Planned>Privacy Policy</Planned><Planned>Terms of Service</Planned></div></div></div></footer>
   </div>;
 }
