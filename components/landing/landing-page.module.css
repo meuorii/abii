@@ -131,7 +131,7 @@
   .navInner { width: calc(100% - 32px); min-height: 64px; }
   .mobileNav { width: calc(100% - 32px); }
   .hero { aspect-ratio: auto; display: flex; flex-direction: column; background: var(--pink-soft); }
-  .heroInner { padding-top: 44px; padding-bottom: 30px; }
+  .heroInner { padding-top: 100px; padding-bottom: 30px; }
   .heroCopy { width: 100%; }
   .hero h1 { font-size: clamp(33px, 8.6vw, 54px); line-height: 1.08; }
   .heroCopy > p { margin-top: 18px; max-width: 500px; font-size: 16px; line-height: 1.55; }
