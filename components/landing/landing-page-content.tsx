@@ -2,14 +2,13 @@
 import Link from "next/link";
 import { LandingNav } from "./landing-nav";
 import { LandingHero } from "./landing-hero";
-import { LandingBrand } from "./landing-brand";
+import { LandingFooter } from "./landing-footer";
 import styles from "./landing-page.module.css";
 const steps = [
   { image: "1%20organize.png", category: "Organize", title: "Make it yours.", description: "Create subjects, organize topics, and build flashcards that fit the way you study.", alt: "Abii organizing study cards at a desk" },
   { image: "2%20practice.png", category: "Practice", title: "Put your memory to work.", description: "Choose a review mode and practice recalling what you've learned.", alt: "Abii thinking through a flashcard answer" },
   { image: "3%20progress.png", category: "Progress", title: "See what sticks.", description: "Follow your mastery and find out what needs a little more practice.", alt: "Abii celebrating learning progress beside a tablet" },
 ];
-function Planned({ children }: { children: React.ReactNode }) { return <span className={styles.planned} aria-disabled="true">{children}<small>Planned</small></span>; }
 export function LandingPageContent() {
   return <div className={styles.page} id="home"><a className={styles.skipLink} href="#main-content">Skip to content</a><LandingNav />
     <main id="main-content" tabIndex={-1}><LandingHero />
@@ -23,6 +22,6 @@ export function LandingPageContent() {
       </section>
       <section className={`${styles.container} ${styles.cta}`} aria-labelledby="cta-heading"><div className={styles.ctaPanel}><div className={styles.ctaArt}><Image src="/landing/home/cta-mascot.png" alt="Abii welcoming you to your study journey" width={1254} height={1254} sizes="(max-width: 700px) 260px, 400px" /></div><div className={styles.ctaCopy}><h2 id="cta-heading">A little progress starts here.</h2><p>Your study journey is better with Abii by your side.</p><Link href="/register" className={styles.button}>Get Started</Link></div></div></section>
     </main>
-    <footer className={styles.footer}><div className={styles.container}><div className={styles.footerTop}><div className={styles.footerBrand}><LandingBrand /><p>Learn a little. Remember a lot.</p></div><nav aria-label="Explore"><h2>Explore</h2><Link href="/">Home</Link><a href="#why-abii">About</a><a href="#features">Features</a><Planned>Blogs</Planned></nav><nav aria-label="Support"><h2>Support</h2><Planned>Help Center</Planned><Planned>FAQs</Planned><Planned>Contact Us</Planned></nav></div><div className={styles.footerBottom}><small>© 2026 Abii. All rights reserved.</small><div><Planned>Privacy Policy</Planned><Planned>Terms of Service</Planned></div></div></div></footer>
+    <LandingFooter />
   </div>;
 }
