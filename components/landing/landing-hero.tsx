@@ -8,6 +8,6 @@ export function LandingHero() {
       <p>Meet Abii, your friendly study buddy. Organize your learning, practice with active recall, and turn little study sessions into lasting knowledge all in one place.</p>
       <div className={styles.heroActions}><Link href="/register" className={styles.button}>Get Started</Link><a href="#features" className={`${styles.button} ${styles.secondaryButton}`}>Explore Features</a></div>
     </div></div>
-    <div className={styles.heroArt}><Image src="/landing/home/hero.png" alt="Abii studying with flashcards and an open book at a sunlit desk" width={1672} height={941} priority sizes="100vw" /></div>
+    <div className={styles.heroArt}><Image src="/landing/home/hero.png" alt="Abii studying with flashcards and an open book at a sunlit desk" width={1672} height={941} priority quality={95} sizes="(max-width: 700px) calc(100vw + 16px), (max-width: 1199px) 100vw, min(100vw, 1672px)" /></div>
   </section>;
 }
