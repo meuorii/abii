@@ -13,3 +13,4 @@ next-env.d.ts
 
 # Locally installed Codex / AI design skills
 .agents/skills/
+.edge-profile
