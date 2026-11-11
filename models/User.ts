@@ -24,6 +24,8 @@ const userSchema = new Schema({
   passwordHash: { type: String, required: [true, "Password hash is required"], select: false, minlength: [1, "Password hash cannot be empty"] },
   // Missing legacy values remain unverified; never infer verification during migration.
   emailVerifiedAt: { type: Date, default: null },
+  // Internal ownership marker used only by the explicitly invoked demo seeder.
+  demoSeedKey: { type: String, select: false },
   sessionVersion: { type: Number, default: 0, min: 0 },
   settings: { type: userSettingsSchema, default: () => ({}) },
   profileImage: { type: String, default: undefined, maxlength: 2048 },
@@ -41,6 +43,7 @@ userSchema.index({ email: 1 }, { unique: true, name: "user_email_unique" });
       !cached.schema.path("profileImage") ||
       !cached.schema.path("profileImagePublicId") ||
       !cached.schema.path("emailVerifiedAt") ||
+      !cached.schema.path("demoSeedKey") ||
       !cached.schema.path("sessionVersion") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("featuredBadges") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("featuredBadges.dashboardCustomized") ||
