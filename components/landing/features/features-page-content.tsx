@@ -35,7 +35,7 @@ export function FeaturesPageContent() {
           </div>
           <div className={styles.heroCopy}>
             <h1 id="features-title">Everything you need to make <span>learning stick.</span></h1>
-            <p className={styles.heroDescription}>Keep your study materials organized, turn knowledge into practice, and see how far you&apos;ve come — all in one friendly space.</p>
+            <p className={styles.heroDescription}>Keep your study materials organized, turn knowledge into practice, and see how far you&apos;ve come all in one friendly space.</p>
           </div>
         </section>
 
@@ -68,7 +68,7 @@ export function FeaturesPageContent() {
           <div className={styles.flashcardCopy}>
             <p className={styles.eyebrow}>CREATE YOUR FLASHCARDS</p>
             <h2 id="flashcards-title">Your notes, made easier <span>to remember.</span></h2>
-            <p>Turn what you&apos;ve learned into your own flashcards. Create simple questions and answers or practice recalling complete lists — all at your own pace.</p>
+            <p>Turn what you&apos;ve learned into your own flashcards. Create simple questions and answers or practice recalling complete lists all at your own pace.</p>
           </div>
         </section>
 
