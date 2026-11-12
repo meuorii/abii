@@ -1,9 +1,21 @@
 import Link from "next/link";
 import { LandingBrand } from "./landing-brand";
+
 function Planned({ children }: { children: React.ReactNode }) {
-  return <span className="inline-flex flex-wrap items-baseline gap-x-1.5 text-muted" aria-disabled="true">{children}<small className="text-[11px] font-normal">Planned</small></span>;
+  return <span className="inline-flex min-h-9 items-center text-[15px] leading-relaxed text-muted" aria-disabled="true">{children}</span>;
 }
 
+const footerLink = "inline-flex min-h-10 items-center text-[15px] text-muted transition-colors duration-150 hover:text-pink-active focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-pink-active";
+
 export function LandingFooter() {
-  return <footer className="bg-pink-soft px-5 py-9 sm:px-6 sm:py-12"><div className="mx-auto max-w-6xl"><div className="grid gap-8 sm:grid-cols-2 sm:gap-x-4 lg:grid-cols-[1fr_auto_auto] lg:gap-x-10"><div className="sm:col-span-2 lg:col-span-1"><LandingBrand /><p className="mt-2 text-sm">Learn a little. Remember a lot.</p></div><nav className="flex flex-col items-start gap-1 text-[15px] sm:text-sm" aria-label="Explore"><h2 className="mb-1 text-xl font-bold tracking-[-.02em]">Explore</h2><Link className="min-h-11 py-2 hover:text-pink-active focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-pink-active" href="/">Home</Link><Link className="min-h-11 py-2 hover:text-pink-active focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-pink-active" href="/about">About</Link><Link className="min-h-11 py-2 hover:text-pink-active focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-pink-active" href="/features">Features</Link><Link className="min-h-11 py-2 hover:text-pink-active focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-pink-active" href="/blogs">Blogs</Link></nav><nav className="flex flex-col items-start gap-3 text-[15px] sm:text-sm" aria-label="Support"><h2 className="mb-1 text-xl font-bold tracking-[-.02em]">Support</h2><Planned>Help Center</Planned><Planned>FAQs</Planned><Planned>Contact Us</Planned></nav></div><div className="mt-7 flex flex-col items-start gap-4 border-t border-border pt-6 text-xs text-muted sm:mt-10 sm:flex-row sm:items-center sm:justify-between"><small>© 2026 Abii. All rights reserved.</small><div className="flex flex-wrap gap-4"><Planned>Privacy Policy</Planned><Planned>Terms of Service</Planned></div></div></div></footer>;
+  return <footer className="border-t border-pink/40 bg-pink-soft px-5 py-14 sm:px-6 sm:py-16">
+    <div className="mx-auto max-w-6xl">
+      <div className="grid gap-11 md:grid-cols-[minmax(0,1.45fr)_minmax(8rem,.55fr)_minmax(9rem,.65fr)] md:gap-x-12 lg:gap-x-20">
+        <div className="max-w-[25rem]"><LandingBrand size="footer" /><p className="mt-4 text-[clamp(1rem,1.5vw,1.125rem)] font-medium leading-relaxed tracking-[-.015em] text-foreground">Learn a little. Remember a lot.</p><p className="mt-2 max-w-[34ch] text-sm leading-relaxed text-muted">A friendly place to organize your learning and make every study session count.</p></div>
+        <nav className="grid content-start gap-1" aria-label="Explore"><h2 className="mb-2 text-[15px] font-semibold tracking-[-.01em] text-foreground">Explore</h2><Link className={footerLink} href="/">Home</Link><Link className={footerLink} href="/about">About</Link><Link className={footerLink} href="/features">Features</Link><Link className={footerLink} href="/blogs">Blogs</Link></nav>
+        <section className="grid content-start gap-1" aria-labelledby="footer-support"><h2 id="footer-support" className="mb-2 text-[15px] font-semibold tracking-[-.01em] text-foreground">Support</h2><p className="mb-1 text-xs leading-relaxed text-muted">Helpful resources, thoughtfully in progress.</p><Planned>Help Center</Planned><Planned>FAQs</Planned><Planned>Contact Us</Planned></section>
+      </div>
+      <div className="mt-12 flex flex-col gap-4 border-t border-border/80 pt-6 text-xs leading-relaxed text-muted sm:mt-14 sm:flex-row sm:items-center sm:justify-between"><small>© 2026 Abii. All rights reserved.</small><div className="flex flex-wrap gap-x-5 gap-y-2"><Planned>Privacy Policy</Planned><Planned>Terms of Service</Planned></div></div>
+    </div>
+  </footer>;
 }
