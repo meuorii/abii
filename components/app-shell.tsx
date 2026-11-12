@@ -233,6 +233,7 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
 
           <main
             ref={mainRef}
+            data-authenticated-motion
             aria-label="Dashboard content"
             className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-white pb-20 lg:pb-0"
           >

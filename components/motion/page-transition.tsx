@@ -1,15 +1,10 @@
-"use client";
+import type { ReactNode } from "react";
 
-import { usePathname } from "next/navigation";
-import { m } from "motion/react";
-import { useEffect, useRef, type ReactNode } from "react";
-
+/**
+ * Keeps a stable route-content boundary without animating the entire page.
+ * Individual heroes and viewport reveals own their entrances, avoiding a
+ * duplicate page fade and allowing below-the-fold content to wait for scroll.
+ */
 export function PageTransition({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const lastPathname = useRef(pathname);
-  const entering = lastPathname.current !== pathname;
-
-  useEffect(() => { lastPathname.current = pathname; }, [pathname]);
-
-  return <m.div key={pathname} className="min-w-0" initial={entering ? { opacity: 0, y: 16 } : false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}>{children}</m.div>;
+  return <div className="min-w-0">{children}</div>;
 }

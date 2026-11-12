@@ -157,7 +157,7 @@ setSavingSettings(true); setError("");
       </div>}
 
       {tab === "progress" && <section aria-labelledby="progress-heading" className="abii-enter space-y-4"><div><h2 id="progress-heading" className="text-lg font-bold tracking-[-0.035em] text-[#173B52]">Study Progress</h2><p className="mt-1 text-sm text-[#71869A]">A clear view of how much of this subject you’ve practiced.</p></div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric title="Total flashcards" value={data.flashcardCount} detail="Cards in this subject"/><Metric title="Reviewed cards" value={data.reviewedCount} detail="Reviewed at least once"/><Metric title="Due for review" value={data.dueCount} detail="Ready for another practice"/><Metric title="Mastered cards" value={`${data.masteredCount}/${data.flashcardCount}`} detail="Every type + Random, 3 correct in a row"/></div>
+        <StaggerContainer className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"><StaggerItem index={0}><Metric title="Total flashcards" value={data.flashcardCount} detail="Cards in this subject"/></StaggerItem><StaggerItem index={1}><Metric title="Reviewed cards" value={data.reviewedCount} detail="Reviewed at least once"/></StaggerItem><StaggerItem index={2}><Metric title="Due for review" value={data.dueCount} detail="Ready for another practice"/></StaggerItem><StaggerItem index={3}><Metric title="Mastered cards" value={`${data.masteredCount}/${data.flashcardCount}`} detail="Every type + Random, 3 correct in a row"/></StaggerItem></StaggerContainer>
         <div className="rounded-[18px] border border-[#E8E2E5] bg-white p-5 sm:p-6"><MasteryProgressBar label="Mastery" ariaLabel={`${data.name} mastery progress`} progress={data.progress} size="md" /><MasteryPills progress={data.typeMastery} size="md" className="mt-4 flex flex-wrap gap-3" /><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl bg-[#EAF8F0] p-4"><p className="text-xs text-[#4F7D62]">Correct review results</p><p className="mt-1 text-2xl font-bold text-[#35664B]">{data.correctCount}</p></div><div className="rounded-xl bg-[#FFF1F1] p-4"><p className="text-xs text-[#A45D6B]">Incorrect review results</p><p className="mt-1 text-2xl font-bold text-[#A43E5C]">{data.wrongCount}</p></div></div></div>
       </section>}
 
@@ -181,7 +181,7 @@ function StatRow({ icon, value, label }: { icon: React.ReactNode; value: string;
   return <div className="flex items-center gap-2 rounded-xl bg-[#FFF7F9] p-2.5"><IconCircle>{icon}</IconCircle><div><p className="text-sm font-bold text-[#2F2930]">{value}</p><p className="text-[11px] text-[#71869A]">{label}</p></div></div>;
 }
 function Metric({ title, value, detail }: { title: string; value: number | string; detail: string }) {
-  return <div className="abii-card-enter rounded-[17px] border border-[#E8E2E5] bg-white p-4"><p className="text-xs font-medium text-[#71869A]">{title}</p><p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-[#173B52]">{value}</p><p className="mt-1 text-[11px] text-[#8192A1]">{detail}</p></div>;
+  return <div className="h-full rounded-[17px] border border-[#E8E2E5] bg-white p-4"><p className="text-xs font-medium text-[#71869A]">{title}</p><p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-[#173B52]">{value}</p><p className="mt-1 text-[11px] text-[#8192A1]">{detail}</p></div>;
 }
 
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { m, useReducedMotion, type HTMLMotionProps } from "motion/react";
-import { createContext, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { m, useAnimationControls, useReducedMotion, type HTMLMotionProps } from "motion/react";
+import { createContext, useContext, useLayoutEffect, useRef, type ReactNode } from "react";
 import { useScrollRoot } from "./scroll-root-context";
 
 type ObserverPool = { observer: IntersectionObserver; callbacks: Map<Element, () => void> };
@@ -91,21 +91,21 @@ function getEffectiveRootBounds(rootBounds: DOMRect, rootMargin: string) {
   };
 }
 
-function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number, disabled = false, rootMargin = "0px 0px -12% 0px") {
+const revealEase = [0.22, 1, 0.36, 1] as const;
+const scrollRootMargin = "0px 0px -10% 0px";
+
+function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number, distance: number, duration: number, delay: number, rootMargin = scrollRootMargin) {
   const rootRef = useScrollRoot();
   const reduceMotion = useReducedMotion();
-  // Start visible for server rendering. The layout effect hides offscreen content
-  // before paint, while reduced-motion and observer-fallback paths stay visible.
-  const [visible, setVisible] = useState(true);
-  const [animateOnMount, setAnimateOnMount] = useState(false);
-  const [skipTransition, setSkipTransition] = useState(false);
+  const controls = useAnimationControls();
 
   useLayoutEffect(() => {
     const element = ref.current;
-    if (disabled || !element || reduceMotion || typeof IntersectionObserver === "undefined") {
-      setVisible(true);
-      setAnimateOnMount(false);
-      setSkipTransition(true);
+    const showImmediately = () => {
+      controls.set({ opacity: 1, y: 0 });
+    };
+    if (!element || reduceMotion || typeof IntersectionObserver === "undefined") {
+      showImmediately();
       return;
     }
 
@@ -124,63 +124,60 @@ function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number, dis
     const visibleWidth = Math.max(0, Math.min(bounds.right, viewport.right) - Math.max(bounds.left, viewport.left));
     const visibleRatio = visibleHeight * visibleWidth / Math.max(1, bounds.height * bounds.width);
     const initiallyVisible = visibleRatio >= effectiveThreshold;
+    const hidden = { opacity: 0, y: distance };
+    const revealed = {
+      opacity: 1,
+      y: 0,
+      transition: { duration, delay, ease: revealEase },
+    };
 
     if (initiallyVisible) {
-      setVisible(true);
-      setAnimateOnMount(true);
-      setSkipTransition(false);
+      // Motion controls make the hidden start explicit after hydration, so the
+      // server-rendered fallback remains visible and the entrance still plays.
+      controls.set(hidden);
+      void controls.start(revealed);
       return;
     }
 
-    setVisible(false);
-    setAnimateOnMount(false);
-    // Hide below-the-fold server-rendered content before paint without an
-    // unintended fade-out. The actual reveal below uses the normal transition.
-    setSkipTransition(true);
+    controls.set(hidden);
     try {
       return observeOnce(element, root, effectiveThreshold, rootMargin, () => {
-        setSkipTransition(false);
-        setVisible(true);
+        void controls.start(revealed);
       });
     } catch {
       // Observation can fail in constrained/older browsers. Never leave content hidden.
       const pools = observerPools.get(root);
       if (pools && pools.size === 0 && observerPools.get(root) === pools) observerPools.delete(root);
-      setVisible(true);
-      setAnimateOnMount(false);
-      setSkipTransition(true);
+      showImmediately();
     }
-  }, [amount, disabled, reduceMotion, ref, rootMargin, rootRef]);
+  }, [amount, controls, delay, distance, duration, reduceMotion, ref, rootMargin, rootRef]);
 
-  return { visible, animateOnMount, skipTransition };
+  return controls;
 }
 
 type RevealPreset = "text" | "button" | "card" | "image";
 const revealPresets: Record<RevealPreset, { distance: number; duration: number }> = {
-  text: { distance: 23, duration: 0.78 },
-  button: { distance: 14, duration: 0.68 },
-  card: { distance: 24, duration: 0.84 },
-  image: { distance: 26, duration: 0.96 },
+  text: { distance: 18, duration: 0.78 },
+  button: { distance: 14, duration: 0.72 },
+  card: { distance: 18, duration: 0.84 },
+  image: { distance: 18, duration: 0.88 },
 };
 
 type RevealProps = HTMLMotionProps<"div"> & { children: ReactNode; amount?: number; delay?: number; className?: string; preset?: RevealPreset; rootMargin?: string };
 
 export function ScrollReveal({ children, amount = 0.12, delay = 0, className = "", preset = "text", rootMargin, style, ...props }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const { visible, animateOnMount, skipTransition } = useReveal(ref, amount, false, rootMargin);
-  const { distance, duration } = revealPresets[preset];
+  const controls = useReveal(ref, amount, revealPresets[preset].distance, revealPresets[preset].duration, delay, rootMargin);
   const classes = ["abii-motion-reveal", className].filter(Boolean).join(" ");
-  return <m.div ref={ref} {...props} className={classes} style={animateOnMount ? { ...style, animationDelay: `${delay}s` } : style} initial={false}
-    animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: distance }}
-    transition={animateOnMount || skipTransition ? { duration: 0 } : { duration, delay: visible ? delay : 0, ease: [0.22, 1, 0.36, 1] }}>
+  return <m.div ref={ref} {...props} className={classes} style={style} initial={false} animate={controls}>
     {children}
   </m.div>;
 }
 
 type StaggerState = { stagger: number };
-const StaggerContext = createContext<StaggerState>({ stagger: 0.14 });
+const StaggerContext = createContext<StaggerState>({ stagger: 0.12 });
 
-export function StaggerContainer({ children, stagger = 0.14, className = "", as = "div" }: {
+export function StaggerContainer({ children, stagger = 0.12, className = "", as = "div" }: {
   children: ReactNode;
   amount?: number;
   stagger?: number;
@@ -195,24 +192,22 @@ export function StaggerContainer({ children, stagger = 0.14, className = "", as 
   </StaggerContext.Provider>;
 }
 
-export function StaggerItem({ children, className = "", index = 0, as = "div" }: {
+export function StaggerItem({ children, className = "", index = 0, as = "div", style }: {
   children: ReactNode;
   className?: string;
   index?: number;
   as?: "div" | "li";
+  style?: React.CSSProperties;
 }) {
   const context = useContext(StaggerContext);
   const ref = useRef<HTMLElement>(null);
-  const { visible, animateOnMount, skipTransition } = useReveal(ref, 0.18);
+  const delay = Math.min(index % 3, 2) * context.stagger;
+  const controls = useReveal(ref, 0.12, 16, 0.82, delay);
   const Item = as === "li" ? m.li : m.div;
   // Keep delays short and bounded. Every item observes its own viewport entry,
   // so a large grid does not launch animations for offscreen cards at once.
-  const delay = Math.min(index % 3, 2) * context.stagger;
   const classes = ["min-w-0", className].filter(Boolean).join(" ");
-  return <Item ref={ref as never} className={classes}
-    initial={false}
-    animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
-    transition={animateOnMount || skipTransition ? { duration: 0 } : { duration: 0.84, delay: visible ? delay : 0, ease: [0.22, 1, 0.36, 1] }}>
+  return <Item ref={ref as never} className={classes} style={style} initial={false} animate={controls}>
     {children}
   </Item>;
 }

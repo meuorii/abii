@@ -229,6 +229,13 @@
   button:not(:disabled):active { scale: .985; }
 }
 
+/* The authenticated hero keeps its authored text/art sequence, paced just a
+   little more deliberately than the compact shared entrance default. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-authenticated-motion] .abii-page-hero .abii-enter { animation-duration: 820ms; }
+  [data-authenticated-motion] .abii-page-hero .abii-enter-art { animation-duration: 880ms; }
+}
+
 /* Auth-only timing: keep shared app entrances unchanged while making the
    split-panel welcome and each form step feel responsive. */
 @media (prefers-reduced-motion: no-preference) {

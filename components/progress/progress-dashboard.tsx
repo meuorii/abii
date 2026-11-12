@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ScrollReveal, StaggerItem } from "@/components/motion/scroll-reveal";
+import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/motion/scroll-reveal";
 import { useState } from "react";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 import { Layers3, Target, CalendarDays, Flame, Leaf, BookOpen, RefreshCw, ArrowRight } from "lucide-react";
@@ -72,7 +72,7 @@ export function ProgressDashboard({ data, featuredBadges }: { data: ProgressPayl
     { label: "Current Study Streak", value: `${data.summary.streak} ${data.summary.streak === 1 ? "day" : "days"}`, icon: "flame", note: data.summary.streak ? "Keep it up!" : "Start a streak today" },
   ];
   return <div className="w-full min-w-0">
-    <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-5">{metrics.map((metric, index) => <div key={metric.label} className="abii-card-enter min-w-0 rounded-2xl border bg-white p-3 sm:p-4" style={{ borderColor: border, animationDelay: `${index * 45}ms` }}><div className="flex items-start gap-2.5 sm:gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D] sm:h-11 sm:w-11"><Icon name={metric.icon} /></div><div className="min-w-0"><p className="text-[10px] leading-4 sm:text-xs" style={{ color: muted }}>{metric.label}</p><p className="mt-1 break-words text-xl font-bold sm:text-2xl" style={{ color: ink }}>{metric.value}</p><p className="mt-1 text-[9px] leading-4 sm:text-[10px]" style={{ color: muted }}>{metric.note}</p></div></div></div>)}<div className="abii-card-enter flex min-w-0 items-center rounded-2xl border bg-white p-3 sm:p-4" style={{ borderColor: border, animationDelay: "180ms" }}><MasteryProgressBar label="Overall Mastery" ariaLabel="Overall mastery progress" progress={data.summary.masteryProgress} size="lg" className="w-full" /></div></div>
+    <StaggerContainer className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-5" stagger={0.1}>{metrics.map((metric, index) => <StaggerItem key={metric.label} index={index} className="rounded-2xl border bg-white p-3 sm:p-4" style={{ borderColor: border }}><div className="flex items-start gap-2.5 sm:gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D] sm:h-11 sm:w-11"><Icon name={metric.icon} /></div><div className="min-w-0"><p className="text-[10px] leading-4 sm:text-xs" style={{ color: muted }}>{metric.label}</p><p className="mt-1 break-words text-xl font-bold sm:text-2xl" style={{ color: ink }}>{metric.value}</p><p className="mt-1 text-[9px] leading-4 sm:text-[10px]" style={{ color: muted }}>{metric.note}</p></div></div></StaggerItem>)}<StaggerItem index={metrics.length} className="flex min-w-0 items-center rounded-2xl border bg-white p-3 sm:p-4" style={{ borderColor: border }}><MasteryProgressBar label="Overall Mastery" ariaLabel="Overall mastery progress" progress={data.summary.masteryProgress} size="lg" className="w-full" /></StaggerItem></StaggerContainer>
     <div className="mb-4">{featuredBadges}</div>
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1.75fr)_minmax(280px,0.95fr)]">
       <div className="flex min-w-0 flex-col gap-4"><ScrollReveal><StudyChart points={data.activity} /></ScrollReveal>

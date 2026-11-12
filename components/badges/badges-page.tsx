@@ -32,13 +32,13 @@ function Statistics({ badges }: { badges: BadgePageItem[] }) {
     { label: "Locked", value: locked, icon: AlertCircle, detail: "still to discover" },
     { label: "Collection", value: `${percent}%`, icon: Award, detail: "complete so far" },
   ];
-  return <section aria-label="Achievement overview" className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-    {stats.map(({ label, value, icon: Icon, detail }, index) => <div key={label} className="abii-card-enter min-w-0 rounded-2xl border border-[#E8E2E5] bg-white p-3.5 shadow-[0_2px_10px_rgba(47,41,48,.035)] sm:p-4" style={{ animationDelay: `${index * 45}ms` }}>
+  return <section aria-label="Achievement overview"><StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+    {stats.map(({ label, value, icon: Icon, detail }, index) => <StaggerItem key={label} index={index}>
       <div className="flex items-center gap-2 text-[#D94E7B]"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#FFF0F4]"><Icon aria-hidden="true" className="h-4 w-4" /></span><p className="truncate text-xs font-semibold text-[#756B72] sm:text-sm">{label}</p></div>
       <p className="mt-2 text-2xl font-extrabold tabular-nums leading-none text-[#183653] sm:text-3xl">{value}</p>
       <p className="mt-1.5 text-[11px] leading-4 text-[#8A7E85] sm:text-xs">{detail}</p>
-    </div>)}
-  </section>;
+    </StaggerItem>)}
+  </StaggerContainer></section>;
 }
 
 function CollectionProgress({ badges }: { badges: BadgePageItem[] }) {
@@ -58,17 +58,17 @@ function CollectionProgress({ badges }: { badges: BadgePageItem[] }) {
 
 function RarityOverview({ badges }: { badges: BadgePageItem[] }) {
   return <section aria-label="Badge rarity overview" className="rounded-2xl border border-[#E8E2E5] bg-white p-4 sm:p-5">
-    <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-base font-bold text-[#183653]">Rarity Collection</h2><p className="mt-1 text-xs text-[#756B72]">Earn badges at every rarity level.</p></div></div>
-    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+    <ScrollReveal className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-base font-bold text-[#183653]">Rarity Collection</h2><p className="mt-1 text-xs text-[#756B72]">Earn badges at every rarity level.</p></div></ScrollReveal>
+    <StaggerContainer className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3" stagger={0.1}>
       {rarityOrder.map((rarity) => {
         const group = badges.filter((badge) => badge.rarity === rarity);
         const earned = group.filter((badge) => badge.unlocked).length;
-        return <div key={rarity} className="abii-card-enter flex min-w-0 items-center justify-between gap-1.5 rounded-xl bg-[#FFF9FB] px-2.5 py-2 sm:px-3">
+        return <StaggerItem key={rarity} index={rarityOrder.indexOf(rarity)} className="flex min-w-0 items-center justify-between gap-1.5 rounded-xl bg-[#FFF9FB] px-2.5 py-2 sm:px-3">
           <RarityIndicator rarity={rarity} size="md" />
           <span className="shrink-0 text-xs font-bold tabular-nums text-[#657B8E]">{earned}/{group.length}</span>
-        </div>;
+        </StaggerItem>;
       })}
-    </div>
+    </StaggerContainer>
   </section>;
 }
 
@@ -121,9 +121,9 @@ export function BadgesPage({ initialData, initialError = false }: { initialData:
       <p className="mt-2 max-w-xl text-sm leading-6 text-[#756B72]">Please try again. Your earned badges and learning progress are saved to your account.</p>
       <button type="button" disabled={retrying} onClick={() => void retry()} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#FF6F96] px-4 py-2 text-sm font-semibold text-white hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60">{retrying ? <RotateCw aria-hidden="true" className="h-4 w-4 animate-spin" /> : <RotateCw aria-hidden="true" className="h-4 w-4" />}{retrying ? "Trying again…" : "Try again"}</button>
     </section> : <>
-      <ScrollReveal><Statistics badges={badges} /></ScrollReveal>
+      <Statistics badges={badges} />
       <ScrollReveal><CollectionProgress badges={badges} /></ScrollReveal>
-      <ScrollReveal><RarityOverview badges={badges} /></ScrollReveal>
+      <RarityOverview badges={badges} />
 
       <section aria-labelledby="badge-collection-title" className="space-y-4">
         <ScrollReveal className="flex flex-wrap items-end justify-between gap-3">

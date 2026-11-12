@@ -91,7 +91,7 @@ export function DashboardOverview({ firstName, userId, dueCount, totalCards, ove
               </div>
             </section></ScrollReveal>
 
-            <ScrollReveal className="min-w-0" delay={0.05}><section className="min-w-0 rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5" aria-labelledby="study-streak-heading">
+            <ScrollReveal className="min-w-0" delay={0.12}><section className="min-w-0 rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5" aria-labelledby="study-streak-heading">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 text-[#E9577D]"><span aria-hidden="true" className="text-xl">♨</span><h2 id="study-streak-heading" className="text-base font-semibold text-[#2F4658]">Study Streak</h2></div>
