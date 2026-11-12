@@ -80,7 +80,7 @@ export function AuthLayout({ mode, children }: AuthLayoutProps) {
             <p className={`text-sm font-semibold text-[#B74672] ${isFlowPage ? "abii-enter abii-enter-1" : "abii-enter"}`}>
               {copy.formEyebrow}
             </p>
-            <h1 className={`mt-2 text-[1.75rem] font-semibold leading-tight tracking-[-0.055em] sm:text-[2.15rem] ${isFlowPage ? "abii-enter abii-enter-2" : "abii-enter abii-enter-1"}`}>
+            <h1 className={`mt-2 text-[1.75rem] font-semibold leading-[1.12] tracking-[-0.035em] sm:text-[2.15rem] ${isFlowPage ? "abii-enter abii-enter-2" : "abii-enter abii-enter-1"}`}>
               {copy.heading}
             </h1>
             <p className={`mb-7 mt-2 text-sm leading-6 text-[var(--muted)] ${isFlowPage ? "abii-enter abii-enter-3" : "abii-enter abii-enter-2"}`}>

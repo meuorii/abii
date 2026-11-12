@@ -8,7 +8,7 @@ import { OtpInput } from "./otp-input";
 import { Eye, EyeOff } from "lucide-react";
 
 type Mode = "verify" | "forgot" | "reset";
-const field = "mt-2 block min-h-12 w-full rounded-xl border border-[#E9DFE4] bg-white px-4 py-3 text-sm text-[#29252B] outline-none transition-[border-color,box-shadow,background-color] duration-200 focus:border-[#C65380] focus:ring-4 focus:ring-[#FCE7F3]";
+const field = "mt-2 block min-h-12 w-full rounded-xl border border-[#E9DFE4] bg-white px-4 py-3 text-base text-[#29252B] outline-none transition-[border-color,box-shadow,background-color] duration-200 placeholder:text-[var(--muted)] focus:border-[#C65380] focus:ring-4 focus:ring-[#FCE7F3] disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm";
 
 export function AuthFlowForm({ mode, nextPath = "/dashboard" }: { mode: Mode; nextPath?: string }) {
   const router = useRouter(), { toast } = useToast();
@@ -107,7 +107,7 @@ export function AuthFlowForm({ mode, nextPath = "/dashboard" }: { mode: Mode; ne
   const recoveryTransition = mode === "forgot" && stepChanged;
   const formStageClass = recoveryTransition ? "auth-flow-step-enter" : "";
 
-  return <form onSubmit={submit} className={`auth-flow-form ${mode === "forgot" ? "min-h-[260px]" : ""}`} noValidate>
+  return <form onSubmit={submit} className={`auth-flow-form ${mode === "forgot" ? "min-h-[260px]" : ""}`} noValidate aria-busy={busy}>
     <div key={stepKey} className={`space-y-5 ${formStageClass}`}>
       {mode === "verify" || (mode === "forgot" && step === "code") ? <>
         <p className={`text-sm leading-6 text-[#756B72] ${recoveryTransition ? "" : "abii-enter abii-enter-4"}`}>
@@ -118,13 +118,13 @@ export function AuthFlowForm({ mode, nextPath = "/dashboard" }: { mode: Mode; ne
         {mode === "forgot" && <button type="button" disabled={busy} onClick={changeEmail} className={`mx-auto block text-sm text-[#B74672] underline transition-colors duration-150 hover:text-[#923557] focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C65380] disabled:opacity-60 ${recoveryTransition ? "" : "abii-enter auth-enter-6"}`}>Change email</button>}
       </> : mode === "forgot" ? <div className={`${recoveryTransition ? "" : "abii-enter abii-enter-4"}`}>
         <label htmlFor="email" className="text-sm font-semibold">Email address</label>
-        <input ref={emailInput} id="email" className={field} type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} disabled={busy} required />
+        <input ref={emailInput} id="email" className={field} type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} disabled={busy} required />
       </div> : <>
         <div className="abii-enter abii-enter-4">
           <label htmlFor="password" className="text-sm font-semibold">New password</label>
           <div className="relative">
-            <input id="password" type={show ? "text" : "password"} autoComplete="new-password" className={`${field} pr-12`} value={password} onChange={e => setPassword(e.target.value)} minLength={8} maxLength={128} required />
-            <button type="button" onClick={() => setShow(x => !x)} aria-label={show ? "Hide password" : "Show password"} aria-pressed={show} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-xl text-[#827681] transition-colors duration-150 hover:text-[#C65380] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#C65380]">
+            <input id="password" type={show ? "text" : "password"} autoComplete="new-password" className={`${field} pr-12`} value={password} onChange={e => setPassword(e.target.value)} minLength={8} maxLength={128} required disabled={busy} />
+            <button type="button" onClick={() => setShow(x => !x)} disabled={busy} aria-label={show ? "Hide password" : "Show password"} aria-pressed={show} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-xl text-[#827681] transition-colors duration-150 hover:text-[#C65380] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#C65380] disabled:cursor-not-allowed disabled:opacity-60">
               <span key={show ? "visible" : "hidden"} className="auth-icon-swap">{show ? <EyeOff aria-hidden="true" className="h-5 w-5" /> : <Eye aria-hidden="true" className="h-5 w-5" />}</span>
             </button>
           </div>
@@ -132,8 +132,8 @@ export function AuthFlowForm({ mode, nextPath = "/dashboard" }: { mode: Mode; ne
         <div className="abii-enter auth-enter-5">
           <label htmlFor="confirm" className="text-sm font-semibold">Confirm new password</label>
           <div className="relative">
-            <input id="confirm" type={show ? "text" : "password"} autoComplete="new-password" className={`${field} pr-12`} value={confirm} onChange={e => setConfirm(e.target.value)} minLength={8} maxLength={128} required />
-            <button type="button" onClick={() => setShow(x => !x)} aria-label={show ? "Hide password" : "Show password"} aria-pressed={show} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-xl text-[#827681] transition-colors duration-150 hover:text-[#C65380] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#C65380]">
+            <input id="confirm" type={show ? "text" : "password"} autoComplete="new-password" className={`${field} pr-12`} value={confirm} onChange={e => setConfirm(e.target.value)} minLength={8} maxLength={128} required disabled={busy} />
+            <button type="button" onClick={() => setShow(x => !x)} disabled={busy} aria-label={show ? "Hide password" : "Show password"} aria-pressed={show} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-xl text-[#827681] transition-colors duration-150 hover:text-[#C65380] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#C65380] disabled:cursor-not-allowed disabled:opacity-60">
               <span key={show ? "visible" : "hidden"} className="auth-icon-swap">{show ? <EyeOff aria-hidden="true" className="h-5 w-5" /> : <Eye aria-hidden="true" className="h-5 w-5" />}</span>
             </button>
           </div>

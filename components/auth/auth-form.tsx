@@ -26,7 +26,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
   const isRegister = mode === "register";
-  const fieldClass = "mt-2 block min-h-12 w-full rounded-xl border border-[#E9DFE4] bg-white px-4 py-3 text-sm text-[#29252B] outline-none transition placeholder:text-[#AAA1A8] hover:border-[#DCC8D1] focus:border-[#C65380] focus:ring-4 focus:ring-[#FCE7F3]";
+  const fieldClass = "mt-2 block min-h-12 w-full rounded-xl border border-[#E9DFE4] bg-white px-4 py-3 text-base text-[#29252B] outline-none transition-[border-color,box-shadow,background-color] duration-200 placeholder:text-[var(--muted)] hover:border-[#DCC8D1] focus:border-[#C65380] focus:ring-4 focus:ring-[#FCE7F3] disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -84,25 +84,25 @@ export function AuthForm({ mode }: { mode: Mode }) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5" noValidate>
+    <form onSubmit={submit} className="space-y-5" noValidate aria-busy={busy}>
       {isRegister && <div className="abii-enter abii-enter-1">
         <label htmlFor="name" className="text-sm font-semibold text-[#39323A]">Your name</label>
-        <input id="name" name="name" autoComplete="name" placeholder="What should we call you?" value={name} onChange={e => setName(e.target.value)} className={fieldClass} maxLength={80} required aria-invalid={!!errors.name} aria-describedby={errors.name ? "name-error" : undefined} />
+        <input id="name" name="name" autoComplete="name" placeholder="What should we call you?" value={name} onChange={e => setName(e.target.value)} className={fieldClass} maxLength={80} required disabled={busy} aria-invalid={!!errors.name} aria-describedby={errors.name ? "name-error" : undefined} />
         {errors.name && <p id="name-error" className="mt-1.5 text-sm text-[#B42345]">{errors.name}</p>}
       </div>}
       <div className="abii-enter abii-enter-2">
         <label htmlFor="email" className="text-sm font-semibold text-[#39323A]">Email address</label>
-        <input id="email" name="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} className={fieldClass} maxLength={254} required aria-invalid={!!errors.email} aria-describedby={errors.email ? "email-error" : undefined} />
+        <input id="email" name="email" type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} className={fieldClass} maxLength={254} required disabled={busy} aria-invalid={!!errors.email} aria-describedby={errors.email ? "email-error" : undefined} />
         {errors.email && <p id="email-error" className="mt-1.5 text-sm text-[#B42345]">{errors.email}</p>}
       </div>
       <div className="abii-enter abii-enter-3">
         <label htmlFor="password" className="text-sm font-semibold text-[#39323A]">Password</label>
         <div className="relative mt-2">
-          <input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete={isRegister ? "new-password" : "current-password"} placeholder={isRegister ? "At least 8 characters" : "Enter your password"} value={password} onChange={e => setPassword(e.target.value)} className={`${fieldClass} mt-0 pr-12`} minLength={isRegister ? 8 : undefined} maxLength={128} required aria-invalid={!!errors.password} aria-describedby={errors.password ? "password-error" : undefined} />
-          <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-xl text-[#827681] transition hover:text-[#C65380] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#C65380]" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword}><EyeIcon visible={showPassword} /></button>
+          <input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete={isRegister ? "new-password" : "current-password"} placeholder={isRegister ? "At least 8 characters" : "Enter your password"} value={password} onChange={e => setPassword(e.target.value)} className={`${fieldClass} mt-0 pr-12`} minLength={isRegister ? 8 : undefined} maxLength={128} required disabled={busy} aria-invalid={!!errors.password} aria-describedby={errors.password ? "password-error" : undefined} />
+          <button type="button" onClick={() => setShowPassword(v => !v)} disabled={busy} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-xl text-[#827681] transition-colors duration-150 hover:text-[#C65380] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#C65380] disabled:cursor-not-allowed disabled:opacity-60" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword}><EyeIcon visible={showPassword} /></button>
         </div>
         {errors.password && <p id="password-error" className="mt-1.5 text-sm text-[#B42345]">{errors.password}</p>}
-        {!isRegister && <div className="mt-2 text-right"><Link href="/forgot-password" className="text-xs font-semibold text-[#B74672] hover:underline">Forgot password?</Link></div>}
+        {!isRegister && <div className="mt-2 text-right"><Link href="/forgot-password" className="rounded-sm text-xs font-semibold text-[#B74672] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C65380]">Forgot password?</Link></div>}
         {isRegister && <p className="mt-2 text-xs text-[#8B818A]">Use 8–128 characters.</p>}
       </div>
       {message && <p role="alert" aria-live="assertive" className="rounded-lg border border-[#F1C9D4] bg-[#FFF4F6] px-3.5 py-3 text-sm leading-5 text-[#963A55]">{message}</p>}
