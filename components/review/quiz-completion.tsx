@@ -102,8 +102,9 @@ export function QuizCompletion({ session, firstName, onAgain, againBusy, againEr
       mascotSrc="/dashboard-hero/complete.png"
       mascotAlt=""
       priority
-      decoration={<QuizCompletionConfetti active={celebrate} />}
     />
+
+    <QuizCompletionConfetti active={celebrate} />
 
     <div className="grid min-w-0 grid-cols-1 items-stretch gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] [&>*]:min-w-0">
       <section className={`${cardClass} p-4 sm:p-5`}>

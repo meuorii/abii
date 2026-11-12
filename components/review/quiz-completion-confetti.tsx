@@ -1,90 +1,130 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { m, useReducedMotion } from "motion/react";
 import { Heart, Star } from "lucide-react";
 
-const colors = ["#FF6F96", "#FFC9D8", "#FF9FBA", "#A8E6CF", "#C9B8FF", "#FFE6A7", "#FFF7F9"];
+type ConfettiShape = "paper" | "strip" | "circle" | "star" | "heart";
+type Particle = {
+  index: number;
+  shape: ConfettiShape;
+  color: string;
+  width: number;
+  height: number;
+  left: number;
+  top: number;
+  drift: number;
+  lift: number;
+  fall: number;
+  rotation: number;
+  delay: number;
+};
+
+const colors = [
+  "#FF6F96", "#FF6F96", "#FF6F96", "#E9577D", "#E9577D",
+  "#FF9FBA", "#F5A6BD", "#B9A2F4", "#80D8B2", "#F4D477",
+];
 
 function randomFor(index: number, salt: number) {
   const value = Math.sin((index + 1) * 12.9898 + salt * 78.233) * 43758.5453;
   return value - Math.floor(value);
 }
 
-const particles = Array.from({ length: 44 }, (_, index) => {
-  const side = index % 2 === 0 ? "left" : "right";
-  const seed = randomFor(index, 1);
-  const decorative = index % 13 === 0 ? "star" : index % 17 === 0 ? "heart" : null;
-  const width = 4 + Math.round(randomFor(index, 2) * 4);
-  const height = 5 + Math.round(randomFor(index, 3) * 7);
+function particleCount(viewportWidth: number) {
+  if (viewportWidth < 640) return 48;
+  if (viewportWidth < 1024) return 72;
+  return 100;
+}
 
-  return {
-    index,
-    side,
-    decorative,
-    color: colors[Math.floor(randomFor(index, 4) * colors.length)],
-    width: decorative ? 10 : width,
-    height: decorative ? 10 : height,
-    left: side === "left" ? 5 + seed * 25 : 70 + seed * 25,
-    top: 5 + randomFor(index, 5) * 23,
-    drift: (side === "left" ? -1 : 1) * (22 + randomFor(index, 6) * 115),
-    lift: 12 + randomFor(index, 7) * 38,
-    fall: 95 + randomFor(index, 8) * 220,
-    rotation: (randomFor(index, 9) - 0.5) * 250,
-    delay: 0.2 + randomFor(index, 10) * 0.16,
-  };
-});
+function createParticles(count: number): Particle[] {
+  return Array.from({ length: count }, (_, index) => {
+    const side = index % 2 === 0 ? "left" : "right";
+    const shapeRoll = randomFor(index, 1);
+    const shape: ConfettiShape = shapeRoll < 0.55 ? "paper"
+      : shapeRoll < 0.75 ? "strip"
+        : shapeRoll < 0.9 ? "circle"
+          : shapeRoll < 0.95 ? "star" : "heart";
+    const size = 6 + Math.round(randomFor(index, 2) * 6);
+    const isAccent = shape === "star" || shape === "heart";
+    const outward = randomFor(index, 3) < 0.2;
+    const headsToCenter = (side === "left") !== outward;
+    const direction = headsToCenter ? (side === "left" ? 1 : -1) : (side === "left" ? -1 : 1);
 
-/** A finite, decorative burst shown only for a newly completed session. */
+    return {
+      index,
+      shape,
+      color: colors[Math.floor(randomFor(index, 4) * colors.length)],
+      width: isAccent ? 14 : shape === "circle" ? size : shape === "strip" ? 5 + randomFor(index, 5) * 2 : size,
+      height: isAccent ? 14 : shape === "circle" ? size : shape === "strip" ? 10 + randomFor(index, 6) * 7 : 7 + randomFor(index, 7) * 7,
+      left: side === "left" ? 3 + randomFor(index, 8) * 17 : 80 + randomFor(index, 8) * 17,
+      top: 48 + randomFor(index, 9) * 39,
+      drift: direction * (8 + randomFor(index, 10) * 38),
+      lift: 16 + randomFor(index, 11) * 38,
+      fall: 34 + randomFor(index, 12) * 78,
+      rotation: shape === "circle" ? (randomFor(index, 13) - 0.5) * 30 : (randomFor(index, 13) - 0.5) * 240,
+      delay: 0.1 + randomFor(index, 14) * 0.15,
+    };
+  });
+}
+
+/** Full-viewport decorative bursts, mounted only for a newly completed session. */
 export function QuizCompletionConfetti({ active }: { active: boolean }) {
-  const reduceMotion = useReducedMotion();
-  const [visible, setVisible] = useState(active);
+  const reduceMotion = Boolean(useReducedMotion());
+  const reduceMotionRef = useRef(reduceMotion);
+  reduceMotionRef.current = reduceMotion;
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!active) return;
-    const timeout = window.setTimeout(() => setVisible(false), 2_400);
+    if (!active || reduceMotionRef.current) return;
+
+    setParticles(createParticles(particleCount(window.innerWidth)));
+    setVisible(true);
+    const timeout = window.setTimeout(() => {
+      setVisible(false);
+      setParticles([]);
+    }, 3_300);
     return () => window.clearTimeout(timeout);
   }, [active]);
 
-  if (!active || !visible || reduceMotion) return null;
+  if (!active || !visible || reduceMotion || particles.length === 0) return null;
 
-  return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[5] overflow-hidden">
-      {particles.map((particle) => {
-        const iconClass = "h-full w-full";
-        return (
-          <m.span
-            key={particle.index}
-            className={`absolute block ${particle.index >= 36 ? "max-[1023px]:hidden" : ""} ${particle.index >= 24 ? "max-[639px]:hidden" : ""}`}
-            style={{
-              left: `${particle.left}%`,
-              top: `${particle.top}%`,
-              width: particle.width,
-              height: particle.height,
-              borderRadius: particle.decorative ? undefined : particle.index % 3 === 0 ? "50%" : "2px",
-              backgroundColor: particle.decorative ? undefined : particle.color,
-              color: particle.color,
-            }}
-            initial={{ opacity: 0, x: 0, y: 0, rotate: 0, scale: 0.72 }}
-            animate={{
-              opacity: [0, 1, 1, 0],
-              x: [0, particle.drift * 0.2, particle.drift * 0.58, particle.drift],
-              y: [0, -particle.lift, particle.fall * 0.44, particle.fall],
-              rotate: [0, particle.rotation * 0.22, particle.rotation * 0.64, particle.rotation],
-              scale: [0.72, 1, 1, 0.96],
-            }}
-            transition={{
-              duration: 1.9,
-              delay: particle.delay,
-              times: [0, 0.16, 0.72, 1],
-              ease: "easeInOut",
-            }}
-          >
-            {particle.decorative === "star" && <Star className={iconClass} fill="currentColor" strokeWidth={1.5} />}
-            {particle.decorative === "heart" && <Heart className={iconClass} fill="currentColor" strokeWidth={1.5} />}
-          </m.span>
-        );
-      })}
-    </div>
+  return createPortal(
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[40] overflow-hidden">
+      {particles.map((particle) => (
+        <m.span
+          key={particle.index}
+          className="pointer-events-none absolute block"
+          style={{
+            left: `${particle.left}%`,
+            top: `${particle.top}%`,
+            width: particle.width,
+            height: particle.height,
+            borderRadius: particle.shape === "circle" ? "50%" : particle.shape === "paper" ? "2px" : undefined,
+            backgroundColor: particle.shape === "star" || particle.shape === "heart" ? undefined : particle.color,
+            color: particle.color,
+          }}
+          initial={{ opacity: 0, x: "0vw", y: "0vh", rotate: 0, scale: 0.68 }}
+          animate={{
+            opacity: [0, 1, 1, 0],
+            x: ["0vw", `${particle.drift * 0.18}vw`, `${particle.drift * 0.62}vw`, `${particle.drift}vw`],
+            y: ["0vh", `-${particle.lift}vh`, `${particle.fall * 0.36}vh`, `${particle.fall}vh`],
+            rotate: [0, particle.rotation * 0.2, particle.rotation * 0.62, particle.rotation],
+            scale: [0.68, 1, 1, 0.96],
+          }}
+          transition={{
+            duration: 2.85,
+            delay: particle.delay,
+            times: [0, 0.18, 0.66, 1],
+            ease: "easeInOut",
+          }}
+        >
+          {particle.shape === "star" && <Star className="h-full w-full" fill="currentColor" strokeWidth={1.5} />}
+          {particle.shape === "heart" && <Heart className="h-full w-full" fill="currentColor" strokeWidth={1.5} />}
+        </m.span>
+      ))}
+    </div>,
+    document.body,
   );
 }
