@@ -28,7 +28,7 @@ export function ArticleReaderModal({ article, blocks, loading, onClose }: { arti
     <dialog
       ref={dialogRef}
       className={styles.readerDialog}
-      aria-labelledby={titleId}
+      aria-labelledby={article ? titleId : undefined}
       onCancel={(event) => { event.preventDefault(); dialogRef.current?.close(); }}
       onClose={() => {
         if (suppressCloseRef.current) { suppressCloseRef.current = false; return; }
@@ -38,13 +38,14 @@ export function ArticleReaderModal({ article, blocks, loading, onClose }: { arti
     >
       {article && <>
         <div className={styles.readerToolbar}>
-          <span className={styles.readerBrand}>Abii Journal</span>
+          <span className={styles.readerBrand}>ABII JOURNAL</span>
+          <span className={styles.readerMastheadNote} aria-hidden="true">Ideas for better learning</span>
           <button type="button" className={styles.readerClose} aria-label={`Close ${article.title}`} onClick={() => dialogRef.current?.close()}>
             <X aria-hidden="true" />
           </button>
         </div>
         <div className={styles.readerScroll} ref={scrollRef}>
-          <article className={styles.readerArticle} aria-busy={loading}>
+          <article className={styles.readerArticle} aria-busy={loading} aria-labelledby={titleId}>
             <header className={styles.readerHeader}>
               <p className={styles.readerCategory}>{article.category}</p>
               <h2 id={titleId}>{article.title}</h2>
@@ -58,7 +59,7 @@ export function ArticleReaderModal({ article, blocks, loading, onClose }: { arti
                 ? <h3 key={`${article.slug}-heading-${index}`}>{block.text}</h3>
                 : <p key={`${article.slug}-paragraph-${index}`}>{block.text}</p>)}
             </div>
-            {!loading && <footer className={styles.readerEnd}><span aria-hidden="true" /><p>You&apos;ve reached the end</p><span aria-hidden="true" /></footer>}
+            {!loading && <footer className={styles.readerEnd}><span aria-hidden="true" /><p>End of article</p><span aria-hidden="true" /></footer>}
           </article>
         </div>
       </>}
