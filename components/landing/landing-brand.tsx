@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import styles from "./landing-page.module.css";
 export function LandingBrand() {
-  return <Link href="/" className={styles.brand} aria-label="Abii home"><Image src="/abii-head.png" alt="" width={1402} height={1122} sizes="52px" /><span className="font-brand">Abii</span></Link>;
+  return <Link href="/" className="inline-flex items-center gap-2.5 text-pink-primary" aria-label="Abii home"><Image src="/abii-head.png" alt="" width={1402} height={1122} sizes="52px" className="h-auto w-11 sm:w-[52px]" /><span className="font-brand text-[2.25rem] leading-none sm:text-[2.625rem]">Abii</span></Link>;
 }

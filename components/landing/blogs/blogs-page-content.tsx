@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import { ResponsiveHero } from "../responsive-hero";
 import { LandingNav } from "../landing-nav";
 import { LandingFooter } from "../landing-footer";
 import { ArticleGrid } from "./article-grid";
@@ -9,7 +9,6 @@ import { FeaturedArticle } from "./featured-article";
 import { ArticleReaderModal } from "./article-reader-modal";
 import { articles, categories, featuredArticle, type BlogArticle, type BlogCategory } from "./blog-data";
 import type { ArticleBlock } from "./article-bodies";
-import styles from "./blogs-page.module.css";
 
 export function BlogsPageContent() {
   const [category, setCategory] = useState<"All Articles" | BlogCategory>("All Articles");
@@ -78,36 +77,27 @@ export function BlogsPageContent() {
   const visibleArticles = category === "All Articles" ? articles : articles.filter((article) => article.category === category);
 
   return (
-    <div className={`${styles.page} landing-page`}>
-      <a className={styles.skipLink} href="#blogs-main">Skip to content</a>
+    <div className="bg-white text-foreground">
+      <a className="absolute left-4 top-3 z-50 -translate-y-[180%] bg-white px-5 py-3 focus:translate-y-0 focus:outline-3 focus:outline-pink-active" href="#blogs-main">Skip to content</a>
       <LandingNav />
       <main id="blogs-main" tabIndex={-1}>
-        <section className={styles.hero} aria-labelledby="blogs-title">
-          <div className={styles.heroArt}>
-            {/* Artwork follows the established public-page 1672 / 941 hero frame. */}
-            <Image src="/landing/blogs/hero-blogs.png" alt="" width={1672} height={941} priority quality={95} sizes="(max-width: 767px) 100vw, 100vw" />
-          </div>
-          <div className={styles.heroInner}>
-            <div className={styles.heroCopy}>
-              <h1 id="blogs-title">Little ideas for<br /><span>better learning.</span></h1>
-              <p>Explore study tips, learning techniques, and thoughtful ideas to make every study session a little more meaningful.</p>
-            </div>
-          </div>
-        </section>
+        <ResponsiveHero image="/landing/blogs/hero-blogs.png" titleId="blogs-title" mobileImageClassName="object-[68%_center]" desktopImageClassName="md:object-[56%_center] xl:object-center"><div className="max-w-[35rem] md:max-w-[48%]">
+              <h1 id="blogs-title" className="max-w-[13ch] text-[clamp(2.125rem,8vw,3rem)] font-bold leading-[1.05] tracking-[-.04em] md:text-[clamp(3rem,4.5vw,4.25rem)]">Little ideas for<br /><span className="text-pink-active">better learning.</span></h1>
+              <p className="mt-4 max-w-[46ch] text-[clamp(.9375rem,1.2vw,1.0625rem)] leading-[1.62] text-muted sm:mt-5">Explore study tips, learning techniques, and thoughtful ideas to make every study session a little more meaningful.</p>
+          </div></ResponsiveHero>
 
         <FeaturedArticle article={featuredArticle} onRead={(article, trigger) => void showArticle(article, trigger)} />
 
-        <section className={styles.exploreSection} aria-labelledby="explore-title">
-          <div className={styles.exploreHeader}>
+        <section className="mx-auto w-[min(1120px,calc(100%-2.5rem))] pb-20 sm:w-[min(1120px,calc(100%-3rem))] sm:pb-28" aria-labelledby="explore-title">
+          <div className="grid items-end gap-4 md:grid-cols-[1fr_minmax(15rem,22.5rem)] md:gap-10">
             <div>
-              <p className={styles.sectionLabel}>Explore Articles</p>
-              <h2 id="explore-title">A little something for<br className={styles.mobileBreak} /> <span>every curious mind.</span></h2>
+              <h2 id="explore-title" className="max-w-[20ch] text-[clamp(1.875rem,6vw,2.5rem)] font-bold leading-[1.1] tracking-[-.04em] md:text-[clamp(2.5rem,3.5vw,3.25rem)]">A little something for <span className="text-pink-active">every curious mind.</span></h2>
             </div>
-            <p className={styles.exploreDescription}>From study techniques to everyday moments, find ideas, inspiration, and stories worth exploring.</p>
+            <p className="text-base leading-relaxed text-muted">From study techniques to everyday moments, find ideas, inspiration, and stories worth exploring.</p>
           </div>
 
-          <div className={styles.filters} role="group" aria-label="Filter articles by category">
-            {categories.map((item) => <button type="button" key={item} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}
+          <div className="mt-8 flex gap-6 overflow-x-auto border-b border-border pb-0" role="group" aria-label="Filter articles by category">
+            {categories.map((item) => <button type="button" className="relative min-h-11 shrink-0 pb-3 text-sm font-medium text-muted transition-colors hover:text-pink-active aria-pressed:text-pink-active aria-pressed:after:absolute aria-pressed:after:inset-x-0 aria-pressed:after:bottom-0 aria-pressed:after:h-0.5 aria-pressed:after:bg-pink-active focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-pink-active" key={item} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}
           </div>
           <ArticleGrid articles={visibleArticles} onRead={(article, trigger) => void showArticle(article, trigger)} />
         </section>
