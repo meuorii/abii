@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, m, useAnimationControls, useReducedMotion, type Variants } from "motion/react";
 import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { useToast } from "@/components/ui/toast-provider";
 import { notifyAchievementActivity } from "@/lib/badges/client-sync";
@@ -18,8 +19,14 @@ import { playAbiiSound, unlockAbiiAudio } from "@/lib/sounds";
 import { getAnswerSound, shouldPlayCompletionSound } from "@/lib/sounds-core.mjs";
 import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
 import { firstUnansweredQuestion } from "@/lib/quiz/resume-state";
+import { resolveQuizReaction } from "@/lib/quiz/reactions";
+import { QuizReactionIndicator } from "@/components/review/quiz-reaction-indicator";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
+const answerCardVariants: Variants = {
+  idle: { scale: 1 },
+  selected: { scale: [1, 1.015, 1], transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] } },
+};
 
 /** Show the interaction mode; Items is a flashcard format, not a separate quiz mode. */
 function questionTypeLabel(type: QuizType): string {
@@ -40,6 +47,20 @@ function questionTypeLabel(type: QuizType): string {
 function CheckIcon() { return <Check className="h-5 w-5" aria-hidden="true" />; }
 function CrossIcon() { return <X className="h-5 w-5" aria-hidden="true" />; }
 function BulbIcon() { return <Lightbulb className="h-4 w-4" aria-hidden="true" />; }
+
+function SelectionMark({ reduceMotion }: { reduceMotion: boolean }) {
+  return <AnimatePresence initial={false}>
+    <m.span key="selected" initial={reduceMotion ? false : { opacity: 0, scale: 0.72 }} animate={{ opacity: 1, scale: 1 }} exit={reduceMotion ? { opacity: 0, transition: { duration: 0.01 } } : { opacity: 0, scale: 0.82, transition: { duration: 0.14 } }} transition={reduceMotion ? { duration: 0.01 } : { type: "spring", duration: 0.26, bounce: 0.16 }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FF6F96] text-white">
+      <Check className="h-3.5 w-3.5" strokeWidth={2.8} aria-hidden="true" />
+    </m.span>
+  </AnimatePresence>;
+}
+
+function GradedMark({ correct, reduceMotion }: { correct: boolean; reduceMotion: boolean }) {
+  return <m.span initial={reduceMotion ? false : { opacity: 0, scale: 0.78 }} animate={{ opacity: 1, scale: 1 }} transition={reduceMotion ? { duration: 0.01 } : { type: "spring", duration: 0.28, bounce: 0.12 }} className={correct ? "text-[#2FBF71]" : "text-[#F0507F]"}>
+    {correct ? <CheckIcon /> : <CrossIcon />}
+  </m.span>;
+}
 
 function ProgressPanel({ total, answered, correct, incorrect, mastered, cards, round, firstName }: { total: number; answered: number; correct: number; incorrect: number; mastered: number; cards: number; round: number; firstName: string }) {
   const remaining = total - answered;
@@ -76,6 +97,8 @@ function ProgressPanel({ total, answered, correct, incorrect, mastered, cards, r
 export function QuizSession({ initial, firstName }: { initial: PublicSession; firstName: string }) {
   const router = useRouter();
   const { toast } = useToast();
+  const reduceMotion = Boolean(useReducedMotion());
+  const answerShakeControls = useAnimationControls();
   const [currentSession, setCurrentSession] = useState(initial);
   const [questions, setQuestions] = useState(initial.questions);
   const total = questions.length;
@@ -105,6 +128,8 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const nextRef = useRef<() => void>(() => {});
   const inputRef = useRef<HTMLInputElement>(null);
   const itemRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const truthRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const question = questions[index];
   const result = question ? results[question.index] : undefined;
@@ -213,6 +238,10 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const itemCount = question.itemCount ?? 0;
   const enumTyped = result?.userAnswers ?? Array.from({ length: itemCount }, (_, i) => itemAnswers[i] ?? "");
   const hasDraft = !result && (question.type === "identification" ? Boolean(text.trim()) : question.type === "enumeration-identification" ? itemAnswers.some((answer) => answer.trim()) : false);
+  const hasSelection = !result && (question.type === "multiple-choice" || question.type === "enumeration-multiple-choice" ? selOption !== null : question.type === "true-false" ? selTruth !== null : false);
+  const reactionSeed = question.index * 17 + currentRound * 7 + (selOption ?? (selTruth === true ? 1 : selTruth === false ? 2 : 0));
+  const reaction = resolveQuizReaction({ gradedResult: result ? { correct: result.correct } : null, hasSelection, hasDraft, seed: reactionSeed });
+  const canSubmit = !busy && !result && (question.type === "multiple-choice" || question.type === "enumeration-multiple-choice" ? selectedOption !== null : question.type === "identification" ? text.trim().length > 0 : question.type === "enumeration-identification" ? itemAnswers.some((a) => a.trim().length > 0) : selectedTruth !== null);
 
   async function restart() {
     if (againBusy) return;
@@ -372,15 +401,41 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
 
   function onFormSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy || result) return;
+    if (!canSubmit) {
+      setError(question.type === "enumeration-identification" ? "Enter at least one item before submitting." : question.type === "identification" ? "Enter your answer before submitting." : "Choose an answer before submitting.");
+      if (question.type === "identification") inputRef.current?.focus();
+      else if (question.type === "enumeration-identification") itemRefs.current.find((input) => input)?.focus();
+      else if (question.type === "true-false") truthRefs.current[0]?.focus();
+      else optionRefs.current[0]?.focus();
+      if (!reduceMotion) void answerShakeControls.start({ x: [0, -3, 3, -2, 0], transition: { duration: 0.28, ease: "easeOut" } });
+      return;
+    }
     void submit();
   }
 
-  const canSubmit = !busy && !result && (question.type === "multiple-choice" || question.type === "enumeration-multiple-choice" ? selectedOption !== null : question.type === "identification" ? text.trim().length > 0 : question.type === "enumeration-identification" ? itemAnswers.some((a) => a.trim().length > 0) : selectedTruth !== null);
   const progressPct = total ? Math.round((answeredCount / total) * 100) : 0;
   const upcoming = questions.slice(index + 1, index + 5);
 
+  function chooseOption(next: number) {
+    setSelectedOption(next);
+    if (error) setError("");
+  }
+  function chooseTruth(next: boolean) {
+    setSelectedTruth(next);
+    if (error) setError("");
+  }
+  function moveRadioSelection(event: ReactKeyboardEvent<HTMLButtonElement>, index: number, count: number, select: (next: number) => void, refs: Array<HTMLButtonElement | null>) {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key) || count < 1) return;
+    event.preventDefault();
+    const direction = event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1;
+    const next = (index + direction + count) % count;
+    select(next);
+    refs[next]?.focus();
+  }
+
   function optionClass(i: number) {
-    const base = "flex min-h-[52px] w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-1";
+    const base = "flex min-h-[52px] w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-[border-color,background-color,color] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-1";
     if (result) {
       if (i === result.correctIndex) return `${base} border-[#2FBF71] bg-[#EAF8F0] text-[#1F5E3E]`;
       if (i === selOption) return `${base} border-[#F0507F] bg-[#FFF1F1] text-[#8B273F]`;
@@ -398,7 +453,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
     return i === selOption ? `${base} bg-[#FF6F96] text-white` : `${base} bg-[#F4F1F3] text-[#6C879C]`;
   }
   function truthClass(value: boolean) {
-    const base = "flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-1";
+    const base = "flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-bold transition-[border-color,background-color,color] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-1";
     const correctValue = result ? (result.correct ? selTruth : !selTruth) : null;
     if (result) {
       if (value === correctValue) return `${base} border-[#2FBF71] bg-[#EAF8F0] text-[#1F5E3E]`;
@@ -476,31 +531,34 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
           )}
 
           <form onSubmit={onFormSubmit} className="mt-5 space-y-3">
+            <m.div className="space-y-3" initial={false} animate={answerShakeControls}>
             {question.type === "multiple-choice" && (
-              <div role="radiogroup" aria-labelledby="question-heading" className="space-y-2.5">
+              <div role="radiogroup" aria-labelledby="question-heading" aria-describedby={error ? "quiz-answer-error" : undefined} className="space-y-2.5">
                 {(question.options ?? []).map((option, i) => (
-                  <button key={i} type="button" role="radio" aria-checked={selOption === i} disabled={Boolean(result) || busy} onClick={() => setSelectedOption(i)} className={optionClass(i)}>
-                    <span className={letterClass(i)}>{LETTERS[i] ?? i + 1}</span>
+                  <m.button key={i} ref={(element) => { optionRefs.current[i] = element; }} type="button" role="radio" aria-checked={selOption === i} tabIndex={selOption === null ? (i === 0 ? 0 : -1) : (selOption === i ? 0 : -1)} disabled={Boolean(result) || busy} onClick={() => chooseOption(i)} onKeyDown={(event) => moveRadioSelection(event, i, question.options?.length ?? 0, chooseOption, optionRefs.current)} className={optionClass(i)} variants={answerCardVariants} initial={false} animate={reduceMotion ? "idle" : selOption === i ? "selected" : "idle"}>
+                    <m.span className={letterClass(i)} animate={reduceMotion ? { scale: 1 } : selOption === i ? { scale: [1, 1.12, 1] } : { scale: 1 }} transition={{ duration: reduceMotion ? 0.01 : 0.24, ease: [0.22, 1, 0.36, 1] }}>{LETTERS[i] ?? i + 1}</m.span>
                     <span className="min-w-0 flex-1 break-words">{option}</span>
-                    {result && i === result.correctIndex && <span className="text-[#2FBF71]"><CheckIcon /></span>}
-                    {result && i === selOption && i !== result.correctIndex && <span className="text-[#F0507F]"><CrossIcon /></span>}
-                  </button>
+                    {result && i === result.correctIndex && <GradedMark correct reduceMotion={reduceMotion} />}
+                    {result && i === selOption && i !== result.correctIndex && <GradedMark correct={false} reduceMotion={reduceMotion} />}
+                    {!result && selOption === i && <SelectionMark reduceMotion={reduceMotion} />}
+                  </m.button>
                 ))}
               </div>
             )}
 
             {question.type === "enumeration-multiple-choice" && (
-              <div role="radiogroup" aria-labelledby="question-heading" className="space-y-2.5">
+              <div role="radiogroup" aria-labelledby="question-heading" aria-describedby={error ? "quiz-answer-error" : undefined} className="space-y-2.5">
                 <p className="text-xs text-[#7890A4]">Choose the complete list. Items inside each list are shuffled.</p>
                 {(question.options ?? []).map((option, i) => (
-                  <button key={i} type="button" role="radio" aria-checked={selOption === i} disabled={Boolean(result) || busy} onClick={() => setSelectedOption(i)} className={optionClass(i)}>
-                    <span className={letterClass(i)}>{LETTERS[i] ?? i + 1}</span>
+                  <m.button key={i} ref={(element) => { optionRefs.current[i] = element; }} type="button" role="radio" aria-checked={selOption === i} tabIndex={selOption === null ? (i === 0 ? 0 : -1) : (selOption === i ? 0 : -1)} disabled={Boolean(result) || busy} onClick={() => chooseOption(i)} onKeyDown={(event) => moveRadioSelection(event, i, question.options?.length ?? 0, chooseOption, optionRefs.current)} className={`${optionClass(i)} items-start`} variants={answerCardVariants} initial={false} animate={reduceMotion ? "idle" : selOption === i ? "selected" : "idle"}>
+                    <m.span className={`${letterClass(i)} mt-0.5`} animate={reduceMotion ? { scale: 1 } : selOption === i ? { scale: [1, 1.12, 1] } : { scale: 1 }} transition={{ duration: reduceMotion ? 0.01 : 0.24, ease: [0.22, 1, 0.36, 1] }}>{LETTERS[i] ?? i + 1}</m.span>
                     <ul className="min-w-0 flex-1 list-disc space-y-0.5 pl-4 marker:text-[#E9577D]">
                       {option.split("\n").map((item, k) => <li key={k} className="break-words">{item}</li>)}
                     </ul>
-                    {result && i === result.correctIndex && <span className="text-[#2FBF71]"><CheckIcon /></span>}
-                    {result && i === selOption && i !== result.correctIndex && <span className="text-[#F0507F]"><CrossIcon /></span>}
-                  </button>
+                    {result && i === result.correctIndex && <GradedMark correct reduceMotion={reduceMotion} />}
+                    {result && i === selOption && i !== result.correctIndex && <GradedMark correct={false} reduceMotion={reduceMotion} />}
+                    {!result && selOption === i && <SelectionMark reduceMotion={reduceMotion} />}
+                  </m.button>
                 ))}
               </div>
             )}
@@ -513,12 +571,15 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
                   return (
                     <div key={i} className="flex items-center gap-2">
                       <span className="w-5 shrink-0 text-right text-xs font-semibold text-[#8B9BAA]">{i + 1}.</span>
-                      <input
+                      <m.input
                         ref={(el) => { itemRefs.current[i] = el; }}
                         aria-label={`Item ${i + 1}`}
+                        aria-describedby={error ? "quiz-answer-error" : undefined}
                         value={enumTyped[i] ?? ""}
-                        onChange={(e) => setItemAnswers((cur) => { const copy = Array.from({ length: itemCount }, (_, k) => cur[k] ?? ""); copy[i] = e.target.value; return copy; })}
+                        onChange={(e) => { setItemAnswers((cur) => { const copy = Array.from({ length: itemCount }, (_, k) => cur[k] ?? ""); copy[i] = e.target.value; return copy; }); if (error) setError(""); }}
                         onKeyDown={(e) => { if (e.key === "Enter" && i < itemCount - 1) { e.preventDefault(); itemRefs.current[i + 1]?.focus(); } }}
+                        whileFocus={reduceMotion ? undefined : { scale: 1.006 }}
+                        transition={{ type: "spring", duration: 0.24, bounce: 0.08 }}
                         maxLength={120}
                         autoComplete="off"
                         autoCapitalize="off"
@@ -536,9 +597,13 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
             )}
 
             {question.type === "true-false" && (
-              <div role="radiogroup" aria-label="True or False" className="flex flex-col gap-2.5 sm:flex-row">
-                {[true, false].map((value) => (
-                  <button key={String(value)} type="button" role="radio" aria-checked={selTruth === value} disabled={Boolean(result) || busy} onClick={() => setSelectedTruth(value)} className={truthClass(value)}>{value ? "True" : "False"}</button>
+              <div role="radiogroup" aria-label="True or False" aria-describedby={error ? "quiz-answer-error" : undefined} className="flex flex-col gap-2.5 sm:flex-row">
+                {[true, false].map((value, i) => (
+                  <m.button key={String(value)} ref={(element) => { truthRefs.current[i] = element; }} type="button" role="radio" aria-checked={selTruth === value} tabIndex={selTruth === null ? (i === 0 ? 0 : -1) : (selTruth === value ? 0 : -1)} disabled={Boolean(result) || busy} onClick={() => chooseTruth(value)} onKeyDown={(event) => moveRadioSelection(event, i, 2, (next) => chooseTruth(next === 0), truthRefs.current)} className={truthClass(value)} variants={answerCardVariants} initial={false} animate={reduceMotion ? "idle" : selTruth === value ? "selected" : "idle"}>
+                    {value ? "True" : "False"}
+                    {result && (result.correct ? selTruth === value : selTruth !== value) && <GradedMark correct={result.correct ? selTruth === value : selTruth !== value} reduceMotion={reduceMotion} />}
+                    {!result && selTruth === value && <SelectionMark reduceMotion={reduceMotion} />}
+                  </m.button>
                 ))}
               </div>
             )}
@@ -546,9 +611,15 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
             {question.type === "identification" && (
               <div>
                 <label htmlFor="identification-answer" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Your answer</label>
-                <input ref={inputRef} id="identification-answer" value={typed} onChange={(e) => setText(e.target.value)} disabled={Boolean(result) || busy} maxLength={500} autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="Type your answer…" className={`min-h-12 w-full rounded-xl border px-4 text-sm outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20 disabled:cursor-not-allowed ${result ? (result.correct ? "border-[#2FBF71] bg-[#EAF8F0]" : "border-[#F0507F] bg-[#FFF1F1]") : "border-[#E8E2E5] bg-white"}`} />
+                <m.input ref={inputRef} id="identification-answer" aria-describedby={error ? "quiz-answer-error" : undefined} value={typed} onChange={(e) => { setText(e.target.value); if (error) setError(""); }} whileFocus={reduceMotion ? undefined : { scale: 1.006 }} transition={{ type: "spring", duration: 0.24, bounce: 0.08 }} disabled={Boolean(result) || busy} maxLength={500} autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="Type your answer…" className={`min-h-12 w-full rounded-xl border px-4 text-sm outline-none transition-[border-color,background-color,box-shadow] duration-200 placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20 disabled:cursor-not-allowed ${result ? (result.correct ? "border-[#2FBF71] bg-[#EAF8F0]" : "border-[#F0507F] bg-[#FFF1F1]") : "border-[#E8E2E5] bg-white"}`} />
               </div>
             )}
+
+            <div key={`${question.index}-${currentRound}`} className="min-h-[34px] pt-1">
+              <QuizReactionIndicator reaction={reaction} />
+            </div>
+
+            </m.div>
 
             {hintOpen && question.hint && !result && (
               <div className="flex gap-3 rounded-xl border border-[#F1DDE4] bg-[#FFF7F9] p-4">
@@ -573,7 +644,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
               <span className="text-[#8B7C84]">{autoNext ? "Wrong answers wait twice as long. Turn off to pause." : "Or press Next Question yourself."}</span>
             </div>
 
-            {error && <p role="alert" className="rounded-xl border border-[#F0C7D3] bg-[#FFF1F1] px-3.5 py-3 text-sm text-[#A43E5C]">{error}</p>}
+            {error && <p id="quiz-answer-error" role="alert" className="rounded-xl border border-[#F0C7D3] bg-[#FFF1F1] px-3.5 py-3 text-sm text-[#A43E5C]">{error}</p>}
 
             <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
