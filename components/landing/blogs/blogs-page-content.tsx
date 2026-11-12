@@ -10,6 +10,7 @@ import { ArticleReaderModal } from "./article-reader-modal";
 import { articles, categories, featuredArticle, type BlogArticle, type BlogCategory } from "./blog-data";
 import type { ArticleBlock } from "./article-bodies";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
+import { PageEntry } from "@/components/motion/page-entry";
 
 export function BlogsPageContent() {
   const [category, setCategory] = useState<"All Articles" | BlogCategory>("All Articles");
@@ -83,8 +84,8 @@ export function BlogsPageContent() {
       <LandingNav />
       <main id="blogs-main" tabIndex={-1}>
         <ResponsiveHero image="/landing/blogs/hero-blogs.png" titleId="blogs-title" mobileImageClassName="object-[68%_center]" desktopImageClassName="md:object-[56%_center] xl:object-center"><div className="max-w-[35rem] md:max-w-[48%]">
-              <ScrollReveal><h1 id="blogs-title" className="max-w-[13ch] text-[clamp(2.125rem,8vw,3rem)] font-bold leading-[1.05] tracking-[-.04em] md:text-[clamp(3rem,4.5vw,4.25rem)]">Little ideas for<br /><span className="text-pink-active">better learning.</span></h1></ScrollReveal>
-              <ScrollReveal delay={0.1}><p className="mt-4 max-w-[46ch] text-[clamp(.9375rem,1.2vw,1.0625rem)] leading-[1.62] text-muted sm:mt-5">Explore study tips, learning techniques, and thoughtful ideas to make every study session a little more meaningful.</p></ScrollReveal>
+              <PageEntry delay={0.12}><h1 id="blogs-title" className="max-w-[13ch] text-[clamp(2.125rem,8vw,3rem)] font-bold leading-[1.05] tracking-[-.04em] md:text-[clamp(3rem,4.5vw,4.25rem)]">Little ideas for<br /><span className="text-pink-active">better learning.</span></h1></PageEntry>
+              <PageEntry delay={0.3} distance={17} duration={0.75}><p className="mt-4 max-w-[46ch] text-[clamp(.9375rem,1.2vw,1.0625rem)] leading-[1.62] text-muted sm:mt-5">Explore study tips, learning techniques, and thoughtful ideas to make every study session a little more meaningful.</p></PageEntry>
           </div></ResponsiveHero>
 
         <FeaturedArticle article={featuredArticle} onRead={(article, trigger) => void showArticle(article, trigger)} />
@@ -92,14 +93,14 @@ export function BlogsPageContent() {
         <section className="mx-auto w-[min(1120px,calc(100%-2.5rem))] pb-20 sm:w-[min(1120px,calc(100%-3rem))] sm:pb-28" aria-labelledby="explore-title">
           <div className="grid items-end gap-4 md:grid-cols-[1fr_minmax(15rem,22.5rem)] md:gap-10">
             <div>
-              <h2 id="explore-title" className="max-w-[20ch] text-[clamp(1.875rem,6vw,2.5rem)] font-bold leading-[1.1] tracking-[-.04em] md:text-[clamp(2.5rem,3.5vw,3.25rem)]">A little something for <span className="text-pink-active">every curious mind.</span></h2>
+              <ScrollReveal><h2 id="explore-title" className="max-w-[20ch] text-[clamp(1.875rem,6vw,2.5rem)] font-bold leading-[1.1] tracking-[-.04em] md:text-[clamp(2.5rem,3.5vw,3.25rem)]">A little something for <span className="text-pink-active">every curious mind.</span></h2></ScrollReveal>
             </div>
-            <p className="text-base leading-relaxed text-muted">From study techniques to everyday moments, find ideas, inspiration, and stories worth exploring.</p>
+            <ScrollReveal delay={0.12}><p className="text-base leading-relaxed text-muted">From study techniques to everyday moments, find ideas, inspiration, and stories worth exploring.</p></ScrollReveal>
           </div>
 
-          <div className="mt-8 flex gap-6 overflow-x-auto border-b border-border pb-0" role="group" aria-label="Filter articles by category">
+          <ScrollReveal preset="button" delay={0.2} className="mt-8"><div className="flex gap-6 overflow-x-auto border-b border-border pb-0" role="group" aria-label="Filter articles by category">
             {categories.map((item) => <button type="button" className="relative min-h-11 shrink-0 pb-3 text-sm font-medium text-muted transition-colors hover:text-pink-active aria-pressed:text-pink-active aria-pressed:after:absolute aria-pressed:after:inset-x-0 aria-pressed:after:bottom-0 aria-pressed:after:h-0.5 aria-pressed:after:bg-pink-active focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-pink-active" key={item} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}
-          </div>
+          </div></ScrollReveal>
           <ArticleGrid articles={visibleArticles} onRead={(article, trigger) => void showArticle(article, trigger)} />
         </section>
       </main>

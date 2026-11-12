@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { LandingBrand } from "./landing-brand";
+import { PageEntry } from "@/components/motion/page-entry";
 
 const desktopLink = "inline-flex min-h-11 items-center rounded-full px-3.5 text-sm font-semibold text-muted transition-[background-color,color] duration-150 ease-out hover:bg-pink-soft hover:text-pink-active focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-pink-active";
 const drawerLink = "flex min-h-12 items-center rounded-xl px-4 text-[1rem] font-semibold text-foreground transition-[background-color,color] duration-150 ease-out hover:bg-pink-soft hover:text-pink-active focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-pink-active";
@@ -150,14 +151,14 @@ export function LandingNav() {
 
   return <>
     <header className="fixed inset-x-0 top-0 z-[60] px-3 pt-[max(.75rem,env(safe-area-inset-top))] sm:px-6 sm:pt-[max(1rem,env(safe-area-inset-top))]">
-      <div className={`mx-auto grid min-h-[3.75rem] max-w-[1200px] grid-cols-[1fr_auto] items-center gap-4 rounded-[1.15rem] border px-4 backdrop-blur-md transition-[background-color,box-shadow,border-color] duration-200 ease-out sm:min-h-[4.25rem] sm:px-5 lg:grid-cols-[auto_1fr_auto] ${scrolled ? "border-border bg-white/98 shadow-[0_10px_30px_rgb(47_41_48_/_11%)]" : "border-border/80 bg-white/90 shadow-[0_7px_24px_rgb(47_41_48_/_7%)]"}`}>
+      <PageEntry distance={-14} duration={0.62} className={`mx-auto grid min-h-[3.75rem] max-w-[1200px] grid-cols-[1fr_auto] items-center gap-4 rounded-[1.15rem] border px-4 backdrop-blur-md transition-[background-color,box-shadow,border-color] duration-200 ease-out sm:min-h-[4.25rem] sm:px-5 lg:grid-cols-[auto_1fr_auto] ${scrolled ? "border-border bg-white/98 shadow-[0_10px_30px_rgb(47_41_48_/_11%)]" : "border-border/80 bg-white/90 shadow-[0_7px_24px_rgb(47_41_48_/_7%)]"}`}>
         <LandingBrand size="compact" />
         <nav className="hidden items-center justify-center gap-1 lg:flex" aria-label="Main navigation">
           {navigation.map((item) => <Link key={item.href} href={item.href} className={activeClass(item.href, "desktop")} aria-current={pathname === item.href ? "page" : undefined}>{item.label}</Link>)}
         </nav>
         <div className="hidden items-center justify-end gap-1 lg:flex"><Link href="/login" className={desktopLink}>Login</Link><Link href="/register" className={button}>Get Started</Link></div>
         <button ref={triggerRef} type="button" className="grid size-11 place-items-center rounded-xl border border-border bg-white text-foreground transition-colors hover:bg-pink-soft focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-pink-active lg:hidden" aria-label="Open navigation menu" aria-expanded={open} aria-controls="landing-mobile-menu" onClick={openDrawer}><Menu aria-hidden="true" /></button>
-      </div>
+      </PageEntry>
     </header>
     {drawer}
   </>;

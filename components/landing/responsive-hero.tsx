@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { PageEntry } from "@/components/motion/page-entry";
 
 type ResponsiveHeroProps = {
   image: string;
@@ -24,7 +27,7 @@ export function ResponsiveHero({
   children,
 }: ResponsiveHeroProps) {
   return <section aria-labelledby={titleId} className="relative isolate overflow-hidden bg-pink-soft md:min-h-[clamp(40rem,56.3vw,60rem)]">
-    <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-[clamp(18rem,76vw,25rem)] md:inset-0 md:h-auto">
+    <PageEntry aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-[clamp(18rem,76vw,25rem)] md:inset-0 md:h-auto" delay={0.18} distance={0} duration={0.95} scale={1.02}>
       <Image
         src={image}
         alt=""
@@ -34,7 +37,7 @@ export function ResponsiveHero({
         sizes="100vw"
         className={`object-cover ${mobileImageClassName} ${desktopImageClassName}`}
       />
-    </div>
+    </PageEntry>
     <div className="mx-auto flex min-h-[clamp(43rem,154vw,51rem)] w-[min(1120px,calc(100%-2.5rem))] flex-col justify-start pb-[clamp(20rem,82vw,27rem)] pt-28 sm:w-[min(1120px,calc(100%-3rem))] sm:pb-[clamp(21rem,78vw,28rem)] sm:pt-32 md:min-h-[clamp(40rem,56.3vw,60rem)] md:justify-center md:py-28">
       {children}
     </div>

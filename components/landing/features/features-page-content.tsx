@@ -6,6 +6,7 @@ import { ReviewGallery } from "./review-gallery";
 import { ScreenshotViewer } from "./screenshot-viewer";
 import { ResponsiveHero } from "../responsive-hero";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/motion/scroll-reveal";
+import { PageEntry } from "@/components/motion/page-entry";
 const container = "mx-auto w-[min(1152px,calc(100%-2.5rem))] sm:w-[min(1152px,calc(100%-3rem))]";
 const heading = "mt-2 text-[clamp(1.875rem,6vw,2.5rem)] font-bold leading-[1.1] tracking-[-.04em] md:text-[clamp(2.5rem,3.5vw,3.375rem)]";
 
@@ -25,8 +26,8 @@ export function FeaturesPageContent() {
       <LandingNav />
       <main id="features-main" tabIndex={-1}>
         <ResponsiveHero image="/landing/features/features-hero.png" titleId="features-title" mobileImageClassName="object-[70%_center]" desktopImageClassName="md:object-[54%_center] xl:object-center"><div className="max-w-[39rem] md:max-w-[48%]">
-            <ScrollReveal><h1 id="features-title" className="max-w-[15ch] text-[clamp(2.125rem,8vw,3rem)] font-bold leading-[1.05] tracking-[-.04em] md:text-[clamp(3rem,4.5vw,4.25rem)]">Everything you need to make <span className="text-pink-primary">learning stick.</span></h1></ScrollReveal>
-            <ScrollReveal delay={0.1}><p className="mt-4 max-w-[48ch] text-[clamp(.9375rem,1.2vw,1.0625rem)] leading-[1.62] text-muted sm:mt-5">Keep your study materials organized, turn knowledge into practice, and see how far you&apos;ve come all in one friendly space.</p></ScrollReveal>
+            <PageEntry delay={0.12}><h1 id="features-title" className="max-w-[15ch] text-[clamp(2.125rem,8vw,3rem)] font-bold leading-[1.05] tracking-[-.04em] md:text-[clamp(3rem,4.5vw,4.25rem)]">Everything you need to make <span className="text-pink-primary">learning stick.</span></h1></PageEntry>
+            <PageEntry delay={0.3} distance={17} duration={0.75}><p className="mt-4 max-w-[48ch] text-[clamp(.9375rem,1.2vw,1.0625rem)] leading-[1.62] text-muted sm:mt-5">Keep your study materials organized, turn knowledge into practice, and see how far you&apos;ve come all in one friendly space.</p></PageEntry>
           </div></ResponsiveHero>
 
         <section className="px-5 py-16 sm:px-6 sm:py-24" aria-labelledby="workspace-title">
@@ -43,15 +44,13 @@ export function FeaturesPageContent() {
               <ScrollReveal preset="image" className="grid h-[min(112vw,430px)] place-items-center overflow-hidden rounded-2xl bg-pink-soft sm:h-[27.5rem]">
                 <Image src="/landing/features/creating-flashcard-standard.png" alt="Standard flashcard creation form in Abii" width={810} height={1080} unoptimized sizes="(max-width: 700px) calc((100vw - 52px) / 2), (max-width: 1000px) 38vw, 430px" />
               </ScrollReveal>
-              <figcaption>Standard Flashcards</figcaption>
-              <ScreenshotViewer src="/landing/features/creating-flashcard-standard.png" alt="Standard flashcard creation form in Abii" width={810} height={1080} sizes="100vw" />
+              <ScrollReveal delay={0.12}><figcaption>Standard Flashcards</figcaption><ScreenshotViewer src="/landing/features/creating-flashcard-standard.png" alt="Standard flashcard creation form in Abii" width={810} height={1080} sizes="100vw" /></ScrollReveal>
             </figure>
             <figure className="min-w-0 text-center">
               <ScrollReveal preset="image" delay={0.14} className="grid h-[min(112vw,430px)] place-items-center overflow-hidden rounded-2xl bg-pink-soft sm:h-[27.5rem]">
                 <Image src="/landing/features/creating-flashcard-enumeration.png" alt="Enumeration flashcard creation form in Abii" width={810} height={1080} unoptimized sizes="(max-width: 700px) calc((100vw - 52px) / 2), (max-width: 1000px) 38vw, 430px" />
               </ScrollReveal>
-              <figcaption>Enumeration Flashcards</figcaption>
-              <ScreenshotViewer src="/landing/features/creating-flashcard-enumeration.png" alt="Enumeration flashcard creation form in Abii" width={810} height={1080} sizes="100vw" />
+              <ScrollReveal delay={0.12}><figcaption>Enumeration Flashcards</figcaption><ScreenshotViewer src="/landing/features/creating-flashcard-enumeration.png" alt="Enumeration flashcard creation form in Abii" width={810} height={1080} sizes="100vw" /></ScrollReveal>
             </figure>
           </div>
           <div>
