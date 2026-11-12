@@ -40,41 +40,41 @@ export function FeaturesPageContent() {
         <section className={`${container} grid items-center gap-8 py-16 sm:py-24 lg:grid-cols-[1.18fr_.82fr] lg:gap-16`} aria-labelledby="flashcards-title">
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <figure className="min-w-0 text-center">
-              <div className="grid h-[min(112vw,430px)] place-items-center overflow-hidden rounded-2xl bg-pink-soft sm:h-[27.5rem]">
+              <ScrollReveal preset="image" className="grid h-[min(112vw,430px)] place-items-center overflow-hidden rounded-2xl bg-pink-soft sm:h-[27.5rem]">
                 <Image src="/landing/features/creating-flashcard-standard.png" alt="Standard flashcard creation form in Abii" width={810} height={1080} unoptimized sizes="(max-width: 700px) calc((100vw - 52px) / 2), (max-width: 1000px) 38vw, 430px" />
-              </div>
+              </ScrollReveal>
               <figcaption>Standard Flashcards</figcaption>
               <ScreenshotViewer src="/landing/features/creating-flashcard-standard.png" alt="Standard flashcard creation form in Abii" width={810} height={1080} sizes="100vw" />
             </figure>
             <figure className="min-w-0 text-center">
-              <div className="grid h-[min(112vw,430px)] place-items-center overflow-hidden rounded-2xl bg-pink-soft sm:h-[27.5rem]">
+              <ScrollReveal preset="image" delay={0.14} className="grid h-[min(112vw,430px)] place-items-center overflow-hidden rounded-2xl bg-pink-soft sm:h-[27.5rem]">
                 <Image src="/landing/features/creating-flashcard-enumeration.png" alt="Enumeration flashcard creation form in Abii" width={810} height={1080} unoptimized sizes="(max-width: 700px) calc((100vw - 52px) / 2), (max-width: 1000px) 38vw, 430px" />
-              </div>
+              </ScrollReveal>
               <figcaption>Enumeration Flashcards</figcaption>
               <ScreenshotViewer src="/landing/features/creating-flashcard-enumeration.png" alt="Enumeration flashcard creation form in Abii" width={810} height={1080} sizes="100vw" />
             </figure>
           </div>
           <div>
-            <h2 id="flashcards-title" className={heading}>Your notes, made easier <span className="text-pink-primary">to remember.</span></h2>
-            <p className="mt-4 max-w-[46ch] text-base leading-relaxed text-muted">Turn what you&apos;ve learned into your own flashcards. Create simple questions and answers or practice recalling complete lists all at your own pace.</p>
+            <ScrollReveal><h2 id="flashcards-title" className={heading}>Your notes, made easier <span className="text-pink-primary">to remember.</span></h2></ScrollReveal>
+            <ScrollReveal delay={0.13}><p className="mt-4 max-w-[46ch] text-base leading-relaxed text-muted">Turn what you&apos;ve learned into your own flashcards. Create simple questions and answers or practice recalling complete lists all at your own pace.</p></ScrollReveal>
           </div>
         </section>
 
         <section className="bg-pink-soft px-5 py-16 sm:px-6 sm:py-[5.5rem]" aria-labelledby="practice-title">
           <div className="mx-auto mb-7 max-w-6xl">
-            <h2 id="practice-title" className={heading}>Put your memory <span className="text-pink-primary">to work.</span></h2>
-            <p className="mt-3 max-w-[50ch] text-base leading-relaxed text-muted">Go beyond rereading. Test what you know with different question types, focus on what matters, and build confidence one answer at a time.</p>
+            <ScrollReveal><h2 id="practice-title" className={heading}>Put your memory <span className="text-pink-primary">to work.</span></h2></ScrollReveal>
+            <ScrollReveal delay={0.13}><p className="mt-3 max-w-[50ch] text-base leading-relaxed text-muted">Go beyond rereading. Test what you know with different question types, focus on what matters, and build confidence one answer at a time.</p></ScrollReveal>
           </div>
-          <ReviewGallery />
+          <ScrollReveal preset="image"><ReviewGallery /></ScrollReveal>
         </section>
 
         <section className={`${container} grid items-center gap-9 py-16 sm:py-24 lg:grid-cols-[.62fr_1.38fr]`} aria-labelledby="progress-title">
           <div>
-            <h2 id="progress-title" className={heading}>Know what sticks. <span className="text-pink-primary">See what needs work.</span></h2>
-            <p className="mt-4 text-base leading-relaxed text-muted">Follow your mastery, see how often you study, and discover which subjects or topics need a little more practice.</p>
-            <ul className="mt-5 grid gap-2 text-sm text-muted">
+            <ScrollReveal><h2 id="progress-title" className={heading}>Know what sticks. <span className="text-pink-primary">See what needs work.</span></h2></ScrollReveal>
+            <ScrollReveal delay={0.13}><p className="mt-4 text-base leading-relaxed text-muted">Follow your mastery, see how often you study, and discover which subjects or topics need a little more practice.</p></ScrollReveal>
+            <ScrollReveal delay={0.25}><ul className="mt-5 grid gap-2 text-sm text-muted">
               <li>• Subject and topic mastery</li><li>• Study activity and streaks</li><li>• Quiz accuracy and performance</li>
-            </ul>
+            </ul></ScrollReveal>
           </div>
           <ScrollReveal preset="image" className="flex min-w-0 flex-col items-end gap-2">
             <div className="overflow-hidden rounded-2xl bg-pink-soft p-1">
@@ -85,7 +85,7 @@ export function FeaturesPageContent() {
         </section>
 
         <section className="bg-pink-soft px-5 py-16 sm:px-6 sm:py-[5.5rem]" aria-labelledby="achievements-title">
-          <div className="mx-auto mb-8 max-w-[48rem] text-center"><h2 id="achievements-title" className={heading}>Little wins deserve a little celebration.</h2><p className="mx-auto mt-3 max-w-[66ch] text-base leading-relaxed text-muted">Every study session brings you closer to something great. Unlock badges, reach new milestones, and celebrate how far you&apos;ve come.</p>
+          <div className="mx-auto mb-8 max-w-[48rem] text-center"><ScrollReveal><h2 id="achievements-title" className={heading}>Little wins deserve a little celebration.</h2></ScrollReveal><ScrollReveal delay={0.13}><p className="mx-auto mt-3 max-w-[66ch] text-base leading-relaxed text-muted">Every study session brings you closer to something great. Unlock badges, reach new milestones, and celebrate how far you&apos;ve come.</p></ScrollReveal>
           </div>
           <StaggerContainer stagger={0.06} className="mx-auto grid max-w-[62.5rem] grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-6">
             {badges.map((badge) => (

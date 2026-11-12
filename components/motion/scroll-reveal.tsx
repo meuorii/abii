@@ -25,7 +25,7 @@ function observeOnce(element: Element, root: Element | null, threshold: number, 
     const poolReference: { pool?: ObserverPool } = {};
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
+        if (!entry.isIntersecting || entry.intersectionRatio < threshold) continue;
         const callback = callbacks.get(entry.target);
         if (!callback) continue;
         callbacks.delete(entry.target);
@@ -37,7 +37,7 @@ function observeOnce(element: Element, root: Element | null, threshold: number, 
         const registeredPool = poolReference.pool;
         if (registeredPool) removePoolIfCurrent(root, thresholds, threshold, registeredPool);
       }
-    }, { root, threshold });
+    }, { root, threshold, rootMargin: "0px 0px -12% 0px" });
     pool = { observer, callbacks };
     poolReference.pool = pool;
     thresholds.set(threshold, pool);
@@ -91,8 +91,12 @@ function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number, dis
       left: 0,
     };
     const bounds = element.getBoundingClientRect();
-    const initiallyVisible = bounds.bottom > viewport.top && bounds.top < viewport.bottom &&
-      bounds.right > viewport.left && bounds.left < viewport.right;
+    const viewportHeight = viewport.bottom - viewport.top;
+    const effectiveThreshold = bounds.height > viewportHeight * 0.85 ? Math.min(amount, 0.08) : amount;
+    const visibleHeight = Math.max(0, Math.min(bounds.bottom, viewport.bottom) - Math.max(bounds.top, viewport.top));
+    const visibleWidth = Math.max(0, Math.min(bounds.right, viewport.right) - Math.max(bounds.left, viewport.left));
+    const visibleRatio = visibleHeight * visibleWidth / Math.max(1, bounds.height * bounds.width);
+    const initiallyVisible = bounds.top < viewport.bottom * 0.88 && visibleRatio >= effectiveThreshold;
 
     if (initiallyVisible) {
       setVisible(true);
@@ -107,10 +111,7 @@ function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number, dis
     // unintended fade-out. The actual reveal below uses the normal transition.
     setSkipTransition(true);
     try {
-      return observeOnce(element, root, {
-        // Tall sections should reveal as soon as any useful portion enters view.
-        threshold: bounds.height > viewport.bottom - viewport.top ? Math.min(amount, 0.01) : amount,
-      }.threshold, () => {
+      return observeOnce(element, root, effectiveThreshold, () => {
         setSkipTransition(false);
         setVisible(true);
       });
@@ -129,10 +130,10 @@ function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number, dis
 
 type RevealPreset = "text" | "button" | "card" | "image";
 const revealPresets: Record<RevealPreset, { distance: number; duration: number }> = {
-  text: { distance: 16, duration: 0.48 },
-  button: { distance: 10, duration: 0.4 },
-  card: { distance: 18, duration: 0.5 },
-  image: { distance: 20, duration: 0.62 },
+  text: { distance: 23, duration: 0.78 },
+  button: { distance: 14, duration: 0.68 },
+  card: { distance: 24, duration: 0.84 },
+  image: { distance: 26, duration: 0.96 },
 };
 
 type RevealProps = HTMLMotionProps<"div"> & { children: ReactNode; amount?: number; delay?: number; className?: string; preset?: RevealPreset };
@@ -141,7 +142,7 @@ export function ScrollReveal({ children, amount = 0.12, delay = 0, className = "
   const ref = useRef<HTMLDivElement>(null);
   const { visible, animateOnMount, skipTransition } = useReveal(ref, amount);
   const { distance, duration } = revealPresets[preset];
-  const classes = ["abii-motion-reveal", className, animateOnMount ? "abii-scroll-enter" : ""].filter(Boolean).join(" ");
+  const classes = ["abii-motion-reveal", className].filter(Boolean).join(" ");
   return <m.div ref={ref} {...props} className={classes} style={animateOnMount ? { ...style, animationDelay: `${delay}s` } : style} initial={false}
     animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: distance }}
     transition={animateOnMount || skipTransition ? { duration: 0 } : { duration, delay: visible ? delay : 0, ease: [0.22, 1, 0.36, 1] }}>
@@ -149,10 +150,10 @@ export function ScrollReveal({ children, amount = 0.12, delay = 0, className = "
   </m.div>;
 }
 
-type StaggerState = { stagger: number; visible?: boolean; animateOnMount?: boolean; skipTransition?: boolean };
-const StaggerContext = createContext<StaggerState>({ stagger: 0.06 });
+type StaggerState = { stagger: number };
+const StaggerContext = createContext<StaggerState>({ stagger: 0.14 });
 
-export function StaggerContainer({ children, stagger = 0.06, className = "", as = "div" }: {
+export function StaggerContainer({ children, stagger = 0.14, className = "", as = "div" }: {
   children: ReactNode;
   amount?: number;
   stagger?: number;
@@ -160,10 +161,8 @@ export function StaggerContainer({ children, stagger = 0.06, className = "", as 
   as?: "div" | "ol" | "ul";
 }) {
   const Container = as === "ol" ? m.ol : as === "ul" ? m.ul : m.div;
-  const ref = useRef<HTMLElement>(null);
-  const { visible, animateOnMount, skipTransition } = useReveal(ref, 0.08);
-  return <StaggerContext.Provider value={{ stagger, visible, animateOnMount, skipTransition }}>
-    <Container ref={ref as never} className={`abii-motion-reveal ${className}`} initial={false} animate={{ opacity: 1 }}>
+  return <StaggerContext.Provider value={{ stagger }}>
+    <Container className={className} initial={false} animate={{ opacity: 1 }}>
       {children}
     </Container>
   </StaggerContext.Provider>;
@@ -177,22 +176,16 @@ export function StaggerItem({ children, className = "", index = 0, as = "div" }:
 }) {
   const context = useContext(StaggerContext);
   const ref = useRef<HTMLElement>(null);
-  const reduceMotion = useReducedMotion();
-  const usesContainer = context.visible !== undefined;
-  const individualReveal = useReveal(ref, 0.04, usesContainer);
-  const visible = usesContainer ? context.visible! : individualReveal.visible;
-  const animateOnMount = usesContainer ? context.animateOnMount! : individualReveal.animateOnMount;
-  const skipTransition = usesContainer ? context.skipTransition! : individualReveal.skipTransition;
+  const { visible, animateOnMount, skipTransition } = useReveal(ref, 0.18);
   const Item = as === "li" ? m.li : m.div;
   // Keep delays short and bounded. Every item observes its own viewport entry,
   // so a large grid does not launch animations for offscreen cards at once.
-  const delay = Math.min(index % 4, 3) * context.stagger;
-  const classes = ["abii-motion-reveal", "min-w-0", className, animateOnMount ? "abii-card-enter" : ""].filter(Boolean).join(" ");
+  const delay = Math.min(index % 3, 2) * context.stagger;
+  const classes = ["min-w-0", className].filter(Boolean).join(" ");
   return <Item ref={ref as never} className={classes}
-    style={animateOnMount && !reduceMotion ? { animationDelay: `${delay}s` } : undefined}
     initial={false}
     animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
-    transition={animateOnMount || skipTransition ? { duration: 0 } : { duration: 0.5, delay: visible ? delay : 0, ease: [0.22, 1, 0.36, 1] }}>
+    transition={animateOnMount || skipTransition ? { duration: 0 } : { duration: 0.84, delay: visible ? delay : 0, ease: [0.22, 1, 0.36, 1] }}>
     {children}
   </Item>;
 }

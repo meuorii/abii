@@ -226,8 +226,6 @@
   .otp-error-state .otp-visual-slots { animation: otp-error-shake 220ms ease-out both; }
   .auth-flow-form .auth-error-enter { animation: auth-error-in 180ms ease-out both; }
   .abii-modal-content { animation: abii-modal-content-in 360ms cubic-bezier(.22, 1, .36, 1) 45ms both; }
-  .abii-scroll-enter { animation: abii-scroll-enter 600ms cubic-bezier(.22, 1, .36, 1) both; }
-  .abii-card-enter { animation: abii-card-enter 500ms cubic-bezier(.22, 1, .36, 1) both; }
   button:not(:disabled):active { scale: .985; }
 }
 
