@@ -9,6 +9,7 @@ import {
   RotateCcw, X, Zap,
 } from "lucide-react";
 import { QUIZ_TYPE_LABELS, type PublicQuestion, type PublicSession, type QuestionResult, type QuizType } from "@/lib/quiz/types";
+import { QuizCompletionConfetti } from "@/components/review/quiz-completion-confetti";
 
 type Attempt = { question: PublicQuestion; result: QuestionResult; number: number };
 const typeNames: Record<QuizType, string> = {
@@ -60,8 +61,8 @@ function AttemptsList({ attempts, heading, emptyText }: { attempts: Attempt[]; h
   </div>;
 }
 
-export function QuizCompletion({ session, firstName, onAgain, againBusy, againError }: {
-  session: PublicSession; firstName: string; onAgain: () => void; againBusy: boolean; againError: string;
+export function QuizCompletion({ session, firstName, onAgain, againBusy, againError, celebrate = false }: {
+  session: PublicSession; firstName: string; onAgain: () => void; againBusy: boolean; againError: string; celebrate?: boolean;
 }) {
   const [filterType, setFilterType] = useState<QuizType | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -101,6 +102,7 @@ export function QuizCompletion({ session, firstName, onAgain, againBusy, againEr
       mascotSrc="/dashboard-hero/complete.png"
       mascotAlt=""
       priority
+      decoration={<QuizCompletionConfetti active={celebrate} />}
     />
 
     <div className="grid min-w-0 grid-cols-1 items-stretch gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] [&>*]:min-w-0">

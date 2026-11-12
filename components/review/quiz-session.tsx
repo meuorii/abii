@@ -21,6 +21,7 @@ import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/moda
 import { firstUnansweredQuestion } from "@/lib/quiz/resume-state";
 import { resolveQuizReaction } from "@/lib/quiz/reactions";
 import { QuizReactionIndicator } from "@/components/review/quiz-reaction-indicator";
+import { claimCompletionCelebration } from "@/lib/quiz/completion-celebration.mjs";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 const answerCardVariants: Variants = {
@@ -123,8 +124,10 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   const [againBusy, setAgainBusy] = useState(false);
   const [againError, setAgainError] = useState("");
   const [exitConfirm, setExitConfirm] = useState(false);
+  const [celebrationSessionId, setCelebrationSessionId] = useState<string | null>(null);
   const busyRef = useRef(false);
   const completionSoundSessionsRef = useRef(new Set<string>());
+  const celebratedSessionsRef = useRef(new Set<string>());
   const nextRef = useRef<() => void>(() => {});
   const inputRef = useRef<HTMLInputElement>(null);
   const itemRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -227,7 +230,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
 
   if (summary || currentSession.status === "completed") {
     return (
-      <QuizCompletion session={currentSession} firstName={firstName} againBusy={againBusy} againError={againError} onAgain={restart} />
+      <QuizCompletion session={currentSession} firstName={firstName} againBusy={againBusy} againError={againError} onAgain={restart} celebrate={celebrationSessionId === currentSession.id} />
     );
   }
   if (!question) return <div className="m-4 rounded-2xl border border-[#E8E2E5] bg-white p-6 text-sm text-[#756B72]">This quiz session has no available question. <Link href="/review" className="font-semibold text-[#E9577D] underline">Back to Review</Link></div>;
@@ -363,7 +366,11 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       }
       if (outcome.kind === "complete") {
         notifyAchievementActivity();
-        completeSession(outcome.session, data?.transitioned === true);
+        const newlyCompleted = data?.transitioned === true;
+        completeSession(outcome.session, newlyCompleted);
+        if (claimCompletionCelebration(outcome.session.id, newlyCompleted, celebratedSessionsRef.current)) {
+          setCelebrationSessionId(outcome.session.id);
+        }
         toast({ kind: "success", title: "Review complete! 🎉", message: `You finished ${outcome.session.summary.cards} cards. Great work showing up to study!` });
         return;
       }
