@@ -61,7 +61,7 @@ export function ContactForm() {
     }
   }
 
-  const fieldClass = "mt-2 min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-base text-foreground outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 focus:border-pink-active focus:ring-2 focus:ring-pink-active/20";
+  const fieldClass = "mt-2 min-h-12 w-full rounded-xl border border-border/90 bg-white px-4 py-3 text-base text-foreground outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 focus:border-pink-active focus:ring-2 focus:ring-pink-active/20";
   const labelClass = "block text-sm font-semibold text-foreground";
 
   return <form onSubmit={submit} noValidate className="grid gap-5" aria-describedby="contact-feedback">
@@ -98,7 +98,7 @@ export function ContactForm() {
       <button type="submit" disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-pink-primary px-6 py-3 text-sm font-semibold text-foreground transition-[transform,background-color] duration-150 hover:-translate-y-px hover:bg-pink-accent active:scale-[.98] focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-pink-active disabled:cursor-wait disabled:opacity-70 motion-reduce:transform-none">
         {busy ? <><LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />Sending...</> : <>Send message <Send className="size-4" aria-hidden="true" /></>}
       </button>
-      <p id="contact-feedback" role="status" aria-live="polite" className={`flex min-h-6 items-center gap-2 text-sm ${feedback?.kind === "error" ? "text-red-700" : "text-muted"}`}>
+      <p id="contact-feedback" role="status" aria-live="polite" className={`flex min-h-6 items-center gap-2 text-sm ${feedback?.kind === "error" ? "text-red-700" : feedback?.kind === "success" ? "text-green-800" : "text-muted"}`}>
         {feedback?.kind === "success" && <Check className="size-4 shrink-0 text-green-700" aria-hidden="true" />}
         {feedback?.message}
       </p>
