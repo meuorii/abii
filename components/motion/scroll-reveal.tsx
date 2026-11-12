@@ -5,21 +5,22 @@ import { createContext, useContext, useLayoutEffect, useRef, useState, type Reac
 import { useScrollRoot } from "./scroll-root-context";
 
 type ObserverPool = { observer: IntersectionObserver; callbacks: Map<Element, () => void> };
-const observerPools = new Map<Element | null, Map<number, ObserverPool>>();
+const observerPools = new Map<Element | null, Map<string, ObserverPool>>();
 
-function removePoolIfCurrent(root: Element | null, thresholds: Map<number, ObserverPool>, threshold: number, pool: ObserverPool) {
-  if (observerPools.get(root) !== thresholds || thresholds.get(threshold) !== pool) return;
-  thresholds.delete(threshold);
-  if (thresholds.size === 0 && observerPools.get(root) === thresholds) observerPools.delete(root);
+function removePoolIfCurrent(root: Element | null, pools: Map<string, ObserverPool>, configKey: string, pool: ObserverPool) {
+  if (observerPools.get(root) !== pools || pools.get(configKey) !== pool) return;
+  pools.delete(configKey);
+  if (pools.size === 0 && observerPools.get(root) === pools) observerPools.delete(root);
 }
 
-function observeOnce(element: Element, root: Element | null, threshold: number, onVisible: () => void) {
-  let thresholds = observerPools.get(root);
-  if (!thresholds) {
-    thresholds = new Map();
-    observerPools.set(root, thresholds);
+function observeOnce(element: Element, root: Element | null, threshold: number, rootMargin: string, onVisible: () => void) {
+  let pools = observerPools.get(root);
+  if (!pools) {
+    pools = new Map();
+    observerPools.set(root, pools);
   }
-  let pool = thresholds.get(threshold);
+  const configKey = `${threshold}|${rootMargin}`;
+  let pool = pools.get(configKey);
   if (!pool) {
     const callbacks = new Map<Element, () => void>();
     const poolReference: { pool?: ObserverPool } = {};
@@ -35,12 +36,12 @@ function observeOnce(element: Element, root: Element | null, threshold: number, 
       if (callbacks.size === 0) {
         observer.disconnect();
         const registeredPool = poolReference.pool;
-        if (registeredPool) removePoolIfCurrent(root, thresholds, threshold, registeredPool);
+        if (registeredPool) removePoolIfCurrent(root, pools, configKey, registeredPool);
       }
-    }, { root, threshold, rootMargin: "0px 0px -12% 0px" });
+    }, { root, threshold, rootMargin });
     pool = { observer, callbacks };
     poolReference.pool = pool;
-    thresholds.set(threshold, pool);
+    pools.set(configKey, pool);
   }
 
   const currentPool = pool;
@@ -51,7 +52,7 @@ function observeOnce(element: Element, root: Element | null, threshold: number, 
     currentPool.callbacks.delete(element);
     if (currentPool.callbacks.size === 0) {
       currentPool.observer.disconnect();
-      removePoolIfCurrent(root, thresholds, threshold, currentPool);
+      removePoolIfCurrent(root, pools, configKey, currentPool);
     }
     throw error;
   }
@@ -60,12 +61,37 @@ function observeOnce(element: Element, root: Element | null, threshold: number, 
     currentPool.observer.unobserve(element);
     if (currentPool.callbacks.size === 0) {
       currentPool.observer.disconnect();
-      removePoolIfCurrent(root, thresholds!, threshold, currentPool);
+      removePoolIfCurrent(root, pools!, configKey, currentPool);
     }
   };
 }
 
-function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number, disabled = false) {
+function resolveMargin(value: string, reference: number) {
+  if (value.endsWith("%")) return (Number.parseFloat(value) / 100) * reference;
+  return Number.parseFloat(value) || 0;
+}
+
+function getEffectiveRootBounds(rootBounds: DOMRect, rootMargin: string) {
+  const parts = rootMargin.trim().split(/\s+/);
+  const [topValue, rightValue, bottomValue, leftValue] = parts.length === 1
+    ? [parts[0], parts[0], parts[0], parts[0]]
+    : parts.length === 2
+      ? [parts[0], parts[1], parts[0], parts[1]]
+      : parts.length === 3
+        ? [parts[0], parts[1], parts[2], parts[1]]
+        : parts;
+  const width = rootBounds.right - rootBounds.left;
+  const height = rootBounds.bottom - rootBounds.top;
+  return {
+    top: rootBounds.top - resolveMargin(topValue ?? "0px", width),
+    right: rootBounds.right + resolveMargin(rightValue ?? "0px", width),
+    bottom: rootBounds.bottom + resolveMargin(bottomValue ?? "0px", width),
+    left: rootBounds.left - resolveMargin(leftValue ?? "0px", width),
+    height,
+  };
+}
+
+function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number, disabled = false, rootMargin = "0px 0px -12% 0px") {
   const rootRef = useScrollRoot();
   const reduceMotion = useReducedMotion();
   // Start visible for server rendering. The layout effect hides offscreen content
@@ -84,19 +110,20 @@ function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number, dis
     }
 
     const root = rootRef?.current ?? null;
-    const viewport = root?.getBoundingClientRect() ?? {
+    const rootBounds = root?.getBoundingClientRect() ?? {
       top: 0,
       right: window.innerWidth,
       bottom: window.innerHeight,
       left: 0,
     };
+    const viewport = getEffectiveRootBounds(rootBounds as DOMRect, rootMargin);
     const bounds = element.getBoundingClientRect();
-    const viewportHeight = viewport.bottom - viewport.top;
+    const viewportHeight = viewport.height;
     const effectiveThreshold = bounds.height > viewportHeight * 0.85 ? Math.min(amount, 0.08) : amount;
     const visibleHeight = Math.max(0, Math.min(bounds.bottom, viewport.bottom) - Math.max(bounds.top, viewport.top));
     const visibleWidth = Math.max(0, Math.min(bounds.right, viewport.right) - Math.max(bounds.left, viewport.left));
     const visibleRatio = visibleHeight * visibleWidth / Math.max(1, bounds.height * bounds.width);
-    const initiallyVisible = bounds.top < viewport.bottom * 0.88 && visibleRatio >= effectiveThreshold;
+    const initiallyVisible = visibleRatio >= effectiveThreshold;
 
     if (initiallyVisible) {
       setVisible(true);
@@ -111,19 +138,19 @@ function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number, dis
     // unintended fade-out. The actual reveal below uses the normal transition.
     setSkipTransition(true);
     try {
-      return observeOnce(element, root, effectiveThreshold, () => {
+      return observeOnce(element, root, effectiveThreshold, rootMargin, () => {
         setSkipTransition(false);
         setVisible(true);
       });
     } catch {
       // Observation can fail in constrained/older browsers. Never leave content hidden.
-      const thresholds = observerPools.get(root);
-      if (thresholds && thresholds.size === 0 && observerPools.get(root) === thresholds) observerPools.delete(root);
+      const pools = observerPools.get(root);
+      if (pools && pools.size === 0 && observerPools.get(root) === pools) observerPools.delete(root);
       setVisible(true);
       setAnimateOnMount(false);
       setSkipTransition(true);
     }
-  }, [amount, disabled, reduceMotion, ref, rootRef]);
+  }, [amount, disabled, reduceMotion, ref, rootMargin, rootRef]);
 
   return { visible, animateOnMount, skipTransition };
 }
@@ -136,11 +163,11 @@ const revealPresets: Record<RevealPreset, { distance: number; duration: number }
   image: { distance: 26, duration: 0.96 },
 };
 
-type RevealProps = HTMLMotionProps<"div"> & { children: ReactNode; amount?: number; delay?: number; className?: string; preset?: RevealPreset };
+type RevealProps = HTMLMotionProps<"div"> & { children: ReactNode; amount?: number; delay?: number; className?: string; preset?: RevealPreset; rootMargin?: string };
 
-export function ScrollReveal({ children, amount = 0.12, delay = 0, className = "", preset = "text", style, ...props }: RevealProps) {
+export function ScrollReveal({ children, amount = 0.12, delay = 0, className = "", preset = "text", rootMargin, style, ...props }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const { visible, animateOnMount, skipTransition } = useReveal(ref, amount);
+  const { visible, animateOnMount, skipTransition } = useReveal(ref, amount, false, rootMargin);
   const { distance, duration } = revealPresets[preset];
   const classes = ["abii-motion-reveal", className].filter(Boolean).join(" ");
   return <m.div ref={ref} {...props} className={classes} style={animateOnMount ? { ...style, animationDelay: `${delay}s` } : style} initial={false}
