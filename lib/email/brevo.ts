@@ -1,7 +1,7 @@
 import "server-only";
 import { renderAuthEmail } from "./templates";
 
-type Message = { recipient: string; subject: string; html: string; text: string };
+type Message = { recipient: string; subject: string; html: string; text: string; replyTo?: { email: string; name?: string } };
 
 function config() {
   const apiKey = process.env.BREVO_API_KEY;
@@ -34,7 +34,7 @@ export async function sendTransactionalEmail(message: Message): Promise<{ ok: bo
       method: "POST",
       headers: { "api-key": settings.apiKey, accept: "application/json", "content-type": "application/json" },
       // Brevo documents htmlContent, textContent, and templateId as mutually exclusive body modes.
-      body: JSON.stringify({ sender: { email: settings.email, name: settings.name }, to: [{ email: message.recipient }], subject: message.subject, htmlContent: message.html }),
+      body: JSON.stringify({ sender: { email: settings.email, name: settings.name }, to: [{ email: message.recipient }], ...(message.replyTo ? { replyTo: message.replyTo } : {}), subject: message.subject, htmlContent: message.html }),
       signal: AbortSignal.timeout(10000),
       cache: "no-store",
     });

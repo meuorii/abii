@@ -17,6 +17,7 @@ const navigation = [
   { href: "/about", label: "About" },
   { href: "/features", label: "Features" },
   { href: "/blogs", label: "Blogs" },
+  { href: "/support", label: "Support" },
 ] as const;
 
 export function LandingNav() {

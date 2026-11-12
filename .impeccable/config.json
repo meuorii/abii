@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "arial",
+        "files": [
+          "lib/email/support-template.ts"
+        ],
+        "createdAt": "2026-11-12T08:45:09.973Z",
+        "reason": "This is an inline fallback stack in a transactional email template for broad email-client compatibility, not an interface font choice."
+      }
+    ]
+  }
+}
