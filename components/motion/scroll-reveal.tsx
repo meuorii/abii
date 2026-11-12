@@ -65,7 +65,7 @@ function observeOnce(element: Element, root: Element | null, threshold: number, 
   };
 }
 
-function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number) {
+function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number, disabled = false) {
   const rootRef = useScrollRoot();
   const reduceMotion = useReducedMotion();
   // Start visible for server rendering. The layout effect hides offscreen content
@@ -76,7 +76,7 @@ function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number) {
 
   useLayoutEffect(() => {
     const element = ref.current;
-    if (!element || reduceMotion || typeof IntersectionObserver === "undefined") {
+    if (disabled || !element || reduceMotion || typeof IntersectionObserver === "undefined") {
       setVisible(true);
       setAnimateOnMount(false);
       setSkipTransition(true);
@@ -122,25 +122,35 @@ function useReveal(ref: React.RefObject<HTMLElement | null>, amount: number) {
       setAnimateOnMount(false);
       setSkipTransition(true);
     }
-  }, [amount, reduceMotion, ref, rootRef]);
+  }, [amount, disabled, reduceMotion, ref, rootRef]);
 
   return { visible, animateOnMount, skipTransition };
 }
 
-type RevealProps = HTMLMotionProps<"div"> & { children: ReactNode; amount?: number; delay?: number; className?: string };
+type RevealPreset = "text" | "button" | "card" | "image";
+const revealPresets: Record<RevealPreset, { distance: number; duration: number }> = {
+  text: { distance: 16, duration: 0.48 },
+  button: { distance: 10, duration: 0.4 },
+  card: { distance: 18, duration: 0.5 },
+  image: { distance: 20, duration: 0.62 },
+};
 
-export function ScrollReveal({ children, amount = 0.12, delay = 0, className = "", ...props }: RevealProps) {
+type RevealProps = HTMLMotionProps<"div"> & { children: ReactNode; amount?: number; delay?: number; className?: string; preset?: RevealPreset };
+
+export function ScrollReveal({ children, amount = 0.12, delay = 0, className = "", preset = "text", style, ...props }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { visible, animateOnMount, skipTransition } = useReveal(ref, amount);
+  const { distance, duration } = revealPresets[preset];
   const classes = ["abii-motion-reveal", className, animateOnMount ? "abii-scroll-enter" : ""].filter(Boolean).join(" ");
-  return <m.div ref={ref} {...props} className={classes} initial={false}
-    animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-    transition={animateOnMount || skipTransition ? { duration: 0 } : { duration: 0.6, delay: visible ? delay : 0, ease: [0.22, 1, 0.36, 1] }}>
+  return <m.div ref={ref} {...props} className={classes} style={animateOnMount ? { ...style, animationDelay: `${delay}s` } : style} initial={false}
+    animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: distance }}
+    transition={animateOnMount || skipTransition ? { duration: 0 } : { duration, delay: visible ? delay : 0, ease: [0.22, 1, 0.36, 1] }}>
     {children}
   </m.div>;
 }
 
-const StaggerContext = createContext(0.06);
+type StaggerState = { stagger: number; visible?: boolean; animateOnMount?: boolean; skipTransition?: boolean };
+const StaggerContext = createContext<StaggerState>({ stagger: 0.06 });
 
 export function StaggerContainer({ children, stagger = 0.06, className = "", as = "div" }: {
   children: ReactNode;
@@ -150,8 +160,10 @@ export function StaggerContainer({ children, stagger = 0.06, className = "", as 
   as?: "div" | "ol" | "ul";
 }) {
   const Container = as === "ol" ? m.ol : as === "ul" ? m.ul : m.div;
-  return <StaggerContext.Provider value={stagger}>
-    <Container className={`abii-motion-reveal ${className}`} initial={false} animate={{ opacity: 1 }}>
+  const ref = useRef<HTMLElement>(null);
+  const { visible, animateOnMount, skipTransition } = useReveal(ref, 0.08);
+  return <StaggerContext.Provider value={{ stagger, visible, animateOnMount, skipTransition }}>
+    <Container ref={ref as never} className={`abii-motion-reveal ${className}`} initial={false} animate={{ opacity: 1 }}>
       {children}
     </Container>
   </StaggerContext.Provider>;
@@ -163,14 +175,18 @@ export function StaggerItem({ children, className = "", index = 0, as = "div" }:
   index?: number;
   as?: "div" | "li";
 }) {
-  const stagger = useContext(StaggerContext);
+  const context = useContext(StaggerContext);
   const ref = useRef<HTMLElement>(null);
   const reduceMotion = useReducedMotion();
-  const { visible, animateOnMount, skipTransition } = useReveal(ref, 0.04);
+  const usesContainer = context.visible !== undefined;
+  const individualReveal = useReveal(ref, 0.04, usesContainer);
+  const visible = usesContainer ? context.visible! : individualReveal.visible;
+  const animateOnMount = usesContainer ? context.animateOnMount! : individualReveal.animateOnMount;
+  const skipTransition = usesContainer ? context.skipTransition! : individualReveal.skipTransition;
   const Item = as === "li" ? m.li : m.div;
   // Keep delays short and bounded. Every item observes its own viewport entry,
   // so a large grid does not launch animations for offscreen cards at once.
-  const delay = Math.min(index % 4, 3) * stagger;
+  const delay = Math.min(index % 4, 3) * context.stagger;
   const classes = ["abii-motion-reveal", "min-w-0", className, animateOnMount ? "abii-card-enter" : ""].filter(Boolean).join(" ");
   return <Item ref={ref as never} className={classes}
     style={animateOnMount && !reduceMotion ? { animationDelay: `${delay}s` } : undefined}

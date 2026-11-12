@@ -9,6 +9,7 @@ import { FeaturedArticle } from "./featured-article";
 import { ArticleReaderModal } from "./article-reader-modal";
 import { articles, categories, featuredArticle, type BlogArticle, type BlogCategory } from "./blog-data";
 import type { ArticleBlock } from "./article-bodies";
+import { ScrollReveal } from "@/components/motion/scroll-reveal";
 
 export function BlogsPageContent() {
   const [category, setCategory] = useState<"All Articles" | BlogCategory>("All Articles");
@@ -82,8 +83,8 @@ export function BlogsPageContent() {
       <LandingNav />
       <main id="blogs-main" tabIndex={-1}>
         <ResponsiveHero image="/landing/blogs/hero-blogs.png" titleId="blogs-title" mobileImageClassName="object-[68%_center]" desktopImageClassName="md:object-[56%_center] xl:object-center"><div className="max-w-[35rem] md:max-w-[48%]">
-              <h1 id="blogs-title" className="max-w-[13ch] text-[clamp(2.125rem,8vw,3rem)] font-bold leading-[1.05] tracking-[-.04em] md:text-[clamp(3rem,4.5vw,4.25rem)]">Little ideas for<br /><span className="text-pink-active">better learning.</span></h1>
-              <p className="mt-4 max-w-[46ch] text-[clamp(.9375rem,1.2vw,1.0625rem)] leading-[1.62] text-muted sm:mt-5">Explore study tips, learning techniques, and thoughtful ideas to make every study session a little more meaningful.</p>
+              <ScrollReveal><h1 id="blogs-title" className="max-w-[13ch] text-[clamp(2.125rem,8vw,3rem)] font-bold leading-[1.05] tracking-[-.04em] md:text-[clamp(3rem,4.5vw,4.25rem)]">Little ideas for<br /><span className="text-pink-active">better learning.</span></h1></ScrollReveal>
+              <ScrollReveal delay={0.1}><p className="mt-4 max-w-[46ch] text-[clamp(.9375rem,1.2vw,1.0625rem)] leading-[1.62] text-muted sm:mt-5">Explore study tips, learning techniques, and thoughtful ideas to make every study session a little more meaningful.</p></ScrollReveal>
           </div></ResponsiveHero>
 
         <FeaturedArticle article={featuredArticle} onRead={(article, trigger) => void showArticle(article, trigger)} />

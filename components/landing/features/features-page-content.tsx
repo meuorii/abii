@@ -5,6 +5,7 @@ import { WorkspaceShowcase } from "./workspace-showcase";
 import { ReviewGallery } from "./review-gallery";
 import { ScreenshotViewer } from "./screenshot-viewer";
 import { ResponsiveHero } from "../responsive-hero";
+import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/motion/scroll-reveal";
 const container = "mx-auto w-[min(1152px,calc(100%-2.5rem))] sm:w-[min(1152px,calc(100%-3rem))]";
 const heading = "mt-2 text-[clamp(1.875rem,6vw,2.5rem)] font-bold leading-[1.1] tracking-[-.04em] md:text-[clamp(2.5rem,3.5vw,3.375rem)]";
 
@@ -24,16 +25,16 @@ export function FeaturesPageContent() {
       <LandingNav />
       <main id="features-main" tabIndex={-1}>
         <ResponsiveHero image="/landing/features/features-hero.png" titleId="features-title" mobileImageClassName="object-[70%_center]" desktopImageClassName="md:object-[54%_center] xl:object-center"><div className="max-w-[39rem] md:max-w-[48%]">
-            <h1 id="features-title" className="max-w-[15ch] text-[clamp(2.125rem,8vw,3rem)] font-bold leading-[1.05] tracking-[-.04em] md:text-[clamp(3rem,4.5vw,4.25rem)]">Everything you need to make <span className="text-pink-primary">learning stick.</span></h1>
-            <p className="mt-4 max-w-[48ch] text-[clamp(.9375rem,1.2vw,1.0625rem)] leading-[1.62] text-muted sm:mt-5">Keep your study materials organized, turn knowledge into practice, and see how far you&apos;ve come all in one friendly space.</p>
+            <ScrollReveal><h1 id="features-title" className="max-w-[15ch] text-[clamp(2.125rem,8vw,3rem)] font-bold leading-[1.05] tracking-[-.04em] md:text-[clamp(3rem,4.5vw,4.25rem)]">Everything you need to make <span className="text-pink-primary">learning stick.</span></h1></ScrollReveal>
+            <ScrollReveal delay={0.1}><p className="mt-4 max-w-[48ch] text-[clamp(.9375rem,1.2vw,1.0625rem)] leading-[1.62] text-muted sm:mt-5">Keep your study materials organized, turn knowledge into practice, and see how far you&apos;ve come all in one friendly space.</p></ScrollReveal>
           </div></ResponsiveHero>
 
         <section className="px-5 py-16 sm:px-6 sm:py-24" aria-labelledby="workspace-title">
           <div className="mx-auto mb-9 max-w-[48rem] text-center">
-            <h2 id="workspace-title" className={heading}>A place for every subject.</h2>
-            <p className="mx-auto mt-3 max-w-[68ch] text-base leading-relaxed text-muted">From subject folders to individual flashcards, keep your study materials organized and easy to find. Everything has its place, so you can focus on learning.</p>
+            <ScrollReveal><h2 id="workspace-title" className={heading}>A place for every subject.</h2></ScrollReveal>
+            <ScrollReveal delay={0.1}><p className="mx-auto mt-3 max-w-[68ch] text-base leading-relaxed text-muted">From subject folders to individual flashcards, keep your study materials organized and easy to find. Everything has its place, so you can focus on learning.</p></ScrollReveal>
           </div>
-          <WorkspaceShowcase />
+          <ScrollReveal preset="image" delay={0.16}><WorkspaceShowcase /></ScrollReveal>
         </section>
 
         <section className={`${container} grid items-center gap-8 py-16 sm:py-24 lg:grid-cols-[1.18fr_.82fr] lg:gap-16`} aria-labelledby="flashcards-title">
@@ -75,24 +76,24 @@ export function FeaturesPageContent() {
               <li>• Subject and topic mastery</li><li>• Study activity and streaks</li><li>• Quiz accuracy and performance</li>
             </ul>
           </div>
-          <div className="flex min-w-0 flex-col items-end gap-2">
+          <ScrollReveal preset="image" className="flex min-w-0 flex-col items-end gap-2">
             <div className="overflow-hidden rounded-2xl bg-pink-soft p-1">
               <Image src="/landing/features/progress.png" alt="Abii progress dashboard showing mastery and study activity" width={1920} height={1080} unoptimized sizes="(max-width: 700px) calc(100vw - 40px), (max-width: 1000px) 68vw, 820px" />
             </div>
             <ScreenshotViewer src="/landing/features/progress.png" alt="Abii progress dashboard showing mastery and study activity" width={1920} height={1080} sizes="100vw" />
-          </div>
+          </ScrollReveal>
         </section>
 
         <section className="bg-pink-soft px-5 py-16 sm:px-6 sm:py-[5.5rem]" aria-labelledby="achievements-title">
           <div className="mx-auto mb-8 max-w-[48rem] text-center"><h2 id="achievements-title" className={heading}>Little wins deserve a little celebration.</h2><p className="mx-auto mt-3 max-w-[66ch] text-base leading-relaxed text-muted">Every study session brings you closer to something great. Unlock badges, reach new milestones, and celebrate how far you&apos;ve come.</p>
           </div>
-          <div className="mx-auto grid max-w-[62.5rem] grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-6">
+          <StaggerContainer stagger={0.06} className="mx-auto grid max-w-[62.5rem] grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-6">
             {badges.map((badge) => (
-              <figure className="text-center" key={badge.src}><Image className="mx-auto h-auto w-full max-w-[142px] transition-transform duration-150 hover:-translate-y-0.5" src={`/badges/unlocked/${badge.src}`} alt="" width={240} height={240} sizes="(max-width: 500px) 30vw, (max-width: 900px) 20vw, 150px" />
+              <StaggerItem className="text-center" index={badges.indexOf(badge)} key={badge.src}><figure><Image className="mx-auto h-auto w-full max-w-[142px] transition-transform duration-150 hover:-translate-y-0.5" src={`/badges/unlocked/${badge.src}`} alt="" width={240} height={240} sizes="(max-width: 500px) 30vw, (max-width: 900px) 20vw, 150px" />
                 <figcaption className="mt-2 text-xs font-semibold text-pink-primary">{badge.name}</figcaption>
-              </figure>
+              </figure></StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         </section>
       </main>
       <LandingFooter />
