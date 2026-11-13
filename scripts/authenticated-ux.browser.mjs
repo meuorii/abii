@@ -185,19 +185,38 @@ test("authenticated routes remain accessible and fit the responsive viewport mat
     await page.goto(`${baseURL}/subjects`, { waitUntil: "domcontentloaded" });
     await waitForRouteContent(page);
     const main = page.getByRole("main", { name: "Application content" });
+    await main.getByRole("heading", { level: 1 }).waitFor({ state: "visible" });
+    await waitForVisiblePageHeading(page);
+
+    const mobileNavigation = page.getByRole("navigation", { name: "Mobile bottom navigation" });
     const scrollTopBeforeModal = await main.evaluate((element) => {
       element.scrollTop = Math.min(120, element.scrollHeight - element.clientHeight);
       return element.scrollTop;
     });
-    assert.ok(scrollTopBeforeModal > 0, "the mobile subjects page should provide a scroll position to preserve");
+    assert.ok(scrollTopBeforeModal > 0, "the fully initialized mobile subjects page should provide a scroll position to preserve");
+    await mobileNavigation.getByRole("link", { name: "Review" }).click();
+    await page.waitForURL((url) => url.pathname === "/review");
+    await waitForRouteContent(page);
+    await main.getByRole("heading", { level: 1 }).waitFor({ state: "visible" });
+    await waitForVisiblePageHeading(page);
+    assert.equal(await main.evaluate((element) => element.scrollTop), 0, "client-side route navigation should reset the authenticated scroll root");
+    await mobileNavigation.getByRole("link", { name: "Subjects" }).click();
+    await page.waitForURL((url) => url.pathname === "/subjects");
+    await waitForRouteContent(page);
+    await main.getByRole("heading", { level: 1 }).waitFor({ state: "visible" });
+    await waitForVisiblePageHeading(page);
+    const modalScrollTop = await main.evaluate((element) => {
+      element.scrollTop = Math.min(120, element.scrollHeight - element.clientHeight);
+      return element.scrollTop;
+    });
+    assert.ok(modalScrollTop > 0, "the re-entered Subjects page should be scrollable before opening its modal");
     // The shell also exposes an Add Subject shortcut in mobile navigation.
     // Scope to page content so this activates the page's own dialog trigger.
     const addSubject = main.getByRole("button", { name: "Add Subject" }).first();
     assert.equal(await main.getByRole("button", { name: "Add Subject" }).count(), 1, `the subjects page should expose one content-level Add Subject trigger; page content=${JSON.stringify(await main.innerText())}`);
-    const addSubjectHandle = await addSubject.elementHandle();
-    await page.waitForFunction((element) => Object.keys(element ?? {}).some((key) => key.startsWith("__reactProps$")), addSubjectHandle, { timeout: 15_000 });
+    await addSubject.waitFor({ state: "visible" });
     const scrollTopBeforeClick = await main.evaluate((element) => element.scrollTop);
-    assert.equal(scrollTopBeforeClick, scrollTopBeforeModal, "the modal trigger click should not move the underlying scroll root");
+    assert.equal(scrollTopBeforeClick, modalScrollTop, "the modal trigger should not move the underlying scroll root");
     await addSubject.click();
     const dialog = page.getByRole("dialog", { name: /create a subject/i });
     await dialog.waitFor({ state: "visible", timeout: 5_000 }).catch(async (error) => {
@@ -210,9 +229,10 @@ test("authenticated routes remain accessible and fit the responsive viewport mat
       throw new Error(`Create Subject modal did not open: ${JSON.stringify({ state, pageErrors })}; ${error.message}`);
     });
     assert.equal(await dialog.evaluate((element) => getComputedStyle(element.parentElement).zIndex), "120");
+    assert.equal(await dialog.evaluate((element) => element.contains(document.activeElement)), true, "opening the modal should move focus into the dialog");
     assert.equal(await main.evaluate((element) => getComputedStyle(element).overflowY), "hidden", "opening a modal should lock the authenticated scroll root");
     const scrollTopAfterOpen = await main.evaluate((element) => element.scrollTop);
-    assert.equal(scrollTopAfterOpen, scrollTopBeforeModal, `opening a modal should preserve the underlying scroll offset (before click ${scrollTopBeforeClick}, before modal ${scrollTopBeforeModal}, after open ${scrollTopAfterOpen})`);
+    assert.equal(scrollTopAfterOpen, modalScrollTop, `opening a modal should preserve the underlying scroll offset (before click ${scrollTopBeforeClick}, before modal ${modalScrollTop}, after open ${scrollTopAfterOpen})`);
     const dialogButtons = dialog.getByRole("button");
     await page.keyboard.press("Shift+Tab");
     assert.equal(await dialogButtons.last().evaluate((element) => element === document.activeElement), true, "Shift+Tab should wrap to the last control");
@@ -222,7 +242,7 @@ test("authenticated routes remain accessible and fit the responsive viewport mat
     await page.screenshot({ path: join(tmpdir(), "abii-phase5-modal-390.png"), fullPage: true });
     await page.keyboard.press("Escape");
     await dialog.waitFor({ state: "detached" });
-    assert.equal(await main.evaluate((element) => element.scrollTop), scrollTopBeforeModal, "closing a modal should restore the underlying scroll offset");
+    assert.equal(await main.evaluate((element) => element.scrollTop), modalScrollTop, "closing a modal should restore the underlying scroll offset");
     assert.equal(await addSubject.evaluate((element) => element === document.activeElement), true, "closing the dialog should restore focus to its trigger");
 
     const touchContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: "reduce" });
@@ -237,9 +257,10 @@ test("authenticated routes remain accessible and fit the responsive viewport mat
     await touchPage.getByRole("navigation", { name: "Mobile bottom navigation" }).getByRole("link", { name: "Subjects" }).tap();
     await touchPage.waitForURL((url) => url.pathname === "/subjects");
     await waitForRouteContent(touchPage);
+    await touchPage.getByRole("main", { name: "Application content" }).getByRole("heading", { level: 1 }).waitFor({ state: "visible" });
+    await waitForVisiblePageHeading(touchPage);
     const touchAddSubject = touchPage.getByRole("main", { name: "Application content" }).getByRole("button", { name: "Add Subject" }).first();
-    const touchAddSubjectHandle = await touchAddSubject.elementHandle();
-    await touchPage.waitForFunction((element) => Object.keys(element ?? {}).some((key) => key.startsWith("__reactProps$")), touchAddSubjectHandle, { timeout: 15_000 });
+    await touchAddSubject.waitFor({ state: "visible" });
     await touchAddSubject.tap();
     const touchDialog = touchPage.getByRole("dialog", { name: /create a subject/i });
     await touchDialog.waitFor({ state: "visible" });
