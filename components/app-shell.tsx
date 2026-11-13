@@ -216,8 +216,9 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
                   <div className="absolute right-0 top-full mt-2 w-48 rounded-xl border border-[#E8E2E5] bg-white p-2 shadow-lg">
                     <Link
                       href="/profile"
+                      aria-current={pathname === "/profile" ? "page" : undefined}
                       onClick={() => setProfileMenuOpen(false)}
-                      className="block rounded-lg px-3 py-2 text-sm text-[#756B72] hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"
+                      className={`block rounded-lg px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] ${pathname === "/profile" ? "bg-[#FFF0F4] font-semibold text-[#B84369]" : "text-[#756B72] hover:bg-[#FFF7F9]"}`}
                     >
                       Profile
                     </Link>

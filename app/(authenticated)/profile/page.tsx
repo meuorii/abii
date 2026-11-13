@@ -1,22 +1,27 @@
 import { redirect } from "next/navigation";
+import { ProfileClient } from "@/components/profile/profile-client";
 import { getCurrentUser } from "@/lib/auth/session";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  const createdAt = user.createdAt ? new Date(user.createdAt) : null;
+  const memberSince = createdAt && Number.isFinite(createdAt.getTime())
+    ? new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(createdAt)
+    : null;
+
   return (
-    
-      <section className="rounded-3xl border border-[#E8E2E5] bg-white p-6 sm:p-8">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FFE8EF] text-xl font-bold text-[#B83F68]">
-          {user.name?.trim().charAt(0).toUpperCase() || "A"}
-        </div>
-        <h2 className="mt-4 text-xl font-bold">{user.name}</h2>
-        <p className="mt-1 text-sm text-[#756B72]">{user.email}</p>
-        <p className="mt-5 max-w-xl text-sm leading-6 text-[#756B72]">This is your account overview. Profile editing will be added in a later phase.</p>
-      </section>
-    
+    <ProfileClient
+      initialUser={{
+        name: user.name,
+        email: user.email,
+        profileImage: user.profileImage ?? "",
+        memberSince,
+      }}
+    />
   );
 }

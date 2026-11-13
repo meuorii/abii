@@ -1,22 +1,18 @@
 "use client";
 
-import Image from "next/image";
 import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal, modalCancelClass, modalDangerClass } from "@/components/ui/modal";
 import { ModalButtonContent } from "@/components/ui/modal-button-content";
-import { LogoutButton } from "@/components/auth/logout-button";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
-import { SlidersHorizontal, ShieldCheck, UserRound, Grid2X2, List, Download, Clock3, Layers3, Volume2, Play } from "lucide-react";
+import { SlidersHorizontal, ShieldCheck, Grid2X2, List, Download, Clock3, Layers3, Volume2, Play } from "lucide-react";
 import { getAbiiSoundVolume, isAbiiSoundEnabled, playAbiiSound, setAbiiSoundEnabled, setAbiiSoundVolume } from "@/lib/sounds";
-import { ProfilePictureCropModal } from "@/components/settings/profile-picture-crop-modal";
-import { useToast } from "@/components/ui/toast-provider";
 
 type Preferences = { targetSubjects: number; defaultLandingPage: string; subjectLayout: "grid" | "list"; studyTimezone: string };
-type InitialUser = { name: string; email: string; profileImage: string; createdAt: string; settings?: Partial<Preferences> | null };
+type InitialUser = { settings?: Partial<Preferences> | null };
 type Notice = { kind: "success" | "error"; text: string } | null;
-type NoticeKey = "preferences" | "profile" | "photo" | "password" | "export" | "history" | "materials" | "account" | "logout";
+type NoticeKey = "preferences" | "export" | "history" | "materials";
 type NoticeMap = Partial<Record<NoticeKey, Notice>>;
 const defaultPreferences: Preferences = { targetSubjects: 5, defaultLandingPage: "/dashboard", subjectLayout: "grid", studyTimezone: "UTC" };
 
@@ -32,22 +28,14 @@ function InlineNotice({ notice }: { notice: Notice }) { if (!notice) return null
 
 export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
   const router = useRouter();
-  const { toast } = useToast();
   const [preferences, setPreferences] = useState<Preferences>(() => ({ ...defaultPreferences, ...(initialUser.settings ?? {}), defaultLandingPage: initialUser.settings?.defaultLandingPage === "/favorites" ? "/dashboard" : initialUser.settings?.defaultLandingPage ?? defaultPreferences.defaultLandingPage }));
-  const [profile, setProfile] = useState({ name: initialUser.name, email: initialUser.email });
-  const [profileImage, setProfileImage] = useState(initialUser.profileImage);
-  const [cropFile, setCropFile] = useState<File | null>(null);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState("");
   const [notices, setNotices] = useState<NoticeMap>({});
   function setNoticeFor(key: NoticeKey, value: Notice) {
     setNotices((previous) => ({ ...previous, [key]: value }));
   }
   const [privacyOpen, setPrivacyOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<"history" | "materials" | "account" | null>(null);
-  const [deleteAccountText, setDeleteAccountText] = useState("");
+  const [confirmAction, setConfirmAction] = useState<"history" | "materials" | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [soundVolume, setSoundVolume] = useState(42);
 
@@ -78,80 +66,19 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
     catch (error) { setNoticeFor("preferences", { kind: "error", text: error instanceof Error ? error.message : "Couldn’t save preferences. Check your connection and try again." }); }
     finally { setSaving(""); }
   }
-  async function saveProfile(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setSaving("profile"); setNoticeFor("profile", null);
-    try { const data = await request("/api/account/profile", "PATCH", profile); setProfile(data.user); window.dispatchEvent(new CustomEvent("abii-profile-name-updated", { detail: { name: data.user.name } })); setNoticeFor("profile", { kind: "success", text: data.message || "Profile updated. Your changes have been saved." }); }
-    catch (error) { setNoticeFor("profile", { kind: "error", text: error instanceof Error ? error.message : "Could not update account details." }); }
-    finally { setSaving(""); }
-  }
-  async function selectProfilePhoto(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { setNoticeFor("photo", { kind: "error", text: "Choose a JPG, PNG, or WebP image." }); return; }
-    if (file.size > 15 * 1024 * 1024) { setNoticeFor("photo", { kind: "error", text: "Choose a source image no larger than 15 MB." }); return; }
-    if (typeof createImageBitmap !== "function") { setNoticeFor("photo", { kind: "error", text: "Your browser cannot validate this image. Please try another browser." }); return; }
-    let bitmap: ImageBitmap | undefined;
-    try {
-      bitmap = await createImageBitmap(file);
-      if (bitmap.width > 6000 || bitmap.height > 6000 || bitmap.width * bitmap.height > 20_000_000) { setNoticeFor("photo", { kind: "error", text: "Choose an image no larger than 6000 × 6000 pixels or 20 megapixels." }); return; }
-    } catch { setNoticeFor("photo", { kind: "error", text: "The selected image could not be decoded. Please choose another image." }); return; }
-    finally { bitmap?.close(); }
-    setNoticeFor("photo", null);
-    setCropFile(file);
-  }
-  async function editSavedPhoto() {
-    if (!profileImage || saving) return;
-    setSaving("photo"); setNoticeFor("photo", null);
-    try {
-      const response = await fetch(profileImage, { mode: "cors", credentials: "omit", cache: "no-store" });
-      if (!response.ok) throw new Error("The saved photo could not be downloaded.");
-      const blob = await response.blob();
-      if (!["image/jpeg", "image/png", "image/webp"].includes(blob.type) || blob.size > 15 * 1024 * 1024) throw new Error("This saved image cannot be edited here. Select the original photo again.");
-      setCropFile(new File([blob], "saved-profile-photo", { type: blob.type }));
-    } catch {
-      setNoticeFor("photo", { kind: "error", text: "This hosted photo can’t be safely edited in the browser. Choose the original image again to crop it." });
-    } finally { setSaving(""); }
-  }
-  async function saveCroppedPhoto(image: string) {
-    setSaving("photo"); setNoticeFor("photo", null);
-    try {
-      const data = await request("/api/account/profile-picture", "PATCH", { image });
-      if (typeof data.profileImage !== "string" || !data.profileImage) throw new Error("The saved profile photo URL was missing. Please try again.");
-      setProfileImage(data.profileImage);
-      window.dispatchEvent(new CustomEvent("abii-profile-image-updated", { detail: { profileImage: data.profileImage } }));
-      toast({ kind: "success", title: "Profile photo updated!", message: "Your new profile picture has been saved." });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not update profile photo.";
-      setNoticeFor("photo", { kind: "error", text: message });
-      throw error;
-    } finally { setSaving(""); }
-  }
-  async function removeProfilePhoto() {
-    setSaving("photo"); setNoticeFor("photo", null);
-    try { const data = await request("/api/account/profile-picture", "DELETE"); setProfileImage(""); window.dispatchEvent(new CustomEvent("abii-profile-image-updated", { detail: { profileImage: "" } })); setNoticeFor("photo", { kind: "success", text: data.message || "Profile photo removed." }); }
-    catch (error) { setNoticeFor("photo", { kind: "error", text: error instanceof Error ? error.message : "Could not remove profile photo." }); }
-    finally { setSaving(""); }
-  }
-
-  async function changePassword(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setSaving("password"); setNoticeFor("password", null);
-    try { const data = await request("/api/account/password", "PATCH", { currentPassword, newPassword, confirmPassword }); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); setNoticeFor("password", { kind: "success", text: data.message }); window.setTimeout(() => { router.replace(data.redirectTo || "/login"); }, 1200); }
-    catch (error) { setNoticeFor("password", { kind: "error", text: error instanceof Error ? error.message : "Could not change password." }); }
-    finally { setSaving(""); }
-  }
   async function runAction(key: string, url: string, method: string, body?: unknown, download = false) {
-    setSaving(key); setNoticeFor(key === "history" || key === "materials" || key === "account" ? key : "export", null);
+    const noticeKey: NoticeKey = key === "history" || key === "materials" ? key : "export";
+    setSaving(key); setNoticeFor(noticeKey, null);
     try {
       if (download) {
         const response = await fetch(url);
         if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || "Your export could not be created."); }
         const blob = await response.blob(); const objectUrl = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = objectUrl; link.download = `abii-study-data-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(link); link.click(); link.remove(); window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000); setNoticeFor("export", { kind: "success", text: "Your study data export has been prepared. Check your browser’s downloads." });
       } else {
-        const data = await request(url, method, body); setNoticeFor(key === "history" || key === "materials" || key === "account" ? key : "export", { kind: "success", text: data.message || (key === "history" ? "Study history cleared. Your subjects and flashcards are still here." : key === "materials" ? "Study materials deleted. Your account is still active." : "Account deleted." ) }); if (key === "history" || key === "materials") setConfirmAction(null);
+        const data = await request(url, method, body); setNoticeFor(noticeKey, { kind: "success", text: data.message || (key === "history" ? "Study history cleared. Your subjects and flashcards are still here." : "Study materials deleted. Your account is still active." ) }); if (key === "history" || key === "materials") setConfirmAction(null);
         if (data.redirectTo) window.setTimeout(() => { router.replace(data.redirectTo); }, 900);
       }
-    } catch (error) { setNoticeFor(key === "history" || key === "materials" || key === "account" ? key : "export", { kind: "error", text: error instanceof Error ? error.message : "Something went wrong." }); }
+    } catch (error) { setNoticeFor(noticeKey, { kind: "error", text: error instanceof Error ? error.message : "Something went wrong." }); }
     finally { setSaving(""); }
   }
 
@@ -161,7 +88,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
       headingId="settings-hero-title"
       eyebrow={<div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF6F96] text-xl text-white shadow-sm sm:h-12 sm:w-12 sm:text-2xl" aria-hidden="true">⚙</div>}
       title={<h1 className="text-[clamp(1.45rem,2.6vw,2.15rem)] font-bold leading-[1.12] tracking-[-0.04em] text-[#18384D]">Make Abii Feel Like Yours</h1>}
-      description={<p className="mt-2 max-w-[390px] text-[12px] leading-[1.6] text-[#557187] sm:mt-3 sm:text-sm">Customize your study experience, manage your account, and keep your learning data under control.</p>}
+      description={<p className="mt-2 max-w-[390px] text-[12px] leading-[1.6] text-[#557187] sm:mt-3 sm:text-sm">Set your study preferences and manage your saved learning data.</p>}
       mascotSrc="/dashboard-hero/settings.png"
       mascotAlt="Abii holding a settings gear"
       priority
@@ -169,7 +96,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
     />
     <div className="space-y-2">{(Object.entries(notices) as [NoticeKey, Notice][]).filter((entry) => entry[1]).map(([key, item]) => <div key={key}><InlineNotice notice={item} /></div>)}</div>
 
-    <div className="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2 xl:gap-5">
+    <div className="mx-auto grid w-full max-w-6xl min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-2 xl:gap-6">
       <div className="min-w-0 space-y-4 sm:space-y-5">
         <SectionCard icon={<SlidersHorizontal className="h-5 w-5"/>} title="Study Preferences" description="Customize how Abii organizes your study experience.">
           <form onSubmit={savePreferences} className="space-y-4 rounded-xl border border-[#F0E9EC] p-3.5 sm:p-4">
@@ -201,7 +128,10 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
           </div>
         </SectionCard>
 
-        <SectionCard icon={<ShieldCheck className="h-5 w-5"/>} title="Data & Privacy" description="Export a copy of supported study data or manage your saved materials and history." delay={0.24}>
+      </div>
+
+      <div className="min-w-0 space-y-4 sm:space-y-5">
+        <SectionCard icon={<ShieldCheck className="h-5 w-5"/>} title="Data & Privacy" description="Export a copy of supported study data or manage your saved materials and history." delay={0.12}>
           <div className="divide-y divide-[#F1EAED] rounded-xl border border-[#F0E9EC] px-3.5 sm:px-4">
             <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF0F4] text-lg text-[#E9577D]"><Download className="h-5 w-5"/></span><div><p className="text-sm font-semibold text-[#18384D]">Export Study Data</p><p className="mt-1 text-xs leading-5 text-[#6E879A]">Download your subjects, flashcards, progress, and study history.</p></div></div><button type="button" disabled={saving !== ""} onClick={() => void runAction("export", "/api/data/export", "GET", undefined, true)} className={secondaryButton}>{saving === "export" ? "Preparing Download…" : "Export"}</button></div>
             <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF0F4] text-lg text-[#E9577D]"><Clock3 className="h-5 w-5"/></span><div><p className="text-sm font-semibold text-[#18384D]">Clear Study History</p><p className="mt-1 text-xs leading-5 text-[#6E879A]">Remove review records and completed-session history. Your subjects and flashcards stay.</p></div></div><button type="button" disabled={saving !== ""} onClick={() => setConfirmAction("history")} className={dangerButton}>{saving === "history" ? "Clearing Study History…" : "Clear"}</button></div>
@@ -210,29 +140,11 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
           </div>
         </SectionCard>
       </div>
-
-      <div className="min-w-0 space-y-4 sm:space-y-5">
-        <SectionCard icon={<UserRound className="h-5 w-5"/>} title="Account & Security" description="Manage the account details shown in your Abii profile and protect your account." delay={0.12}>
-          <div className="rounded-xl border border-[#F0E9EC] p-3.5 sm:p-4">
-            <div className="mb-4 flex flex-wrap items-center gap-3"><div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#F4DCE4] bg-[#FFE0E9] text-lg font-semibold text-[#D94E7B]">{profileImage ? <Image key={profileImage} src={profileImage} alt="Profile photo preview" fill sizes="56px" unoptimized className="object-cover" /> : (profile.name.trim().charAt(0).toUpperCase() || "A")}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-[#18384D]">{profile.name}</p><p className="truncate text-xs text-[#6E879A]">{profile.email}</p><div className="mt-2 flex flex-wrap gap-2"><label className={`${secondaryButton} cursor-pointer ${saving === "photo" ? "pointer-events-none opacity-60" : ""}`}>{saving === "photo" ? "Updating…" : "Change Photo"}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={saving !== ""} onChange={selectProfilePhoto} /></label>{profileImage && <button type="button" disabled={saving !== ""} className={secondaryButton} onClick={() => void editSavedPhoto()}>Edit / Crop</button>}{profileImage && <button type="button" disabled={saving !== ""} className={secondaryButton} onClick={removeProfilePhoto}>Remove</button>}</div></div></div><p className="text-xs leading-5 text-[#6E879A]">Source: JPG, PNG, or WebP · up to 15 MB and 20 megapixels. Saved square crop: up to 1 MB. Your photo appears in the account header too.</p>
-            <form onSubmit={saveProfile} className="mt-4 space-y-3.5">
-              <div><label htmlFor="profileName" className="text-xs font-semibold text-[#18384D]">Name</label><input id="profileName" autoComplete="name" maxLength={80} required value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} className={inputClass} /></div>
-              <div><label htmlFor="profileEmail" className="text-xs font-semibold text-[#18384D]">Email</label><input id="profileEmail" type="email" autoComplete="email" maxLength={254} required value={profile.email} readOnly aria-readonly="true" className={`${inputClass} cursor-not-allowed opacity-75`} /></div>
-              <div className="flex justify-end"><button type="submit" disabled={saving !== ""} className={buttonClass}>{saving === "profile" ? "Updating Profile…" : "Save Details"}</button></div>
-            </form>
-          </div>
-          <div className="mt-3 rounded-xl border border-[#F0E9EC] p-3.5 sm:p-4"><h3 className="text-sm font-semibold text-[#18384D]">Change Password</h3><p className="mt-1 text-xs leading-5 text-[#6E879A]">Use your current password to set a new one. You’ll need to log in again afterward.</p><form onSubmit={changePassword} className="mt-3 space-y-3"><div><label htmlFor="currentPassword" className="text-xs font-semibold text-[#18384D]">Current password</label><input id="currentPassword" type="password" autoComplete="current-password" required value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} className={inputClass} /></div><div><label htmlFor="newPassword" className="text-xs font-semibold text-[#18384D]">New password</label><input id="newPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className={inputClass} /></div><div><label htmlFor="confirmPassword" className="text-xs font-semibold text-[#18384D]">Confirm new password</label><input id="confirmPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className={inputClass} /></div><div className="flex justify-end"><button type="submit" disabled={saving !== ""} className={secondaryButton}>{saving === "password" ? "Updating…" : "Change Password"}</button></div></form></div>
-          <div className="mt-3 flex flex-col gap-3 rounded-xl border border-[#F0E9EC] p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4"><div><h3 className="text-sm font-semibold text-[#18384D]">Log Out</h3><p className="mt-1 text-xs leading-5 text-[#6E879A]">End your current Abii session on this browser.</p></div><LogoutButton /></div>
-          <div className="mt-3 rounded-xl border border-[#F0C7D3] bg-[#FFFBFC] p-3.5 sm:p-4"><h3 className="text-sm font-semibold text-[#B8435D]">Delete Account</h3><p className="mt-1 text-xs leading-5 text-[#876A73]">Permanently delete your account, subjects, flashcards, review history, and study sessions. This cannot be undone.</p><button type="button" disabled={saving !== ""} onClick={() => { setDeleteAccountText(""); setConfirmAction("account"); }} className={dangerButton + " mt-3"}>{saving === "account" ? "Deleting account…" : "Delete Account"}</button></div>
-        </SectionCard>
-        <ScrollReveal delay={0.12}><section className="relative overflow-hidden rounded-2xl border border-[#F8E4EB] bg-gradient-to-r from-[#FFF7F9] to-[#FFF0F4] p-5 sm:p-6"><div className="relative z-10 max-w-[65%]"><p className="text-sm font-semibold text-[#18384D]">Your data matters.</p><p className="mt-1.5 text-xs leading-5 text-[#6E879A]">Your study materials and learning history belong to you. Export or remove your data whenever you need.</p></div><div className="pointer-events-none absolute -bottom-3 -right-2 h-28 w-28 opacity-90"><Image src="/dashboard-hero/settings.png" alt="" fill sizes="112px" className="object-contain object-bottom" /></div></section></ScrollReveal>
-      </div>
     </div>
 
-    <Modal open={privacyOpen} onClose={() => setPrivacyOpen(false)} action="information" title="Your data, your choice" description="What these controls do"><ul className="space-y-3 text-sm leading-6 text-[#756B72]"><li><strong className="text-[#2F2930]">Export:</strong> downloads available profile details, subjects, flashcards, review records, and completed sessions as JSON. Password hashes and session tokens are excluded.</li><li><strong className="text-[#2F2930]">Clear Study History:</strong> removes review records and completed sessions while preserving your subjects and flashcards.</li><li><strong className="text-[#2F2930]">Delete Study Materials:</strong> removes subjects, flashcards, and associated review/session records while preserving your account.</li><li><strong className="text-[#2F2930]">Delete Account:</strong> removes your account and associated study data. Confirm before proceeding because this cannot be undone.</li></ul><p className="mt-4 rounded-xl bg-[#FFF7F9] p-3 text-xs leading-5 text-[#756B72]">This panel describes the controls currently implemented in Abii; it is not a substitute for a full published privacy policy.</p></Modal>
-    {cropFile && <ProfilePictureCropModal file={cropFile} onClose={() => setCropFile(null)} onSave={saveCroppedPhoto} />}
-    <Modal open={confirmAction !== null} onClose={() => { if (!saving) setConfirmAction(null); }} action="delete" alert busy={Boolean(saving)} title={confirmAction === "history" ? "Clear Study History?" : confirmAction === "materials" ? "Delete All Study Materials?" : "Delete Your Account?"} description={confirmAction === "history" ? "Review history will be removed while your subjects and flashcards stay." : confirmAction === "materials" ? "Your subjects, topics, flashcards, and related study history will be deleted. Your account will remain." : "Your account and all associated study data will be permanently deleted."} footer={<><button type="button" disabled={Boolean(saving)} onClick={() => setConfirmAction(null)} className={modalCancelClass}>Cancel</button><button type="button" disabled={Boolean(saving) || (confirmAction === "account" && deleteAccountText !== "DELETE")} onClick={() => { if (confirmAction === "history") void runAction("history", "/api/data/history", "DELETE"); else if (confirmAction === "materials") void runAction("materials", "/api/data/materials", "DELETE"); else if (confirmAction === "account") void runAction("account", "/api/account", "DELETE", { confirmation: "DELETE" }); }} className={modalDangerClass}><ModalButtonContent loading={Boolean(saving)} label={confirmAction === "history" ? "Clear Study History" : confirmAction === "materials" ? "Delete Study Materials" : "Delete Account"} loadingLabel={saving === "history" ? "Clearing Study History…" : saving === "materials" ? "Deleting Study Materials…" : "Deleting Account…"} /></button></>}>
-      {confirmAction === "history" ? <p className="text-sm leading-6 text-[#756B72]">Review records and completed session history will be removed. Your subjects and flashcards remain.</p> : confirmAction === "materials" ? <p className="text-sm leading-6 text-[#756B72]">Subjects, topics, flashcards, review records, and quiz sessions will be deleted. Your user account remains.</p> : <div><p className="text-sm leading-6 text-[#756B72]">Your account, subjects, topics, flashcards, review history, and study sessions will be permanently deleted.</p><label htmlFor="deleteAccountConfirm" className="mt-4 block text-[13px] font-semibold text-[#2F2930]">Type DELETE to confirm</label><input id="deleteAccountConfirm" value={deleteAccountText} onChange={e=>setDeleteAccountText(e.target.value)} className={inputClass} placeholder="DELETE" autoComplete="off"/></div>}
+    <Modal open={privacyOpen} onClose={() => setPrivacyOpen(false)} action="information" title="Your data, your choice" description="What these controls do"><ul className="space-y-3 text-sm leading-6 text-[#756B72]"><li><strong className="text-[#2F2930]">Export:</strong> downloads available profile details, subjects, flashcards, review records, and completed sessions as JSON. Password hashes and session tokens are excluded.</li><li><strong className="text-[#2F2930]">Clear Study History:</strong> removes review records and completed sessions while preserving your subjects and flashcards.</li><li><strong className="text-[#2F2930]">Delete Study Materials:</strong> removes subjects, flashcards, and associated review/session records while preserving your account.</li><li><strong className="text-[#2F2930]">Delete Account:</strong> available from Profile and removes your account and associated study data after confirmation.</li></ul><p className="mt-4 rounded-xl bg-[#FFF7F9] p-3 text-xs leading-5 text-[#756B72]">This panel describes the controls currently implemented in Abii; it is not a substitute for a full published privacy policy.</p></Modal>
+    <Modal open={confirmAction !== null} onClose={() => { if (!saving) setConfirmAction(null); }} action="delete" alert busy={Boolean(saving)} title={confirmAction === "history" ? "Clear Study History?" : "Delete All Study Materials?"} description={confirmAction === "history" ? "Review history will be removed while your subjects and flashcards stay." : "Your subjects, topics, flashcards, and related study history will be deleted. Your account will remain."} footer={<><button type="button" disabled={Boolean(saving)} onClick={() => setConfirmAction(null)} className={modalCancelClass}>Cancel</button><button type="button" disabled={Boolean(saving)} onClick={() => { if (confirmAction === "history") void runAction("history", "/api/data/history", "DELETE"); else if (confirmAction === "materials") void runAction("materials", "/api/data/materials", "DELETE"); }} className={modalDangerClass}><ModalButtonContent loading={Boolean(saving)} label={confirmAction === "history" ? "Clear Study History" : "Delete Study Materials"} loadingLabel={saving === "history" ? "Clearing Study History…" : "Deleting Study Materials…"} /></button></>}>
+      {confirmAction === "history" ? <p className="text-sm leading-6 text-[#756B72]">Review records and completed session history will be removed. Your subjects and flashcards remain.</p> : <p className="text-sm leading-6 text-[#756B72]">Subjects, topics, flashcards, review records, and quiz sessions will be deleted. Your user account remains.</p>}
     </Modal>
   </div>;
 }
