@@ -33,3 +33,60 @@ test("page and badge loaders share primitives without client-side motion or inde
   assert.match(badges, /SkeletonBlock/);
   assert.doesNotMatch(page + badges, /animate-pulse|motion-safe:animate-pulse/);
 });
+
+function assertSectionOrder(source: string, component: string, sections: string[]) {
+  const start = source.indexOf(`export function ${component}`);
+  assert.notEqual(start, -1, `${component} exists`);
+  const next = source.indexOf("\nexport function ", start + 1);
+  const body = source.slice(start, next === -1 ? undefined : next);
+  let previous = -1;
+  for (const section of sections) {
+    const index = section === "hero" ? body.indexOf("<MainPageHeroSkeleton") : body.indexOf(`data-skeleton-section="${section}"`);
+    assert.ok(index > previous, `${component} contains ${section} in order`);
+    previous = index;
+  }
+}
+
+test("main page skeletons follow each real page's primary section order", async () => {
+  const source = await readFile(`${root}/components/ui/main-page-skeletons.tsx`, "utf8");
+  assertSectionOrder(source, "DashboardSkeleton", ["hero", "overall-mastery", "due-review", "study-streak", "subjects", "featured-badges", "quick-actions"]);
+  assertSectionOrder(source, "SubjectsSkeleton", ["hero", "subject-controls", "subject-grid"]);
+  assertSectionOrder(source, "ReviewSkeleton", ["hero", "review-overview", "recent-subjects", "review-by-topic", "review-progress"]);
+  assertSectionOrder(source, "ProgressSkeleton", ["hero", "summary", "featured-badges", "study-activity", "subject-performance", "topic-mastery", "needs-more-practice", "recent-sessions"]);
+  assertSectionOrder(source, "SettingsSkeleton", ["hero", "study-preferences", "data-privacy"]);
+  assertSectionOrder(source, "ProfileSkeleton", ["hero", "account-overview", "personal-information", "password-security", "danger-zone"]);
+  assert.doesNotMatch(source, /<(?:button|input|select|textarea|a)(?:\s|>)/i);
+});
+
+test("Badges skeleton follows fixed statistics and collection hierarchy with loaded breakpoints", async () => {
+  const source = await readFile(`${root}/components/badges/badges-page-skeleton.tsx`, "utf8");
+  assertSectionOrder(source, "BadgesPageSkeleton", ["hero", "statistics", "collection-progress", "rarity", "filters", "badge-grid"]);
+  assert.match(source, /min-\[380px\]:grid-cols-2/);
+  assert.match(source, /xl:grid-cols-4/);
+  assert.match(source, /min-\[360px\]:grid-cols-2/);
+  assert.match(source, /data-skeleton-stat=/);
+  assert.equal((source.match(/data-skeleton-stat=/g) ?? []).length, 4);
+  assert.doesNotMatch(source, /<(?:button|input|select|textarea|a)(?:\s|>)/i);
+});
+
+test("Profile route uses the shared Profile skeleton variant and accessible loading region", async () => {
+  const [route, page] = await Promise.all([
+    readFile(`${root}/app/(authenticated)/profile/loading.tsx`, "utf8"),
+    readFile(`${root}/components/ui/page-loading-skeleton.tsx`, "utf8"),
+  ]);
+  assert.match(route, /variant="profile"/);
+  assert.match(page, /case "profile"/);
+  assert.match(page, /ProfileSkeleton/);
+  assert.match(page, /Loading profile page/);
+});
+
+test("Featured Badges keeps one streamed fallback implementation for route and local boundaries", async () => {
+  const [stream, content] = await Promise.all([
+    readFile(`${root}/components/badges/featured-badges-stream.tsx`, "utf8"),
+    readFile(`${root}/components/badges/featured-badges-skeleton-content.tsx`, "utf8"),
+  ]);
+  assert.match(stream, /<SkeletonRegion label=\{`Loading \$\{title\}`\}/);
+  assert.match(stream, /<FeaturedBadgesSkeletonContent\s*\/>/);
+  assert.match(content, /export function FeaturedBadgesSkeletonContent/);
+  assert.match(content, /min-\[390px\]:grid-cols-2 xl:grid-cols-3/);
+});

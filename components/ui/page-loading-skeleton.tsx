@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { SkeletonBlock, SkeletonCard, SkeletonRegion } from "@/components/ui/skeleton";
+import { DashboardSkeleton, ProfileSkeleton, ProgressSkeleton, ReviewSkeleton, SettingsSkeleton, SubjectsSkeleton } from "@/components/ui/main-page-skeletons";
 
 
 export type PageLoadingVariant =
@@ -14,7 +15,8 @@ export type PageLoadingVariant =
   | "quiz"
   | "finish"
   | "progress"
-  | "settings";
+  | "settings"
+  | "profile";
 
 function Bar({ className = "" }: { className?: string }) {
   return <SkeletonBlock className={`rounded-lg ${className}`} />;
@@ -56,38 +58,6 @@ function MetricCards({ count = 3 }: { count?: number }) {
   );
 }
 
-function FeaturedBadgesSkeleton() {
-  return <CardSkeleton className="min-h-[150px] sm:min-h-[168px]">
-    <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2.5"><Bar className="h-9 w-9 rounded-xl bg-[#F8DCE5]"/><div><Bar className="h-4 w-36"/><Bar className="mt-2 h-3 w-52 max-w-full"/></div></div><Bar className="h-10 w-28 rounded-xl"/></div>
-    <div className="mt-4 grid grid-cols-1 gap-2.5 min-[390px]:grid-cols-2 xl:grid-cols-3">{[0,1,2].map((item)=><div key={item} className="flex min-h-[88px] items-center gap-3 rounded-xl border border-[#F0E6EA] bg-[#FFFCFD] p-3"><Bar className="h-14 w-14 shrink-0 rounded-full bg-[#F8DCE5]"/><div className="min-w-0 flex-1"><Bar className="h-3 w-3/4"/><Bar className="mt-2 h-3 w-20"/><Bar className="mt-2 h-2.5 w-24"/></div></div>)}</div>
-  </CardSkeleton>;
-}
-
-function SubjectCards() {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 6 }, (_, index) => (
-        <CardSkeleton key={index} className="min-h-[165px]">
-          <div className="flex items-center gap-3">
-            <Bar className="h-11 w-11 shrink-0 rounded-xl bg-[#F8DCE5]" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Bar className="h-4 w-3/4" />
-              <Bar className="h-3 w-1/2" />
-            </div>
-          </div>
-          <Bar className="mt-5 h-2.5 w-full rounded-full" />
-          <div className="mt-4 flex gap-2">
-            <Bar className="h-7 w-7 rounded-lg" />
-            <Bar className="h-7 w-7 rounded-lg" />
-            <Bar className="h-7 w-7 rounded-lg" />
-            <Bar className="h-7 w-7 rounded-lg" />
-          </div>
-        </CardSkeleton>
-      ))}
-    </div>
-  );
-}
-
 function QuizSessionHeroSkeleton({ className = "" }: { className?: string }) {
   return <section aria-hidden="true" className={`relative isolate grid min-h-[168px] grid-cols-[minmax(0,1fr)_minmax(78px,34%)] items-stretch gap-2 overflow-hidden rounded-[1.4rem] border border-[#F5DDE5] bg-[#FFF1F5] pl-4 pr-3 pt-3.5 pb-0 min-[360px]:grid-cols-[minmax(0,1fr)_minmax(100px,38%)] sm:flex sm:min-h-[210px] sm:items-center sm:gap-0 sm:px-0 sm:py-0 ${className}`}>
     <div className="relative z-10 flex min-w-0 flex-col justify-center gap-2 py-3 sm:max-w-[59%] sm:gap-0 sm:px-7 sm:py-6">
@@ -106,35 +76,6 @@ function QuizSessionHeroSkeleton({ className = "" }: { className?: string }) {
       <Bar className="absolute bottom-[72%] right-[15%] h-5 w-5 rounded-full bg-[#F7D5E0]" />
     </div>
   </section>;
-}
-
-function SettingsSections() {
-  return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)]">
-      <div className="space-y-4">
-        {[0, 1, 2].map((item) => (
-          <CardSkeleton key={item}>
-            <Bar className="h-4 w-40" />
-            <Bar className="mt-2 h-3 w-64 max-w-full" />
-            <div className="mt-5 space-y-3">
-              <Bar className="h-10 w-full rounded-xl" />
-              <Bar className="h-10 w-full rounded-xl" />
-            </div>
-          </CardSkeleton>
-        ))}
-      </div>
-      <div className="space-y-4">
-        {[0, 1].map((item) => (
-          <CardSkeleton key={item}>
-            <Bar className="h-4 w-36" />
-            <Bar className="mt-2 h-3 w-56 max-w-full" />
-            <Bar className="mt-5 h-24 w-full rounded-xl" />
-            <Bar className="mt-4 h-10 w-32 rounded-full" />
-          </CardSkeleton>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 const finishGridClass = "grid min-w-0 grid-cols-1 items-stretch gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] [&>*]:min-w-0";
@@ -275,9 +216,9 @@ function SubjectFolderDetailSkeleton() {
 function Content({ variant }: { variant: PageLoadingVariant }) {
   switch (variant) {
     case "dashboard":
-      return <div className="space-y-5"><Hero /><MetricCards count={4} /><div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]"><CardSkeleton className="min-h-[240px]"><Bar className="h-4 w-36" /><Bar className="mt-6 h-36 w-full rounded-xl" /></CardSkeleton><CardSkeleton className="min-h-[240px]"><Bar className="h-4 w-32" /><div className="mt-5 space-y-4">{[0, 1, 2, 3].map((n) => <div key={n} className="flex gap-3"><Bar className="h-10 w-10 rounded-xl" /><div className="flex-1 space-y-2"><Bar className="h-3 w-3/4" /><Bar className="h-2.5 w-1/2" /></div></div>)}</div></CardSkeleton></div><FeaturedBadgesSkeleton /></div>;
+      return <DashboardSkeleton />;
     case "subjects":
-      return <div className="space-y-5"><Hero variant="compact" /><div className="flex items-center justify-between gap-3"><Bar className="h-5 w-36" /><Bar className="h-10 w-32 rounded-full" /></div><SubjectCards /></div>;
+      return <SubjectsSkeleton />;
     case "subject-detail":
       return <div className="space-y-5"><Bar className="h-4 w-44" /><Hero /><MetricCards count={4} /><div className="flex items-center justify-between"><Bar className="h-5 w-40" /><Bar className="h-9 w-28 rounded-full" /></div><div className="grid gap-3 md:grid-cols-2"><CardSkeleton className="min-h-[150px]"><Bar className="h-3 w-24" /><Bar className="mt-5 h-4 w-full" /><Bar className="mt-3 h-3 w-2/3" /></CardSkeleton><CardSkeleton className="min-h-[150px]"><Bar className="h-3 w-24" /><Bar className="mt-5 h-4 w-full" /><Bar className="mt-3 h-3 w-2/3" /></CardSkeleton></div></div>;
     case "folder-detail":
@@ -287,7 +228,7 @@ function Content({ variant }: { variant: PageLoadingVariant }) {
     case "topic-detail":
       return <TopicDetailSkeleton />;
     case "review":
-      return <div className="space-y-5"><Hero /><MetricCards count={3} /><CardSkeleton><Bar className="h-5 w-44" /><div className="mt-5 space-y-3">{[0, 1, 2].map((n) => <div key={n} className="flex items-center gap-3 rounded-xl border border-[#F4E9ED] p-3"><Bar className="h-10 w-10 rounded-xl" /><div className="flex-1 space-y-2"><Bar className="h-3 w-2/3" /><Bar className="h-2.5 w-1/3" /></div><Bar className="h-9 w-24 rounded-full" /></div>)}</div></CardSkeleton></div>;
+      return <ReviewSkeleton />;
     case "quiz-setup":
       return <div className="space-y-5"><Hero variant="compact" /><div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]"><CardSkeleton><Bar className="h-5 w-44" /><Bar className="mt-2 h-3 w-60 max-w-full" /><div className="mt-5 grid gap-3 sm:grid-cols-2">{[0, 1, 2, 3].map((n) => <Bar key={n} className="h-20 rounded-xl" />)}</div><Bar className="mt-5 h-11 w-40 rounded-full" /></CardSkeleton><CardSkeleton><Bar className="h-5 w-36" /><MetricCards count={3} /><Bar className="mt-4 h-24 w-full rounded-xl" /></CardSkeleton></div></div>;
     case "quiz":
@@ -312,22 +253,29 @@ function Content({ variant }: { variant: PageLoadingVariant }) {
     case "finish":
       return <FinishSkeleton />;
     case "progress":
-      return <div className="space-y-5"><Hero variant="compact" /><MetricCards count={4} /><FeaturedBadgesSkeleton /><div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]"><CardSkeleton className="min-h-[300px]"><Bar className="h-4 w-40" /><Bar className="mt-6 h-52 w-full rounded-xl" /></CardSkeleton><CardSkeleton className="min-h-[300px]"><Bar className="h-4 w-36" /><div className="mt-6 space-y-5">{[0, 1, 2, 3, 4].map((n) => <Bar key={n} className="h-5 w-full" />)}</div></CardSkeleton></div></div>;
+      return <ProgressSkeleton />;
     case "settings":
-      return <div className="space-y-5"><Hero variant="compact" /><SettingsSections /></div>;
+      return <SettingsSkeleton />;
+    case "profile":
+      return <ProfileSkeleton />;
   }
 }
 
 export function PageLoadingSkeleton({ variant }: { variant: PageLoadingVariant }) {
+  const pageLabels: Record<PageLoadingVariant, string> = {
+    dashboard: "Loading dashboard page", subjects: "Loading subjects page", "subject-detail": "Loading subject detail page", "folder-detail": "Loading folder detail page", "subject-folder-detail": "Loading subject folder detail page", "topic-detail": "Loading topic detail page", review: "Loading review page", "quiz-setup": "Loading review setup page", quiz: "Loading quiz page", finish: "Loading quiz completion page", progress: "Loading progress page", settings: "Loading settings page", profile: "Loading profile page",
+  };
   const pageSpacing = variant === "folder-detail" || variant === "subject-folder-detail"
     ? "min-w-0 space-y-4 p-4 pb-24 sm:p-5 xl:p-6"
     : variant === "finish"
     ? "w-full px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 lg:px-7 lg:pb-7"
     : variant === "topic-detail"
       ? "min-w-0 space-y-5 p-4 pb-24 sm:p-6 xl:p-7"
-      : "space-y-5 p-4 pb-24 sm:p-5 xl:p-6";
+      : variant === "dashboard" || variant === "profile" || variant === "subjects" || variant === "review" || variant === "progress" || variant === "settings"
+        ? "min-h-full"
+        : "space-y-5 p-4 pb-24 sm:p-5 xl:p-6";
   const content = (
-    <SkeletonRegion label={`Loading ${variant.replaceAll("-", " ")} page`} className="min-h-full">
+    <SkeletonRegion label={pageLabels[variant]} className="min-h-full">
       <div className={pageSpacing}>
         <Content variant={variant} />
       </div>

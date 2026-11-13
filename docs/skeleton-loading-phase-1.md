@@ -50,15 +50,15 @@ Audit source: current `app/(authenticated)` route files, the page compositions/c
 
 ## Phase backlog
 
-### Phase 2 — main pages
+### Phase 2 — main pages (implemented in the current working tree)
 
-- **Dashboard:** align section order and geometry to mastery, due review/streak, subjects, streamed badges, and quick actions. Use already-known subject counts only if a parent has them; otherwise a short representative grid.
-- **Subjects:** align hero and action/filter controls; responsive subject cards. Counts remain representative at route level.
-- **Review:** mirror the real review summary and due/action rows, with the existing error and empty states left to resolved content.
-- **Progress:** map real metric count, chart shapes/aspect ratios, history density, and actual badge placement.
-- **Badges:** reconcile hero height, latest statistics, progress/filter regions, and current collection card shape.
-- **Settings:** model its two real panel groups and control/action rows rather than generic cards.
-- **Profile:** add route fallback for profile hero, picture, identity form, security, and danger zone.
+- **Dashboard:** implemented the visible hierarchy in source-verified order: hero, Overall Mastery, Due Review and Study Streak, representative Subjects, Featured Badges, and Quick Actions. The independent Featured Badges Suspense fallback shares its composition with the route fallback.
+- **Subjects:** implemented hero, representative control/search region, and cards using the loaded grid breakpoints. Route loading cannot know whether the user's preferred view or folder contents will select grid, list, or empty state; resolved page state remains authoritative.
+- **Review:** implemented hero, four summary cards, Recent Subjects, representative topic rows, and the Review Progress chart/progress panel. Empty and error states remain in the resolved page.
+- **Progress:** implemented five summary slots, Featured Badges, activity chart with controls/plot/stats, subject and topic performance, practice needs, and recent sessions in the loaded order. Chart marks are neutral placeholders, not simulated data.
+- **Badges:** corrected the shared hero size, four fixed statistic cards (one column below 380px, two from 380px, four at `xl`), collection progress, rarity overview, filters, and representative collection cards. The loaded collection's empty/error/filter behavior is unchanged.
+- **Settings:** implemented the two primary desktop panels in source order, with preference controls/sound area and data/privacy action rows. Mobile stacks those panels.
+- **Profile:** added the missing route boundary and represented the hero, account overview, Personal Information, Password & Security, and Danger Zone. Account actions and security behavior are untouched.
 - **Favorites:** no work while the route redirects to Dashboard; audit a new destination if product behavior changes.
 
 ### Phase 3 — nested pages and quiz workflow
@@ -74,4 +74,11 @@ Audit source: current `app/(authenticated)` route files, the page compositions/c
 
 ## Verification limits
 
-The focused `scripts/skeleton-system.test.ts` covers shared primitive availability, status semantics, common palette/shimmer contract, reduced-motion static behavior, and use by the Page/Badges loaders. Browser screenshots and viewport-by-viewport measurements are still part of Phase 4. Source-level comparisons above are an inventory, not a screenshot-based pixel audit.
+Phase 1's original source inventory above remains the audit baseline. Phase 2 extends `scripts/skeleton-system.test.ts` to check all seven compositions' ordered sections, the four Badge statistic placeholders and responsive breakpoints, the Profile loading boundary, non-focusable skeleton markup, and reuse of the Featured Badges fallback. `scripts/skeleton-system.browser.mjs` validates the shared shimmer and reduced motion across the eight required viewport widths. The authenticated route browser suite checks loaded-page responsiveness and page geometry; it does not currently capture the loading and loaded states side by side. Therefore, the source-verified structures and CSS foundation are validated, but measured skeleton-to-content geometry comparison remains open for Phase 4.
+
+### Phase 2 verification notes
+
+- All seven main page compositions reuse the Phase 1 CSS shimmer and decorative primitives; their page layouts remain distinct.
+- Counts in route-level skeletons are representative. No loading-only data fetch was added. Profile identity, counts, progress, and settings remain unknown until the real page data resolves.
+- No new client boundary, animation dependency, or intentional loading delay was introduced.
+- Nested routes and quiz workflows remain assigned to Phase 3; final loading-to-content geometry, transitions, and cross-page browser QA remain assigned to Phase 4.
