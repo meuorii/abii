@@ -23,11 +23,14 @@ type Props = {
   firstName: string;
   subjects: SetupSubject[];
   allEligible: Record<QuizMode, number>;
+  allDueEligible?: Record<QuizMode, number>;
+  allDueCardCount?: number;
   totalCards: number;
   allProgress: number;
   allTypeMastery: TypeProgress;
   initialSubjectId: string | null;
   initialTopicId: string | null;
+  initialReviewFilter?: "all" | "due";
   loadFailed: boolean;
 };
 
@@ -62,10 +65,11 @@ function unavailableReason(type: QuizMode) {
   return "True or False needs flashcards with a question and a short answer (120 characters or fewer).";
 }
 
-export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allProgress, allTypeMastery, initialSubjectId, initialTopicId, loadFailed }: Props) {
+export function ReviewSetup({ firstName, subjects, allEligible, allDueEligible = allEligible, allDueCardCount = 0, totalCards, allProgress, allTypeMastery, initialSubjectId, initialTopicId, initialReviewFilter = "all", loadFailed }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [scope, setScope] = useState<ReviewScope>(initialTopicId ? "topic" : initialSubjectId ? "subject" : "all");
+  const [reviewFilter, setReviewFilter] = useState<"all" | "due">(initialReviewFilter);
   const [subjectId, setSubjectId] = useState<string>(initialSubjectId ?? "");
   const [topicId, setTopicId] = useState<string>(initialTopicId ?? "");
   const [type, setType] = useState<QuizMode | null>(null);
@@ -84,7 +88,10 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
 
   const selectedSubject = subjects.find((s) => s.id === subjectId) ?? null;
   const selectedTopic = selectedSubject?.topics.find((item) => item.id === topicId) ?? null;
-  const counts = scope === "all" ? allEligible : scope === "subject" ? selectedSubject?.eligible ?? null : selectedTopic?.eligible ?? null;
+  const scopeCounts = scope === "all" ? allEligible : scope === "subject" ? selectedSubject?.eligible ?? null : selectedTopic?.eligible ?? null;
+  const dueScopeCounts = scope === "all" ? allDueEligible : scope === "subject" ? selectedSubject?.dueEligible ?? null : selectedTopic?.dueEligible ?? null;
+  const dueCardsInScope = scope === "all" ? allDueCardCount : scope === "subject" ? selectedSubject?.dueCardCount ?? 0 : selectedTopic?.dueCardCount ?? 0;
+  const counts = reviewFilter === "due" ? dueScopeCounts : scopeCounts;
   const available = counts && type ? counts[type] : null;
   const hasRequiredScope = scope === "all" || Boolean(selectedSubject && (scope === "subject" || selectedTopic));
   const canStart = Boolean(hasRequiredScope && type && available && available > 0 && !starting);
@@ -95,7 +102,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
     setStarting(true);
     setError("");
     try {
-      const response = await fetch("/api/quiz/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scope, ...(scope !== "all" ? { subjectId } : {}), ...(scope === "topic" ? { topicId } : {}), type }) });
+      const response = await fetch("/api/quiz/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scope, ...(scope !== "all" ? { subjectId } : {}), ...(scope === "topic" ? { topicId } : {}), type, reviewFilter }) });
       const data = (await response.json().catch(() => ({}))) as { sessionId?: string; error?: string };
       if (!response.ok || !data.sessionId) {
         const message = data.error || "We couldn’t start your quiz. Please try again.";
@@ -163,6 +170,15 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
       </nav>
       {hero}
 
+      <fieldset className="rounded-2xl border border-[#F1DDE4] bg-white p-4 sm:p-5">
+        <legend id="choose-review-filter" className="text-base font-bold tracking-tight text-[#153B56]">What would you like to practice?</legend>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {([ ["all", "All available cards", "Practice every eligible flashcard in your selected scope."], ["due", "Due Review", "Practice only cards with no schedule or a review due now."] ] as const).map(([value, label, description]) => <label key={value} className={`flex min-h-[76px] cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors focus-within:ring-2 focus-within:ring-[#E9577D] focus-within:ring-offset-2 ${reviewFilter === value ? "border-[#FF6F96] bg-[#FFF0F5]" : "border-[#E8E2E5] hover:border-[#F0B6C9]"}`}><input type="radio" name="reviewFilter" value={value} checked={reviewFilter === value} onChange={() => { setReviewFilter(value); setError(""); }} className="mt-0.5 h-4 w-4 shrink-0 accent-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]" /><span><span className="block text-sm font-bold text-[#153B56]">{label}</span><span className="mt-1 block text-xs leading-5 text-[#6C879C]">{description}</span></span></label>)}
+        </div>
+      </fieldset>
+
+      {reviewFilter === "due" && dueCardsInScope === 0 && <p role="status" className="rounded-xl border border-[#DDEFE5] bg-[#F7FCF9] px-4 py-3 text-sm text-[#527C68]">No flashcards are currently due in this scope. Your saved review schedule will be checked again when you start.</p>}
+
       <ScrollReveal><section aria-labelledby="choose-scope" className="space-y-3">
         <h2 id="choose-scope" className="text-base font-bold tracking-tight text-[#153B56] sm:text-lg"><span className="mr-2 text-[#E9577D]">1</span>Choose review scope</h2>
         <div role="radiogroup" aria-labelledby="choose-scope" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -218,7 +234,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, totalCards, allP
             ) : available && available > 0 ? (
               <p className="mt-1 text-sm text-[#45647A]"><span className="font-semibold text-[#153B56]">{available} {available === 1 ? "question" : "questions"}</span> · {QUIZ_TYPE_LABELS[type]} · {scopeLabel}. Every eligible flashcard is included, in random order.</p>
             ) : (
-              <p role="alert" className="mt-1 text-sm leading-6 text-[#A43E5C]">No eligible flashcards for {QUIZ_TYPE_LABELS[type]} in {scopeLabel}. {unavailableReason(type)} <Link href={selectedSubject ? `/subjects/${selectedSubject.id}` : "/subjects"} className="font-semibold underline underline-offset-2">Add or update flashcards</Link>, or choose another option yourself.</p>
+              <p role="alert" className="mt-1 text-sm leading-6 text-[#A43E5C]">{reviewFilter === "due" ? dueCardsInScope === 0 ? "No flashcards are currently due in this scope. Try All available cards or check back when the next review is due." : `${dueCardsInScope} card${dueCardsInScope === 1 ? " is" : "s are"} due, but none can make a ${QUIZ_TYPE_LABELS[type]} question in this scope. Choose another mode or use All available cards.` : `No eligible flashcards for ${QUIZ_TYPE_LABELS[type]} in ${scopeLabel}. ${unavailableReason(type)}`} <Link href={selectedSubject ? `/subjects/${selectedSubject.id}` : "/subjects"} className="font-semibold underline underline-offset-2">{reviewFilter === "due" ? "Review your study library" : "Add or update flashcards"}</Link>.</p>
             )}            {error && <p role="alert" className="mt-2 text-sm text-[#A43E5C]">{error}</p>}
           </div>
           <button type="button" onClick={start} disabled={!canStart} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#FF477D] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">

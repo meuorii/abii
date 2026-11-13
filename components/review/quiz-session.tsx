@@ -22,6 +22,7 @@ import { firstUnansweredQuestion } from "@/lib/quiz/resume-state";
 import { resolveQuizReaction } from "@/lib/quiz/reactions";
 import { QuizReactionIndicator } from "@/components/review/quiz-reaction-indicator";
 import { claimCompletionCelebration } from "@/lib/quiz/completion-celebration.mjs";
+import { reviewAgainInput } from "@/lib/quiz/restart-input";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 const answerCardVariants: Variants = {
@@ -251,7 +252,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
     setAgainBusy(true);
     setAgainError("");
     try {
-      const response = await fetch("/api/quiz/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subjectId: initial.subjectId ?? "all", type: initial.type }) });
+      const response = await fetch("/api/quiz/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reviewAgainInput(initial)) });
       const data = (await response.json().catch(() => ({}))) as { sessionId?: string; error?: string };
       if (!response.ok || !data.sessionId) {
         const message = data.error || "We couldn’t start a new review. Please try again.";

@@ -35,6 +35,9 @@ test("concurrent and interrupted answer writes recover exactly once and preserve
     ]);
     assert.ok(submissions.every((submission) => submission.ok));
     assert.equal(submissions.filter((submission) => submission.ok && !submission.duplicate).length, 1);
+    const uncertainReplay = await submitAnswer(user._id, String(session._id), { questionIndex: 0, answer: "a different answer after the response was lost" });
+    assert.ok(uncertainReplay.ok && uncertainReplay.duplicate);
+    if (uncertainReplay.ok) assert.equal(uncertainReplay.result.userAnswer, "target", "idempotent replay returns the durable answer instead of grading changed client input");
     assert.equal(await ReviewRecord.countDocuments({ userId: user._id, flashcardId: card._id }), 1);
     assert.equal(await AchievementEvent.countDocuments({ userId: user._id, idempotencyKey: `quiz-answer:${String(session._id)}:0` }), 1);
     await AchievementEvent.deleteOne({ userId: user._id, idempotencyKey: `quiz-answer:${String(session._id)}:0` });

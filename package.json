@@ -12,6 +12,7 @@
     "test:progress-analytics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/progress-analytics.test.ts",
     "test:study-day": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/study-day.test.ts",
     "test:profile-crop": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/profile-crop.test.ts",
+    "test:quiz-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/quiz-due-review.browser.mjs",
     "test:landing-demo": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/landing-demo-grading.test.ts",
     "test:demo": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/demo-seed.test.ts",
     "test:auth-email": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/auth-email.test.ts",
@@ -19,7 +20,7 @@
     "test:auth-ui": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/auth-otp-input.test.ts",
     "test:auth-login": "node --test scripts/auth-login-routes.test.mjs",
     "test:topic-routes": "node --test scripts/topic-routes.test.mjs",
-    "test:topics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test --test-concurrency=1 scripts/folders.test.ts scripts/subject-folders.test.ts scripts/topics.test.ts scripts/topic-api.test.ts scripts/mastery.test.ts scripts/quiz-answer.test.ts scripts/quiz-compatibility.test.ts scripts/quiz-session-resume.test.ts scripts/quiz-round-priority.test.ts scripts/badges.test.ts scripts/achievements-persistence.test.ts scripts/badge-reconciliation.test.ts scripts/badge-evaluator.test.ts scripts/badge-page.test.ts scripts/badges-route.test.mjs",
+    "test:topics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test --test-concurrency=1 scripts/folders.test.ts scripts/subject-folders.test.ts scripts/topics.test.ts scripts/topic-api.test.ts scripts/mastery.test.ts scripts/quiz-answer.test.ts scripts/quiz-compatibility.test.ts scripts/quiz-session-resume.test.ts scripts/quiz-round-priority.test.ts scripts/quiz-due-review.test.ts scripts/quiz-restart.test.ts scripts/badges.test.ts scripts/achievements-persistence.test.ts scripts/badge-reconciliation.test.ts scripts/badge-evaluator.test.ts scripts/badge-page.test.ts scripts/badges-route.test.mjs",
     "migrate:topics": "node --conditions=react-server --import ./scripts/register-typescript.mjs scripts/migrate-topics.ts",
     "reconcile:badges": "node --conditions=react-server --import ./scripts/register-typescript.mjs scripts/reconcile-badges.ts",
     "seed:demo": "node --conditions=react-server --import ./scripts/register-typescript.mjs scripts/seed-demo-account.ts"
@@ -44,6 +45,7 @@
     "eslint": "^9.36.0",
     "eslint-config-next": "^15.5.4",
     "mongodb-memory-server": "^11.3.0",
+    "playwright": "1.65.0",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2"
   }

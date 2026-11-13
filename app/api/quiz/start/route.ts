@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const user = await getCurrentUser();
     if (!user) return measureServerOperation("response serialization", async () => NextResponse.json({ error: "Please sign in to start a quiz." }, { status: 401 }));
 
-    let body: { scope?: unknown; subjectId?: unknown; topicId?: unknown; type?: unknown };
+    let body: { scope?: unknown; subjectId?: unknown; topicId?: unknown; type?: unknown; reviewFilter?: unknown };
     try {
       body = await request.json();
     } catch {

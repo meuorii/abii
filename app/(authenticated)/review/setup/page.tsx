@@ -12,7 +12,7 @@ import { measureServerOperation, withServerPagePerformanceTrace } from "@/lib/pe
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type PageProps = { searchParams: Promise<{ subjectId?: string | string[]; topicId?: string | string[] }> };
+type PageProps = { searchParams: Promise<{ subjectId?: string | string[]; topicId?: string | string[]; reviewFilter?: string | string[] }> };
 
 export default function ReviewSetupPage(props: PageProps) {
   return withServerPagePerformanceTrace("review.setup", () => renderReviewSetupPage(props));
@@ -25,10 +25,14 @@ async function renderReviewSetupPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const requested = Array.isArray(params.subjectId) ? params.subjectId[0] : params.subjectId;
   const requestedTopicId = Array.isArray(params.topicId) ? params.topicId[0] : params.topicId;
+  const requestedFilter = Array.isArray(params.reviewFilter) ? params.reviewFilter[0] : params.reviewFilter;
+  const initialReviewFilter = requestedFilter === "due" ? "due" : "all";
   const firstName = user.name.trim().split(/\s+/)[0] || "there";
 
   let subjects: SetupSubject[] = [];
   let allEligible = Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>;
+  let allDueEligible = Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>;
+  let allDueCardCount = 0;
   let totalCards = 0;
   let allProgress = 0;
   let allTypeMastery = emptyTypeProgress();
@@ -47,6 +51,8 @@ async function renderReviewSetupPage({ searchParams }: PageProps) {
     allProgress = mastery.overall.progress;
     allTypeMastery = mastery.allByType;
     totalCards = cards.length;
+    allDueEligible = counts.due.all;
+    allDueCardCount = counts.dueCardCount;
     const cardCounts = new Map<string, number>();
     for (const card of cards) cardCounts.set(String(card.subjectId), (cardCounts.get(String(card.subjectId)) ?? 0) + 1);
     allEligible = counts.all;
@@ -67,6 +73,8 @@ async function renderReviewSetupPage({ searchParams }: PageProps) {
         completedRequirements: mastery.byTopic.get(id)?.completedRequirements ?? 0,
         totalRequirements: mastery.byTopic.get(id)?.totalRequirements ?? 0,
         eligible: counts.byTopic.get(id) ?? (Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>),
+        dueEligible: counts.due.byTopic.get(id) ?? (Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>),
+        dueCardCount: counts.dueByTopic.get(id) ?? 0,
       };
       const parentId = String(topic.subjectId);
       topicsBySubject.set(parentId, [...(topicsBySubject.get(parentId) ?? []), setupTopic]);
@@ -84,6 +92,8 @@ async function renderReviewSetupPage({ searchParams }: PageProps) {
         totalRequirements: mastery.bySubject.get(id)?.totalRequirements ?? 0,
         typeMastery: mastery.byTypeBySubject.get(id) ?? emptyTypeProgress(),
         eligible: counts.bySubject.get(id) ?? (Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>),
+        dueEligible: counts.due.bySubject.get(id) ?? (Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>),
+        dueCardCount: counts.dueBySubject.get(id) ?? 0,
         topics: topicsBySubject.get(id) ?? [],
       };
     });
@@ -103,11 +113,14 @@ async function renderReviewSetupPage({ searchParams }: PageProps) {
         firstName={firstName}
         subjects={subjects}
         allEligible={allEligible}
+        allDueEligible={allDueEligible}
+        allDueCardCount={allDueCardCount}
         totalCards={totalCards}
         allProgress={allProgress}
         allTypeMastery={allTypeMastery}
         initialSubjectId={initialSubjectId}
         initialTopicId={initialTopicId}
+        initialReviewFilter={initialReviewFilter}
         loadFailed={loadFailed}
       />
     

@@ -77,7 +77,7 @@ export function DashboardOverview({ firstName, greeting, userId, dueCount, total
           </section></ScrollReveal>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.45fr_1fr]">
             <ScrollReveal className="min-w-0"><section className="min-w-0 rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5" aria-labelledby="today-review-heading">
-              <SectionHeading icon="calendar" title="Today’s Review" href="/review" />
+              <SectionHeading icon="calendar" title="Today’s Review" href="/review/setup?reviewFilter=due" />
                 <div className="flex min-h-[100px] flex-col items-stretch gap-3 rounded-2xl border border-[#F6E8ED] bg-[#FFFCFD] p-4 sm:flex-row sm:items-center sm:gap-5 sm:px-5">
                   <div className="flex min-w-0 items-center gap-4 sm:flex-1">
                     <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><Icon name="cards" className="h-7 w-7" /></span>
@@ -86,7 +86,7 @@ export function DashboardOverview({ firstName, greeting, userId, dueCount, total
                   <p className="mt-1 text-xs text-[#8392A0]">{dueCount > 0 ? "You have flashcards ready for review. Practice them to strengthen your recall." : totalCards > 0 ? "You’re all caught up! Come back when your next flashcards are ready." : "Create flashcards to begin your first review."}</p>
                     </div>
                 </div>
-                  <Link href={dueCount > 0 ? "/review" : "/subjects"} className="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-[#FF6F96] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:ml-auto sm:w-auto">{dueCount > 0 ? "Start Review" : totalCards > 0 ? "Review" : "Add Cards"}<Icon name="arrow" className="h-4 w-4" /></Link>
+                  <Link href={dueCount > 0 ? "/review/setup?reviewFilter=due" : "/subjects"} className="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-[#FF6F96] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:ml-auto sm:w-auto">{dueCount > 0 ? "Start Due Review" : totalCards > 0 ? "Review" : "Add Cards"}<Icon name="arrow" className="h-4 w-4" /></Link>
               </div>
             </section></ScrollReveal>
 

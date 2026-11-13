@@ -9,6 +9,7 @@ export function isFlashcardType(value: unknown): value is FlashcardType {
 export const QUIZ_MODES = ["multiple-choice", "identification", "true-false", "random"] as const;
 export type QuizMode = (typeof QUIZ_MODES)[number];
 export type ReviewScope = "all" | "subject" | "topic";
+export type ReviewFilter = "all" | "due";
 export type ActiveQuizSummary = { id: string; scope: ReviewScope; subjectName: string; topicName: string | null; type: QuizMode; status: "active"; answeredCount: number; totalQuestions: number; progress: number; currentRound: number; readyToFinish: boolean; lastActivityAt: string; expiresAt: string };
 
 /** Internal question renderers used when an Items flashcard is played in MC/Identification. */
@@ -84,7 +85,7 @@ export type QuizSummary = {
 };
 export type PublicSession = {
   id: string; subjectId: string | null; subjectName: string; type: QuizMode;
-  scope?: ReviewScope; topicId?: string | null; topicName?: string | null;
+  scope?: ReviewScope; reviewFilter?: ReviewFilter; topicId?: string | null; topicName?: string | null;
   status: "active" | "completed"; questions: PublicQuestion[]; results: Record<number, QuestionResult>;
   summary: QuizSummary | null; cardTotal: number; mastery: Record<number, number>; masteryTarget: number;
   completedAt: string | null;
@@ -93,6 +94,7 @@ export type SetupSubject = {
   id: string; name: string; flashcardCount: number; mastered: number;
   usableCount: number; masteryProgress: number; completedRequirements: number; totalRequirements: number;
   typeMastery: TypeProgress; eligible: Record<QuizMode, number>;
+  dueEligible?: Record<QuizMode, number>; dueCardCount?: number;
   topics: SetupTopic[];
 };
-export type SetupTopic = { id: string; name: string; flashcardCount: number; mastered: number; usableCount: number; masteryProgress: number; completedRequirements: number; totalRequirements: number; eligible: Record<QuizMode, number> };
+export type SetupTopic = { id: string; name: string; flashcardCount: number; mastered: number; usableCount: number; masteryProgress: number; completedRequirements: number; totalRequirements: number; eligible: Record<QuizMode, number>; dueEligible?: Record<QuizMode, number>; dueCardCount?: number };

@@ -43,6 +43,7 @@ const quizSessionSchema = new Schema(
     subjectId: { type: Schema.Types.ObjectId, ref: "Subject", default: null },
     subjectName: { type: String, required: true, trim: true },
     scope: { type: String, enum: ["all", "subject", "topic"], default: undefined },
+    reviewFilter: { type: String, enum: ["all", "due"], default: undefined },
     topicId: { type: Schema.Types.ObjectId, ref: "Topic", default: undefined },
     topicName: { type: String, trim: true, default: undefined },
     type: { type: String, enum: MODES, required: true },
@@ -66,7 +67,7 @@ quizSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "quiz_s
 {
   const cached = mongoose.models.QuizSession;
   const questionSchema = (cached?.schema.path("questions") as unknown as { schema?: { path: (p: string) => unknown } } | undefined)?.schema;
-  if (cached && (!questionSchema?.path("expectedItems") || !questionSchema.path("reviewRecordPending") || !questionSchema.path("achievementDayKey") || !cached.schema.path("scope") || !cached.schema.path("lastActivityAt") || !cached.schema.path("resumedAt"))) delete mongoose.models.QuizSession;
+  if (cached && (!questionSchema?.path("expectedItems") || !questionSchema.path("reviewRecordPending") || !questionSchema.path("achievementDayKey") || !cached.schema.path("scope") || !cached.schema.path("reviewFilter") || !cached.schema.path("lastActivityAt") || !cached.schema.path("resumedAt"))) delete mongoose.models.QuizSession;
 }
 
 export type QuizSessionDocument = InferSchemaType<typeof quizSessionSchema>;

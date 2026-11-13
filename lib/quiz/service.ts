@@ -63,6 +63,7 @@ type SessionDoc = {
   subjectId?: Types.ObjectId | null;
   subjectName: string;
   scope?: ReviewScope;
+  reviewFilter?: "all" | "due";
   topicId?: Types.ObjectId | null;
   topicName?: string | null;
   type: QuizMode;
@@ -147,9 +148,27 @@ export async function loadUsableCards(userId: Types.ObjectId | string): Promise<
   return measureSyncServerOperation("quiz card preparation", () => cards.map(prepareCard).filter(isUsableCard));
 }
 
-export async function startSession(userId: Types.ObjectId | string, input: { scope?: unknown; subjectId?: unknown; topicId?: unknown; type?: unknown }) {
+/** Selects cards whose latest owner-scoped schedule is due at the captured instant. */
+export async function getDueCards(userId: Types.ObjectId | string, cards: PreparedCard[], now = new Date()): Promise<PreparedCard[]> {
+  if (!cards.length) return [];
+  const latest = await ReviewRecord.aggregate<{ _id: Types.ObjectId; nextReviewAt?: Date | null }>([
+    { $match: { userId, flashcardId: { $in: cards.map((card) => new Types.ObjectId(card.id)) } } },
+    { $sort: { reviewedAt: -1, _id: -1 } },
+    { $group: { _id: "$flashcardId", nextReviewAt: { $first: "$nextReviewAt" } } },
+  ]);
+  const nextReviewByCard = new Map(latest.map((record) => [String(record._id), record.nextReviewAt]));
+  return cards.filter((card) => {
+    const nextReviewAt = nextReviewByCard.get(card.id);
+    return nextReviewAt == null || new Date(nextReviewAt).getTime() <= now.getTime();
+  });
+}
+
+export async function startSession(userId: Types.ObjectId | string, input: { scope?: unknown; subjectId?: unknown; topicId?: unknown; type?: unknown; reviewFilter?: unknown }) {
   if (!input || typeof input !== "object") return fail(400, "Choose a review scope and quiz type.");
   if (!isQuizMode(input.type)) return fail(400, "Choose a valid quiz type.");
+  if (input.reviewFilter !== undefined && input.reviewFilter !== "all" && input.reviewFilter !== "due") return fail(400, "Choose a valid review filter.");
+  const reviewFilter = input.reviewFilter === "due" ? "due" : "all";
+  const now = new Date();
   const type: QuizMode = input.type;
   let scope: ReviewScope;
   if (input.scope !== undefined) {
@@ -185,14 +204,15 @@ export async function startSession(userId: Types.ObjectId | string, input: { sco
     topicName = topic.name;
   }
   const usable = await loadUsableCards(userId);
-  const scopedCards = scope === "topic"
+  const scopeCards = scope === "topic"
     ? usable.filter((card) => card.topicId === String(topicId))
     : scope === "subject"
       ? usable.filter((card) => card.subjectId === String(subjectId))
       : usable;
-  const questions = measureSyncServerOperation("quiz question generation", () => buildQuestions(scopedCards, usable, type));
+  const dueCards = reviewFilter === "due" ? await getDueCards(userId, scopeCards, now) : scopeCards;
+  const questions = measureSyncServerOperation("quiz question generation", () => buildQuestions(dueCards, usable, type));
   if (questions.length === 0) {
-    return fail(422, `There are no eligible flashcards for this ${scope} and quiz type.`);
+    return fail(422, reviewFilter === "due" ? "There are no due flashcards eligible for this quiz type and scope. Refresh your review options or choose another mode." : `There are no eligible flashcards for this ${scope} and quiz type.`);
   }
 
   const session = await measureServerOperation("quiz session insertion", () => QuizSession.create({
@@ -200,6 +220,7 @@ export async function startSession(userId: Types.ObjectId | string, input: { sco
     subjectId,
     subjectName,
     scope,
+    reviewFilter,
     ...(topicId ? { topicId, topicName } : {}),
     type,
     status: "active",
@@ -211,26 +232,40 @@ export async function startSession(userId: Types.ObjectId | string, input: { sco
 }
 
 /** Counts of eligible questions per subject (and for "all") and quiz type, using the same rules as the builder. */
-export async function getEligibilityCounts(userId: Types.ObjectId | string) {
-  const usable = await loadUsableCards(userId);
+export async function getEligibilityCounts(userId: Types.ObjectId | string, options: { filter?: "all" | "due"; now?: Date } = {}) {
+  const rawCards = await measureServerOperation("review eligibility flashcard retrieval", () => Flashcard.find({ userId }).select("_id subjectId topicId flashcardType question answer hint").lean(), { database: true });
+  const cards = measureSyncServerOperation("review eligibility card preparation", () => rawCards.map(prepareCard));
+  const usable = cards.filter(isUsableCard);
+  const dueCards = await getDueCards(userId, cards, options.now);
+  const dueUsable = dueCards.filter(isUsableCard);
+  const candidates = options.filter === "due" ? dueUsable : usable;
   const empty = () => Object.fromEntries(QUIZ_MODES.map((t) => [t, 0])) as Record<QuizMode, number>;
-  const all = empty();
-  const bySubject = new Map<string, Record<QuizMode, number>>();
-  const byTopic = new Map<string, Record<QuizMode, number>>();
-  for (const card of usable) {
-    const counts = bySubject.get(card.subjectId) ?? empty();
-    const topicCounts = card.topicId ? byTopic.get(card.topicId) ?? empty() : null;
-    for (const type of QUIZ_MODES) {
-      if (isEligible(card, type, usable)) {
-        counts[type] += 1;
-        all[type] += 1;
-        if (topicCounts) topicCounts[type] += 1;
+  const summarize = (questionCards: PreparedCard[]) => {
+    const all = empty();
+    const bySubject = new Map<string, Record<QuizMode, number>>();
+    const byTopic = new Map<string, Record<QuizMode, number>>();
+    for (const card of questionCards) {
+      const counts = bySubject.get(card.subjectId) ?? empty();
+      const topicCounts = card.topicId ? byTopic.get(card.topicId) ?? empty() : null;
+      for (const type of QUIZ_MODES) {
+        if (isEligible(card, type, usable)) {
+          counts[type] += 1;
+          all[type] += 1;
+          if (topicCounts) topicCounts[type] += 1;
+        }
       }
+      bySubject.set(card.subjectId, counts);
+      if (card.topicId && topicCounts) byTopic.set(card.topicId, topicCounts);
     }
-    bySubject.set(card.subjectId, counts);
-    if (card.topicId && topicCounts) byTopic.set(card.topicId, topicCounts);
+    return { all, bySubject, byTopic };
+  };
+  const dueBySubject = new Map<string, number>();
+  const dueByTopic = new Map<string, number>();
+  for (const card of dueCards) {
+    dueBySubject.set(card.subjectId, (dueBySubject.get(card.subjectId) ?? 0) + 1);
+    if (card.topicId) dueByTopic.set(card.topicId, (dueByTopic.get(card.topicId) ?? 0) + 1);
   }
-  return { all, bySubject, byTopic, usableCount: usable.length };
+  return { ...summarize(candidates), due: summarize(dueUsable), dueCardCount: dueCards.length, dueBySubject, dueByTopic, usableCount: options.filter === "due" ? dueUsable.length : usable.length };
 }
 
 function explanationFor(q: StoredQuestionDoc, type: QuizType): string {
@@ -518,7 +553,8 @@ export function toPublicSession(session: SessionDoc, streaks?: Map<string, numbe
     id: String(session._id),
     subjectId: session.subjectId ? String(session.subjectId) : null,
     subjectName: session.subjectName,
-    scope: session.scope ?? (session.subjectId ? "subject" : "all"),
+    scope: session.scope ?? (session.topicId ? "topic" : session.subjectId ? "subject" : "all"),
+    reviewFilter: session.reviewFilter === "due" ? "due" : "all",
     topicId: session.topicId ? String(session.topicId) : null,
     topicName: session.topicName ?? null,
     type: session.type,
