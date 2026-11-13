@@ -116,7 +116,13 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
   const firstLetter = userName?.trim().charAt(0).toUpperCase() || "A";
 
   return (
-    <div className="min-h-dvh overflow-hidden bg-[#FFF7F9] p-0 text-[#2F2930] sm:p-3 lg:p-4">
+    <div className="relative min-h-dvh overflow-hidden bg-[#FFF7F9] p-0 text-[#2F2930] sm:p-3 lg:p-4">
+      <a
+        href="#authenticated-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[110] focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-[#B84369] focus:shadow-md focus:outline-none focus:ring-2 focus:ring-[#E9577D] focus:ring-offset-2"
+      >
+        Skip to main content
+      </a>
       <div className="mx-auto flex h-dvh min-h-0 max-w-[1600px] overflow-hidden bg-white sm:h-[calc(100dvh-24px)] sm:rounded-[20px] sm:border sm:border-[#F0E5E9] sm:shadow-[0_10px_40px_rgba(65,37,48,0.07)] lg:h-[calc(100dvh-32px)]">
         <aside className="relative hidden w-[220px] shrink-0 flex-col border-r border-[#F0E8EC] bg-[#FFFCFD] lg:flex">
           <div className="px-5 pb-7 pt-7">
@@ -234,8 +240,10 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
 
           <main
             ref={mainRef}
+            id="authenticated-main"
+            tabIndex={-1}
             data-authenticated-motion
-            aria-label="Dashboard content"
+            aria-label="Application content"
             className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-white pb-20 lg:pb-0"
           >
             <ScrollRootProvider rootRef={mainRef}>

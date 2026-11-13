@@ -13,6 +13,7 @@
     "test:study-day": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/study-day.test.ts",
     "test:profile-crop": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/profile-crop.test.ts",
     "test:quiz-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/quiz-due-review.browser.mjs",
+    "test:responsive-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/authenticated-ux.browser.mjs",
     "test:landing-demo": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/landing-demo-grading.test.ts",
     "test:demo": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/demo-seed.test.ts",
     "test:auth-email": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/auth-email.test.ts",
