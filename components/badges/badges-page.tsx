@@ -32,11 +32,13 @@ function Statistics({ badges }: { badges: BadgePageItem[] }) {
     { label: "Locked", value: locked, icon: AlertCircle, detail: "still to discover" },
     { label: "Collection", value: `${percent}%`, icon: Award, detail: "complete so far" },
   ];
-  return <section aria-label="Achievement overview"><StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-    {stats.map(({ label, value, icon: Icon, detail }, index) => <StaggerItem key={label} index={index}>
-      <div className="flex items-center gap-2 text-[#D94E7B]"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#FFF0F4]"><Icon aria-hidden="true" className="h-4 w-4" /></span><p className="truncate text-xs font-semibold text-[#756B72] sm:text-sm">{label}</p></div>
-      <p className="mt-2 text-2xl font-extrabold tabular-nums leading-none text-[#183653] sm:text-3xl">{value}</p>
-      <p className="mt-1.5 text-[11px] leading-4 text-[#8A7E85] sm:text-xs">{detail}</p>
+  return <section aria-label="Achievement overview"><StaggerContainer className="grid auto-rows-fr grid-cols-1 items-stretch gap-3 min-[380px]:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+    {stats.map(({ label, value, icon: Icon, detail }, index) => <StaggerItem key={label} index={index} className="h-full min-w-0">
+      <div className="flex h-32 min-w-0 flex-col rounded-2xl border border-[#E8E2E5] bg-white p-3.5 sm:p-4">
+        <div className="flex min-h-8 min-w-0 items-center gap-2 text-[#D94E7B]"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#FFF0F4]"><Icon aria-hidden="true" className="h-4 w-4" /></span><p className="min-w-0 text-xs font-semibold leading-4 text-[#756B72] sm:text-sm">{label}</p></div>
+        <p className="mt-2 text-2xl font-extrabold tabular-nums leading-none text-[#183653] sm:text-3xl">{value}</p>
+        <p className="mt-auto pt-1.5 text-[11px] leading-4 text-[#8A7E85] sm:text-xs">{detail}</p>
+      </div>
     </StaggerItem>)}
   </StaggerContainer></section>;
 }

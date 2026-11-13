@@ -207,7 +207,7 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
 
   const initial = name.trim().charAt(0).toUpperCase() || "A";
 
-  return <div className="mx-auto w-full min-w-0 max-w-5xl space-y-7 px-4 py-7 sm:space-y-9 sm:px-6 sm:py-9 xl:px-8">
+  return <div className="mx-auto w-full min-w-0 max-w-[1500px] space-y-7 px-4 py-7 sm:space-y-9 sm:px-6 sm:py-9 xl:px-6">
     <header>
       <h1 className="text-[clamp(1.7rem,3vw,2.25rem)] font-bold leading-tight tracking-[-0.035em] text-[#18384D] [text-wrap:balance]">My Profile</h1>
       <p className="mt-2 max-w-[58ch] text-sm leading-6 text-[#557187]">Manage the details and security for your Abii account.</p>

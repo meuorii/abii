@@ -82,7 +82,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
     finally { setSaving(""); }
   }
 
-  return <div className="mx-auto w-full min-w-0 space-y-4 p-4 sm:space-y-5 sm:p-6 xl:p-7">
+  return <div className="mx-auto w-full min-w-0 space-y-4 p-4 sm:space-y-5 sm:p-6 xl:px-6 xl:py-7">
     <AbiiPageHero
       variant="settings"
       headingId="settings-hero-title"
@@ -96,7 +96,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
     />
     <div className="space-y-2">{(Object.entries(notices) as [NoticeKey, Notice][]).filter((entry) => entry[1]).map(([key, item]) => <div key={key}><InlineNotice notice={item} /></div>)}</div>
 
-    <div className="mx-auto grid w-full max-w-6xl min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-2 xl:gap-6">
+    <div data-testid="settings-panels" className="grid w-full min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-2 xl:gap-6">
       <div className="min-w-0 space-y-4 sm:space-y-5">
         <SectionCard icon={<SlidersHorizontal className="h-5 w-5"/>} title="Study Preferences" description="Customize how Abii organizes your study experience.">
           <form onSubmit={savePreferences} className="space-y-4 rounded-xl border border-[#F0E9EC] p-3.5 sm:p-4">

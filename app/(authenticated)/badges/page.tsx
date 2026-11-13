@@ -38,7 +38,7 @@ export default async function BadgesRoute() {
   }
 
   return (
-    <div className="w-full min-w-0 p-4 pb-24 sm:p-6 sm:pb-6 xl:p-7">
+    <div className="w-full min-w-0 p-4 pb-24 sm:px-6 sm:py-6 sm:pb-6 xl:px-6">
       <BadgeHero />
       <BadgesPage initialData={initialData} initialError={initialError} />
     </div>

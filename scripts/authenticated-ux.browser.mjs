@@ -137,6 +137,7 @@ test("authenticated routes remain accessible and fit the responsive viewport mat
       `/subjects/folders/${subjectFolderId}`, "/subjects/folders/unfiled", "/favorites", "/review",
       "/review/setup?reviewFilter=due", "/progress", "/badges", "/profile", "/settings",
     ];
+    const dashboardContentEdges = new Map();
     for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: width === 320 ? 568 : 820 });
       for (const route of routes) {
@@ -158,6 +159,66 @@ test("authenticated routes remain accessible and fit the responsive viewport mat
             - document.querySelector("main[data-authenticated-motion]")?.clientWidth,
         }));
         assert.ok(overflow.document <= 1 && overflow.shell <= 1, `${route} at ${width}px overflow: ${JSON.stringify(overflow)}`);
+        if (["/dashboard", "/settings", "/profile", "/badges"].includes(route)) {
+          const geometry = await page.evaluate((currentRoute) => {
+            const box = (selector) => {
+              const element = document.querySelector(selector);
+              if (!element) return null;
+              const { left, right, width } = element.getBoundingClientRect();
+              return { left, right, width };
+            };
+            const hero = box(".abii-page-hero");
+            if (currentRoute === "/dashboard") return { reference: hero };
+            if (currentRoute === "/settings") return { hero, panels: box('[data-testid="settings-panels"]') };
+            if (currentRoute === "/profile") return {
+              overview: box('section[aria-label="Account overview"]'),
+              settings: box(".grid.min-w-0.items-start"),
+              danger: box('section[aria-labelledby="danger-zone-heading"]'),
+            };
+            const stats = document.querySelector('section[aria-label="Achievement overview"] > div');
+            return {
+              hero,
+              stats: box('section[aria-label="Achievement overview"] > div'),
+              cards: stats ? Array.from(stats.children).map((element) => {
+                const { left, right, width, height } = element.getBoundingClientRect();
+                return { left, right, width, height };
+              }) : [],
+            };
+          }, route);
+          const assertAligned = (box, reference, name) => {
+            assert.ok(box && reference, `${route} at ${width}px should expose ${name} and the Dashboard content`);
+            assert.ok(Math.abs(box.left - reference.left) <= 2 && Math.abs(box.right - reference.right) <= 2,
+              `${route} ${name} should align with Dashboard at ${width}px: ${JSON.stringify({ box, reference })}`);
+          };
+          if (route === "/dashboard") dashboardContentEdges.set(width, geometry.reference);
+          else {
+            const reference = dashboardContentEdges.get(width);
+            assert.ok(reference, `Dashboard reference should be measured before ${route} at ${width}px`);
+            if (route === "/settings") {
+              assertAligned(geometry.hero, reference, "hero");
+              assertAligned(geometry.panels, reference, "panel grid");
+            }
+            if (route === "/profile") {
+              assertAligned(geometry.overview, reference, "account overview");
+              assertAligned(geometry.settings, reference, "account settings");
+              assertAligned(geometry.danger, reference, "danger zone");
+            }
+            if (route === "/badges") {
+              assertAligned(geometry.hero, reference, "hero");
+              assertAligned(geometry.stats, reference, "statistics grid");
+              const expectedColumns = width < 380 ? 1 : width >= 1280 ? 4 : 2;
+              assert.equal(geometry.cards.length, 4, `Badge statistics should show four cards at ${width}px`);
+              assert.ok(geometry.cards.every((card) => Math.abs(card.width - geometry.cards[0].width) <= 1), `Badge cards should have equal widths at ${width}px: ${JSON.stringify(geometry.cards)}`);
+              assert.ok(geometry.cards.every((card) => Math.abs(card.height - geometry.cards[0].height) <= 1), `Badge cards should have equal heights at ${width}px: ${JSON.stringify(geometry.cards)}`);
+              const rows = new Set(geometry.cards.map((card) => Math.round(card.left)));
+              assert.equal(rows.size, expectedColumns, `Badge statistics should use ${expectedColumns} columns at ${width}px: ${JSON.stringify(geometry.cards)}`);
+            }
+          }
+          if ([390, 1440].includes(width)) {
+            await revealScrollableContent(page);
+            await page.screenshot({ path: join(tmpdir(), `abii-layout-after-${route.slice(1)}-${width}.png`), fullPage: true, caret: "initial" });
+          }
+        }
         if (width < 1024) await page.getByRole("navigation", { name: "Mobile bottom navigation" }).waitFor({ state: "visible" });
         else await page.getByRole("navigation", { name: "Main navigation" }).waitFor({ state: "visible" });
         if (width < 1024) {
@@ -167,17 +228,17 @@ test("authenticated routes remain accessible and fit the responsive viewport mat
           }));
           assert.ok(targetSizes.every((size) => size.width >= 44 && size.height >= 44), `mobile navigation touch targets at ${width}px: ${JSON.stringify(targetSizes)}`);
         }
-        if (route === `/subjects/${subjectId}` && width === 320) await page.screenshot({ path: join(tmpdir(), "abii-phase5-subject-320.png") });
+        if (route === `/subjects/${subjectId}` && width === 320) await page.screenshot({ path: join(tmpdir(), "abii-phase5-subject-320.png"), caret: "initial" });
         if (route === "/progress" && width === 768) {
           await revealScrollableContent(page);
-          await page.screenshot({ path: join(tmpdir(), "abii-phase5-progress-768.png") });
+          await page.screenshot({ path: join(tmpdir(), "abii-phase5-progress-768.png"), caret: "initial" });
         }
       }
       if (width === 1440) {
         await page.goto(`${baseURL}/dashboard`, { waitUntil: "domcontentloaded" });
         await page.locator("main h1").first().waitFor({ state: "visible" });
       await waitForVisiblePageHeading(page);
-        await page.screenshot({ path: join(tmpdir(), "abii-phase5-dashboard-1440.png") });
+        await page.screenshot({ path: join(tmpdir(), "abii-phase5-dashboard-1440.png"), caret: "initial" });
       }
     }
 
@@ -239,7 +300,7 @@ test("authenticated routes remain accessible and fit the responsive viewport mat
     await page.keyboard.press("Tab");
     assert.equal(await dialogButtons.first().evaluate((element) => element === document.activeElement), true, "Tab should wrap to the first control");
     await page.waitForFunction(() => !document.getAnimations().some((animation) => animation.playState === "running"));
-    await page.screenshot({ path: join(tmpdir(), "abii-phase5-modal-390.png"), fullPage: true });
+    await page.screenshot({ path: join(tmpdir(), "abii-phase5-modal-390.png"), fullPage: true, caret: "initial" });
     await page.keyboard.press("Escape");
     await dialog.waitFor({ state: "detached" });
     assert.equal(await main.evaluate((element) => element.scrollTop), modalScrollTop, "closing a modal should restore the underlying scroll offset");
