@@ -1,6 +1,5 @@
-"use client";
-
 import Image from "next/image";
+import { SkeletonBlock, SkeletonCard, SkeletonRegion } from "@/components/ui/skeleton";
 
 
 export type PageLoadingVariant =
@@ -18,11 +17,11 @@ export type PageLoadingVariant =
   | "settings";
 
 function Bar({ className = "" }: { className?: string }) {
-  return <div aria-hidden="true" className={`motion-safe:animate-pulse rounded-lg bg-[#F4E9ED] ${className}`} />;
+  return <SkeletonBlock className={`rounded-lg ${className}`} />;
 }
 
 function CardSkeleton({ className = "", children }: { className?: string; children?: React.ReactNode }) {
-  return <div aria-hidden="true" className={`rounded-2xl border border-[#F0E5E9] bg-white p-4 sm:p-5 ${className}`}>{children}</div>;
+  return <SkeletonCard className={className}>{children}</SkeletonCard>;
 }
 
 function Hero({ variant = "wide" }: { variant?: "wide" | "compact" }) {
@@ -165,7 +164,7 @@ function FinishResults() {
       <CardSkeleton className="rounded-[18px] border-[#E8E2E5] p-4 sm:p-5">
         <div className="flex items-center justify-between gap-2"><Bar className="h-5 w-44 max-w-[65%]" /><Bar className="h-7 w-24 rounded-full" /></div>
         <div className="mt-3 grid gap-4 rounded-2xl border border-[#EAEFF3] p-4 sm:grid-cols-[minmax(180px,.8fr)_1.2fr] sm:items-center sm:p-5">
-          <div className="flex min-w-0 flex-col items-center"><Bar className="mb-2 h-4 w-full" /><div className="relative grid h-[176px] w-[176px] max-w-full shrink-0 place-items-center rounded-full bg-[#F4E9ED] p-3 motion-safe:animate-pulse"><div className="grid h-full w-full place-content-center rounded-full bg-white"><Bar className="h-8 w-20" /><Bar className="mt-3 h-3 w-28 max-w-full" /></div></div></div>
+          <div className="flex min-w-0 flex-col items-center"><Bar className="mb-2 h-4 w-full" /><div aria-hidden="true" className="grid h-[176px] w-[176px] max-w-full shrink-0 place-items-center rounded-full bg-white p-3"><SkeletonBlock className="h-full w-full rounded-full" /></div></div>
           <div className="min-w-0">
             <Bar className="h-3 w-full" /><Bar className="mt-2 h-3 w-4/5" />
             <div className="mt-4 grid grid-cols-2 gap-2.5">{[0, 1].map((item) => <div key={item} className={`rounded-2xl border p-3 ${item === 0 ? "border-[#DDF2E7] bg-[#F6FCF8]" : "border-[#F8DCE4] bg-[#FFF8FA]"}`}><div className="flex items-center gap-2"><Bar className="h-8 w-8 shrink-0 rounded-full" /><Bar className="h-7 w-12" /></div><Bar className="mt-2 h-2.5 w-24 max-w-full" /></div>)}</div>
@@ -328,12 +327,11 @@ export function PageLoadingSkeleton({ variant }: { variant: PageLoadingVariant }
       ? "min-w-0 space-y-5 p-4 pb-24 sm:p-6 xl:p-7"
       : "space-y-5 p-4 pb-24 sm:p-5 xl:p-6";
   const content = (
-    <div role="status" aria-live="polite" aria-label={`Loading ${variant.replace("-", " ")} page`} className="min-h-full">
-      <span className="sr-only">Loading page content…</span>
+    <SkeletonRegion label={`Loading ${variant.replaceAll("-", " ")} page`} className="min-h-full">
       <div className={pageSpacing}>
         <Content variant={variant} />
       </div>
-    </div>
+    </SkeletonRegion>
   );
 
   return content;

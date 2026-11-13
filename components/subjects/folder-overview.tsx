@@ -8,17 +8,18 @@ import { ModalButtonContent } from "@/components/ui/modal-button-content";
 import { useToast } from "@/components/ui/toast-provider";
 import type { FolderItem } from "./topics-section";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/motion/scroll-reveal";
+import { SkeletonBlock } from "@/components/ui/skeleton";
 
 type Unfiled = { topicCount: number; flashcardCount: number };
 
 function FolderCardSkeleton() {
-  return <div aria-hidden="true" className="min-h-[190px] animate-pulse rounded-2xl border border-[#F0E5E9] bg-white p-4">
-    <div className="h-10 w-10 rounded-xl bg-[#FFF0F5]" />
-    <div className="mt-4 h-4 w-3/5 rounded bg-[#F4E9ED]" />
-    <div className="mt-2 h-3 w-full rounded bg-[#F6F1F3]" />
-    <div className="mt-2 h-3 w-2/3 rounded bg-[#F6F1F3]" />
-    <div className="mt-4 h-3 w-1/2 rounded bg-[#F4E9ED]" />
-    <div className="mt-4 h-4 w-28 rounded bg-[#FFF0F5]" />
+  return <div aria-hidden="true" className="min-h-[190px] rounded-2xl border border-[#F0E5E9] bg-white p-4">
+    <SkeletonBlock className="h-10 w-10 rounded-xl" />
+    <SkeletonBlock className="mt-4 h-4 w-3/5 rounded" />
+    <SkeletonBlock className="mt-2 h-3 w-full rounded" />
+    <SkeletonBlock className="mt-2 h-3 w-2/3 rounded" />
+    <SkeletonBlock className="mt-4 h-3 w-1/2 rounded" />
+    <SkeletonBlock className="mt-4 h-4 w-28 rounded" />
   </div>;
 }
 

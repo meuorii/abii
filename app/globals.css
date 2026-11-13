@@ -1,5 +1,39 @@
 @import "tailwindcss";
 
+:root {
+  --skeleton-base: #F2E7EB;
+  --skeleton-highlight: rgb(255 255 255 / 48%);
+  --skeleton-surface: #FFF4F7;
+  --skeleton-border: #F0E5E9;
+  --skeleton-radius: 0.625rem;
+}
+
+.abii-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--skeleton-base) !important;
+  isolation: isolate;
+}
+
+.abii-skeleton::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(100deg, transparent 25%, var(--skeleton-highlight) 50%, transparent 75%);
+  content: "";
+  transform: translateX(-100%);
+  animation: skeleton-shimmer 2s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes skeleton-shimmer {
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .abii-skeleton::after { animation: none; }
+}
+
 
 @media (max-width: 639.98px) {
   .abii-page-hero__content { gap: 8px; }
