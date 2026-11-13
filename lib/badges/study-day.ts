@@ -8,6 +8,12 @@ export function normalizeStudyTimezone(value?: string | null): string {
   return isIanaStudyTimezone(value) ? value : DEFAULT_STUDY_TIMEZONE;
 }
 
+/** Greeting time follows the browser's local zone, falling back to the saved study zone. */
+export function resolveGreetingTimezone(browserTimezone?: string | null, studyTimezone?: string | null): string {
+  if (browserTimezone && isIanaStudyTimezone(browserTimezone)) return browserTimezone;
+  return normalizeStudyTimezone(studyTimezone);
+}
+
 export function studyDayKey(date: Date, timezone?: string | null): string {
   if (Number.isNaN(date.getTime())) throw new RangeError("Cannot compute a study day for an invalid date.");
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: normalizeStudyTimezone(timezone), year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);

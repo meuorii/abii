@@ -5,7 +5,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Subject } from "@/models/Subject";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { logServerDuration, measureServerOperation } from "@/lib/performance/server-timing";
-import { addCalendarDays, currentConsecutiveDayStreak, normalizeStudyTimezone, studyDayGreeting, studyDayKey } from "@/lib/badges/study-day";
+import { addCalendarDays, currentConsecutiveDayStreak, normalizeStudyTimezone, studyDayKey } from "@/lib/badges/study-day";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,7 +82,7 @@ export default async function DashboardPage() {
     
       <DashboardOverview
         firstName={firstName}
-        greeting={studyDayGreeting(now, timezone)}
+        studyTimezone={timezone}
         userId={String(user._id)}
         dueCount={dueCount}
         totalCards={totalCards}

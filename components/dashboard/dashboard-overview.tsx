@@ -5,12 +5,13 @@ import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 import { FeaturedBadgesStream } from "@/components/badges/featured-badges-stream";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/motion/scroll-reveal";
 import { AbiiPageHero } from "@/components/ui/abii-page-hero";
+import { DashboardGreeting } from "@/components/dashboard/dashboard-greeting";
 
 type SubjectOverview = { id: string; name: string; flashcardCount: number; progress: number };
 
 type DashboardOverviewProps = {
   firstName: string;
-  greeting: string;
+  studyTimezone: string;
   userId: string;
   dueCount: number;
   totalCards: number;
@@ -46,7 +47,7 @@ function EmptySubjects() {
   );
 }
 
-export function DashboardOverview({ firstName, greeting, userId, dueCount, totalCards, overallMastery, currentStreak, lastSevenDays, subjects, loadFailed = false }: DashboardOverviewProps) {
+export function DashboardOverview({ firstName, studyTimezone, userId, dueCount, totalCards, overallMastery, currentStreak, lastSevenDays, subjects, loadFailed = false }: DashboardOverviewProps) {
   const shownSubjects = subjects.slice(0, 4);
 
   return (
@@ -54,7 +55,7 @@ export function DashboardOverview({ firstName, greeting, userId, dueCount, total
       <AbiiPageHero
         variant="dashboard"
         headingId="dashboard-hero-title"
-        eyebrow={<p className="text-xs font-medium text-[#2F4658] sm:text-sm">{greeting}, {firstName}! <span aria-hidden="true">👋</span></p>}
+        eyebrow={<DashboardGreeting firstName={firstName} studyTimezone={studyTimezone} />}
         title={<h1 className="mt-2 max-w-[490px] text-[clamp(1.7rem,3.3vw,2.8rem)] font-bold leading-[1.08] tracking-[-0.055em] text-[#203D50]">What should you <span className="text-[#E9577D]">study</span> today?</h1>}
         description={<p className="mt-3 max-w-[340px] text-xs leading-5 text-[#6C8192] sm:text-sm sm:leading-6">Pick up where you left off, review your flashcards, and keep your learning progress moving forward.</p>}
         actions={<Link href="/review" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#FF6F96] px-4 py-2.5 text-xs font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.15)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:mt-5 sm:min-h-11 sm:px-5 sm:text-sm">Start Review <Icon name="arrow" className="h-4 w-4" /></Link>}
