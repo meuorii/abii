@@ -12,10 +12,10 @@ export default async function SettingsPage() {
   await connectToDatabase();
   const safeUser = await (await import("@/models/User")).User.findById(user._id).select("name email settings createdAt profileImage").lean();
   if (!safeUser) redirect("/login");
-  const settings = safeUser.settings ?? { targetSubjects: 5, defaultLandingPage: "/dashboard", subjectLayout: "grid" };
+  const settings = safeUser.settings ?? { targetSubjects: 5, defaultLandingPage: "/dashboard", subjectLayout: "grid", studyTimezone: "UTC" };
   return (
     
-      <SettingsClient initialUser={{ name: safeUser.name, email: safeUser.email, profileImage: safeUser.profileImage ?? "", createdAt: safeUser.createdAt?.toISOString() ?? "", settings: { targetSubjects: settings.targetSubjects ?? 5, defaultLandingPage: settings.defaultLandingPage ?? "/dashboard", subjectLayout: settings.subjectLayout ?? "grid" } }} />
+      <SettingsClient initialUser={{ name: safeUser.name, email: safeUser.email, profileImage: safeUser.profileImage ?? "", createdAt: safeUser.createdAt?.toISOString() ?? "", settings: { targetSubjects: settings.targetSubjects ?? 5, defaultLandingPage: settings.defaultLandingPage ?? "/dashboard", subjectLayout: settings.subjectLayout ?? "grid", studyTimezone: settings.studyTimezone ?? "UTC" } }} />
     
   );
 }

@@ -10,6 +10,7 @@ type SubjectOverview = { id: string; name: string; flashcardCount: number; progr
 
 type DashboardOverviewProps = {
   firstName: string;
+  greeting: string;
   userId: string;
   dueCount: number;
   totalCards: number;
@@ -45,9 +46,7 @@ function EmptySubjects() {
   );
 }
 
-export function DashboardOverview({ firstName, userId, dueCount, totalCards, overallMastery, currentStreak, lastSevenDays, subjects, loadFailed = false }: DashboardOverviewProps) {
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+export function DashboardOverview({ firstName, greeting, userId, dueCount, totalCards, overallMastery, currentStreak, lastSevenDays, subjects, loadFailed = false }: DashboardOverviewProps) {
   const shownSubjects = subjects.slice(0, 4);
 
   return (

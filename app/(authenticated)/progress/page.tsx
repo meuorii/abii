@@ -3,18 +3,14 @@ import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { ProgressDashboard, type ProgressPayload } from "@/components/progress/progress-dashboard";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
-import { Subject } from "@/models/Subject";
-import { QuizSession } from "@/models/QuizSession";
-import { Topic } from "@/models/Topic";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { FeaturedBadgesStream } from "@/components/badges/featured-badges-stream";
+import { currentConsecutiveDayStreak, normalizeStudyTimezone, recentStudyDayKeys, studyDayKey } from "@/lib/badges/study-day";
+import { loadProgressReviewActivity, loadProgressSessionAnalytics } from "@/lib/progress/analytics";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DAY = 86_400_000;
-const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 const percent = (numerator: number, denominator: number) => denominator ? Math.round((numerator / denominator) * 100) : null;
 
 export default async function ProgressPage() {
@@ -24,25 +20,25 @@ export default async function ProgressPage() {
 
   const userId = user._id;
   const now = new Date();
-  const today = startOfDay(now);
-  const chartStart = new Date(today.getTime() - 89 * DAY);
+  const timezone = normalizeStudyTimezone(user.settings?.studyTimezone);
+  const todayKey = studyDayKey(now, timezone);
 
-  const [subjects, topics, sessions, mastery] = await Promise.all([
-    Subject.find({ userId }).select("_id name").lean(),
-    Topic.find({ userId }).select("_id subjectId name").sort({ subjectId: 1, name: 1 }).lean(),
-    QuizSession.find({ userId, status: "completed" }).select("_id subjectId subjectName type questions completedAt createdAt").lean(),
-    getSubjectMastery(userId),
+  const [mastery, sessionAnalytics] = await Promise.all([
+    getSubjectMastery(userId, undefined, { includeHistory: false, studyTimezone: timezone, includeCatalog: true }),
+    loadProgressSessionAnalytics(userId, timezone, todayKey),
   ]);
 
-  const flashcards = mastery.cardSummaries;
-  const reviews = mastery.reviewHistory;
-  const recentSessions = [...sessions].sort((a, b) => (new Date(b.completedAt ?? b.createdAt).getTime() - new Date(a.completedAt ?? a.createdAt).getTime())).slice(0, 5);
+  const subjects = mastery.subjectCatalog ?? [];
+  const topics = mastery.topicCatalog ?? [];
 
-  const subjectNameById = new Map(subjects.map((s) => [String(s._id), s.name]));
+  const flashcards = mastery.cardSummaries;
+  const reviewActivity = await loadProgressReviewActivity(userId, flashcards.map((card) => card.id), timezone, todayKey);
+
+  const subjectNameById = new Map(subjects.map((s) => [s.id, s.name]));
   const topicCardCounts = new Map<string, number>();
-  const topicSubjectById = new Map(topics.map((topic) => [String(topic._id), String(topic.subjectId)]));
+  const topicSubjectById = new Map(topics.map((topic) => [topic.id, topic.subjectId]));
   const subjectStats = new Map<string, { total: number; reviewed: Set<string>; correct: number; answered: number }>();
-  for (const subject of subjects) subjectStats.set(String(subject._id), { total: 0, reviewed: new Set(), correct: 0, answered: 0 });
+  for (const subject of subjects) subjectStats.set(subject.id, { total: 0, reviewed: new Set(), correct: 0, answered: 0 });
   const cardSubject = new Map<string, string>();
   const cardById = new Map<string, (typeof flashcards)[number]>();
   for (const card of flashcards) {
@@ -59,47 +55,36 @@ export default async function ProgressPage() {
 
   let correctAll = 0;
   let answeredAll = 0;
-  const allReviewDays = new Set<string>();
-  const activity = Array.from({ length: 90 }, (_, index) => {
-    const date = new Date(chartStart.getTime() + index * DAY);
-    return { date: dateKey(date), label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }), sessions: 0, cards: 0 };
+  const activity = recentStudyDayKeys(todayKey, 90).map((date) => {
+    const [year, month, day] = date.split("-").map(Number);
+    const label = new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
+    return { date, label, sessions: 0, cards: 0 };
   });
   const activityIndex = new Map(activity.map((item, index) => [item.date, index]));
-  const cardAttemptTotals = new Map<string, { wrong: number; total: number }>();
-
-  // Full-history summary is based on actual saved answer records.
-  const allReviews = reviews;
-  for (const record of allReviews) {
-    const key = String(record.flashcardId);
-    const subjectId = cardSubject.get(key);
-    const stats = subjectId ? subjectStats.get(subjectId) : undefined;
-    if (record.result === "correct") { correctAll += 1; if (stats) stats.correct += 1; }
-    answeredAll += 1;
-    if (stats) { stats.answered += 1; stats.reviewed.add(key); }
-    const day = dateKey(new Date(record.reviewedAt));
-    allReviewDays.add(day);
-    const cardTotal = cardAttemptTotals.get(key) ?? { wrong: 0, total: 0 };
-    cardTotal.total += 1;
-    if (record.result === "wrong") cardTotal.wrong += 1;
-    cardAttemptTotals.set(key, cardTotal);
+  for (const [cardId, attempts] of mastery.reviewStatsByCard) {
+    correctAll += attempts.correct;
+    answeredAll += attempts.total;
+    const subjectId = cardSubject.get(cardId);
+    const subject = subjectId ? subjectStats.get(subjectId) : undefined;
+    if (subject) {
+      subject.correct += attempts.correct;
+      subject.answered += attempts.total;
+      if (attempts.total > 0) subject.reviewed.add(cardId);
+    }
   }
-  for (const record of reviews) {
-    const idx = activityIndex.get(dateKey(new Date(record.reviewedAt)));
-    if (idx !== undefined) activity[idx].cards += 1;
+  for (const { date, count } of reviewActivity) {
+    const index = activityIndex.get(date);
+    if (index !== undefined) activity[index].cards = count;
   }
-  for (const session of sessions) {
-    const completedAt = session.completedAt ? new Date(session.completedAt) : null;
-    if (!completedAt) continue;
-    const idx = activityIndex.get(dateKey(completedAt));
-    if (idx !== undefined) activity[idx].sessions += 1;
+  for (const { date, count } of sessionAnalytics.sessionActivity) {
+    const index = activityIndex.get(date);
+    if (index !== undefined) activity[index].sessions = count;
   }
 
-  let streak = 0;
-  let cursor = allReviewDays.has(dateKey(today)) ? today : new Date(today.getTime() - DAY);
-  while (allReviewDays.has(dateKey(cursor))) { streak += 1; cursor = new Date(cursor.getTime() - DAY); }
+  const streak = currentConsecutiveDayStreak(mastery.reviewDays, todayKey);
 
   const subjectPerformance = subjects.map((subject) => {
-    const id = String(subject._id);
+    const id = subject.id;
     const stats = subjectStats.get(id)!;
     return {
       id,
@@ -116,13 +101,13 @@ export default async function ProgressPage() {
   }).sort((a, b) => (a.accuracy ?? 101) - (b.accuracy ?? 101));
 
   const topicPerformance = topics.map((topic) => {
-    const id = String(topic._id);
-    const subjectId = String(topic.subjectId);
+    const id = topic.id;
+    const subjectId = topic.subjectId;
     const stats = mastery.byTopic.get(id);
     return { id, subjectId, subject: subjectNameById.get(subjectId) ?? "Subject", name: topic.name, totalCards: topicCardCounts.get(id) ?? 0, mastered: stats?.mastered ?? 0, usable: stats?.usable ?? 0, progress: stats?.progress ?? 0, completedRequirements: stats?.completedRequirements ?? 0, totalRequirements: stats?.totalRequirements ?? 0 };
   });
 
-  const groupedCardReviews = [...cardAttemptTotals].map(([id, value]) => ({ _id: id, total: value.total, wrong: value.wrong })).filter((item) => item.total >= 2).sort((a, b) => b.wrong - a.wrong || b.total - a.total).slice(0, 20);
+  const groupedCardReviews = [...mastery.reviewStatsByCard].map(([id, value]) => ({ _id: id, total: value.total, wrong: value.wrong, latestAt: value.latestReviewedAt?.getTime() ?? 0, latestId: value.latestReviewId ?? "" })).filter((item) => item.total >= 2).sort((a, b) => b.wrong - a.wrong || b.total - a.total || b.latestAt - a.latestAt || b.latestId.localeCompare(a.latestId)).slice(0, 2);
   const challengingCards = groupedCardReviews.map((item) => {
     const card = cardById.get(String(item._id));
     if (!card) return null;
@@ -138,17 +123,13 @@ export default async function ProgressPage() {
   }).filter((item): item is NonNullable<typeof item> => Boolean(item)).slice(0, 2);
 
   const lowerAccuracySubjects = subjectPerformance.filter((s) => s.accuracy !== null && (subjectStats.get(s.id)?.answered ?? 0) >= 3).slice(0, 3);
-  const serializedSessions = recentSessions.map((session) => {
-    const questions = session.questions ?? [];
-    const answered = questions.filter((q) => q.answered);
-    const correct = answered.filter((q) => q.correct).length;
-    const date = session.completedAt ? new Date(session.completedAt) : new Date(session.createdAt);
-    const type = session.type === "multiple-choice" ? "Multiple Choice" : session.type === "true-false" ? "True or False" : session.type === "identification" ? "Identification" : "Random";
-    return { id: String(session._id), subject: session.subjectName, type, date: date.toISOString(), correct, answered: answered.length, accuracy: percent(correct, answered.length) };
+  const serializedSessions = sessionAnalytics.recentSessions.map((session) => {
+    const type = session.quizType === "multiple-choice" ? "Multiple Choice" : session.quizType === "true-false" ? "True or False" : session.quizType === "identification" ? "Identification" : "Random";
+    return { id: session.id, subject: session.subject, type, date: session.date.toISOString(), correct: session.correct, answered: session.answered, accuracy: percent(session.correct, session.answered) };
   });
 
   const payload: ProgressPayload = {
-    summary: { totalReviews: answeredAll, accuracy: percent(correctAll, answeredAll), sessions: sessions.length, streak, masteredCards: mastery.overall.mastered, totalCards: mastery.overall.total, masteryProgress: mastery.overall.progress, completedRequirements: mastery.overall.completedRequirements, totalRequirements: mastery.overall.totalRequirements },
+    summary: { totalReviews: answeredAll, accuracy: percent(correctAll, answeredAll), sessions: sessionAnalytics.sessionCount, streak, masteredCards: mastery.overall.mastered, totalCards: mastery.overall.total, masteryProgress: mastery.overall.progress, completedRequirements: mastery.overall.completedRequirements, totalRequirements: mastery.overall.totalRequirements },
     activity,
     subjects: subjectPerformance,
     topics: topicPerformance,

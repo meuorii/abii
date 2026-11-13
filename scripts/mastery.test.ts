@@ -139,6 +139,7 @@ test("compact dashboard mastery matches full history across modes, ties, due dat
       { _id: new Types.ObjectId("000000000000000000000011"), userId, flashcardId: card._id, questionType: "random", result: "correct", reviewedAt: sameTimestamp, nextReviewAt: new Date("2020-01-01Z") },
       { _id: new Types.ObjectId("000000000000000000000012"), userId, flashcardId: card._id, questionType: "random", result: "wrong", reviewedAt: sameTimestamp, nextReviewAt: new Date("2099-01-01Z") },
       { userId, flashcardId: secondCard._id, questionType: "identification", result: "wrong", reviewedAt: new Date("2026-04-08T13:00:00Z"), nextReviewAt: new Date("2020-01-01Z") },
+      { userId, flashcardId: secondCard._id, questionType: "identification", result: "correct", reviewedAt: new Date("2026-04-08T17:30:00Z"), nextReviewAt: new Date("2020-01-01Z") },
       ...Array.from({ length: 120 }, (_, i) => ({ userId, flashcardId: secondCard._id, questionType: "multiple-choice", result: i % 7 === 0 ? "wrong" : "correct", reviewedAt: new Date(`2026-04-09T${String(Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}:00Z`), nextReviewAt: new Date("2020-01-01Z") })),
     ];
     await ReviewRecord.insertMany(rows);
@@ -164,6 +165,9 @@ test("compact dashboard mastery matches full history across modes, ties, due dat
     assert.equal(compact.overall.incorrect, full.overall.incorrect);
     assert.equal(compact.byTypeByTopic.get(String(topic._id))?.identification.done, full.byTypeByTopic.get(String(topic._id))?.identification.done, "wrong answers reset the mode streak in both paths");
     assert.equal(compact.reviewDays.size, 7, "many records on one UTC date contribute one study day");
+    const manilaCompact = await getSubjectMastery(userId, undefined, { includeHistory: false, studyTimezone: "Asia/Manila" });
+    assert.ok(manilaCompact.reviewDays.has("2026-04-09"), "compact aggregation groups a UTC April 8 review under April 9 in Manila");
+    assert.equal(manilaCompact.reviewHistory.length, 0, "timezone aware grouping preserves the compact no-history contract");
   } finally {
     await mongoose.disconnect();
     await server.stop();

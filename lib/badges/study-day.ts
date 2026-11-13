@@ -15,6 +15,38 @@ export function studyDayKey(date: Date, timezone?: string | null): string {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
+/** UTC instants spanning one account-local calendar day (end is exclusive). */
+export function getStudyDayWindow(dayKey: string, timezone?: string | null): { start: Date; end: Date } {
+  const zone = normalizeStudyTimezone(timezone);
+  const start = instantAtStudyDayStart(dayKey, zone);
+  const end = instantAtStudyDayStart(addCalendarDays(dayKey, 1), zone);
+  return { start, end };
+}
+
+function instantAtStudyDayStart(dayKey: string, timezone: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey) || addCalendarDays(dayKey, 0) !== dayKey) {
+    throw new RangeError(`Invalid study day key: ${dayKey}`);
+  }
+  const [year, month, day] = dayKey.split("-").map(Number);
+  const target = Date.UTC(year, month - 1, day);
+  let low = target - 36 * 60 * 60 * 1000;
+  let high = target + 36 * 60 * 60 * 1000;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (studyDayKey(new Date(middle), timezone) < dayKey) low = middle + 1;
+    else high = middle;
+  }
+  const result = new Date(low);
+  if (studyDayKey(result, timezone) !== dayKey) throw new RangeError(`Study day does not exist in ${timezone}: ${dayKey}`);
+  return result;
+}
+
+export function studyDayGreeting(date: Date, timezone?: string | null): "Good morning" | "Good afternoon" | "Good evening" {
+  const hourPart = new Intl.DateTimeFormat("en", { timeZone: normalizeStudyTimezone(timezone), hour: "2-digit", hourCycle: "h23" }).formatToParts(date).find((part) => part.type === "hour")?.value;
+  const hour = Number(hourPart);
+  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
+
 /** Consecutive calendar days are calculated with UTC date arithmetic after timezone-local keying. */
 export function longestConsecutiveDayStreak(dayKeys: Iterable<string>): number {
   const sorted = [...new Set(dayKeys)].sort();
@@ -37,6 +69,11 @@ export function addCalendarDays(dayKey: string, amount: number): string {
   const [year, month, day] = dayKey.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day + amount));
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+export function recentStudyDayKeys(todayKey: string, count: number): string[] {
+  if (!Number.isInteger(count) || count < 0) throw new RangeError("Study-day count must be a non-negative integer.");
+  return Array.from({ length: count }, (_, index) => addCalendarDays(todayKey, index - count + 1));
 }
 
 /** A live streak includes today if active today, otherwise it may continue from yesterday. */

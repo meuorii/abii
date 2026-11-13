@@ -5,38 +5,19 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Subject } from "@/models/Subject";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { logServerDuration, measureServerOperation } from "@/lib/performance/server-timing";
+import { addCalendarDays, currentConsecutiveDayStreak, normalizeStudyTimezone, studyDayGreeting, studyDayKey } from "@/lib/badges/study-day";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type SubjectSummary = { id: string; name: string; flashcardCount: number; progress: number };
 
-function dateKey(date: Date) {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
-}
-
-function startOfUtcDay(date: Date) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-}
-
-function getCurrentStreak(studyDayKeys: Set<string>, today: Date) {
-  const todayKey = dateKey(today);
-  const yesterday = new Date(startOfUtcDay(today).getTime() - 24 * 60 * 60 * 1000);
-  let cursor = studyDayKeys.has(todayKey) ? startOfUtcDay(today) : yesterday;
-  if (!studyDayKeys.has(dateKey(cursor))) return 0;
-
-  let streak = 0;
-  while (studyDayKeys.has(dateKey(cursor))) {
-    streak += 1;
-    cursor = new Date(cursor.getTime() - 24 * 60 * 60 * 1000);
-  }
-  return streak;
-}
-
 export default async function DashboardPage() {
   const pageStartedAt = performance.now();
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const now = new Date();
+  const timezone = normalizeStudyTimezone(user.settings?.studyTimezone);
 
   let subjects: SubjectSummary[] = [];
   let dueCount = 0;
@@ -49,10 +30,9 @@ export default async function DashboardPage() {
   try {
     await connectToDatabase();
     const userId = user._id;
-    const now = new Date();
     const [subjectDocs, mastery] = await measureServerOperation("dashboard data retrieval", () => Promise.all([
       Subject.find({ userId }).select("_id name").sort({ name: 1 }).lean(),
-      getSubjectMastery(userId, undefined, { includeHistory: false }),
+      getSubjectMastery(userId, undefined, { includeHistory: false, studyTimezone: timezone }),
     ]));
     overallMastery = { progress: mastery.overall.progress };
 
@@ -82,11 +62,13 @@ export default async function DashboardPage() {
       };
     });
 
-    currentStreak = getCurrentStreak(studyDays, now);
-    const todayStart = startOfUtcDay(now);
+    const todayKey = studyDayKey(now, timezone);
+    currentStreak = currentConsecutiveDayStreak(studyDays, todayKey);
     lastSevenDays = Array.from({ length: 7 }, (_, index) => {
-      const day = new Date(todayStart.getTime() - (6 - index) * 24 * 60 * 60 * 1000);
-      return { label: ["S", "M", "T", "W", "T", "F", "S"][day.getUTCDay()], completed: studyDays.has(dateKey(day)) };
+      const dayKey = addCalendarDays(todayKey, index - 6);
+      const [year, month, day] = dayKey.split("-").map(Number);
+      const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+      return { label: ["S", "M", "T", "W", "T", "F", "S"][weekday], completed: studyDays.has(dayKey) };
     });
   } catch (error) {
     console.error("Dashboard overview data could not be loaded.", error);
@@ -100,6 +82,7 @@ export default async function DashboardPage() {
     
       <DashboardOverview
         firstName={firstName}
+        greeting={studyDayGreeting(now, timezone)}
         userId={String(user._id)}
         dueCount={dueCount}
         totalCards={totalCards}

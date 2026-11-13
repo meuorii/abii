@@ -57,7 +57,8 @@ try {
   const compactTimes = [];
   let fullResult;
   let compactResult;
-  for (let i = 0; i < 20; i += 1) {
+  const iterations = Number(process.env.BENCH_ITERATIONS ?? 20);
+  for (let i = 0; i < iterations; i += 1) {
     let started = performance.now();
     fullResult = await getSubjectMastery(owner);
     fullTimes.push(performance.now() - started);

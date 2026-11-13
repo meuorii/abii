@@ -13,12 +13,12 @@ import { getAbiiSoundVolume, isAbiiSoundEnabled, playAbiiSound, setAbiiSoundEnab
 import { ProfilePictureCropModal } from "@/components/settings/profile-picture-crop-modal";
 import { useToast } from "@/components/ui/toast-provider";
 
-type Preferences = { targetSubjects: number; defaultLandingPage: string; subjectLayout: "grid" | "list" };
+type Preferences = { targetSubjects: number; defaultLandingPage: string; subjectLayout: "grid" | "list"; studyTimezone: string };
 type InitialUser = { name: string; email: string; profileImage: string; createdAt: string; settings?: Partial<Preferences> | null };
 type Notice = { kind: "success" | "error"; text: string } | null;
 type NoticeKey = "preferences" | "profile" | "photo" | "password" | "export" | "history" | "materials" | "account" | "logout";
 type NoticeMap = Partial<Record<NoticeKey, Notice>>;
-const defaultPreferences: Preferences = { targetSubjects: 5, defaultLandingPage: "/dashboard", subjectLayout: "grid" };
+const defaultPreferences: Preferences = { targetSubjects: 5, defaultLandingPage: "/dashboard", subjectLayout: "grid", studyTimezone: "UTC" };
 
 const inputClass = "mt-1.5 min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-2.5 text-sm text-[#2F2930] outline-none transition placeholder:text-[#A49AA0] focus:border-[#FF9FBA] focus:ring-2 focus:ring-[#FFE8EF]";
 const buttonClass = "inline-flex min-h-10 items-center justify-center rounded-xl bg-[#FF6F96] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
@@ -74,7 +74,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
   }
   async function savePreferences(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving("preferences"); setNoticeFor("preferences", null);
-    try { const data = await request("/api/settings", "PATCH", preferences); setNoticeFor("preferences", { kind: "success", text: data.message || "Preferences saved. Your study experience is updated." }); }
+    try { const data = await request("/api/settings", "PATCH", preferences); setNoticeFor("preferences", { kind: "success", text: data.message || "Preferences saved. Your study experience is updated." }); router.refresh(); }
     catch (error) { setNoticeFor("preferences", { kind: "error", text: error instanceof Error ? error.message : "Couldn’t save preferences. Check your connection and try again." }); }
     finally { setSaving(""); }
   }
@@ -178,6 +178,8 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(150px,180px)] sm:items-center"><div><label htmlFor="landingPage" className="text-sm font-semibold text-[#18384D]">Default landing page</label><p className="mt-1 text-xs leading-5 text-[#6E879A]">Choose where you want to start after signing in.</p></div><select id="landingPage" value={preferences.defaultLandingPage} onChange={(event) => setPreferences({ ...preferences, defaultLandingPage: event.target.value })} className={inputClass + " mt-0"}><option value="/dashboard">Dashboard</option><option value="/subjects">My Subjects</option><option value="/review">Review</option><option value="/progress">Progress</option></select></div>
             <div className="h-px bg-[#F1EAED]" />
             <fieldset><legend className="text-sm font-semibold text-[#18384D]">Preferred subject layout</legend><p className="mt-1 text-xs leading-5 text-[#6E879A]">Choose how subjects should appear in My Subjects.</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" aria-pressed={preferences.subjectLayout === "grid"} onClick={() => setPreferences({ ...preferences, subjectLayout: "grid" })} className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition ${preferences.subjectLayout === "grid" ? "border-[#FF9FBA] bg-[#FFF0F4] text-[#C94B76]" : "border-[#E8E2E5] text-[#756B72] hover:bg-[#FFF7F9]"}`}><Grid2X2 className="h-4 w-4"/> Grid</button><button type="button" aria-pressed={preferences.subjectLayout === "list"} onClick={() => setPreferences({ ...preferences, subjectLayout: "list" })} className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition ${preferences.subjectLayout === "list" ? "border-[#FF9FBA] bg-[#FFF0F4] text-[#C94B76]" : "border-[#E8E2E5] text-[#756B72] hover:bg-[#FFF7F9]"}`}><List className="h-4 w-4"/> List</button></div></fieldset>
+            <div className="h-px bg-[#F1EAED]" />
+            <div><label htmlFor="studyTimezone" className="text-sm font-semibold text-[#18384D]">Study timezone</label><p className="mt-1 text-xs leading-5 text-[#6E879A]">Used for study days, streaks, activity charts, and your Dashboard greeting. Enter an IANA timezone such as Asia/Manila or America/New_York.</p><input id="studyTimezone" type="text" autoComplete="off" spellCheck={false} required value={preferences.studyTimezone} onChange={(event) => setPreferences({ ...preferences, studyTimezone: event.target.value })} className={inputClass} /></div>
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1"><p className="text-xs text-[#8A7D84]">Preferences are saved to your account.</p><button type="submit" disabled={saving !== ""} className={buttonClass}>{saving === "preferences" ? "Saving Preferences…" : "Save Preferences"}</button></div>
           </form>
           <div className="mt-3 rounded-xl border border-[#F0E9EC] p-3.5 sm:p-4">

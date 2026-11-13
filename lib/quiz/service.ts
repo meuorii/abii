@@ -13,7 +13,7 @@ import { computeNextReviewAt } from "./schedule";
 import { currentRoundProgress } from "./resume-state";
 import { priorMistakeState, prioritizePending } from "./round-priority";
 import { recordAchievementEvent } from "@/lib/badges/repository";
-import { studyDayKey } from "@/lib/badges/study-day";
+import { normalizeStudyTimezone, studyDayKey } from "@/lib/badges/study-day";
 import { User } from "@/models/User";
 import { measureServerOperation, measureSyncServerOperation } from "@/lib/performance/server-timing";
 import {
@@ -294,33 +294,36 @@ export async function computeStreaks(userId: Types.ObjectId | string, flashcardI
  * Computes streak mastery once per owned card, then aggregates it by topic,
  * subject, and account. Type applicability uses the exact question builder rules.
  */
-async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds?: Types.ObjectId[], options: { includeHistory?: boolean } = {}) {
+async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds?: Types.ObjectId[], options: { includeHistory?: boolean; studyTimezone?: string | null; includeCatalog?: boolean } = {}) {
   await connectToDatabase();
   const scopedSubjectFilter = subjectIds ? { $in: subjectIds } : undefined;
   const [rawCards, subjects, topics] = await Promise.all([
     measureServerOperation("mastery flashcard query", () => Flashcard.find({ userId, ...(scopedSubjectFilter ? { subjectId: scopedSubjectFilter } : {}) }).select("_id subjectId topicId flashcardType question answer hint").lean(), { database: true }),
-    measureServerOperation("mastery subject query", () => Subject.find({ userId, ...(scopedSubjectFilter ? { _id: scopedSubjectFilter } : {}) }).select("_id").lean(), { database: true }),
-    measureServerOperation("mastery topic query", () => Topic.find({ userId, ...(scopedSubjectFilter ? { subjectId: scopedSubjectFilter } : {}) }).select("_id subjectId").lean(), { database: true }),
+    measureServerOperation("mastery subject query", () => Subject.find({ userId, ...(scopedSubjectFilter ? { _id: scopedSubjectFilter } : {}) }).select(options.includeCatalog ? "_id name" : "_id").lean(), { database: true }),
+    measureServerOperation("mastery topic query", () => Topic.find({ userId, ...(scopedSubjectFilter ? { subjectId: scopedSubjectFilter } : {}) }).select(options.includeCatalog ? "_id subjectId name" : "_id subjectId").sort(options.includeCatalog ? { subjectId: 1, name: 1 } : {}).lean(), { database: true }),
   ]);
   const cardIds = rawCards.map(card => card._id);
   const includeHistory = options.includeHistory !== false;
+  const timezone = normalizeStudyTimezone(options.studyTimezone);
   const reviewFilter = { userId, flashcardId: { $in: cardIds } };
   const [records, precomputedCounts, compactReviewDays] = includeHistory || !cardIds.length
     ? [cardIds.length ? await measureServerOperation("mastery review history query", () => ReviewRecord.find(reviewFilter).select("flashcardId result reviewedAt nextReviewAt questionType").sort({ reviewedAt: -1, _id: -1 }).lean(), { database: true }) : [], new Map<string, { correct: number; incorrect: number }>(), null]
-    : await Promise.all([
-      measureServerOperation("compact mastery aggregation", () => ReviewRecord.aggregate<{ _id: { cardId: Types.ObjectId; mode: QuizMode }; correct: number; incorrect: number; recent: Array<{ _id: Types.ObjectId; result: "correct" | "wrong"; reviewedAt: Date; nextReviewAt: Date; questionType: QuizMode }> }>([
+    : await measureServerOperation("compact mastery and study-day aggregation", () => ReviewRecord.aggregate<{
+      groups: Array<{ _id: { cardId: Types.ObjectId; mode: QuizMode }; correct: number; incorrect: number; recent: Array<{ _id: Types.ObjectId; result: "correct" | "wrong"; reviewedAt: Date; nextReviewAt: Date; questionType: QuizMode }> }>;
+      days: Array<{ day: string }>;
+    }>([
         { $match: reviewFilter },
-        { $group: { _id: { cardId: "$flashcardId", mode: "$questionType" }, correct: { $sum: { $cond: [{ $eq: ["$result", "correct"] }, 1, 0] } }, incorrect: { $sum: { $cond: [{ $eq: ["$result", "wrong"] }, 1, 0] } }, recent: { $topN: { n: MASTERY_STREAK, sortBy: { reviewedAt: -1, _id: -1 }, output: { _id: "$_id", result: "$result", reviewedAt: "$reviewedAt", nextReviewAt: "$nextReviewAt", questionType: "$questionType" } } } } },
-      ]), { database: true }),
-      measureServerOperation("review day aggregation", () => ReviewRecord.aggregate<{ day: string }>([
-        { $match: reviewFilter },
-        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$reviewedAt", timezone: "UTC" } } } },
-        { $project: { _id: 0, day: "$_id" } },
-      ]), { database: true }),
-    ]).then(([groups, days]) => {
+        { $facet: {
+          groups: [{ $group: { _id: { cardId: "$flashcardId", mode: "$questionType" }, correct: { $sum: { $cond: [{ $eq: ["$result", "correct"] }, 1, 0] } }, incorrect: { $sum: { $cond: [{ $eq: ["$result", "correct"] }, 0, 1] } }, recent: { $topN: { n: MASTERY_STREAK, sortBy: { reviewedAt: -1, _id: -1 }, output: { _id: "$_id", result: "$result", reviewedAt: "$reviewedAt", nextReviewAt: "$nextReviewAt", questionType: "$questionType" } } } } }],
+          days: [
+            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$reviewedAt", timezone } } } },
+            { $project: { _id: 0, day: "$_id" } },
+          ],
+        } },
+      ]), { database: true }).then(([summary]) => {
       const counts = new Map<string, { correct: number; incorrect: number }>();
       const bounded: Array<{ _id: Types.ObjectId; flashcardId: Types.ObjectId; result: "correct" | "wrong"; reviewedAt: Date; nextReviewAt: Date; questionType: QuizMode }> = [];
-      for (const group of groups) {
+      for (const group of summary?.groups ?? []) {
         const cardId = String(group._id.cardId);
         const total = counts.get(cardId) ?? { correct: 0, incorrect: 0 };
         total.correct += group.correct;
@@ -328,7 +331,7 @@ async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds
         counts.set(cardId, total);
         for (const record of group.recent) bounded.push({ flashcardId: group._id.cardId, ...record });
       }
-      return [bounded, counts, new Set(days.map(({ day }) => day))] as const;
+      return [bounded, counts, new Set((summary?.days ?? []).map(({ day }) => day))] as const;
     });
   const cards = rawCards.map(prepareCard);
   const usable = cards.filter(isUsableCard);
@@ -435,16 +438,30 @@ async function computeSubjectMastery(userId: Types.ObjectId | string, subjectIds
     byTypeBySubject,
     allByType,
     reviewedCardIds: new Set(latestByCard.keys()),
+    reviewStatsByCard: new Map([...recordCounts].map(([id, counts]) => {
+      const latest = latestByCard.get(id);
+      return [id, {
+        correct: counts.correct,
+        wrong: counts.incorrect,
+        total: counts.correct + counts.incorrect,
+        latestReviewedAt: latest?.reviewedAt ?? null,
+        latestReviewId: latest ? String(latest._id) : null,
+      }];
+    })),
     cardSummaries: rawCards.map((card) => ({ id: String(card._id), subjectId: String(card.subjectId), topicId: card.topicId ? String(card.topicId) : null, question: card.question, flashcardType: card.flashcardType })),
     latestReviewByCard: new Map([...latestByCard].map(([id, record]) => [id, { reviewedAt: record.reviewedAt, nextReviewAt: record.nextReviewAt }])),
-    reviewDays: compactReviewDays ?? new Set(records.map((record) => new Date(record.reviewedAt).toISOString().slice(0, 10))),
+    reviewDays: compactReviewDays ?? new Set(records.map((record) => studyDayKey(new Date(record.reviewedAt), timezone))),
     reviewHistory: includeHistory ? records : [],
+    ...(options.includeCatalog ? {
+      subjectCatalog: subjects.map((subject) => ({ id: String(subject._id), name: subject.name })),
+      topicCatalog: topics.map((topic) => ({ id: String(topic._id), subjectId: String(topic.subjectId), name: topic.name })),
+    } : {}),
     // Compatibility aliases retained for existing quiz and progress consumers.
     all: overall.mastered,
   };
 }
 
-export function getSubjectMastery(userId: Types.ObjectId | string, subjectIds?: Types.ObjectId[], options: { includeHistory?: boolean } = {}) {
+export function getSubjectMastery(userId: Types.ObjectId | string, subjectIds?: Types.ObjectId[], options: { includeHistory?: boolean; studyTimezone?: string | null; includeCatalog?: boolean } = {}) {
   return measureServerOperation("mastery calculation", () => computeSubjectMastery(userId, subjectIds, options));
 }
 

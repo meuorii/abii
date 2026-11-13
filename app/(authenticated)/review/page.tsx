@@ -8,6 +8,7 @@ import { Topic } from "@/models/Topic";
 import { ReviewOverview, type ReviewSubjectItem, type ReviewTopicItem } from "@/components/review/review-overview";
 import { getSubjectMastery, listActiveSessions } from "@/lib/quiz/service";
 import { emptyTypeProgress, type ActiveQuizSummary } from "@/lib/quiz/types";
+import { currentConsecutiveDayStreak, getStudyDayWindow, normalizeStudyTimezone, studyDayKey } from "@/lib/badges/study-day";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,27 +19,6 @@ type ReviewRecordRow = {
   reviewedAt: Date;
   nextReviewAt: Date;
 };
-
-function dayKey(date: Date) {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
-}
-
-function utcDayStart(date: Date) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-}
-
-function calculateStreak(reviewDays: Set<string>, now: Date) {
-  const today = utcDayStart(now);
-  const yesterday = new Date(today.getTime() - 86_400_000);
-  let cursor = reviewDays.has(dayKey(today)) ? today : yesterday;
-  if (!reviewDays.has(dayKey(cursor))) return 0;
-  let streak = 0;
-  while (reviewDays.has(dayKey(cursor))) {
-    streak += 1;
-    cursor = new Date(cursor.getTime() - 86_400_000);
-  }
-  return streak;
-}
 
 function ReviewLoadError() {
   return (
@@ -80,12 +60,13 @@ export default async function ReviewPage({ searchParams }: PageProps) {
     await connectToDatabase();
     const userId = user._id;
     const now = new Date();
-    const todayStart = utcDayStart(now);
-    const tomorrowStart = new Date(todayStart.getTime() + 86_400_000);
+    const timezone = normalizeStudyTimezone(user.settings?.studyTimezone);
+    const todayKey = studyDayKey(now, timezone);
+    const { start: todayStart, end: tomorrowStart } = getStudyDayWindow(todayKey, timezone);
     const [subjectDocs, topicDocs, mastery] = await Promise.all([
       Subject.find({ userId }).select("_id name").lean(),
       Topic.find({ userId }).select("_id subjectId name position").sort({ position: 1, name: 1 }).lean(),
-      getSubjectMastery(userId),
+      getSubjectMastery(userId, undefined, { studyTimezone: timezone }),
     ]);
     const cards = mastery.cardSummaries;
     const records = mastery.reviewHistory as ReviewRecordRow[];
@@ -118,7 +99,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
       reviewedCardIds.add(cardId);
       const reviewedAt = new Date(record.reviewedAt);
       if (!Number.isNaN(reviewedAt.getTime())) {
-        reviewedDays.add(dayKey(reviewedAt));
+        reviewedDays.add(studyDayKey(reviewedAt, timezone));
         if (reviewedAt >= todayStart && reviewedAt < tomorrowStart) {
           reviewAttemptsToday += 1;
           reviewedTodayCardIds.add(cardId);
@@ -146,7 +127,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
 
     reviewedUniqueCount = reviewedCardIds.size;
     reviewedTodayUnique = reviewedTodayCardIds.size;
-    streak = calculateStreak(reviewedDays, now);
+    streak = currentConsecutiveDayStreak(reviewedDays, todayKey);
 
     subjects = subjectDocs
       .map((subject) => {
