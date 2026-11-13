@@ -70,7 +70,7 @@ test("Profile hero and account actions render responsively and announce server o
     assert.ok(ready, `Next.js should become ready. Output: ${serverOutput}`);
 
     browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({ reducedMotion: "reduce" });
+    const context = await browser.newContext({ reducedMotion: "no-preference", viewport: { width: 390, height: 568 } });
     await context.addCookies([{ name: "abii_session", value: token, url: baseURL, httpOnly: true, sameSite: "Strict" }]);
     const page = await context.newPage();
     const pageErrors = [];
@@ -135,6 +135,86 @@ test("Profile hero and account actions render responsively and announce server o
       await page.getByLabel("Choose profile photo").waitFor({ state: "visible" });
     };
     const toast = (role, title) => page.getByRole(role).filter({ hasText: title }).last();
+
+    await page.setViewportSize({ width: 1280, height: 820 });
+    await page.goto(`${baseURL}/dashboard`, { waitUntil: "networkidle", timeout: 90_000 });
+    await page.getByRole("button", { name: "Open account menu" }).click();
+    await page.getByRole("link", { name: "Profile", exact: true }).click();
+    await page.waitForURL((url) => url.pathname === "/profile");
+    await page.getByRole("heading", { level: 1, name: "Your Profile, Your Space." }).waitFor({ state: "visible" });
+    await page.goBack();
+    await page.waitForURL((url) => url.pathname === "/dashboard");
+    await page.goForward();
+    await page.waitForURL((url) => url.pathname === "/profile");
+
+    await page.setViewportSize({ width: 390, height: 568 });
+    await page.goto(`${baseURL}/profile`, { waitUntil: "networkidle", timeout: 90_000 });
+    await page.locator("main h1").first().waitFor({ state: "visible", timeout: 45_000 });
+    await page.waitForFunction(() => {
+      const security = document.querySelector('section[aria-labelledby="security-heading"]')?.parentElement;
+      const danger = document.querySelector('section[aria-labelledby="danger-zone-heading"]')?.parentElement;
+      return security?.classList.contains("abii-motion-reveal") && danger?.classList.contains("abii-motion-reveal")
+        && security.getAttribute("style")?.includes("opacity") && danger.getAttribute("style")?.includes("opacity");
+    }, undefined, { timeout: 10_000 });
+    const revealState = async (selector) => page.locator(selector).evaluate((element) => {
+      const wrapper = element.parentElement;
+      return { opacity: Number.parseFloat(getComputedStyle(wrapper).opacity), transform: getComputedStyle(wrapper).transform };
+    });
+    assert.equal(await page.locator(".abii-page-hero__title").getAttribute("class").then((value) => value.includes("abii-enter-1")), true,
+      "the hero heading should keep its established first entrance slot");
+    assert.equal(await page.locator(".abii-page-hero__description").getAttribute("class").then((value) => value.includes("abii-enter-2")), true,
+      "the hero description should follow the heading");
+    assert.equal(await page.locator(".abii-page-hero__mascot").getAttribute("class").then((value) => value.includes("abii-enter-art")), true,
+      "the hero mascot should keep its coordinated art entrance");
+    assert.equal(await page.locator(".abii-page-hero__title").evaluate((element) => getComputedStyle(element).animationName), "abii-enter",
+      "the hero heading should retain its shared entrance animation");
+    assert.equal(await page.locator(".abii-page-hero__mascot").evaluate((element) => getComputedStyle(element).animationName), "abii-enter-art",
+      "the mascot should retain its shared art entrance animation");
+    const overviewSelector = 'section[aria-label="Account overview"]';
+    const personalSelector = 'section[aria-labelledby="personal-info-heading"]';
+    const securitySelector = 'section[aria-labelledby="security-heading"]';
+    const dangerSelector = 'section[aria-labelledby="danger-zone-heading"]';
+    assert.equal(await page.locator(overviewSelector).evaluate((element) => element.parentElement.classList.contains("abii-motion-reveal")), true,
+      "the account overview should use the shared viewport-aware reveal");
+    assert.equal((await revealState(securitySelector)).opacity, 0, "offscreen Password & Security should wait for scrolling");
+    assert.equal((await revealState(dangerSelector)).opacity, 0, "offscreen Danger Zone should wait for scrolling");
+    const scrollToSection = async (selector) => page.evaluate((targetSelector) => {
+      const root = document.querySelector("main[data-authenticated-motion]");
+      const target = document.querySelector(targetSelector);
+      const top = target.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop - root.clientHeight * 0.62;
+      root.scrollTop = Math.max(0, top);
+    }, selector);
+    const waitForRevealed = async (selector) => page.waitForFunction((targetSelector) => {
+      const section = document.querySelector(targetSelector);
+      return Number.parseFloat(getComputedStyle(section.parentElement).opacity) > 0.99;
+    }, selector, { timeout: 4_000 });
+
+    await scrollToSection(personalSelector);
+    await waitForRevealed(personalSelector);
+    assert.equal((await revealState(securitySelector)).opacity, 0, "Password & Security should reveal separately on mobile");
+    assert.equal((await revealState(dangerSelector)).opacity, 0, "Danger Zone should remain hidden until reached");
+    await scrollToSection(securitySelector);
+    await waitForRevealed(securitySelector);
+    assert.equal((await revealState(dangerSelector)).opacity, 0, "Danger Zone should reveal independently");
+    await scrollToSection(dangerSelector);
+    await waitForRevealed(dangerSelector);
+    await page.evaluate(() => { document.querySelector("main[data-authenticated-motion]").scrollTop = 0; });
+    assert.ok((await revealState(personalSelector)).opacity > 0.99, "revealed content should remain visible when scrolling back up");
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto(`${baseURL}/profile`, { waitUntil: "networkidle", timeout: 90_000 });
+    await page.waitForFunction(() => [...document.querySelectorAll(".abii-motion-reveal")].length >= 4
+      && [...document.querySelectorAll(".abii-motion-reveal")].every((element) => getComputedStyle(element).opacity === "1"), undefined, { timeout: 10_000 });
+    assert.equal(await page.locator(".abii-page-hero__title").evaluate((element) => getComputedStyle(element).animationName), "none",
+      "the existing hero animation should reduce to immediate content visibility");
+
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    const fallbackPage = await context.newPage();
+    await fallbackPage.addInitScript(() => { Object.defineProperty(window, "IntersectionObserver", { configurable: true, value: undefined }); });
+    await fallbackPage.goto(`${baseURL}/profile`, { waitUntil: "networkidle", timeout: 90_000 });
+    await fallbackPage.waitForFunction(() => [...document.querySelectorAll(".abii-motion-reveal")].length >= 4
+      && [...document.querySelectorAll(".abii-motion-reveal")].every((element) => getComputedStyle(element).opacity === "1"), undefined, { timeout: 10_000 });
+    await fallbackPage.close();
 
     await page.goto(`${baseURL}/profile`, { waitUntil: "networkidle", timeout: 90_000 });
     await page.locator("main h1").first().waitFor({ state: "visible", timeout: 45_000 });

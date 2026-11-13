@@ -7,6 +7,7 @@ import { Camera, Check, ShieldCheck, Trash2 } from "lucide-react";
 import { Modal, modalCancelClass, modalDangerClass } from "@/components/ui/modal";
 import { ModalButtonContent } from "@/components/ui/modal-button-content";
 import { ProfilePictureCropModal } from "@/components/settings/profile-picture-crop-modal";
+import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { useToast } from "@/components/ui/toast-provider";
 
@@ -204,6 +205,7 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
   return <div className="mx-auto w-full min-w-0 max-w-[1500px] space-y-7 px-4 py-7 sm:space-y-9 sm:px-6 sm:py-9 xl:px-6">
     <AbiiPageHero variant="profile" title={<h1 className="text-[clamp(1.65rem,3vw,2.3rem)] font-bold leading-[1.08] tracking-[-0.035em] text-[#18384D] [text-wrap:balance]">Your Profile, Your Space.</h1>} description={<p className="mt-2 max-w-[48ch] text-sm leading-6 text-[#557187] sm:text-[0.9375rem]">Manage your personal details, update your profile photo, and keep your Abii account secure.</p>} mascotSrc="/dashboard-hero/profile-hero.png" mascotAlt="Abii the pink otter smiling and waving" />
 
+    <ScrollReveal preset="card" delay={0.12}>
     <section aria-label="Account overview" className="flex min-w-0 flex-col gap-5 rounded-2xl border border-[#F0E5E9] bg-[#FFF7F9] p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-6">
       <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-[#FFE8EF] text-2xl font-bold text-[#B83F68] shadow-[0_2px_10px_rgba(47,41,48,0.08)]">
         {profileImage ? <Image key={profileImage} src={profileImage} alt={`${name || "Account"} profile photo`} fill sizes="72px" unoptimized className="object-cover" /> : initial}
@@ -219,8 +221,10 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
         {initialUser.memberSince && <p className="text-xs text-[#6E879A]">Member since {initialUser.memberSince}</p>}
       </div>
     </section>
+    </ScrollReveal>
 
     <div className="grid min-w-0 items-start gap-7 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,.9fr)] lg:gap-10">
+      <ScrollReveal preset="card" className="min-w-0">
       <section aria-labelledby="personal-info-heading" className="min-w-0">
         <div className="border-b border-[#F0E5E9] pb-4">
           <h2 id="personal-info-heading" className="text-lg font-semibold tracking-[-0.02em] text-[#18384D]">Personal information</h2>
@@ -266,7 +270,9 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
           </div>
         </form>
       </section>
+      </ScrollReveal>
 
+      <ScrollReveal preset="card" delay={0.12} className="min-w-0">
       <section aria-labelledby="security-heading" className="min-w-0">
         <div className="border-b border-[#F0E5E9] pb-4">
           <h2 id="security-heading" className="text-lg font-semibold tracking-[-0.02em] text-[#18384D]">Password & security</h2>
@@ -291,8 +297,10 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
           </div>
         </form>
       </section>
+      </ScrollReveal>
     </div>
 
+    <ScrollReveal preset="card" className="min-w-0">
     <section aria-labelledby="danger-zone-heading" className="flex flex-col gap-4 border-t border-[#EADDE2] pt-6 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF1F1] text-[#B8435D]" aria-hidden="true"><Trash2 className="h-4 w-4" /></span>
@@ -303,6 +311,7 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
       </div>
       <button type="button" disabled={Boolean(saving)} onClick={() => { setDeleteText(""); setConfirmDelete(true); }} className={`${dangerButton} shrink-0`}>Delete account</button>
     </section>
+    </ScrollReveal>
 
     {cropFile && <ProfilePictureCropModal file={cropFile} onClose={() => setCropFile(null)} onSave={savePhoto} />}
     <Modal
