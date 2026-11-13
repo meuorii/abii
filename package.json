@@ -12,6 +12,7 @@
     "test:progress-analytics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/progress-analytics.test.ts",
     "test:study-day": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/study-day.test.ts",
     "test:profile-crop": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/profile-crop.test.ts",
+    "test:profile-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/profile-actions.browser.mjs",
     "test:quiz-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/quiz-due-review.browser.mjs",
     "test:dashboard-greeting-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/dashboard-greeting.browser.mjs",
     "test:responsive-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/authenticated-ux.browser.mjs",

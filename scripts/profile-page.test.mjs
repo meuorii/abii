@@ -4,12 +4,17 @@ import { test } from "node:test";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
-test("Profile is authenticated and receives only its account overview fields", async () => {
+test("Profile is authenticated, receives account data, and renders one branded hero", async () => {
   const page = await read("../app/(authenticated)/profile/page.tsx");
   assert.match(page, /getCurrentUser\(\)/);
   assert.match(page, /if \(!user\) redirect\("\/login"\)/);
   assert.match(page, /<ProfileClient[\s\S]*?initialUser=\{[\s\S]*?name: user\.name[\s\S]*?email: user\.email[\s\S]*?profileImage: user\.profileImage[\s\S]*?memberSince,/);
-  assert.doesNotMatch(page, /AbiiPageHero|Profile editing will be added/);
+  const profile = await read("../components/profile/profile-client.tsx");
+  assert.match(profile, /AbiiPageHero/);
+  assert.match(profile, /variant="profile"/);
+  assert.match(profile, /mascotSrc="\/dashboard-hero\/profile-hero\.png"/);
+  assert.match(profile, /Your Profile, Your Space\./);
+  assert.equal((profile.match(/<h1\b/g) ?? []).length, 1, "the Profile page should expose one primary heading");
 });
 
 test("Profile owns account controls and synchronizes updates through existing AppShell events", async () => {
@@ -50,7 +55,7 @@ test("Failed photo saves leave the existing photo state untouched", async () => 
   const profile = await read("../components/profile/profile-client.tsx");
   const savePhoto = profile.slice(profile.indexOf("async function savePhoto"), profile.indexOf("async function removePhoto"));
   assert.ok(savePhoto.indexOf("setProfileImage(data.profileImage)") > savePhoto.indexOf("await request("));
-  assert.match(savePhoto, /catch \(error\)[\s\S]*throw error/);
+  assert.match(savePhoto, /catch \(error\)[\s\S]*toast\(\{ kind: "error"[\s\S]*throw new Error\("Your saved photo has not changed/);
 });
 
 test("Settings retains study and data controls without duplicate account forms", async () => {

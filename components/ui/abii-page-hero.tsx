@@ -8,6 +8,7 @@ export type AbiiHeroVariant =
   | "progress"
   | "badges"
   | "settings"
+  | "profile"
   | "subject-detail"
   | "subject-folder"
   | "topic-folder"
@@ -72,6 +73,14 @@ const variants: Record<AbiiHeroVariant, VariantStyle> = {
     mascot: "sm:w-[37%] lg:w-[35%]",
     imagePosition: "object-right-bottom",
     imageSizes: "(max-width: 639px) 31vw, (max-width: 1023px) 40vw, 390px",
+  },
+  profile: {
+    section: "sm:rounded-2xl sm:border-[#F6DCE5] sm:bg-[#FFF0F5]",
+    layout: "sm:min-h-[230px] lg:min-h-[250px]",
+    content: "sm:max-w-[59%] sm:px-8 sm:py-7 lg:max-w-[58%] lg:px-9",
+    mascot: "sm:w-[40%] lg:w-[38%]",
+    mascotAnchor: "sm:right-2 lg:right-4",
+    imageSizes: "(max-width: 639px) 31vw, (max-width: 1023px) 38vw, 240px",
   },
   "subject-detail": {
     section: "sm:rounded-[1.35rem] sm:border-[#F5DDE5] sm:bg-[#FFF1F5]",
