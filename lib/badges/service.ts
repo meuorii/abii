@@ -4,6 +4,7 @@ import { getBadgeImagePath } from "./images";
 import { fetchEarnedBadges, recordAchievementEvent } from "./repository";
 import { reconcileUserBadges } from "./reconcile";
 import { getSubjectMastery } from "@/lib/quiz/service";
+import { notifyLiveBadgeAward } from "@/lib/notifications/producers";
 import type { BadgeId, BadgeRarity } from "./types";
 
 export type NewlyUnlockedBadge = { badgeId: BadgeId; name: string; rarity: BadgeRarity; unlockedAt: Date; imagePath: string };
@@ -14,11 +15,18 @@ export async function evaluateAffectedBadges(userId: string): Promise<NewlyUnloc
   if (!reconciled.newlyAwardedBadgeIds.length) return [];
   const earned = await fetchEarnedBadges(userId);
   const byId = new Map(earned.map((badge) => [badge.badgeId, badge]));
-  return reconciled.newlyAwardedBadgeIds.flatMap((badgeId) => {
+  const newlyUnlocked = reconciled.newlyAwardedBadgeIds.flatMap((badgeId) => {
     const record = byId.get(badgeId);
     const definition = BADGE_BY_ID[badgeId];
     return record ? [{ badgeId, name: definition.name, rarity: definition.rarity, unlockedAt: record.unlockedAt, imagePath: getBadgeImagePath(badgeId, true) }] : [];
   });
+  // Only IDs returned by a successful live insert can reach this point. Notification failures
+  // are isolated by the producer and never affect the durable badge award.
+  await Promise.all(reconciled.newlyAwardedBadgeIds.flatMap((badgeId) => {
+    const record = byId.get(badgeId);
+    return record ? [notifyLiveBadgeAward(userId, { record, created: true })] : [];
+  }));
+  return newlyUnlocked;
 }
 
 /** Persist each achieved subject threshold once, using the shared quiz mastery calculation. */

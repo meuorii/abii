@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { finishSession, loadSession, sessionMastery, toPublicSession } from "@/lib/quiz/service";
 import { evaluateAffectedBadges, type NewlyUnlockedBadge } from "@/lib/badges/service";
 import { measureServerOperation, withApiPerformanceTrace } from "@/lib/performance/server-timing";
+import { notifyQuizMilestoneForCompletion } from "@/lib/notifications/producers";
 
 export const runtime = "nodejs";
 type RouteContext = { params: Promise<{ sessionId: string }> };
@@ -33,6 +34,11 @@ export async function POST(request: Request, { params }: RouteContext) {
       const result = await measureServerOperation("finish session processing", () => finishSession(user._id, sessionId, user.settings?.studyTimezone));
       if (!result.ok) return measureServerOperation("response serialization", async () => NextResponse.json({ error: result.message }, { status: result.status }));
       if (!result.done) return measureServerOperation("response serialization", async () => NextResponse.json({ retry: true, session: result.session }));
+      if (result.transitioned) {
+        // The session transition is authoritative. Producer failures must not change the quiz result.
+        try { await notifyQuizMilestoneForCompletion(String(user._id), sessionId); }
+        catch (notificationError) { console.error("Quiz completed; milestone notification could not be recorded.", notificationError instanceof Error ? notificationError.name : "UnknownError"); }
+      }
       let newlyUnlockedBadges: NewlyUnlockedBadge[] = [];
       try { newlyUnlockedBadges = await measureServerOperation("affected badge evaluation", () => evaluateAffectedBadges(String(user._id))); }
       catch (badgeError) { console.error("Quiz completed; badge evaluation will retry during reconciliation.", badgeError); }

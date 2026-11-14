@@ -7,6 +7,7 @@ import { AnimatePresence, m, useAnimationControls, useReducedMotion, type Varian
 import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { useToast } from "@/components/ui/toast-provider";
 import { notifyAchievementActivity } from "@/lib/badges/client-sync";
+import { notifyStateChanged } from "@/components/notifications/notification-context";
 import { TypeIcon } from "@/components/review/review-setup";
 import { Mascot } from "@/components/ui/mascot";
 import { PageLoadingSkeleton } from "@/components/ui/page-loading-skeleton";
@@ -368,6 +369,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       if (outcome.kind === "complete") {
         notifyAchievementActivity();
         const newlyCompleted = data?.transitioned === true;
+        if (newlyCompleted) notifyStateChanged();
         completeSession(outcome.session, newlyCompleted);
         if (claimCompletionCelebration(outcome.session.id, newlyCompleted, celebratedSessionsRef.current)) {
           setCelebrationSessionId(outcome.session.id);

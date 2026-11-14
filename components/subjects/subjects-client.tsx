@@ -11,6 +11,7 @@ import { ListChecks, PenLine, CheckCircle2, Shuffle } from "lucide-react";
 import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/motion/scroll-reveal";
 import { notifyAchievementActivity } from "@/lib/badges/client-sync";
+import { notifyStateChanged } from "@/components/notifications/notification-context";
 import { SubjectFolderCreateModal } from "@/components/subjects/subject-folder-create-modal";
 import { ModalButtonContent } from "@/components/ui/modal-button-content";
 import type { SubjectFolderSummary } from "@/components/subjects/subject-folders-overview";
@@ -53,7 +54,7 @@ export function AddSubjectModal({ onClose, onCreated, subjectFolderId, subjectFo
    const subjectId = String(raw?.id ?? raw?._id ?? "");
    if (!subjectId) throw new Error("The subject was created, but its details didn’t load. Refresh the page to check your subjects.");
    onCreated({ id: subjectId, name: String(raw?.name ?? trimmedName), subjectFolderId: selectedFolder || null, flashcardCount: Number(raw?.flashcardCount ?? 0), topicCount: 0, progress: Number(raw?.progress ?? 0), masteredCount: Number(raw?.masteredCount ?? 0), typeMastery: raw?.typeMastery ?? { "multiple-choice": { done: 0, total: 0 }, identification: { done: 0, total: 0 }, "true-false": { done: 0, total: 0 }, random: { done: 0, total: 0 } } });
-   notifyAchievementActivity(); router.refresh(); onClose();
+   notifyAchievementActivity(); if (Array.isArray(data?.newlyUnlockedBadges) && data.newlyUnlockedBadges.length) notifyStateChanged(); router.refresh(); onClose();
   } catch (cause) { setError(cause instanceof Error ? cause.message : "Couldn’t create the subject. Check your connection and try again."); }
   finally { setSaving(false); }
  }

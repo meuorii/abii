@@ -25,8 +25,12 @@ const achievementEventSchema = new Schema({
 
 achievementEventSchema.index({ userId: 1, idempotencyKey: 1 }, { unique: true, name: "achievement_event_owner_key_unique" });
 achievementEventSchema.index({ userId: 1, kind: 1, dayKey: 1 }, { name: "achievement_event_owner_kind_day" });
+achievementEventSchema.index({ userId: 1, kind: 1, occurredAt: 1 }, { name: "achievement_event_owner_kind_occurred" });
 achievementEventSchema.index({ userId: 1, createdAt: -1 }, { name: "achievement_event_owner_created" });
 
-if (mongoose.models.AchievementEvent && !mongoose.models.AchievementEvent.schema.indexes().some(([keys, options]) => keys.userId === 1 && keys.idempotencyKey === 1 && options.unique)) mongoose.deleteModel("AchievementEvent");
+if (mongoose.models.AchievementEvent && (
+  !mongoose.models.AchievementEvent.schema.indexes().some(([keys, options]) => keys.userId === 1 && keys.idempotencyKey === 1 && options.unique) ||
+  !mongoose.models.AchievementEvent.schema.indexes().some(([keys]) => keys.userId === 1 && keys.kind === 1 && keys.occurredAt === 1)
+)) mongoose.deleteModel("AchievementEvent");
 export type AchievementEventDocument = InferSchemaType<typeof achievementEventSchema>;
 export const AchievementEvent: Model<AchievementEventDocument> = (mongoose.models.AchievementEvent as Model<AchievementEventDocument> | undefined) ?? mongoose.model<AchievementEventDocument>("AchievementEvent", achievementEventSchema);

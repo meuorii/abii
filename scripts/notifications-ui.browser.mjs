@@ -64,7 +64,11 @@ test("notification bell, center, and preferences work in a real authenticated br
     page.on("pageerror", (error) => pageErrors.push(error.message));
     page.on("response", async (response) => { if (response.url().includes("/api/notifications/") && response.request().method() === "PATCH") mutationResponses.push({ url: response.url(), status: response.status(), body: await response.text().catch(() => "") }); });
 
-    await page.goto(`${baseURL}/dashboard`, { waitUntil: "domcontentloaded", timeout: 90_000 });
+    try {
+      await page.goto(`${baseURL}/dashboard`, { waitUntil: "domcontentloaded", timeout: 90_000 });
+    } catch (error) {
+      throw new Error(`Dashboard navigation failed: ${error instanceof Error ? error.message : String(error)}\nNext output: ${serverOutput}`);
+    }
     const bell = page.getByRole("button", { name: "Notifications, 2 unread" });
     await bell.waitFor({ state: "visible", timeout: 15_000 });
     await bell.click();

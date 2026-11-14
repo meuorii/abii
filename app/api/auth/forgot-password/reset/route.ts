@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -7,6 +7,7 @@ import { PasswordResetGrant } from "@/models/PasswordResetGrant";
 import { hashGrant } from "@/lib/auth/challenges";
 import { readResetGrantCookie, clearResetGrantCookie } from "@/lib/auth/tickets";
 import { rateAllowed, rateAllowedByTrustedIp, validOrigin, limited } from "@/lib/auth/http";
+import { notifyAccountSecurityChange } from "@/lib/notifications/producers";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
   if (!validOrigin(request)) return NextResponse.json({ message: "Invalid request origin." }, { status: 403 });
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
   const passwordHash = await bcrypt.hash(password, 12);
   const session = await mongoose.startSession();
   let updated = false;
+  let securityEvent: { userId: string; operationId: string } | null = null;
   try {
     await session.withTransaction(async () => {
       updated = false;
@@ -30,9 +32,11 @@ export async function POST(request: Request) {
       if (result.matchedCount !== 1) throw new Error("Reset account no longer exists.");
       await PasswordResetGrant.deleteMany({ userId: grant.userId, _id: { $ne: grant._id } }, { session });
       updated = true;
+      securityEvent = { userId: String(grant.userId), operationId: String(grant._id) };
     });
   } finally { await session.endSession(); }
   if (!updated) return NextResponse.json({ message: "Your reset session expired. Request a new code." }, { status: 401 });
   await clearResetGrantCookie();
+  if (securityEvent) after(async () => { await notifyAccountSecurityChange(securityEvent!.userId, "password_reset", securityEvent!.operationId); });
   return NextResponse.json({ message: "Password updated successfully. Please sign in again.", redirectTo: "/login" });
 }

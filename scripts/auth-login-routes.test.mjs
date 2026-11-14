@@ -90,6 +90,18 @@ test("existing account login routes unverified users through OTP and preserves v
       assert.ok(response.headers.get("content-type")?.includes("application/json"), `Expected JSON, got ${text.slice(0, 400)}\n${output}`);
       return { response, body: JSON.parse(text) };
     }
+    async function patch(path, body, cookieHeader) {
+      const response = await fetch(`${base}${path}`, { method: "PATCH", headers: { "Content-Type": "application/json", ...(cookieHeader ? { Cookie: cookieHeader } : {}) }, body: JSON.stringify(body), redirect: "manual", signal: AbortSignal.timeout(60000) });
+      return { response, body: await response.json() };
+    }
+    async function waitForNotification(filter) {
+      for (let attempt = 0; attempt < 50; attempt += 1) {
+        const notification = await db.collection("notifications").findOne(filter);
+        if (notification) return notification;
+        await delay(100);
+      }
+      return null;
+    }
     async function get(path, cookieHeader) {
       const response = await fetch(`${base}${path}`, { headers: cookieHeader ? { Cookie: cookieHeader } : {}, redirect: "manual", signal: AbortSignal.timeout(60000) });
       return { response, body: await response.json() };
@@ -137,6 +149,8 @@ test("existing account login routes unverified users through OTP and preserves v
     const fullSession = cookie(verified.response, "abii_session");
     assert.ok(fullSession, "full session is issued only after OTP verification");
     assert.equal(cookie(verified.response, "abii_pending_verification"), "");
+    const emailVerifiedNotice = await waitForNotification({ userId: unverifiedId, type: "account_security", dedupeKey: "account-security:email_verified:first-verification" });
+    assert.equal(emailVerifiedNotice?.target, "/settings", "first verified-email transition generates a mandatory security notice");
     const afterVerification = await db.collection("users").findOne({ _id: unverifiedId });
     assert.equal(String(afterVerification._id), String(unverifiedId));
     assert.ok(afterVerification.emailVerifiedAt instanceof Date);
@@ -161,6 +175,15 @@ test("existing account login routes unverified users through OTP and preserves v
     assert.equal(verifiedFixtureLogin.response.status, 200);
     assert.equal(verifiedFixtureLogin.body.code, "AUTHENTICATED");
     assert.equal(await db.collection("authchallenges").countDocuments({ userId: verifiedId }), 0, "verified login does not create an OTP challenge");
+    const verifiedSession = `abii_session=${cookie(verifiedFixtureLogin.response, "abii_session")}`;
+    const wrongCurrentPassword = await patch("/api/account/password", { currentPassword: "incorrect-password", newPassword: "Next-password-789", confirmPassword: "Next-password-789" }, verifiedSession);
+    assert.equal(wrongCurrentPassword.response.status, 400);
+    assert.equal(await db.collection("notifications").countDocuments({ userId: verifiedId, type: "account_security" }), 0, "rejected password changes do not notify");
+    const changedPassword = await patch("/api/account/password", { currentPassword: fixturePassword, newPassword: "Next-password-789", confirmPassword: "Next-password-789" }, verifiedSession);
+    assert.equal(changedPassword.response.status, 200);
+    const passwordChangedNotice = await waitForNotification({ userId: verifiedId, type: "account_security", dedupeKey: "account-security:password_changed:version-1" });
+    assert.ok(passwordChangedNotice, "successful password update creates a durable security notice");
+    assert.equal(await fetch(`${base}/api/subjects`, { headers: { Cookie: verifiedSession } }).then(response => response.status), 401, "password change still revokes the old session");
 
     // Seed a test-only recovery challenge; no provider or production data is used.
     const recoveryId = "isolated-recovery-challenge", recoveryCode = "001234";
@@ -190,6 +213,9 @@ test("existing account login routes unverified users through OTP and preserves v
     assert.equal(cookie(success.response, "abii_password_reset_v2"), "");
     assert.equal((await post("/api/auth/login", { email: "legacy-auth@example.invalid", password: fixturePassword })).response.status, 401);
     assert.equal((await post("/api/auth/login", { email: "legacy-auth@example.invalid", password: newPassword })).response.status, 200);
+    const resetNotice = await waitForNotification({ userId: unverifiedId, type: "account_security", title: "Your password was reset" });
+    assert.ok(resetNotice, "committed reset transaction creates a security notification");
+    assert.doesNotMatch(`${resetNotice.title} ${resetNotice.message} ${resetNotice.dedupeKey}`, /token|grant|otp|secret/i);
     assert.equal((await fetch(`${base}/api/subjects`, { headers: { Cookie: `abii_session=${fullSession}` } })).status, 401, "old session is revoked");
     for (const collection of fixtureCollections) assert.deepEqual(await db.collection(collection).find({ userId: unverifiedId }).sort({ _id: 1 }).toArray(), originalData.get(collection));
 

@@ -15,6 +15,7 @@
     "test:progress-analytics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/progress-analytics.test.ts",
     "test:study-day": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/study-day.test.ts",
     "test:notifications": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/notifications.test.ts && node --test scripts/notifications-routes.test.mjs",
+    "test:notification-events": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/notification-events.test.ts",
     "test:notifications-ui": "node --import ./scripts/register-typescript.mjs --test scripts/notifications-display.test.ts && node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/notifications-ui.browser.mjs",
     "test:profile-crop": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/profile-crop.test.ts",
     "test:profile-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/profile-actions.browser.mjs",
@@ -31,6 +32,7 @@
     "test:topics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test --test-concurrency=1 scripts/folders.test.ts scripts/subject-folders.test.ts scripts/topics.test.ts scripts/topic-api.test.ts scripts/mastery.test.ts scripts/quiz-answer.test.ts scripts/quiz-compatibility.test.ts scripts/quiz-session-resume.test.ts scripts/quiz-round-priority.test.ts scripts/quiz-due-review.test.ts scripts/quiz-restart.test.ts scripts/badges.test.ts scripts/achievements-persistence.test.ts scripts/badge-reconciliation.test.ts scripts/badge-evaluator.test.ts scripts/badge-page.test.ts scripts/badges-route.test.mjs",
     "migrate:topics": "node --conditions=react-server --import ./scripts/register-typescript.mjs scripts/migrate-topics.ts",
     "reconcile:badges": "node --conditions=react-server --import ./scripts/register-typescript.mjs scripts/reconcile-badges.ts",
+    "publish:whats-new": "node --conditions=react-server --import ./scripts/register-typescript.mjs scripts/publish-notification-announcement.ts",
     "seed:demo": "node --conditions=react-server --import ./scripts/register-typescript.mjs scripts/seed-demo-account.ts"
   },
   "dependencies": {

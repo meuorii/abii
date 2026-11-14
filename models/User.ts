@@ -35,6 +35,7 @@ const userSchema = new Schema({
   profileImagePublicId: { type: String, default: undefined, maxlength: 255 },
 }, { timestamps: true, versionKey: false });
 userSchema.index({ email: 1 }, { unique: true, name: "user_email_unique" });
+userSchema.index({ emailVerifiedAt: 1, _id: 1 }, { name: "verified_users_cursor" });
 
 // Replace a cached development model if it predates settings or the profile image fields.
 // Without this, Mongoose strict mode silently drops profileImage / profileImagePublicId on update.
@@ -52,7 +53,8 @@ userSchema.index({ email: 1 }, { unique: true, name: "user_email_unique" });
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("featuredBadges.dashboardCustomized") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("studyTimezone") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("notifications") ||
-      !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("dailyStudyTime"))
+      !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("dailyStudyTime") ||
+      !cached.schema.indexes().some(([keys]) => keys.emailVerifiedAt === 1 && keys._id === 1))
   ) {
     mongoose.deleteModel("User");
   }

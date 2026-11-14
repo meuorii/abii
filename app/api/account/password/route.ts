@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import bcrypt from "bcryptjs";
 import { destroySession, getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { notifyAccountSecurityChange } from "@/lib/notifications/producers";
 export const runtime = "nodejs";
 export async function PATCH(request: Request) {
   const user = await getCurrentUser();
@@ -17,7 +18,9 @@ export async function PATCH(request: Request) {
   await connectToDatabase();
   const account = await User.findById(user._id).select("+passwordHash");
   if (!account || !(await bcrypt.compare(currentPassword, account.passwordHash))) return NextResponse.json({ error: "Your current password is incorrect." }, { status: 400 });
-  await User.updateOne({ _id: account._id }, { $set: { passwordHash: await bcrypt.hash(newPassword, 12) }, $inc: { sessionVersion: 1 } });
+  const updated = await User.findOneAndUpdate({ _id: account._id }, { $set: { passwordHash: await bcrypt.hash(newPassword, 12) }, $inc: { sessionVersion: 1 } }, { new: true }).select("sessionVersion").lean();
+  if (!updated) return NextResponse.json({ error: "We could not update your password. Please try again." }, { status: 500 });
+  after(async () => { await notifyAccountSecurityChange(String(account._id), "password_changed", `version-${updated.sessionVersion}`); });
   await destroySession();
   return NextResponse.json({ message: "Password changed. Please log in again.", redirectTo: "/login" });
 }

@@ -9,6 +9,7 @@ import { ReviewRecord } from "../models/ReviewRecord";
 import { QuizSession } from "../models/QuizSession";
 import { AchievementEvent } from "../models/AchievementEvent";
 import { UserBadge } from "../models/UserBadge";
+import { Notification } from "../models/Notification";
 import { BadgeReconciliation } from "../models/BadgeReconciliation";
 import { calculateAchievementMetrics } from "../lib/badges/metrics";
 import { evaluateBadgeCatalog } from "../lib/badges/evaluator";
@@ -27,7 +28,7 @@ test("retroactive metrics use only verified owner data and reconciliation awards
   try {
     process.env.MONGODB_URI = server.getUri("abii_badge_reconcile_test");
     await connectToDatabase();
-    await Promise.all([AchievementEvent.createIndexes(), UserBadge.createIndexes(), BadgeReconciliation.createIndexes()]);
+    await Promise.all([AchievementEvent.createIndexes(), UserBadge.createIndexes(), BadgeReconciliation.createIndexes(), Notification.syncIndexes()]);
     const user = await User.create({ name: "Legacy Learner", email: "legacy@example.invalid", passwordHash: "hash", settings: { studyTimezone: "UTC" } });
     const stranger = await User.create({ name: "Other Learner", email: "other@example.invalid", passwordHash: "hash" });
     const subjects = await Subject.create(Array.from({ length: 4 }, (_, index) => ({ userId: user._id, name: `Subject ${index + 1}` })));
@@ -69,6 +70,7 @@ test("retroactive metrics use only verified owner data and reconciliation awards
     for (const id of ["hello-abii", "card-creator", "little-explorer", "quiz-rookie", "sharp-mind", "getting-into-rhythm"]) assert.ok(unlockedIds.has(id), `expected ${id}`);
     for (const id of ["perfect-pearl", "weekly-wonder", "dedicated-otter", "study-superstar", "finish-line", "mastermind-abii", "ultimate-scholar"]) assert.ok(!unlockedIds.has(id), `unexpected ${id}`);
     assert.equal(await UserBadge.countDocuments({ userId: user._id }), unlockedIds.size);
+    assert.equal(await Notification.countDocuments({ userId: user._id, type: "badge_unlocked" }), 0, "backfilled historical badges do not notify");
     const baseline = (await BadgeReconciliation.findOne({ userId: user._id }).lean())?.baseline;
     assert.equal(baseline?.flashcardCount, 25, "historical content counts are persisted as a deduplicated baseline");
     assert.equal(baseline?.flashcardIds.length, 25);
@@ -104,7 +106,17 @@ test("retroactive metrics use only verified owner data and reconciliation awards
     assert.deepEqual(firstAwards.map((badge) => badge.badgeId), ["hello-abii"]);
     assert.equal(firstAwards[0].imagePath, "/badges/unlocked/hello-abi-unlocked.png");
     assert.equal((await UserBadge.findOne({ userId: newLearner._id, badgeId: "hello-abii" }).lean())?.source, "live");
+    const liveNotice = await Notification.findOne({ userId: newLearner._id, type: "badge_unlocked" }).lean();
+    assert.equal(liveNotice?.dedupeKey, "badge-unlocked:hello-abii");
+    assert.equal(liveNotice?.target, "/badges");
     assert.deepEqual(await evaluateAffectedBadges(String(newLearner._id)), [], "re-evaluation returns only awards inserted by that call");
+    assert.equal(await Notification.countDocuments({ userId: newLearner._id, type: "badge_unlocked" }), 1, "reconciliation does not repeat notifications");
+
+    const previewLearner = await User.create({ name: "Preview Learner", email: "preview@example.invalid", passwordHash: "hash" });
+    await Subject.create({ userId: previewLearner._id, name: "Preview Subject" });
+    const previewAwards = await reconcileUserBadges(String(previewLearner._id), { dryRun: true, force: true, source: "live" });
+    assert.ok(previewAwards.results.some((badge) => badge.unlocked && !badge.alreadyEarned));
+    assert.equal(await Notification.countDocuments({ userId: previewLearner._id, type: "badge_unlocked" }), 0, "dry-run reconciliation never reaches the notification producer");
   } finally {
     await mongoose.disconnect();
     delete process.env.MONGODB_URI;
