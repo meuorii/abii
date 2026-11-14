@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { Modal, modalCancelClass, modalDangerClass } from "@/components/ui/modal";
 import { ModalButtonContent } from "@/components/ui/modal-button-content";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
-import { SlidersHorizontal, ShieldCheck, Grid2X2, List, Download, Clock3, Layers3, Volume2, Play } from "lucide-react";
+import { SlidersHorizontal, ShieldCheck, Grid2X2, List, Download, Clock3, Layers3, Volume2, Play, BellRing } from "lucide-react";
+import { NotificationPreferences } from "@/components/notifications/notification-preferences";
 import { getAbiiSoundVolume, isAbiiSoundEnabled, playAbiiSound, setAbiiSoundEnabled, setAbiiSoundVolume } from "@/lib/sounds";
 
 type Preferences = { targetSubjects: number; defaultLandingPage: string; subjectLayout: "grid" | "list"; studyTimezone: string };
@@ -126,6 +127,10 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
               </div>
             </div>
           </div>
+        </SectionCard>
+
+        <SectionCard icon={<BellRing className="h-5 w-5"/>} title="Notification Preferences" description="Choose which learning updates and reminders you’d like to receive." delay={0.06}>
+          <NotificationPreferences/>
         </SectionCard>
 
       </div>

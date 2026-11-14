@@ -4,10 +4,10 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Notification } from "@/models/Notification";
 import { User } from "@/models/User";
 import { NotificationInputError } from "./errors";
-import { isNotificationType, normalizeNotificationPreferences, validateNotificationTarget, type CreateNotificationInput, type NotificationDTO, type NotificationMetadata, type NotificationType } from "./contracts";
+import { isNotificationType, NOTIFICATION_GROUPS, normalizeNotificationPreferences, validateNotificationTarget, type CreateNotificationInput, type NotificationDTO, type NotificationGroup, type NotificationMetadata, type NotificationType } from "./contracts";
 
 export type CreateNotificationResult = { status: "created"; notification: NotificationDTO } | { status: "already_exists" } | { status: "suppressed"; reason: "preference_disabled" | "daily_time_unset" };
-export interface NotificationListOptions { limit: number; cursor?: string; unreadOnly?: boolean; type?: NotificationType }
+export interface NotificationListOptions { limit: number; cursor?: string; unreadOnly?: boolean; type?: NotificationType; group?: NotificationGroup }
 export interface NotificationListResult { notifications: NotificationDTO[]; nextCursor: string | null; hasMore: boolean }
 
 function ownerId(value: string): Types.ObjectId {
@@ -86,6 +86,7 @@ export async function listNotifications(userId: string, options: NotificationLis
   const filter: Record<string, unknown> = { userId: userObjectId, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] };
   if (options.unreadOnly) filter.readAt = null;
   if (options.type) filter.type = options.type;
+  else if (options.group) filter.type = { $in: NOTIFICATION_GROUPS[options.group] };
   if (cursor) filter.$and = [{ $or: [{ createdAt: { $lt: cursor.createdAt } }, { createdAt: cursor.createdAt, _id: { $lt: cursor.id } }] }];
   const rows = await Notification.find(filter).select("type title message target metadata readAt createdAt expiresAt").sort({ createdAt: -1, _id: -1 }).limit(options.limit + 1).lean();
   const hasMore = rows.length > options.limit;
@@ -104,7 +105,9 @@ export async function markNotificationRead(userId: string, notificationId: strin
   if (!mongoose.isObjectIdOrHexString(notificationId)) throw new NotificationInputError("A valid notification ID is required.");
   await connectToDatabase();
   const updated = await Notification.findOneAndUpdate({ _id: new Types.ObjectId(notificationId), userId: userObjectId, readAt: null }, { $set: { readAt } }, { new: true, runValidators: true }).select("_id").lean();
-  return Boolean(updated);
+  if (updated) return true;
+  const owned = await Notification.exists({ _id: new Types.ObjectId(notificationId), userId: userObjectId });
+  return owned !== null;
 }
 
 export async function markAllNotificationsRead(userId: string, readAt = new Date()): Promise<number> {

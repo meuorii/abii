@@ -8,4 +8,16 @@ The `Notification` collection has three query indexes: owner/newest listing, own
 
 Preferences are embedded under `User.settings.notifications`; `dailyStudyTime` is a nullable local `HH:mm` value. Existing records normalize to the documented defaults without migration. The user's existing `settings.studyTimezone` remains the only timezone. Preference patches use dotted paths and preserve unrelated settings. Account deletion removes notifications inside the existing required transaction. Full account data export includes notification history and preferences; clear-history and delete-materials operations retain their established study-only semantics.
 
-Future phases: Phase 2 builds the bell, center, and settings UI; Phase 3 integrates verified badge/quiz/security/announcement events; Phase 4 defines reminder scheduling, timezone behavior, expiry, retries, and retention; Phase 5 adds focused end-to-end/production QA. Producers should use stable event keys, avoid placing answers/secrets in metadata, and treat notification delivery as non-authoritative.
+## Phase 2 frontend
+
+The authenticated shell wraps its existing navbar bell, dropdown, and route content in a user-keyed notification provider. The provider fetches only the unread count at initialization and on focus/visibility changes; the bell fetches the latest five items only while opened. Account identity is keyed by the authenticated shell, and notification state is kept in memory only. A shared notification row and centralized category presentation are used by both the dropdown and `/notifications`.
+
+The Notification Center requests bounded pages from `GET /api/notifications`, appending with the opaque `(createdAt, _id)` cursor. The supported filters are All, Unread, Reminders, Achievements, and System. The group filters use the validated `group=reminders|achievements|system` query, mapped server-side to the registry types; single-type filters remain supported by the API for future use. Category destinations use only the validated `target` returned by the backend. Read actions use the existing PATCH routes and refresh the shared unread count. The Settings section uses the dedicated preferences API and retains the existing study timezone.
+
+The dropdown is portaled to the document body so it escapes the authenticated shell's clipped scroll region. On narrow screens it becomes a viewport-contained sheet above the mobile navigation. It closes on Escape, outside interaction, route changes, and opening the profile menu. Motion is brief and reduced to opacity for users requesting reduced motion.
+
+## Phase 2 scope and limits
+
+Phase 2 only displays and manages notifications already persisted by trusted server services. There are no notification producers in the client, no generated sample records, and no scheduling or polling. Users may therefore see an empty inbox until later producer phases ship. The navbar refreshes the count at shell initialization and when the page regains focus; live delivery is not provided.
+
+Future phases: Phase 3 integrates verified badge/quiz/security/announcement events; Phase 4 defines reminder scheduling, timezone behavior, expiry, retries, and retention; Phase 5 adds focused end-to-end/production QA. Producers should use stable event keys, avoid placing answers/secrets in metadata, and treat notification delivery as non-authoritative.

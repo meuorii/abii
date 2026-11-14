@@ -63,6 +63,8 @@ test("notification APIs require authentication, enforce owner scope, and patch p
     assert.equal(ownList.body.notifications.length, 1);
     assert.equal(ownList.body.notifications[0].id, String(ownNotificationId));
     assert.match(ownList.cache ?? "", /no-store/);
+    assert.equal((await call("/api/notifications?group=reminders")).body.notifications.length, 1);
+    assert.equal((await call("/api/notifications?group=not-a-group")).status, 400);
     assert.equal((await call(`/api/notifications/${notificationId}`, "PATCH")).status, 404);
     assert.equal((await call("/api/notifications/preferences", "PATCH", { notifications: { study_streak: false } }, true, "https://attacker.invalid")).status, 403);
     const patched = await call("/api/notifications/preferences", "PATCH", { notifications: { study_streak: false }, dailyStudyTime: "09:35" });

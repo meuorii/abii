@@ -15,6 +15,7 @@
     "test:progress-analytics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/progress-analytics.test.ts",
     "test:study-day": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/study-day.test.ts",
     "test:notifications": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/notifications.test.ts && node --test scripts/notifications-routes.test.mjs",
+    "test:notifications-ui": "node --import ./scripts/register-typescript.mjs --test scripts/notifications-display.test.ts && node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/notifications-ui.browser.mjs",
     "test:profile-crop": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/profile-crop.test.ts",
     "test:profile-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/profile-actions.browser.mjs",
     "test:quiz-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/quiz-due-review.browser.mjs",

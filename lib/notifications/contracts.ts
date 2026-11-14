@@ -7,6 +7,12 @@ export const NOTIFICATION_TYPES = [
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+export const NOTIFICATION_GROUPS = {
+  reminders: ["flashcards_due", "study_streak", "unfinished_quiz", "daily_study_reminder", "study_inactivity"],
+  achievements: ["badge_unlocked", "quiz_milestone"],
+  system: ["account_security", "whats_new"],
+} as const satisfies Record<string, readonly NotificationType[]>;
+export type NotificationGroup = keyof typeof NOTIFICATION_GROUPS;
 export const OPTIONAL_NOTIFICATION_TYPES = NOTIFICATION_TYPES.filter((type) => type !== "account_security") as Exclude<NotificationType, "account_security">[];
 export type NotificationPreferences = Record<NotificationType, boolean> & { dailyStudyTime: string | null };
 

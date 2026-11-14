@@ -51,7 +51,7 @@ test("notification persistence is idempotent, paginated, isolated, and read atom
     assert.ok(first);
     const firstReadAt = new Date("2026-01-01T00:00:00Z");
     assert.equal(await markNotificationRead(String(owner), String(first._id), firstReadAt), true);
-    await markNotificationRead(String(owner), String(first._id), new Date("2026-01-02T00:00:00Z"));
+    assert.equal(await markNotificationRead(String(owner), String(first._id), new Date("2026-01-02T00:00:00Z")), true);
     assert.equal((await Notification.findById(first._id).lean())?.readAt?.toISOString(), firstReadAt.toISOString());
     assert.equal(await markNotificationRead(String(stranger), String(first._id)), false);
     assert.equal((await createNotification(String(owner), { type: "badge_unlocked", title: "Changed title", message: "Changed body", dedupeKey: "badge:hello" })).status, "already_exists");
@@ -63,6 +63,9 @@ test("notification persistence is idempotent, paginated, isolated, and read atom
     await Promise.all(["one", "two", "three"].map((key) => createNotification(String(owner), {
       type: "weekly_progress", title: `Update ${key}`, message: "Weekly update", dedupeKey: `weekly:${key}`,
     })));
+    await createNotification(String(owner), { type: "flashcards_due", title: "Review due", message: "A few cards are ready.", dedupeKey: "review:due" });
+    const reminderGroup = await listNotifications(String(owner), { limit: 20, group: "reminders" });
+    assert.deepEqual(reminderGroup.notifications.map((item) => item.type), ["flashcards_due"]);
     const page1 = await listNotifications(String(owner), { limit: 2 });
     assert.equal(page1.notifications.length, 2);
     assert.equal(page1.hasMore, true);
@@ -70,9 +73,9 @@ test("notification persistence is idempotent, paginated, isolated, and read atom
     assert.equal(page2.notifications.length, 2);
     assert.equal(new Set([...page1.notifications, ...page2.notifications].map((item) => item.id)).size, 4);
     assert.equal((await listNotifications(String(stranger), { limit: 20 })).notifications.length, 1);
-    assert.equal((await listNotifications(String(owner), { limit: 20, unreadOnly: true })).notifications.length, 3);
+    assert.equal((await listNotifications(String(owner), { limit: 20, unreadOnly: true })).notifications.length, 4);
     await assert.rejects(listNotifications(String(owner), { limit: 20, cursor: "tampered" }), /cursor is invalid/i);
-    assert.equal(await markAllNotificationsRead(String(owner)), 3);
+    assert.equal(await markAllNotificationsRead(String(owner)), 4);
     assert.equal(await countUnreadNotifications(String(owner)), 0);
     assert.equal(await Notification.countDocuments({ userId: stranger, dedupeKey: "badge:hello" }), 1);
   } finally {

@@ -8,7 +8,9 @@ import { useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { PageTransition } from "@/components/motion/page-transition";
 import { ScrollRootProvider } from "@/components/motion/scroll-root-context";
-import { LayoutDashboard, BookOpen, RotateCcw, ChartNoAxesColumn, Settings, Bell, ChevronDown, Award } from "lucide-react";
+import { LayoutDashboard, BookOpen, RotateCcw, ChartNoAxesColumn, Settings, ChevronDown, Award } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { NotificationProvider } from "@/components/notifications/notification-context";
 
 const desktopNavigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -35,6 +37,7 @@ type AppShellProps = {
   userId: string;
   userName: string;
   profileImage: string;
+  studyTimezone: string;
 };
 
 function isActive(pathname: string, href: string) {
@@ -76,7 +79,7 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function AppShell({ children, userId, userName: initialUserName, profileImage: initialProfileImage }: AppShellProps) {
+export function AppShell({ children, userId, userName: initialUserName, profileImage: initialProfileImage, studyTimezone }: AppShellProps) {
   const pathname = usePathname();
   const mainRef = useRef<HTMLElement>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -112,10 +115,16 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [profileMenuOpen]);
+  useEffect(() => {
+    const close = () => setProfileMenuOpen(false);
+    window.addEventListener("abii:close-profile-menu", close);
+    return () => window.removeEventListener("abii:close-profile-menu", close);
+  }, []);
 
   const firstLetter = userName?.trim().charAt(0).toUpperCase() || "A";
 
   return (
+    <NotificationProvider userId={userId} studyTimezone={studyTimezone}>
     <div className="relative min-h-dvh overflow-hidden bg-[#FFF7F9] p-0 text-[#2F2930] sm:p-3 lg:p-4">
       <a
         href="#authenticated-main"
@@ -177,14 +186,7 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
             </div>
 
             <div className="flex items-center gap-3 sm:gap-4">
-              <button
-                type="button"
-                aria-label="Notifications"
-                className="relative flex h-9 w-9 items-center justify-center rounded-full text-[21px] text-[#708397] transition-colors hover:bg-[#FFF4F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"
-              >
-                <Bell aria-hidden="true" className="h-5 w-5" />
-                <span className="absolute right-[7px] top-[6px] h-[6px] w-[6px] rounded-full bg-[#FF6F96] ring-2 ring-white" />
-              </button>
+              <NotificationBell />
 
               <span
                 className="hidden h-7 w-px bg-[#E8E2E5] sm:block"
@@ -196,7 +198,7 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
                   type="button"
                   aria-label="Open account menu"
                   aria-expanded={profileMenuOpen}
-                  onClick={() => setProfileMenuOpen((open) => !open)}
+                  onClick={() => { window.dispatchEvent(new Event("abii:close-notification-popover")); setProfileMenuOpen((open) => !open); }}
                   className="flex min-h-10 items-center gap-2.5 rounded-full px-1.5 py-1 text-left transition-colors hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"
                 >
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FFE0E9] text-sm font-semibold text-[#D94E7B]">
@@ -279,5 +281,6 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
         </div>
       </div>
     </div>
+    </NotificationProvider>
   );
 }

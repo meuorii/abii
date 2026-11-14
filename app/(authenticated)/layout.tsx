@@ -30,6 +30,7 @@ export default async function AuthenticatedLayout({
       userId={String(user._id)}
       userName={user.name}
       profileImage={user.profileImage ?? ""}
+      studyTimezone={user.settings?.studyTimezone ?? "UTC"}
     >
       {children}
     </AppShell>
