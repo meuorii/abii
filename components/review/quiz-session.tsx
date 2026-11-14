@@ -226,7 +226,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   }, [index, questionType, hasResult]);
 
   if (busy && result && isLast && !summary) {
-    return <PageLoadingSkeleton variant="finish" />;
+    return <PageLoadingSkeleton variant="finish" knownQuestionCount={questions.filter((question) => Boolean(results[question.index])).length} />;
   }
 
   if (summary || currentSession.status === "completed") {

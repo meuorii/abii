@@ -4,7 +4,7 @@ import { FeaturedBadgesSkeletonContent } from "@/components/badges/featured-badg
 
 type HeroVariant = "dashboard" | "subjects" | "review" | "progress" | "badges" | "settings" | "profile";
 const heroSize: Record<HeroVariant, string> = {
-  dashboard: "sm:min-h-[248px] lg:min-h-[254px]",
+  dashboard: "sm:min-h-[248px] lg:min-h-[310px]",
   subjects: "sm:min-h-[238px] lg:min-h-[242px]",
   review: "sm:min-h-[245px] lg:min-h-[265px]",
   progress: "sm:min-h-[230px] xl:min-h-[250px]",
@@ -19,7 +19,7 @@ function Panel({ className = "", children }: { className?: string; children: Rea
 export function MainPageHeroSkeleton({ variant, action = false }: { variant: HeroVariant; action?: boolean }) {
   return <section aria-hidden="true" className={`relative isolate grid min-h-[168px] grid-cols-[minmax(0,1fr)_minmax(78px,34%)] items-stretch gap-2 overflow-hidden rounded-[1.35rem] border border-[#F5DDE5] bg-[#FFF4F7] pl-4 pr-3 pt-3.5 pb-0 min-[360px]:grid-cols-[minmax(0,1fr)_minmax(100px,38%)] sm:block sm:p-7 ${heroSize[variant]}`}>
     <div className="relative z-10 min-w-0 max-w-full space-y-3 py-3 sm:max-w-[62%] sm:py-0">
-      {variant === "profile" ? <><Bar className="h-7 w-4/5 max-w-[340px] bg-[#EED7E0] sm:h-9" /><Bar className="h-3 w-full max-w-[380px]" /><Bar className="h-3 w-4/5 max-w-[310px]" /></> : <><Bar className="h-3 w-24 bg-[#F2DCE4]" /><Bar className="h-6 w-full max-w-[330px] bg-[#EED7E0] sm:h-9" /><Bar className="h-3 w-full max-w-[300px]" /><Bar className="h-3 w-4/5 max-w-[240px]" />{action && <Bar className="mt-2 h-10 w-32 rounded-full bg-[#F3D4DF]" />}</>}
+      {variant === "profile" ? <><Bar className="h-7 w-4/5 max-w-[340px] bg-[#EED7E0] sm:h-9" /><Bar className="h-3 w-full max-w-[380px]" /><Bar className="h-3 w-4/5 max-w-[310px]" /></> : <><Bar className="h-3 w-24 bg-[#F2DCE4]" />{variant === "dashboard" ? <div className="space-y-1"><Bar className="h-7 w-full max-w-[490px] bg-[#EED7E0] sm:h-11" /><Bar className="h-7 w-4/5 max-w-[390px] bg-[#EED7E0] sm:h-11" /></div> : <Bar className="h-6 w-full max-w-[330px] bg-[#EED7E0] sm:h-9" />}<Bar className="h-3 w-full max-w-[300px]" /><Bar className="h-3 w-4/5 max-w-[240px]" />{action && <Bar className="mt-2 h-10 w-32 rounded-full bg-[#F3D4DF]" />}</>}
     </div>
     <div aria-hidden="true" className="pointer-events-none relative col-start-2 row-start-1 min-h-[154px] min-w-0 min-[360px]:min-h-[158px] sm:absolute sm:inset-y-0 sm:right-0 sm:w-[40%]">
       <Bar className="absolute bottom-0 right-[5%] h-[76%] w-[85%] rounded-t-[48%] rounded-b-3xl bg-[#FFE6EE] sm:-bottom-8 sm:right-3 sm:h-[82%] sm:w-32" />

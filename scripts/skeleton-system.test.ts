@@ -25,14 +25,16 @@ test("shared shimmer uses one tokenized 2 second sweep and becomes static for re
 });
 
 test("page and badge loaders share primitives without client-side motion or independent pulse styling", async () => {
-  const [page, badges] = await Promise.all([
+  const [page, badges, study] = await Promise.all([
     readFile(`${root}/components/ui/page-loading-skeleton.tsx`, "utf8"),
     readFile(`${root}/components/badges/badges-page-skeleton.tsx`, "utf8"),
+    readFile(`${root}/components/ui/study-page-skeletons.tsx`, "utf8"),
   ]);
   assert.doesNotMatch(page, /"use client"/);
-  assert.match(page, /SkeletonBlock/);
+  assert.match(page, /study-page-skeletons/);
+  assert.match(study, /SkeletonBlock/);
   assert.match(badges, /SkeletonBlock/);
-  assert.doesNotMatch(page + badges, /animate-pulse|motion-safe:animate-pulse/);
+  assert.doesNotMatch(page + study + badges, /animate-pulse|motion-safe:animate-pulse/);
 });
 
 function assertSectionOrder(source: string, component: string, sections: string[]) {
@@ -42,7 +44,14 @@ function assertSectionOrder(source: string, component: string, sections: string[
   const body = source.slice(start, next === -1 ? undefined : next);
   let previous = -1;
   for (const section of sections) {
-    const index = section === "hero" ? body.indexOf("<MainPageHeroSkeleton") : body.indexOf(`data-skeleton-section="${section}"`);
+    const aliases: Record<string, string[]> = {
+      hero: ["<MainPageHeroSkeleton", '<StudyHero', '<CompletionHero', 'data-skeleton-section="hero"'],
+      breadcrumb: ["<Breadcrumb", 'data-skeleton-section="breadcrumb"'],
+      "completion-hero": ["<CompletionHero", 'data-skeleton-section="completion-hero"'],
+      "review-progress": ["<SessionProgressSkeleton", 'data-skeleton-section="review-progress"'],
+      results: ["<ResultPanel", 'data-skeleton-section="results"'],
+    };
+    const index = (aliases[section] ?? [`data-skeleton-section="${section}"`]).reduce((found, needle) => Math.max(found, body.indexOf(needle)), -1);
     assert.ok(index > previous, `${component} contains ${section} in order`);
     previous = index;
   }
@@ -122,6 +131,15 @@ test("loaded collection metadata never crosses subject or folder scopes", async 
   assert.equal(collectionStateModule.isCollectionScopeLoaded("subject-a:folder-1", "subject-a:folder-2"), false);
 });
 
+test("Subject Detail folder overview uses an honest initial fallback and scopes retained data", async () => {
+  const source = await readFile(`${root}/components/subjects/folder-overview.tsx`, "utf8");
+  assert.match(source, /isCollectionScopeLoaded/);
+  assert.match(source, /loadedScope/);
+  assert.match(source, /UnknownCollectionPlaceholder/);
+  assert.match(source, /setLoadError\(""\);\s+setLoadErrorScope\(null\);/);
+  assert.doesNotMatch(source, /\[0,\s*1,\s*2\]\.map\(item => <FolderCardSkeleton/);
+});
+
 test("known collections preserve exact visible identity and respect the rendered window", async () => {
   const subjects = ["one", "two", "three", "four", "five"];
   assert.deepEqual(await collectionState(subjects.slice(0, 1)), { kind: "known", items: ["one"] });
@@ -136,4 +154,44 @@ test("Badge catalog loading quantity follows the fixed product catalog, not unlo
   const state = await collectionState(BADGE_CATALOG);
   assert.equal(state.kind, "known");
   if (state.kind === "known") assert.equal(state.items.length, BADGE_CATALOG.length);
+});
+
+test("nested study skeletons mirror their route content order without inventing collections", async () => {
+  const source = await readFile(`${root}/components/ui/study-page-skeletons.tsx`, "utf8");
+  assertSectionOrder(source, "SubjectDetailSkeleton", ["breadcrumb", "hero", "tabs", "topic-folders", "topics"]);
+  assert.match(source, /data-skeleton-section="overview"/);
+  assertSectionOrder(source, "SubjectFolderDetailSkeleton", ["breadcrumb", "hero", "subject-controls", "subjects"]);
+  assertSectionOrder(source, "TopicFolderDetailSkeleton", ["breadcrumb", "hero", "topic-actions", "topics"]);
+  assertSectionOrder(source, "TopicDetailSkeleton", ["breadcrumb", "hero", "mastery", "flashcard-controls", "flashcards", "review-actions"]);
+  assert.match(source, /UnknownCollectionPlaceholder/);
+  assert.doesNotMatch(source, /\[0,\s*1,\s*2,\s*3,\s*4,\s*5\]/);
+});
+
+test("Review Setup skeleton follows real filter, scope, mode, and summary groups", async () => {
+  const source = await readFile(`${root}/components/ui/study-page-skeletons.tsx`, "utf8");
+  assertSectionOrder(source, "ReviewSetupSkeleton", ["breadcrumb", "hero", "review-filter", "scope", "quiz-modes", "summary"]);
+  assert.match(source, /QUIZ_MODES\.map/);
+  assert.match(source, /data-skeleton-scope(?:\s|>)/);
+  assert.match(source, /data-skeleton-filter(?:\s|>)/);
+  assert.doesNotMatch(source, /aria-checked|role="radio"|<button|<input|<select/);
+});
+
+test("Quiz Session skeleton keeps the responsive sidebar and does not guess answer controls", async () => {
+  const source = await readFile(`${root}/components/ui/study-page-skeletons.tsx`, "utf8");
+  assertSectionOrder(source, "QuizSessionSkeleton", ["session-nav", "session-hero", "review-progress", "question", "next-up"]);
+  assert.match(source, /lg:grid-cols-\[minmax\(0,1fr\)_290px\].*xl:grid-cols-\[minmax\(0,1fr\)_320px\]/);
+  assert.match(source, /hidden[^\"]*lg:block/);
+  assert.match(source, /UnknownCollectionPlaceholder/);
+  assert.doesNotMatch(source, /mt-8 grid gap-3 sm:grid-cols-2/);
+});
+
+test("inline completion skeleton uses saved answered-question count instead of a fixed recent list", async () => {
+  const [source, session] = await Promise.all([
+    readFile(`${root}/components/ui/study-page-skeletons.tsx`, "utf8"),
+    readFile(`${root}/components/review/quiz-session.tsx`, "utf8"),
+  ]);
+  assertSectionOrder(source, "QuizCompletionSkeleton", ["completion-hero", "results", "performance", "recent-questions", "next-actions"]);
+  assert.match(source, /knownQuestionCount/);
+  assert.match(session, /variant="finish"\s+knownQuestionCount=\{questions\.filter\(\(question\) => Boolean\(results\[question\.index\]\)\)\.length\}/);
+  assert.doesNotMatch(source, /\[0,\s*1,\s*2,\s*3,\s*4\]\.map/);
 });

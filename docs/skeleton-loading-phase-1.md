@@ -102,3 +102,75 @@ Phase 1's original source inventory above remains the audit baseline. Phase 2 ex
 Root cause: Phase 2 used hardcoded arrays as representative layout counts in route-level skeletons. Those fallbacks are outside the pending server pages and cannot receive the page's query results. Re-fetching counts from the fallbacks would duplicate database work and delay the loading UI. `SkeletonCollection` now treats `null` as unknown, an empty array as known-empty, and a populated array as known data with an optional visible-item limit. The authenticated route fallbacks use the unknown state where data is unavailable.
 
 No account-scoped cache, database query, API endpoint, or other network request was added. The only known repeated count is the static Badge catalog. Local Topics refresh reuses the current component state and existing API request flow.
+
+### Phase 3 — nested study and quiz loading compositions
+
+The nested route fallbacks are implemented in `components/ui/study-page-skeletons.tsx` and selected through the server-renderable `PageLoadingSkeleton` wrapper. They retain the shared skeleton tokens, CSS shimmer, reduced-motion behavior, and one page-level loading status.
+
+| Area | Phase 3 structure | Count/state handling |
+| --- | --- | --- |
+| Subject Detail | Breadcrumb, subject hero/overview, four decorative tabs, folder controls, topic organization, and flashcard actions | Folder and flashcard collections are neutral unknown-count regions at the route boundary. The fixed tab count reflects the actual four tabs. |
+| Subject Folder | Breadcrumb, folder hero/actions, controls, and subject collection | Unknown membership uses the neutral collection fallback; route loader cannot access pending server data. |
+| Topic Folder | Breadcrumb, folder hero/actions, controls, and topic collection | Route fallback is neutral. `TopicsSection` retains known topics or a known-empty state only within the matching subject/folder scope. |
+| Topic Detail | Breadcrumb, topic hero, fixed mastery structure, card controls, flashcard collection, and study actions | Flashcard count is unknown at route loading; no question/card count is implied. |
+| Review Setup | Hero, two fixed review filters, three scope options, configured quiz modes, and summary/action | Fixed controls use their real counts; selected subject/topic and eligibility counts remain neutral until resolved. |
+| Quiz Session | Navigation, session/progress area, question card, responsive progress sidebar, and desktop-only Next Up region | Question type and answer option count are unknown, so answer controls are represented by one neutral area. Existing saved answers/results determine the already-answered count for the inline finish fallback. |
+| Quiz Completion | Completion hero, results, fixed breakdown categories, recent-question area, and actions | The inline fallback receives only the count of answered questions still present in the current in-memory session; it does not invent results or scores. |
+| Subject Detail Folder Overview | Section-local folder collection | Initial unknown count is a compact neutral surface. Loaded content remains visible for same-subject refreshes; data is hidden immediately when the subject scope changes. |
+
+Route-level loading components cannot read the pending page's server-fetched records. No loading-only queries, caches, API requests, changes to quiz lifecycle logic, or artificial delays were added. The quiz completion fallback remains inside its existing `busy && result && isLast && !summary` condition. Session ownership, answer persistence, grading, resume, recovery, retry, sounds, and celebration logic were not modified.
+
+### Phase 3 verification notes
+
+- `npm run test:skeleton`: passed, 17 tests, including route composition order, neutral unknown-count behavior, quiz question neutrality, completion counts, and Subject Detail folder scope handling.
+- `npm run typecheck`: passed.
+- `npm run lint`: passed with three existing warnings outside the Phase 3 changes (`app-shell.tsx` raw image, and unused eslint-disable directives in `mongodb.ts` and `quiz/normalize.ts`).
+- `npm test`: passed, including quiz answer, resume, restart, topic/folder, and skeleton tests.
+- `npm run test:quiz-browser`: passed; persisted Due Review retry rounds and stale due-set handling remained intact.
+- `npm run test:skeleton:browser`: passed after production build at 320, 375, 390, 430, 768, 1024, 1280, and 1440px; shimmer and reduced-motion paths passed.
+- `npm run test:responsive-browser`: passed for the authenticated loaded-page viewport matrix. It does not capture paired loading/content screenshots or force route-level loading boundaries. Measured skeleton-to-loaded geometry comparison remains Phase 4 work.
+
+### Phase 4 verification — 2026-11-14
+
+Added `scripts/skeleton-routes.browser.mjs` and the `test:skeleton:routes` package script. The test creates an isolated MongoDB account, launches the actual Next.js App Router, and uses a local streaming proxy to pause authenticated HTML after the serialized route fallback boundary. This is not a copied skeleton fixture. It captures the loading state, releases the stream, waits for PageEntry/ScrollReveal to settle, captures the resolved UI, measures hero bounds, checks that the loading region is removed, checks for focusable placeholders and browser/hydration errors, and records layout-shift entries. The full route matrix passed against both `next dev` and the optimized `next start` build. The Windows cleanup path sends Next its graceful SIGINT shutdown when process-tree termination is unavailable in the sandbox. Artifacts are written to the OS temp folder, not committed.
+
+The production paired route test passed for all seven main authenticated routes at 1280×900, plus Subject Detail through a real client-side navigation from the isolated Subject Folder fixture. The main-route hero horizontal and top bounds matched exactly; heights were:
+
+| Route | Skeleton hero | Loaded hero | Difference (skeleton − loaded) | Result |
+| --- | ---: | ---: | ---: | --- |
+| Dashboard | 978×310 | 978×309.2 | +0.8px | Pass |
+| Subjects | 970×242 | 970×244 | −2px | Pass |
+| Review | 970×265 | 970×282.2 | −17.2px | Pass |
+| Progress | 970×250 | 970×259.5 | −9.5px | Pass |
+| Badges | 978×250 | 978×252 | −2px | Pass |
+| Settings | 978×248 | 978×250 | −2px | Pass |
+| Profile | 978×250 | 978×252 | −2px | Pass |
+
+The client-side Subject Detail transition measured a 978×340px skeleton hero versus 978×335.7px loaded (4.3px height difference; top offset −4px from breadcrumb spacing). Its route status was removed after the nested RSC response resumed. The loading/loaded screenshot pair is `subject-detail-client-navigation-loading.png` and `subject-detail-client-navigation-loaded.png` in the temporary artifact folder.
+
+The initial Dashboard measurement found a 55.2px short hero because the placeholder headline occupied one line while the actual heading wraps to two. The skeleton now models both headline lines and reserves a 310px desktop hero; the paired measurement is now within 1px. This changes only the loading composition.
+
+Subjects loading and loaded states were checked at 320, 375, 390, 430, 768, 1024, 1280, and 1440px. Both had zero document overflow at each width. The real Subjects route also passed the reduced-motion check: placeholders stayed visible and the pseudo-element animation became `none`. The seven route captures reported zero `layout-shift` entries during the controlled stream release, and no route status remained after resolution. The shared shimmer computed to `skeleton-shimmer`, 2s, running under normal motion; placeholders were not keyboard-focusable.
+
+The inline Quiz Completion transition was tested through an isolated real quiz session. The test answered the fixture correctly through its three required mastery rounds, held the final finish response, confirmed the completion loading region appeared and result heading remained absent, then released the response and confirmed results replaced the skeleton. Exactly one final finish request was observed. Existing answer/session behavior was exercised; this test does not replace the broader quiz resume/restart suite.
+
+Paired screenshots and `geometry.json` are available under `%TEMP%\abii-phase4-skeleton-routes` on the test machine. They are sanitized fixture data and are deliberately not checked into the repository.
+
+#### Phase 4 validation results
+
+- `npm run test:skeleton:routes` against `next start`: passed; seven main route fallbacks, Subject Detail through a held client-side RSC navigation, and inline completion, with production-stream screenshots and geometry.
+- `npm run test:skeleton`: passed, 17/17.
+- `npm run test:skeleton:browser`: passed at 320, 375, 390, 430, 768, 1024, 1280, and 1440px; shimmer and reduced-motion fallback passed.
+- `npm run test:quiz-browser`: passed, including persisted retry rounds and stale due-set handling.
+- `npm run test:responsive-browser`: passed at the complete authenticated viewport matrix.
+- `npm run typecheck`: passed.
+- `npm run lint`: zero errors; three existing warnings remain in `app-shell.tsx`, `lib/mongodb.ts`, and `lib/quiz/normalize.ts`.
+- `npm test`: passed, including all chained unit/integration suites and the skeleton suite.
+- `npm run build`: passed. The app remains server-rendered for dynamic authenticated routes.
+- `git diff --check`: passed; Git reports expected LF-to-CRLF normalization notices for touched text files.
+
+#### Route coverage limits
+
+The deterministic production stream gate verifies seven top-level routes. A separate client-side App Router transition now also verifies Subject Detail with a held RSC response and paired geometry. Subject Folder, Topic Folder, Topic Detail, Review Setup, and Quiz Session route-level fallbacks still lack paired genuine-pending screenshots/geometry in this Phase 4 harness. Direct-document experiments for nested routes exposed the parent Subjects/Review loading region while nested fallback data was present in the serialized stream, so those cases were not counted as destination-specific skeleton verification. Loaded nested routes and quiz resume/session behavior remain covered by the Phase 3 responsive and quiz suites. Empty/error transitions and cross-account navigation were not exercised in this Phase 4 harness.
+
+**Phase 4 status: PARTIAL.** Production App Router route loading is verified for all seven main pages, Subject Detail client navigation, and inline quiz completion. Geometry, Subjects responsive overflow, reduced motion, shimmer, quiz completion, and the broader existing regressions pass. Destination-specific pending captures for five other nested routes, plus empty/error and cross-account transitions, remain outstanding; this report does not claim all four phases are fully validated.

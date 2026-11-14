@@ -8,26 +8,18 @@ import { ModalButtonContent } from "@/components/ui/modal-button-content";
 import { useToast } from "@/components/ui/toast-provider";
 import type { FolderItem } from "./topics-section";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/motion/scroll-reveal";
-import { SkeletonBlock } from "@/components/ui/skeleton";
+import { SkeletonRegion } from "@/components/ui/skeleton";
+import { UnknownCollectionPlaceholder } from "@/components/ui/skeleton-collection";
+import { isCollectionScopeLoaded } from "@/components/ui/collection-loading-state";
 
 type Unfiled = { topicCount: number; flashcardCount: number };
-
-function FolderCardSkeleton() {
-  return <div aria-hidden="true" className="min-h-[190px] rounded-2xl border border-[#F0E5E9] bg-white p-4">
-    <SkeletonBlock className="h-10 w-10 rounded-xl" />
-    <SkeletonBlock className="mt-4 h-4 w-3/5 rounded" />
-    <SkeletonBlock className="mt-2 h-3 w-full rounded" />
-    <SkeletonBlock className="mt-2 h-3 w-2/3 rounded" />
-    <SkeletonBlock className="mt-4 h-3 w-1/2 rounded" />
-    <SkeletonBlock className="mt-4 h-4 w-28 rounded" />
-  </div>;
-}
 
 export function FolderOverview({ subjectId }: { subjectId: string }) {
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [unfiled, setUnfiled] = useState<Unfiled>({ topicCount: 0, flashcardCount: 0 });
   const [loading, setLoading] = useState(true);
-  const [loaded, setLoaded] = useState(false);
+  const [loadedScope, setLoadedScope] = useState<string | null>(null);
+  const [loadErrorScope, setLoadErrorScope] = useState<string | null>(null);
   const [loadError, setLoadError] = useState("");
   const [query, setQuery] = useState("");
   const [editor, setEditor] = useState<{ folder?: FolderItem; deleting?: boolean } | null>(null);
@@ -47,6 +39,7 @@ export function FolderOverview({ subjectId }: { subjectId: string }) {
     const currentRequest = ++requestId.current;
     if (!background || !loadedRef.current) setLoading(true);
     setLoadError("");
+    setLoadErrorScope(null);
     try {
       const response = await fetch(`/api/subjects/${subjectId}/folders`, { cache: "no-store", signal: currentController.signal });
       const data = await response.json().catch(() => ({}));
@@ -55,10 +48,12 @@ export function FolderOverview({ subjectId }: { subjectId: string }) {
       setFolders(data.folders);
       setUnfiled(data.unfiled ?? { topicCount: 0, flashcardCount: 0 });
       loadedRef.current = true;
-      setLoaded(true);
+      setLoadedScope(subjectId);
+      setLoadErrorScope(null);
     } catch (cause) {
       if (currentController.signal.aborted || currentRequest !== requestId.current) return;
       setLoadError(cause instanceof Error ? cause.message : "Couldn't load topic folders. Try again.");
+      setLoadErrorScope(subjectId);
     } finally {
       if (currentRequest === requestId.current) setLoading(false);
     }
@@ -66,7 +61,6 @@ export function FolderOverview({ subjectId }: { subjectId: string }) {
 
   useEffect(() => {
     loadedRef.current = false;
-    setLoaded(false);
     setFolders([]);
     setUnfiled({ topicCount: 0, flashcardCount: 0 });
     setQuery("");
@@ -112,6 +106,8 @@ export function FolderOverview({ subjectId }: { subjectId: string }) {
 
   const visible = folders.filter(folder => `${folder.name} ${folder.description}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const pendingLabel = editor?.deleting ? "Deleting Folder…" : editor?.folder ? "Saving Changes…" : "Creating Folder…";
+  const hasLoadedCurrentScope = isCollectionScopeLoaded(loadedScope, subjectId);
+  const hasErrorForCurrentScope = loadErrorScope === subjectId;
 
   return <section className="min-w-0 space-y-5" aria-labelledby="topics-heading">
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -119,10 +115,10 @@ export function FolderOverview({ subjectId }: { subjectId: string }) {
       <button type="button" onClick={() => open()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6F96] px-4 text-sm font-semibold text-white"><FolderPlus className="h-4 w-4"/>New Folder</button>
     </div>
     <label className="relative block"><span className="sr-only">Search folders</span><Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B9BAA]"/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search folders..." className="min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white pl-10 pr-3 text-sm"/></label>
-    {loadError && loaded && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#FFF1F1] p-3 text-sm text-[#A43E5C]"><span>{loadError}</span><button type="button" onClick={() => void load(true)} disabled={loading} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 font-semibold text-[#A43E5C] underline disabled:opacity-60"><LoaderCircle aria-hidden="true" className={`h-4 w-4 ${loading ? "animate-spin" : "hidden"}`}/>Try again</button></div>}
+    {hasErrorForCurrentScope && hasLoadedCurrentScope && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#FFF1F1] p-3 text-sm text-[#A43E5C]"><span>{loadError}</span><button type="button" onClick={() => void load(true)} disabled={loading} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 font-semibold text-[#A43E5C] underline disabled:opacity-60"><LoaderCircle aria-hidden="true" className={`h-4 w-4 ${loading ? "animate-spin" : "hidden"}`}/>Try again</button></div>}
 
-    {loading && !loaded ? <div role="status" aria-label="Loading topic folders" className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"><span className="sr-only">Loading topic folders…</span>{[0, 1, 2].map(item => <FolderCardSkeleton key={item}/>)}</div>
-      : loadError && !loaded ? <div role="alert" className="rounded-2xl border border-dashed border-[#E8D7DE] bg-[#FFFCFD] px-5 py-10 text-center"><h3 className="font-bold text-[#153B56]">Topic folders could not be loaded</h3><p className="mt-2 text-sm text-[#756B72]">{loadError}</p><button type="button" onClick={() => void load()} disabled={loading} className="mt-3 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#FF6F96] px-4 font-semibold text-white disabled:opacity-60">{loading && <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none"/>}{loading ? "Trying again…" : "Try again"}</button></div>
+    {!hasLoadedCurrentScope && !hasErrorForCurrentScope ? <SkeletonRegion label="Loading topic folders" className="rounded-2xl border border-[#F0E5E9] bg-white p-4"><UnknownCollectionPlaceholder className="space-y-4" /></SkeletonRegion>
+      : !hasLoadedCurrentScope && hasErrorForCurrentScope ? <div role="alert" className="rounded-2xl border border-dashed border-[#E8D7DE] bg-[#FFFCFD] px-5 py-10 text-center"><h3 className="font-bold text-[#153B56]">Topic folders could not be loaded</h3><p className="mt-2 text-sm text-[#756B72]">{loadError}</p><button type="button" onClick={() => void load()} disabled={loading} className="mt-3 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#FF6F96] px-4 font-semibold text-white disabled:opacity-60">{loading && <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none"/>}{loading ? "Trying again…" : "Try again"}</button></div>
       : query.trim() && visible.length === 0 ? <div className="rounded-2xl border border-dashed border-[#E8D7DE] bg-[#FFFCFD] px-5 py-10 text-center"><span aria-hidden="true" className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#FFF0F5] text-[#E9577D]"><Search className="h-7 w-7"/></span><h3 className="mt-4 font-bold text-[#153B56]">No matching folders found</h3><p className="mt-2 text-sm text-[#756B72]">Try another search term or clear your search.</p><button type="button" onClick={() => setQuery("")} className="mt-3 min-h-10 font-semibold text-[#C65380] underline">Clear search</button></div>
       : visible.length || unfiled.topicCount ? <StaggerContainer className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" stagger={0.04}>
         {visible.map((folder, index) => <StaggerItem key={folder.id} index={index}><article className="relative flex min-w-0 flex-col rounded-2xl border border-[#F0E5E9] bg-white p-4 transition hover:border-[#F3C4D3] hover:shadow-[0_8px_28px_rgba(92,49,66,.07)]"><details className="absolute right-2 top-2"><summary aria-label={`Options for ${folder.name}`} className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg text-[#C65380]"><Ellipsis className="h-5 w-5"/></summary><div className="absolute right-0 z-10 w-40 rounded-xl border bg-white p-1 shadow-lg"><button type="button" onClick={() => open(folder)} className="min-h-11 w-full rounded px-2 text-left text-sm hover:bg-[#FFF0F5]">Edit / Rename</button><button type="button" onClick={() => open(folder, true)} className="min-h-11 w-full rounded px-2 text-left text-sm text-[#A43E5C] hover:bg-[#FFF1F1]">Delete Folder</button></div></details><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#FFF0F5] text-[#E9577D]"><FolderOpen className="h-5 w-5"/></span><h3 className="mt-3 break-words font-bold text-[#153B56]">{folder.name}</h3>{folder.description && <p className="mt-1 line-clamp-2 break-words text-sm text-[#756B72]">{folder.description}</p>}<p className="mt-2 text-sm text-[#71869A]">{folder.topicCount} {folder.topicCount === 1 ? "topic" : "topics"} · {folder.flashcardCount} {folder.flashcardCount === 1 ? "flashcard" : "flashcards"}</p><Link href={`/subjects/${subjectId}/folders/${folder.id}`} className="mt-3 inline-flex min-h-10 items-center font-semibold text-[#C65380]">Open Folder <ChevronRight aria-hidden="true" className="ml-1 h-4 w-4"/></Link></article></StaggerItem>)}
