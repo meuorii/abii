@@ -186,30 +186,38 @@ export async function evaluateUserReminders(userId: string, now = new Date(), ac
   return counts;
 }
 
-export interface ReminderBatchResult extends ReminderCounts { examined: number; errors: number; busy: boolean; hasMore: boolean; durationMs: number }
+export interface ReminderBatchResult extends ReminderCounts { examined: number; errors: number; busy: boolean; hasMore: boolean; durationMs: number; batches: number }
+export interface ReminderBatchOptions { maxBatches?: number; executionBudgetMs?: number }
 
-/** Processes one bounded, restartable page of verified accounts, guarded by a MongoDB lease. */
-export async function runReminderBatch(now = new Date(), batchSize = 50): Promise<ReminderBatchResult> {
-  if (!Number.isFinite(now.getTime()) || !Number.isInteger(batchSize) || batchSize < 1 || batchSize > 100) throw new TypeError("A valid run time and batch size from 1 to 100 are required.");
+const REMINDER_LEASE_MS = 270_000;
+const REMINDER_EXECUTION_BUDGET_MS = 240_000;
+
+/** Processes bounded, restartable cursor pages under one lease and an execution budget. */
+export async function runReminderBatch(now = new Date(), batchSize = 50, options: ReminderBatchOptions = {}): Promise<ReminderBatchResult> {
+  const maxBatches = options.maxBatches ?? Number.MAX_SAFE_INTEGER;
+  const executionBudgetMs = options.executionBudgetMs ?? REMINDER_EXECUTION_BUDGET_MS;
+  if (!Number.isFinite(now.getTime()) || !Number.isInteger(batchSize) || batchSize < 1 || batchSize > 100 || !Number.isInteger(maxBatches) || maxBatches < 1 || !Number.isFinite(executionBudgetMs) || executionBudgetMs < 1 || executionBudgetMs > REMINDER_EXECUTION_BUDGET_MS) throw new TypeError("A valid run time, batch size, and bounded execution policy are required.");
   const startedAt = Date.now();
   await connectToDatabase();
   const leaseToken = new Types.ObjectId().toHexString();
-  const leaseUntil = new Date(now.getTime() + 90_000);
+  const leaseStartedAt = new Date();
+  const leaseUntil = new Date(leaseStartedAt.getTime() + REMINDER_LEASE_MS);
   let state: { cursor?: Types.ObjectId | null; leaseToken?: string | null } | null;
   try {
     state = await NotificationScheduleState.findOneAndUpdate(
-      { _id: "study-reminders", $or: [{ leaseUntil: null }, { leaseUntil: { $lte: now } }] },
-      { $set: { leaseToken, leaseUntil, updatedAt: now }, $setOnInsert: { cursor: null } },
+      { _id: "study-reminders", $or: [{ leaseUntil: null }, { leaseUntil: { $lte: leaseStartedAt } }] },
+      { $set: { leaseToken, leaseUntil, updatedAt: leaseStartedAt }, $setOnInsert: { cursor: null } },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     ).select("cursor leaseToken").lean();
   } catch (error) {
     if (error instanceof mongoose.mongo.MongoServerError && error.code === 11000) {
-      return { created: 0, existing: 0, suppressed: 0, candidates: 0, examined: 0, errors: 0, busy: true, hasMore: true, durationMs: Date.now() - startedAt };
+      return { created: 0, existing: 0, suppressed: 0, candidates: 0, examined: 0, errors: 0, busy: true, hasMore: true, durationMs: Date.now() - startedAt, batches: 0 };
     }
     throw error;
   }
-  if (!state || state.leaseToken !== leaseToken) return { created: 0, existing: 0, suppressed: 0, candidates: 0, examined: 0, errors: 0, busy: true, hasMore: true, durationMs: Date.now() - startedAt };
+  if (!state || state.leaseToken !== leaseToken) return { created: 0, existing: 0, suppressed: 0, candidates: 0, examined: 0, errors: 0, busy: true, hasMore: true, durationMs: Date.now() - startedAt, batches: 0 };
 
+  let checkpointCursor = state.cursor ?? null;
   const release = async (cursor: Types.ObjectId | null) => {
     await NotificationScheduleState.updateOne({ _id: "study-reminders", leaseToken }, { $set: { cursor, leaseUntil: new Date(0), leaseToken: null, updatedAt: new Date() } });
   };
@@ -225,35 +233,78 @@ export async function runReminderBatch(now = new Date(), batchSize = 50): Promis
         { "settings.notifications.study_inactivity": true },
       ],
     };
-    if (state.cursor) query._id = { $gt: state.cursor };
-    const users = await User.find(query).select("_id settings.notifications settings.dailyStudyTime settings.studyTimezone").sort({ _id: 1 }).limit(batchSize).lean();
-    if (users.length === 0 && state.cursor) {
-      await release(null);
-      return { created: 0, existing: 0, suppressed: 0, candidates: 0, examined: 0, errors: 0, busy: false, hasMore: false, durationMs: Date.now() - startedAt };
-    }
-    const totals: ReminderBatchResult = { created: 0, existing: 0, suppressed: 0, candidates: 0, examined: users.length, errors: 0, busy: false, hasMore: users.length === batchSize, durationMs: 0 };
-    for (let offset = 0; offset < users.length; offset += 4) {
-      const group = users.slice(offset, offset + 4);
-      const results = await Promise.all(group.map(async (user) => {
-        try { return await evaluateUserReminders(String(user._id), now, user); }
-        catch (error) {
-          totals.errors += 1;
-          console.error("Study reminder evaluation failed for an account.", { category: "study-reminders", failure: error instanceof Error ? error.name : "UnknownError" });
-          return null;
+    const totals: ReminderBatchResult = { created: 0, existing: 0, suppressed: 0, candidates: 0, examined: 0, errors: 0, busy: false, hasMore: Boolean(state.cursor), durationMs: 0, batches: 0 };
+    let cursor = state.cursor ?? null;
+    let finishedSweep = false;
+    while (totals.batches < maxBatches && Date.now() - startedAt < executionBudgetMs) {
+      // Renew before starting another page. The lease token fences stale invocations.
+      const renewed = await NotificationScheduleState.updateOne(
+        { _id: "study-reminders", leaseToken },
+        { $set: { leaseUntil: new Date(Date.now() + REMINDER_LEASE_MS), updatedAt: new Date() } },
+      );
+      if (renewed.matchedCount !== 1) {
+        totals.busy = true;
+        totals.hasMore = true;
+        break;
+      }
+
+      const pageQuery = { ...query };
+      if (cursor) pageQuery._id = { $gt: cursor };
+      else delete pageQuery._id;
+      const users = await User.find(pageQuery).select("_id settings.notifications settings.dailyStudyTime settings.studyTimezone").sort({ _id: 1 }).limit(batchSize).lean();
+      totals.batches += 1;
+      if (users.length === 0) {
+        cursor = null;
+        finishedSweep = true;
+        break;
+      }
+
+      for (let offset = 0; offset < users.length; offset += 4) {
+        const group = users.slice(offset, offset + 4);
+        const results = await Promise.all(group.map(async (user) => {
+          try { return await evaluateUserReminders(String(user._id), now, user); }
+          catch (error) {
+            totals.errors += 1;
+            console.error("Study reminder evaluation failed for an account.", { category: "study-reminders", failure: error instanceof Error ? error.name : "UnknownError" });
+            return null;
+          }
+        }));
+        for (const result of results) if (result) {
+          totals.created += result.created;
+          totals.existing += result.existing;
+          totals.suppressed += result.suppressed;
+          totals.candidates += result.candidates;
         }
-      }));
-      for (const result of results) if (result) {
-        totals.created += result.created;
-        totals.existing += result.existing;
-        totals.suppressed += result.suppressed;
-        totals.candidates += result.candidates;
+      }
+
+      totals.examined += users.length;
+      cursor = users.at(-1)?._id ?? cursor;
+      // Checkpoint each completed page. Repeating a page after a crash is safe
+      // because notification deduplication is enforced by MongoDB.
+      const persistedCursor = users.length < batchSize ? null : cursor;
+      const checkpoint = await NotificationScheduleState.updateOne(
+        { _id: "study-reminders", leaseToken },
+        { $set: { cursor: persistedCursor, updatedAt: new Date() } },
+      );
+      if (checkpoint.matchedCount !== 1) {
+        totals.busy = true;
+        totals.hasMore = true;
+        break;
+      }
+      checkpointCursor = persistedCursor;
+      if (users.length < batchSize) {
+        cursor = null;
+        finishedSweep = true;
+        break;
       }
     }
-    await release(users.at(-1)?._id ?? state.cursor ?? null);
+
+    totals.hasMore = totals.busy || (!finishedSweep && Boolean(cursor));
+    await release(finishedSweep ? null : cursor);
     totals.durationMs = Date.now() - startedAt;
     return totals;
   } catch (error) {
-    await release(state.cursor ?? null);
+    await release(checkpointCursor);
     throw error;
   }
 }

@@ -4,7 +4,7 @@ import { runReminderBatch } from "@/lib/notifications/reminders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function GET(request: Request) {
   const authorization = authorizeReminderRequest(new URL(request.url).searchParams, request.headers.get("authorization"), process.env.CRON_SECRET);

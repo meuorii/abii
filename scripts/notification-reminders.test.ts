@@ -103,17 +103,61 @@ test("scheduled batch advances a durable cursor, bounds work, and skips unverifi
     await User.create({ name: "Muted", email: "muted-batch@example.invalid", passwordHash: "hash", emailVerifiedAt: verifiedAt, settings: { notifications: { flashcards_due: false, study_streak: false, unfinished_quiz: false, daily_study_reminder: false, weekly_progress: false, study_inactivity: false } } });
     const now = new Date("2026-11-14T12:00:00Z");
 
-    const simultaneous = await Promise.all([runReminderBatch(now, 1), runReminderBatch(now, 1)]);
+    const simultaneous = await Promise.all([runReminderBatch(now, 1, { maxBatches: 1 }), runReminderBatch(now, 1, { maxBatches: 1 })]);
     assert.equal(simultaneous.filter((result) => result.busy).length, 1);
     const first = simultaneous.find((result) => !result.busy);
     assert.equal(first?.examined, 1);
     assert.equal(first?.hasMore, true);
-    const second = await runReminderBatch(now, 1);
+    const second = await runReminderBatch(now, 1, { maxBatches: 1 });
     assert.equal(second.examined, 1);
-    const completed = await runReminderBatch(now, 1);
+    const completed = await runReminderBatch(now, 1, { maxBatches: 1 });
     assert.equal(completed.examined, 0);
     assert.equal(completed.hasMore, false);
     assert.equal(await Notification.countDocuments({}), 0);
+  } finally {
+    await mongoose.disconnect();
+    if (global.mongooseCache) { global.mongooseCache.conn = null; global.mongooseCache.promise = null; }
+    if (previousUri === undefined) delete process.env.MONGODB_URI;
+    else process.env.MONGODB_URI = previousUri;
+    await server.stop();
+  }
+});
+
+test("bounded cursor sweeps cover zero through multiple account pages without skips or duplicates", { timeout: 60000 }, async () => {
+  const server = await MongoMemoryServer.create();
+  const previousUri = process.env.MONGODB_URI;
+  try {
+    process.env.MONGODB_URI = server.getUri("abii_notification_reminder_sweep_test");
+    await connectToDatabase();
+    await Promise.all([User.syncIndexes(), NotificationScheduleState.syncIndexes()]);
+    const verifiedAt = new Date("2026-11-01T00:00:00Z");
+    const now = new Date("2026-11-14T12:00:00Z");
+    for (const population of [0, 1, 49, 50, 51, 100, 150]) {
+      await User.deleteMany({});
+      await NotificationScheduleState.deleteMany({});
+      await User.insertMany(Array.from({ length: population }, (_, index) => ({
+        name: `Sweep ${population}-${index}`,
+        email: `sweep-${population}-${index}@example.invalid`,
+        passwordHash: "hash",
+        emailVerifiedAt: verifiedAt,
+        settings: { studyTimezone: "UTC", notifications: { flashcards_due: false, study_streak: false, unfinished_quiz: false, daily_study_reminder: false, weekly_progress: false, study_inactivity: true } },
+      })));
+
+      const first = await runReminderBatch(now, 50, { maxBatches: population === 150 ? 1 : 4 });
+      if (population === 150) {
+        assert.equal(first.examined, 50);
+        assert.equal(first.hasMore, true);
+        const resumed = await runReminderBatch(now, 50, { maxBatches: 4 });
+        assert.equal(resumed.examined, 100);
+        assert.equal(resumed.hasMore, false);
+      } else {
+        assert.equal(first.examined, population);
+        assert.equal(first.busy, false);
+        assert.equal(first.hasMore, false);
+      }
+      const state = await NotificationScheduleState.findById("study-reminders").lean();
+      assert.equal(state?.cursor, null, `population ${population} should wrap the cursor after a full sweep`);
+    }
   } finally {
     await mongoose.disconnect();
     if (global.mongooseCache) { global.mongooseCache.conn = null; global.mongooseCache.promise = null; }

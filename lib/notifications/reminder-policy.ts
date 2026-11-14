@@ -24,7 +24,12 @@ export function resolvePreferredStudyTime(dayKey: string, timezone: string, time
   return end;
 }
 
-export function isDailyReminderWindow(now: Date, timezone: string, time: string, toleranceMinutes = 5): boolean {
+/**
+ * Vercel Hobby runs a 15-minute cadence with up to 15 minutes of dispatch jitter.
+ * Account sweeps add further delay, so reminders may arrive up to one hour after
+ * the saved time. They are never delivered early or carried into another day.
+ */
+export function isDailyReminderWindow(now: Date, timezone: string, time: string, toleranceMinutes = 60): boolean {
   const zone = normalizeStudyTimezone(timezone);
   const dayKey = studyDayKey(now, zone);
   const dueAt = resolvePreferredStudyTime(dayKey, zone, time);

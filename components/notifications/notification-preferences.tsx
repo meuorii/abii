@@ -75,9 +75,9 @@ export function NotificationPreferences() {
         <p id="notification-security-note" className="sr-only">This preference cannot be changed.</p>
         {draft.daily_study_reminder && <div className="mt-4 rounded-xl border border-[#F0E9EC] bg-[#FFFCFD] p-3.5 sm:p-4">
           <label htmlFor="dailyStudyTime" className="text-sm font-semibold text-[#18384D]">Preferred study time</label>
-          <p className="mt-1 text-xs leading-5 text-[#647A8B]">Choose a time in your existing study timezone. Scheduled delivery will begin in a future Abii update.</p>
+          <p className="mt-1 text-xs leading-5 text-[#647A8B]">Choose a time in your study timezone. Delivery is approximate and depends on scheduler availability.</p>
           <input id="dailyStudyTime" type="time" required value={draft.dailyStudyTime ?? ""} aria-invalid={missingDailyTime} aria-describedby="daily-study-time-help" onChange={(event) => { setNotice(""); setDraft({ ...draft, dailyStudyTime: event.target.value || null }); }} className="mt-2 min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-2 text-sm text-[#2F2930] outline-none focus:border-[#FF9FBA] focus:ring-2 focus:ring-[#FFE8EF] sm:max-w-[190px]"/>
-          <span id="daily-study-time-help" className="mt-2 block text-xs leading-5 text-[#647A8B]">{missingDailyTime ? "Add a preferred time before saving this reminder." : "This time is saved now; reminder delivery is not active yet."}</span>
+          <span id="daily-study-time-help" className="mt-2 block text-xs leading-5 text-[#647A8B]">{missingDailyTime ? "Add a preferred time before saving this reminder." : "This preferred time is saved with your account."}</span>
         </div>}
         {error && <p role="alert" className="mt-3 rounded-xl bg-[#FFF1F1] px-3.5 py-2.5 text-sm text-[#A73C50]">{error}</p>}
         {notice && <p role="status" className="mt-3 rounded-xl bg-[#EAF8F0] px-3.5 py-2.5 text-sm text-[#28734A]">{notice}</p>}

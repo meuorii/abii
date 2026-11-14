@@ -1,5 +1,20 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": false
+  },
+  "functions": {
+    "app/api/internal/notifications/reminder-schedule/route.ts": {
+      "experimentalTriggers": [
+        { "type": "schedule/v1beta" }
+      ]
+    }
+  },
+  "schedules": {
+    "notification-reminders": {
+      "schedule": "*/15 * * * *",
+      "timezone": "UTC",
+      "function": "api/internal/notifications/reminder-schedule"
+    }
   }
 }
