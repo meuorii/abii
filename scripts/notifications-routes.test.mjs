@@ -19,7 +19,7 @@ test("notification APIs require authentication, enforce owner scope, and patch p
     const owner = new mongoose.Types.ObjectId();
     const stranger = new mongoose.Types.ObjectId();
     await db.collection("users").insertMany([
-      { _id: owner, name: "Owner", email: "owner@example.invalid", passwordHash: "never-export-this", emailVerifiedAt: new Date(), sessionVersion: 0, settings: { studyTimezone: "Asia/Manila", targetSubjects: 9 } },
+      { _id: owner, name: "Owner", email: "owner@example.invalid", passwordHash: "never-export-this", emailVerifiedAt: new Date(), sessionVersion: 0, settings: { studyTimezone: "Asia/Manila", targetSubjects: 9, notifications: { flashcards_due: false } } },
       { _id: stranger, name: "Stranger", email: "stranger@example.invalid", passwordHash: "never-export-this", emailVerifiedAt: new Date(), sessionVersion: 0 },
     ]);
     const notificationId = new mongoose.Types.ObjectId();
@@ -76,6 +76,13 @@ test("notification APIs require authentication, enforce owner scope, and patch p
     assert.equal(stored.settings.targetSubjects, 9);
     assert.equal((await call("/api/notifications/preferences", "PATCH", { notifications: { account_security: false } })).status, 400);
     assert.equal((await call("/api/notifications", "POST", { type: "badge_unlocked" })).status, 405);
+    const exported = await call("/api/data/export");
+    assert.equal(exported.status, 200);
+    assert.equal(exported.body.notifications.length, 1, "the full account export includes only the authenticated owner's notification history");
+    assert.equal(String(exported.body.notifications[0]._id), String(ownNotificationId));
+    assert.equal(exported.body.account.settings.notifications.flashcards_due, false, "export includes persisted notification preferences");
+    assert.equal(exported.body.account.settings.studyTimezone, "Asia/Manila");
+    assert.equal(Object.hasOwn(exported.body.account, "passwordHash"), false, "export excludes password hashes");
     const deletion = await call("/api/account", "DELETE", { confirmation: "DELETE" });
     assert.equal(deletion.status, 200);
     assert.equal(await db.collection("notifications").countDocuments({ userId: owner }), 0);

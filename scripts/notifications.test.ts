@@ -77,6 +77,9 @@ test("notification persistence is idempotent, paginated, isolated, and read atom
     await assert.rejects(listNotifications(String(owner), { limit: 20, cursor: "tampered" }), /cursor is invalid/i);
     assert.equal(await markAllNotificationsRead(String(owner)), 4);
     assert.equal(await countUnreadNotifications(String(owner)), 0);
+    await Notification.create({ userId: owner, type: "flashcards_due", title: "Expired reminder", message: "This reminder has expired.", dedupeKey: "expired:reminder", readAt: null, expiresAt: new Date(Date.now() - 60_000) });
+    assert.equal((await listNotifications(String(owner), { limit: 20, unreadOnly: true })).notifications.length, 0, "expired unread reminders stay out of active lists");
+    assert.equal(await countUnreadNotifications(String(owner)), 0, "expired unread reminders do not inflate the navbar count");
     assert.equal(await Notification.countDocuments({ userId: stranger, dedupeKey: "badge:hello" }), 1);
   } finally {
     await mongoose.disconnect();
