@@ -61,6 +61,10 @@ reviewRecordSchema.index(
   { name: "review_owner_card_next_review" },
 );
 reviewRecordSchema.index(
+  { userId: 1, flashcardId: 1, reviewedAt: -1, _id: -1 },
+  { name: "review_owner_card_latest_review" },
+);
+reviewRecordSchema.index(
   { userId: 1, quizSessionId: 1, quizQuestionIndex: 1 },
   { unique: true, name: "review_owner_quiz_question_unique", partialFilterExpression: { quizSessionId: { $type: "objectId" } } },
 );
@@ -75,7 +79,7 @@ reviewRecordSchema.index(
 );
 
 // Drop a stale cached model (dev hot reload) whose enum lacks the newer question types.
-if (mongoose.models.ReviewRecord && (!(mongoose.models.ReviewRecord.schema.path("questionType") as unknown as { enumValues?: string[] }).enumValues?.includes("random") || !mongoose.models.ReviewRecord.schema.path("quizQuestionIndex") || !mongoose.models.ReviewRecord.schema.path("achievementDayKey"))) {
+if (mongoose.models.ReviewRecord && (!(mongoose.models.ReviewRecord.schema.path("questionType") as unknown as { enumValues?: string[] }).enumValues?.includes("random") || !mongoose.models.ReviewRecord.schema.path("quizQuestionIndex") || !mongoose.models.ReviewRecord.schema.path("achievementDayKey") || !mongoose.models.ReviewRecord.schema.indexes().some(([keys]) => keys.userId === 1 && keys.flashcardId === 1 && keys.reviewedAt === -1 && keys._id === -1))) {
   delete mongoose.models.ReviewRecord;
 }
 
