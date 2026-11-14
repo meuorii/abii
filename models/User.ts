@@ -2,6 +2,7 @@ import "server-only";
 import mongoose, { Schema, type InferSchemaType, type Model } from "mongoose";
 import { BADGE_IDS } from "@/lib/badges/types";
 import { isIanaStudyTimezone } from "@/lib/badges/study-day";
+import { DEFAULT_NOTIFICATION_PREFERENCES, NOTIFICATION_TYPES, isValidStudyTime } from "@/lib/notifications/contracts";
 
 const badgeIds = [...BADGE_IDS];
 
@@ -16,6 +17,8 @@ const userSettingsSchema = new Schema({
     progressCustomized: { type: Boolean, default: false },
   },
   studyTimezone: { type: String, default: "UTC", validate: { validator: isIanaStudyTimezone, message: "Study timezone must be a valid IANA timezone." } },
+  notifications: Object.fromEntries(NOTIFICATION_TYPES.map((type) => [type, { type: Boolean, default: DEFAULT_NOTIFICATION_PREFERENCES[type] }])),
+  dailyStudyTime: { type: String, default: null, validate: { validator: (value: string | null) => value === null || isValidStudyTime(value), message: "Preferred study time must use HH:mm format." } },
 }, { _id: false });
 
 const userSchema = new Schema({
@@ -47,7 +50,9 @@ userSchema.index({ email: 1 }, { unique: true, name: "user_email_unique" });
       !cached.schema.path("sessionVersion") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("featuredBadges") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("featuredBadges.dashboardCustomized") ||
-      !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("studyTimezone"))
+      !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("studyTimezone") ||
+      !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("notifications") ||
+      !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("dailyStudyTime"))
   ) {
     mongoose.deleteModel("User");
   }

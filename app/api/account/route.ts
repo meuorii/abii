@@ -13,6 +13,7 @@ import { TransactionUnavailableError, withRequiredTransaction } from "@/lib/mong
 import { UserBadge } from "@/models/UserBadge";
 import { AchievementEvent } from "@/models/AchievementEvent";
 import { BadgeReconciliation } from "@/models/BadgeReconciliation";
+import { Notification } from "@/models/Notification";
 export const runtime = "nodejs";
 export async function DELETE(request: Request) {
   const user = await getCurrentUser();
@@ -26,6 +27,7 @@ export async function DELETE(request: Request) {
       await UserBadge.deleteMany({ userId: user._id }, { session });
       await AchievementEvent.deleteMany({ userId: user._id }, { session });
       await BadgeReconciliation.deleteMany({ userId: user._id }, { session });
+      await Notification.deleteMany({ userId: user._id }, { session });
       await ReviewRecord.deleteMany({ userId: user._id }, { session });
       await QuizSession.deleteMany({ userId: user._id }, { session });
       await Flashcard.deleteMany({ userId: user._id }, { session });

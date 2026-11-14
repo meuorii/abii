@@ -9,12 +9,13 @@ import { QuizSession } from "@/models/QuizSession";
 import { Topic } from "@/models/Topic";
 import { Folder } from "@/models/Folder";
 import { SubjectFolder } from "@/models/SubjectFolder";
+import { Notification } from "@/models/Notification";
 export const runtime = "nodejs";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Please log in to export your data." }, { status: 401 });
   await connectToDatabase();
-  const [account, subjects, topics, folders, subjectFolders, flashcards, reviews, sessions] = await Promise.all([
+  const [account, subjects, topics, folders, subjectFolders, flashcards, reviews, sessions, notifications] = await Promise.all([
     User.findById(user._id).select("name email createdAt settings").lean(),
     Subject.find({ userId: user._id }).select("name subjectFolderId createdAt updatedAt").lean(),
     Topic.find({ userId: user._id }).select("subjectId folderId name description position createdAt updatedAt").sort({ subjectId: 1, position: 1, _id: 1 }).lean(),
@@ -23,7 +24,8 @@ export async function GET() {
     Flashcard.find({ userId: user._id }).select("subjectId topicId flashcardType question answer hint createdAt updatedAt").lean(),
     ReviewRecord.find({ userId: user._id }).select("flashcardId result questionType reviewedAt nextReviewAt createdAt").lean(),
     QuizSession.find({ userId: user._id, status: "completed" }).select("subjectId subjectName scope topicId topicName type status questions completedAt expiresAt createdAt updatedAt").lean(),
+    Notification.find({ userId: user._id }).select("type title message target metadata readAt createdAt expiresAt").sort({ createdAt: -1, _id: -1 }).lean(),
   ]);
-  const payload = { exportedAt: new Date().toISOString(), account, subjectFolders, subjects: subjects.map(subject => ({ ...subject, subjectFolderId: subject.subjectFolderId ?? null })), topics: topics.map(topic => ({ ...topic, folderId: topic.folderId ?? null })), folders, flashcards, reviewHistory: reviews, completedStudySessions: sessions };
+  const payload = { exportedAt: new Date().toISOString(), account, subjectFolders, subjects: subjects.map(subject => ({ ...subject, subjectFolderId: subject.subjectFolderId ?? null })), topics: topics.map(topic => ({ ...topic, folderId: topic.folderId ?? null })), folders, flashcards, reviewHistory: reviews, completedStudySessions: sessions, notifications };
   return new Response(JSON.stringify(payload, null, 2), { status: 200, headers: { "Content-Type": "application/json; charset=utf-8", "Content-Disposition": `attachment; filename="abii-study-data-${new Date().toISOString().slice(0, 10)}.json"`, "Cache-Control": "no-store" } });
 }

@@ -1,6 +1,18 @@
 {
   "version": 2,
   "skills": {
+    "api-security": {
+      "source": "UnitOneAI/SecuritySkills",
+      "sourceType": "github",
+      "skillPath": "skills/appsec/api-security/SKILL.md",
+      "computedHash": "106f5d7d289e07f18618c612457228e12c878dc0d4412d952e46480788bdb072"
+    },
+    "backend-architecture": {
+      "source": "we-are-singular/skills",
+      "sourceType": "github",
+      "skillPath": "skills/backend-architecture/SKILL.md",
+      "computedHash": "f1539359b3cb0d77cddc108a0f819cca1b077d3b4b66c25f6ef2e58c54747f19"
+    },
     "design-taste-frontend": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
@@ -25,11 +37,23 @@
       "skillPath": ".agents/skills/impeccable/SKILL.md",
       "computedHash": "86e265bf3df79c65215f7244d71892ca278370d56dec47a8cc15e8373db3f714"
     },
+    "mongodb-mongoose": {
+      "source": "PracticalSwan/agent-skills",
+      "sourceType": "github",
+      "skillPath": "mongodb-mongoose/SKILL.md",
+      "computedHash": "9082a5cd5f3d58f561d7085f3ca619ae83f3d630f3197607d77b0be1bf9c907b"
+    },
     "stageshow": {
       "source": "benjitaylor/skills",
       "sourceType": "github",
       "skillPath": "stageshow/SKILL.md",
       "computedHash": "faaf72b41c206b98da5788093eb07fcdceb80dee90b5dc6dd921048196279474"
+    },
+    "typescript-patterns": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/typescript-patterns/SKILL.md",
+      "computedHash": "7bf6b11a0e0b2bbccb5bcc90c30222842ae735effe85178fbeba58b50ce4891b"
     },
     "ui-ux-pro-max": {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",

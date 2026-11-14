@@ -20,3 +20,5 @@ export { AchievementEvent, ACHIEVEMENT_EVENT_KINDS } from "./AchievementEvent";
 export type { AchievementEventDocument } from "./AchievementEvent";
 export { BadgeReconciliation } from "./BadgeReconciliation";
 export type { BadgeReconciliationDocument } from "./BadgeReconciliation";
+export { Notification } from "./Notification";
+export type { NotificationDocument } from "./Notification";
