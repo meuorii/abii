@@ -174,3 +174,28 @@ Paired screenshots and `geometry.json` are available under `%TEMP%\abii-phase4-s
 The deterministic production stream gate verifies seven top-level routes. A separate client-side App Router transition now also verifies Subject Detail with a held RSC response and paired geometry. Subject Folder, Topic Folder, Topic Detail, Review Setup, and Quiz Session route-level fallbacks still lack paired genuine-pending screenshots/geometry in this Phase 4 harness. Direct-document experiments for nested routes exposed the parent Subjects/Review loading region while nested fallback data was present in the serialized stream, so those cases were not counted as destination-specific skeleton verification. Loaded nested routes and quiz resume/session behavior remain covered by the Phase 3 responsive and quiz suites. Empty/error transitions and cross-account navigation were not exercised in this Phase 4 harness.
 
 **Phase 4 status: PARTIAL.** Production App Router route loading is verified for all seven main pages, Subject Detail client navigation, and inline quiz completion. Geometry, Subjects responsive overflow, reduced motion, shimmer, quiz completion, and the broader existing regressions pass. Destination-specific pending captures for five other nested routes, plus empty/error and cross-account transitions, remain outstanding; this report does not claim all four phases are fully validated.
+
+### Phase 4.1 continuation — 2026-11-14
+
+The existing route harness was extended experimentally to inspect nested client-navigation Flight responses and add paired-capture helpers for Subject Folder, virtual Unfiled Subjects, Topic Folder, Topic Detail, and Review Setup. The suite failed in the earlier Subject Detail transition before those five helper cases executed. In the isolated development run, the nested Subject Detail Flight response contained the serialized `Loading subject detail page` fallback (marker offset 9,444 in a 17,027-byte response). The browser did not expose that fallback as a visible loading region while the response was held. Blocking the nested RSC response before the route transition commits therefore does not constitute genuine visible-fallback evidence. A separate cold-document Subject Folder attempt aborted before observation. No screenshots or geometry measurements for these five routes are claimed.
+
+This identifies a test-harness limitation rather than a demonstrated production layout defect: the nested fallback is serialized, but this harness has not yet established a deterministic browser condition that makes the nested segment fallback visible. The correct next step is a route-specific, production-equivalent pending fixture that suspends the nested segment after the client transition begins, or another supported App Router test mechanism. Production request delays, route code changes, and arbitrary wait timers are not justified by the evidence.
+
+Phase 4.1 empty/error resolution, two-account isolation, folder-switch stale-content behavior, and Quiz Session route-level pending capture remain unverified. Existing Phase 3 unit, quiz-resume, and responsive checks are useful regressions but do not substitute for these scenarios. The previous Phase 4 measurements and passing results above remain the verified baseline.
+
+**Phase 4.1 status: PARTIAL.** The nested route attempts did not produce destination-visible pending states, paired screenshots, or geometry. Empty/error and cross-account checks were not completed. No production UI or data-loading behavior was changed in this continuation.
+The existing route harness was extended experimentally to inspect nested client-navigation Flight responses and add paired-capture helpers for Subject Folder, virtual Unfiled Subjects, Topic Folder, Topic Detail, and Review Setup. The suite failed in the earlier Subject Detail transition before those five helper cases executed. In the isolated development run, the nested Subject Detail Flight response contained the serialized `Loading subject detail page` fallback (marker offset 9,444 in a 17,027-byte response). The browser did not expose that fallback as a visible loading region while the response was held. Blocking the nested RSC response before the route transition commits therefore does not constitute genuine visible-fallback evidence. A separate cold-document Subject Folder attempt aborted before observation. No screenshots or geometry measurements for these five routes are claimed.
+Phase 4.1 regression results after restoring the established route harness:
+
+- `npm run test:skeleton:routes` with `ABII_SERVER_MODE=production`: passed; eight genuine route fallbacks and inline completion. Artifacts were written to `%TEMP%\abii-phase4-skeleton-routes`.
+- `npm run test:skeleton`: passed, 17/17.
+- `npm run test:skeleton:browser`: passed at all eight configured widths.
+- `npm run test:quiz-browser`: passed.
+- `npm run test:responsive-browser`: passed.
+- `npm test`: passed, including the skeleton suite and existing quiz/session/topic integration coverage.
+- `npm run typecheck`: passed.
+- `npm run lint`: passed with zero errors and the same three existing warnings recorded above.
+- `npm run build`: passed; it was run before the production route suite.
+- `git diff --check`: passed.
+
+These results validate the existing Phase 4 baseline and regression safety; they do not close the nested-route, empty/error, or cross-account evidence gaps listed above.
