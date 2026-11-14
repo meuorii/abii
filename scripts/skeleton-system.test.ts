@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { BADGE_CATALOG } from "../lib/badges/catalog";
 
 const root = process.cwd();
 
@@ -88,5 +89,51 @@ test("Featured Badges keeps one streamed fallback implementation for route and l
   assert.match(stream, /<SkeletonRegion label=\{`Loading \$\{title\}`\}/);
   assert.match(stream, /<FeaturedBadgesSkeletonContent\s*\/>/);
   assert.match(content, /export function FeaturedBadgesSkeletonContent/);
-  assert.match(content, /min-\[390px\]:grid-cols-2 xl:grid-cols-3/);
+  assert.match(content, /UnknownCollectionPlaceholder/);
+});
+
+async function collectionState(items: readonly unknown[] | null, visibleLimit?: number) {
+  const collectionStateModule = await import("../components/ui/collection-loading-state").catch(() => null);
+  assert.ok(collectionStateModule, "the collection loading state resolver should exist");
+  return collectionStateModule.resolveCollectionSkeletonState(items, visibleLimit);
+}
+
+test("unknown and empty collections never produce fabricated item placeholders", async () => {
+  assert.deepEqual(await collectionState(null), { kind: "unknown" });
+  assert.deepEqual(await collectionState([]), { kind: "empty" });
+});
+
+test("local collection refresh keeps successfully loaded content visible", async () => {
+  const collectionStateModule = await import("../components/ui/collection-loading-state").catch(() => null);
+  assert.ok(collectionStateModule, "the collection loading state resolver should exist");
+  assert.equal(typeof collectionStateModule.getCollectionLoadingPresentation, "function", "the collection refresh presentation rule should exist");
+  assert.equal(collectionStateModule.getCollectionLoadingPresentation(false, false), "initial-skeleton");
+  assert.equal(collectionStateModule.getCollectionLoadingPresentation(true, false), "content");
+  assert.equal(collectionStateModule.getCollectionLoadingPresentation(true, true), "content");
+  assert.equal(collectionStateModule.getCollectionLoadingPresentation(false, true), "content");
+});
+
+test("loaded collection metadata never crosses subject or folder scopes", async () => {
+  const collectionStateModule = await import("../components/ui/collection-loading-state").catch(() => null);
+  assert.ok(collectionStateModule, "the collection loading state resolver should exist");
+  assert.equal(typeof collectionStateModule.isCollectionScopeLoaded, "function", "collection loaded state should be scoped");
+  assert.equal(collectionStateModule.isCollectionScopeLoaded("subject-a:all", "subject-a:all"), true);
+  assert.equal(collectionStateModule.isCollectionScopeLoaded("subject-a:all", "subject-b:all"), false);
+  assert.equal(collectionStateModule.isCollectionScopeLoaded("subject-a:folder-1", "subject-a:folder-2"), false);
+});
+
+test("known collections preserve exact visible identity and respect the rendered window", async () => {
+  const subjects = ["one", "two", "three", "four", "five"];
+  assert.deepEqual(await collectionState(subjects.slice(0, 1)), { kind: "known", items: ["one"] });
+  assert.deepEqual(await collectionState(subjects.slice(0, 2)), { kind: "known", items: ["one", "two"] });
+  assert.deepEqual(await collectionState(subjects, 5), { kind: "known", items: subjects });
+  assert.deepEqual(await collectionState(subjects, 2), { kind: "known", items: ["one", "two"] });
+  const many = Array.from({ length: 100 }, (_, index) => index);
+  assert.deepEqual(await collectionState(many, 10), { kind: "known", items: many.slice(0, 10) });
+});
+
+test("Badge catalog loading quantity follows the fixed product catalog, not unlocked account data", async () => {
+  const state = await collectionState(BADGE_CATALOG);
+  assert.equal(state.kind, "known");
+  if (state.kind === "known") assert.equal(state.items.length, BADGE_CATALOG.length);
 });

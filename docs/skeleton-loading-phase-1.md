@@ -52,11 +52,11 @@ Audit source: current `app/(authenticated)` route files, the page compositions/c
 
 ### Phase 2 — main pages (implemented in the current working tree)
 
-- **Dashboard:** implemented the visible hierarchy in source-verified order: hero, Overall Mastery, Due Review and Study Streak, representative Subjects, Featured Badges, and Quick Actions. The independent Featured Badges Suspense fallback shares its composition with the route fallback.
-- **Subjects:** implemented hero, representative control/search region, and cards using the loaded grid breakpoints. Route loading cannot know whether the user's preferred view or folder contents will select grid, list, or empty state; resolved page state remains authoritative.
-- **Review:** implemented hero, four summary cards, Recent Subjects, representative topic rows, and the Review Progress chart/progress panel. Empty and error states remain in the resolved page.
-- **Progress:** implemented five summary slots, Featured Badges, activity chart with controls/plot/stats, subject and topic performance, practice needs, and recent sessions in the loaded order. Chart marks are neutral placeholders, not simulated data.
-- **Badges:** corrected the shared hero size, four fixed statistic cards (one column below 380px, two from 380px, four at `xl`), collection progress, rarity overview, filters, and representative collection cards. The loaded collection's empty/error/filter behavior is unchanged.
+- **Dashboard:** implemented the visible hierarchy in source-verified order: hero, Overall Mastery, Due Review and Study Streak, unknown-count Subjects surface, Featured Badges, and Quick Actions. The independent Featured Badges Suspense fallback shares its composition with the route fallback.
+- **Subjects:** implemented hero, representative control/search region, and a compact unknown-count collection surface. Route loading cannot know the user's preferred view or folder contents; resolved content and the true empty state remain authoritative.
+- **Review:** implemented hero, four fixed summary cards, neutral unknown-count surfaces for Recent Subjects and topic rows, and the Review Progress panel. Empty and error states remain in the resolved page.
+- **Progress:** implemented five fixed summary slots, Featured Badges, activity chart with controls/neutral plot/stats, and neutral unknown-count surfaces for performance, practice needs, and recent sessions.
+- **Badges:** corrected the shared hero size, four fixed statistic cards (one column below 380px, two from 380px, four at `xl`), collection progress, rarity overview, filters, and one skeleton per entry in the static 18-badge catalog. Unlocked counts and filtered results remain account data and are never inferred.
 - **Settings:** implemented the two primary desktop panels in source order, with preference controls/sound area and data/privacy action rows. Mobile stacks those panels.
 - **Profile:** added the missing route boundary and represented the hero, account overview, Personal Information, Password & Security, and Danger Zone. Account actions and security behavior are untouched.
 - **Favorites:** no work while the route redirects to Dashboard; audit a new destination if product behavior changes.
@@ -79,6 +79,26 @@ Phase 1's original source inventory above remains the audit baseline. Phase 2 ex
 ### Phase 2 verification notes
 
 - All seven main page compositions reuse the Phase 1 CSS shimmer and decorative primitives; their page layouts remain distinct.
-- Counts in route-level skeletons are representative. No loading-only data fetch was added. Profile identity, counts, progress, and settings remain unknown until the real page data resolves.
+- Route fallback collection counts are unknown because the server pages own the pending queries; variable item grids now use a compact neutral collection surface. The static Badge catalog remains a known, fixed 18-item collection. No loading-only data fetch was added.
+- The generic collection loading state distinguishes unknown (`null`), known empty (`[]`), and known items; known item placeholders preserve identity and can be capped to the visible window. Dashboard's known preview uses its four-item visible limit when identities are available.
+- `TopicsSection` has a local client fetch. Its initial unknown load is compact; after one successful load, a refresh keeps the current collection/empty state visible and announces the refresh instead of replacing known items with a fixed three-card grid.
+- Profile identity, Dashboard and Review counts, progress collections, and unlocked Badge totals remain unknown to their route fallbacks until page data resolves.
 - No new client boundary, animation dependency, or intentional loading delay was introduced.
 - Nested routes and quiz workflows remain assigned to Phase 3; final loading-to-content geometry, transitions, and cross-page browser QA remain assigned to Phase 4.
+
+### Phase 2.1 — collection quantity correction
+
+| Collection | Availability at loading UI | Corrected behavior |
+| --- | --- | --- |
+| Dashboard Subjects | Unknown in route `loading.tsx`; the authenticated server page loads subjects before rendering `DashboardOverview`, which then shows at most four | No invented subject cards; use a neutral collection surface. If the visible four identities are passed to the composition in a future local boundary, `SkeletonCollection` preserves them and applies a four-item window. |
+| Subjects page | Unknown in route `loading.tsx`; subjects and preferred layout are read by the page before rendering `SubjectsClient` | Neutral collection surface; actual loaded list/grid/folder/empty state remains authoritative. |
+| Review Recent Subjects and Topics | Unknown in route `loading.tsx`; both lists are assembled in `review/page.tsx` | Fixed summary cards remain; variable collections use neutral surfaces without invented rows. |
+| Progress subject/topic performance, practice needs, sessions | Unknown in route `loading.tsx`; these arrays arrive with server-rendered Progress data | Collection placeholders are neutral; chart plot shows axes/grid only, not fabricated activity bars. |
+| Featured Badges | Account-specific unlocked/earned list is pending in its local Suspense boundary | Header/layout remains; no badge cards are implied while the earned collection count is unknown. |
+| Badges page collection | Static catalog is available synchronously; all catalog entries are shown by default | One placeholder per `BADGE_CATALOG` item (currently 18); unlocked totals remain unknown/account-specific. |
+| TopicsSection | Initial client request has unknown count; after first success, current topics and folders remain in component state during refresh | Initial load is neutral; refresh preserves known content and empty states, with one `Refreshing topics…` status. |
+| Settings and Profile | Fixed interface structure | No collection-dependent quantity change. |
+
+Root cause: Phase 2 used hardcoded arrays as representative layout counts in route-level skeletons. Those fallbacks are outside the pending server pages and cannot receive the page's query results. Re-fetching counts from the fallbacks would duplicate database work and delay the loading UI. `SkeletonCollection` now treats `null` as unknown, an empty array as known-empty, and a populated array as known data with an optional visible-item limit. The authenticated route fallbacks use the unknown state where data is unavailable.
+
+No account-scoped cache, database query, API endpoint, or other network request was added. The only known repeated count is the static Badge catalog. Local Topics refresh reuses the current component state and existing API request flow.
