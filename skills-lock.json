@@ -31,6 +31,13 @@
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "83485963700bcf11d5bf78118facb301676b69d918fee2e45a95e7f1a2840f6c"
     },
+    "graphify": {
+      "source": "Graphify-Labs/graphify",
+      "commit": "b582ad401aaef4378935ec6620e3b165ae8e03c1",
+      "sourceType": "github",
+      "skillPath": "graphify/SKILL.md",
+      "computedHash": "bfeb112083193f45087c31b102859076df6b4b99d83e282b3a7554476f8fddf5"
+    },
     "impeccable": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
@@ -42,6 +49,13 @@
       "sourceType": "github",
       "skillPath": "mongodb-mongoose/SKILL.md",
       "computedHash": "9082a5cd5f3d58f561d7085f3ca619ae83f3d630f3197607d77b0be1bf9c907b"
+    },
+    "ponytail": {
+      "source": "DietrichGebert/ponytail",
+      "commit": "96608e078b2d5ea607c5c3b8b5a54d1c1fba6846",
+      "sourceType": "github",
+      "skillPath": "skills/ponytail/SKILL.md",
+      "computedHash": "56d72677aca02689ac89bd48734e8c19b40ab86716d1257eaf5f1238b43cda6b"
     },
     "stageshow": {
       "source": "benjitaylor/skills",
