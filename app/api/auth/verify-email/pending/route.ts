@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { readPendingIdentity, setPendingIdentity } from "@/lib/auth/tickets";
 import { readSessionUserId } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { activeOrdinaryAccount, User } from "@/models/User";
 import { AuthChallenge } from "@/models/AuthChallenge";
 export const runtime = "nodejs";
 export async function GET() {
@@ -10,7 +10,7 @@ export async function GET() {
   if (!userId) { userId = await readSessionUserId(); if (userId) await setPendingIdentity(userId); }
   if (!userId) return NextResponse.json({ email: null }, { status: 401 });
   await connectToDatabase();
-  const user = await User.findById(userId).select("email emailVerifiedAt").lean();
+  const user = await User.findOne({ _id: userId, ...activeOrdinaryAccount }).select("email emailVerifiedAt").lean();
   if (!user) return NextResponse.json({ email: null }, { status: 401 });
   if (user.emailVerifiedAt instanceof Date) return NextResponse.json({ email: user.email, verified: true });
   const [name, domain] = user.email.split("@");

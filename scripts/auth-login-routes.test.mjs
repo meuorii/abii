@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { createServer } from "node:net";
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -62,9 +62,11 @@ test("existing account login routes unverified users through OTP and preserves v
     await new Promise((resolve) => probe.listen(0, "127.0.0.1", resolve));
     const port = probe.address().port;
     await new Promise((resolve) => probe.close(resolve));
+    process.env.ADMIN_MFA_KEY_ID = "test";
+    process.env.ADMIN_MFA_KEYS = JSON.stringify({ test: randomBytes(32).toString("base64") });
     child = spawn(process.execPath, [fileURLToPath(new URL("./topic-test-server.mjs", import.meta.url)), String(port)], {
       cwd: process.cwd(), windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, NODE_ENV: "development", MONGODB_URI: uri, AUTH_SECRET: secret, AUTH_OTP_SECRET: otpSecret, NEXT_TELEMETRY_DISABLED: "1", BREVO_API_KEY: "", BREVO_SENDER_EMAIL: "", APP_BASE_URL: "" },
+      env: { ...process.env, NODE_ENV: "development", MONGODB_URI: uri, AUTH_SECRET: secret, AUTH_OTP_SECRET: otpSecret, NEXT_TELEMETRY_DISABLED: "1", BREVO_API_KEY: "", BREVO_SENDER_EMAIL: "", APP_BASE_URL: `http://127.0.0.1:${port}` },
     });
     child.stdout.on("data", (data) => { output = (output + data).slice(-12000); });
     child.stderr.on("data", (data) => { output = (output + data).slice(-12000); });
@@ -166,7 +168,9 @@ test("existing account login routes unverified users through OTP and preserves v
     assert.equal(verifiedLogin.body.redirectTo, "/dashboard");
     assert.ok(cookie(verifiedLogin.response, "abii_session"));
     assert.equal(cookie(verifiedLogin.response, "abii_pending_verification"), null);
-    await post("/api/auth/logout", {}, `abii_session=${cookie(verifiedLogin.response, "abii_session")}`);
+    const ordinaryLogout = await post("/api/auth/logout", {}, `abii_session=${cookie(verifiedLogin.response, "abii_session")}`);
+    assert.equal(ordinaryLogout.response.status, 200);
+    assert.ok(ordinaryLogout.response.headers.getSetCookie().some(row => row.startsWith("abii_session=") && /max-age=0/i.test(row)));
     const verifiedLoginAgain = await post("/api/auth/login", { email: "legacy-auth@example.invalid", password: fixturePassword });
     assert.equal(verifiedLoginAgain.response.status, 200, "logout does not reset verification");
     assert.equal(verifiedLoginAgain.body.code, "AUTHENTICATED");
@@ -218,6 +222,89 @@ test("existing account login routes unverified users through OTP and preserves v
     assert.doesNotMatch(`${resetNotice.title} ${resetNotice.message} ${resetNotice.dedupeKey}`, /token|grant|otp|secret/i);
     assert.equal((await fetch(`${base}/api/subjects`, { headers: { Cookie: `abii_session=${fullSession}` } })).status, 401, "old session is revoked");
     for (const collection of fixtureCollections) assert.deepEqual(await db.collection(collection).find({ userId: unverifiedId }).sort({ _id: 1 }).toArray(), originalData.get(collection));
+
+    const injectedFields = { role: "admin", suspendedAt: now, sessionVersion: 500, mfa: { enrolled: true } };
+    const email = "ordinary-phase-two@example.invalid";
+    await post("/api/auth/register", { name: "Ordinary", email, password: fixturePassword, ...injectedFields });
+    const users = db.collection("users");
+    const registered = await users.findOne({ email });
+    assert.equal(registered.role, "user");
+    assert.equal(registered.suspendedAt, null);
+    assert.equal(registered.sessionVersion, 0);
+    assert.equal(registered.mfa, undefined);
+    assert.ok(!(await users.indexes()).some(index => index.name === "user_single_admin_unique"),
+      "web model initialization must leave admin index deployment to the operator");
+    await users.updateOne({ _id: registered._id }, { $set: { emailVerifiedAt: now } });
+    const ordinaryLogin = await post("/api/auth/login", { email, password: fixturePassword });
+    const ordinaryCookie = `abii_session=${cookie(ordinaryLogin.response, "abii_session")}`;
+    assert.equal((await patch("/api/account/profile", { email, name: "Updated", ...injectedFields }, ordinaryCookie)).response.status, 200);
+    assert.equal((await patch("/api/settings", { targetSubjects: 6, defaultLandingPage: "/review", subjectLayout: "list", ...injectedFields }, ordinaryCookie)).response.status, 200);
+    assert.equal((await users.findOne({ email })).role, "user");
+    const exported = await get("/api/data/export", ordinaryCookie);
+    assert.equal(exported.response.status, 200);
+    assert.doesNotMatch(JSON.stringify(exported.body), /passwordHash|sessionVersion|recoveryHashes|ciphertext|challengeHash/);
+    const dashboard = await fetch(`${base}/dashboard`, { headers: { Cookie: ordinaryCookie }, redirect: "manual" });
+    assert.equal(dashboard.status, 200);
+
+    async function deleteAccount(header) {
+      return fetch(`${base}/api/account`, { method: "DELETE", headers: { Cookie: header, "Content-Type": "application/json" }, body: JSON.stringify({ confirmation: "DELETE" }) });
+    }
+    // Simulate a stale ordinary cookie/grant on a subsequently protected identity.
+    await users.updateOne({ _id: registered._id }, { $set: { role: "admin" } });
+    assert.equal((await deleteAccount(ordinaryCookie)).status, 401);
+    assert.equal((await get("/api/data/export", ordinaryCookie)).response.status, 401);
+    const recoveryResponse = await post("/api/auth/forgot-password", { email });
+    assert.deepEqual(recoveryResponse.body, (await post("/api/auth/forgot-password", { email: "absent@example.invalid" })).body);
+    assert.equal((await post("/api/auth/forgot-password/resend", { email })).response.status, 200);
+    assert.equal((await post("/api/auth/forgot-password/verify", { email, code: "123456" })).response.status, 400);
+    assert.equal(await db.collection("authchallenges").countDocuments({ userId: registered._id, purpose: "password_reset" }), 0);
+    const { SignJWT } = await import("jose");
+    const rawGrant = "isolated-protected-account-grant";
+    const staleTicket = await new SignJWT({ purpose: "password_reset" }).setProtectedHeader({ alg: "HS256" }).setSubject(rawGrant)
+      .setIssuer("abii").setAudience("abii-auth-flow").setExpirationTime("1m").sign(new TextEncoder().encode(secret));
+    await db.collection("passwordresetgrants").insertOne({ userId: registered._id, tokenHash: createHash("sha256").update(rawGrant).digest("hex"), expiresAt: new Date(Date.now() + 60000), consumedAt: null });
+    assert.equal((await post("/api/auth/forgot-password/reset", { password: newPassword, confirmPassword: newPassword }, `abii_password_reset_v2=${staleTicket}`)).response.status, 401);
+    assert.equal((await users.findOne({ email })).passwordHash, registered.passwordHash);
+    const { prepareEnrollment, totpAt } = await import("../lib/auth/admin-factor-crypto.ts");
+    const enrollment = prepareEnrollment(String(registered._id));
+    await users.createIndex({ role: 1 }, {
+      name: "user_single_admin_unique", unique: true, partialFilterExpression: { role: "admin" },
+    });
+    await db.collection("adminfactors").insertOne({ _id: registered._id, state: "active", encryptedSeed: enrollment.encryptedSeed, lastStep: -1, recoveryHashes: [] });
+    async function adminPost(path, body, header, origin = base) {
+      return fetch(base + path, { method: "POST", headers: { Origin: origin, Cookie: header, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    }
+    const passwordOnly = await adminPost("/api/auth/login", { email, password: fixturePassword }, "");
+    assert.equal((await passwordOnly.json()).code, "ADMIN_MFA_REQUIRED");
+    assert.ok(!cookie(passwordOnly, "abii_admin"));
+    const pendingMfa = cookie(passwordOnly, "abii_admin_pending");
+    assert.ok(pendingMfa);
+    const challengeCookie = "abii_admin_pending=" + pendingMfa;
+    const secondFactor = { code: totpAt(enrollment.seed, Date.now()), next: "/admin/settings" };
+    assert.equal((await post("/api/auth/admin-mfa", secondFactor, challengeCookie)).response.status, 403);
+    assert.equal((await adminPost("/api/auth/admin-mfa", secondFactor, challengeCookie, "https://other.invalid")).status, 403);
+    const authenticated = await adminPost("/api/auth/admin-mfa", secondFactor, challengeCookie);
+    assert.equal(authenticated.status, 200);
+    assert.match(authenticated.headers.get("cache-control"), /private.*no-store/);
+    const adminJwt = cookie(authenticated, "abii_admin");
+    assert.ok(adminJwt);
+    assert.ok(authenticated.headers.getSetCookie().some(row => row.startsWith("abii_admin=") && /max-age=1800/i.test(row) && /httponly/i.test(row) && /samesite=strict/i.test(row)));
+    assert.ok((await adminPost("/api/auth/admin-mfa", secondFactor, challengeCookie)).status >= 400);
+    assert.equal((await get("/api/data/export", "abii_session=" + adminJwt)).response.status, 401);
+    const pendingOnlyLogout = await adminPost("/api/auth/logout", {}, challengeCookie);
+    assert.equal(pendingOnlyLogout.status, 200);
+    assert.ok(pendingOnlyLogout.headers.getSetCookie().some(row => row.startsWith("abii_admin=") && /max-age=0/i.test(row)));
+    assert.equal((await users.findOne({ email })).sessionVersion, 1);
+    assert.equal((await adminPost("/api/auth/logout", {}, "abii_admin=" + adminJwt)).status, 200);
+    assert.equal((await users.findOne({ email })).sessionVersion, 1);
+    await users.updateOne({ _id: registered._id }, { $set: { role: "user", suspendedAt: new Date() }, $inc: { sessionVersion: 1 } });
+    assert.equal((await get("/api/data/export", ordinaryCookie)).response.status, 401);
+    assert.ok((await post("/api/auth/login", { email, password: fixturePassword })).response.status >= 400);
+    await users.updateOne({ _id: registered._id }, { $set: { suspendedAt: null } });
+    assert.equal((await get("/api/data/export", ordinaryCookie)).response.status, 401);
+    const restored = await post("/api/auth/login", { email, password: fixturePassword });
+    assert.equal((await deleteAccount(`abii_session=${cookie(restored.response, "abii_session")}`)).status, 200);
+    assert.equal(await users.countDocuments({ email }), 0);
 
     const authForm = await readFile(new URL("../components/auth/auth-form.tsx", import.meta.url), "utf8");
     const verificationBranch = authForm.indexOf('if (result.code === "EMAIL_VERIFICATION_REQUIRED")');

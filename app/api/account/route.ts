@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { destroySession, getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { activeOrdinaryAccount, User } from "@/models/User";
 import { Subject } from "@/models/Subject";
 import { Flashcard } from "@/models/Flashcard";
 import { ReviewRecord } from "@/models/ReviewRecord";
@@ -24,6 +24,8 @@ export async function DELETE(request: Request) {
   await connectToDatabase();
   try {
     await withRequiredTransaction(async (session) => {
+      const removed = await User.deleteOne({ _id: user._id, ...activeOrdinaryAccount }, { session });
+      if (!removed.deletedCount) throw new Error("Account unavailable for deletion");
       await UserBadge.deleteMany({ userId: user._id }, { session });
       await AchievementEvent.deleteMany({ userId: user._id }, { session });
       await BadgeReconciliation.deleteMany({ userId: user._id }, { session });
@@ -35,7 +37,6 @@ export async function DELETE(request: Request) {
       await Folder.deleteMany({ userId: user._id }, { session });
       await SubjectFolder.deleteMany({ userId: user._id }, { session });
       await Subject.deleteMany({ userId: user._id }, { session });
-      await User.deleteOne({ _id: user._id }, { session });
     });
   } catch (error) {
     console.error("Account data could not be deleted.", error);

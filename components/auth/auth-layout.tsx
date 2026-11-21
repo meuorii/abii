@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 type AuthLayoutProps = {
-  mode: "login" | "register" | "verify" | "forgot" | "reset";
+  mode: "login" | "register" | "verify" | "forgot" | "reset" | "admin-mfa";
   children: ReactNode;
 };
 
@@ -13,6 +13,14 @@ const content = {
     formEyebrow: "Your study space awaits",
     heading: "Welcome back!",
     description: "Sign in to continue studying, review your flashcards, and pick up where you left off.",
+  },
+  "admin-mfa": {
+    eyebrow: "Account security",
+    brandHeading: "Administrator sign-in",
+    brandDescription: "Verify your identity to continue.",
+    formEyebrow: "Two-step verification",
+    heading: "Check your authenticator",
+    description: "Enter the current six-digit code for your Abii account.",
   },
   register: {
     eyebrow: "Start your learning journey",

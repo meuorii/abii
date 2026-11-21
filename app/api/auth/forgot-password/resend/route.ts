@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { activeOrdinaryAccount, User } from "@/models/User";
 import { AuthChallenge } from "@/models/AuthChallenge";
 import { deliverChallenge } from "@/lib/auth/challenges";
 import { sendPasswordResetEmail } from "@/lib/email/brevo";
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   const email = typeof body.email === "string" ? normalizeEmail(body.email) : "";
   if (!(await rateAllowed("recovery-resend", email || "invalid", 5, 60 * 60_000))) return limited();
   if (!(await rateAllowedByTrustedIp(request, "recovery-resend-ip", 20, 60 * 60_000))) return limited();
-  await connectToDatabase(); const user = await User.findOne({ email }).select("name email _id").lean();
+  await connectToDatabase(); const user = await User.findOne({ email, ...activeOrdinaryAccount }).select("name email _id").lean();
   const prior = user && await AuthChallenge.findOne({ userId: user._id, purpose: "password_reset" }).select("resendAvailableAt").lean() as unknown as { resendAvailableAt: Date } | null;
   if (prior && prior.resendAvailableAt > new Date()) return NextResponse.json({ message: "Please wait before requesting another code.", retryAfter: Math.ceil((prior.resendAvailableAt.getTime() - Date.now()) / 1000) }, { status: 429 });
   if (user) await deliverChallenge(String(user._id), "password_reset", code => sendPasswordResetEmail(user.email, user.name, code));

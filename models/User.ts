@@ -21,7 +21,29 @@ const userSettingsSchema = new Schema({
   dailyStudyTime: { type: String, default: null, validate: { validator: (value: string | null) => value === null || isValidStudyTime(value), message: "Preferred study time must use HH:mm format." } },
 }, { _id: false });
 
+export type UserRole = "user" | "admin";
+
+// Existing documents predate roles. Only these two BSON cases are ordinary accounts.
+export const ordinaryRoleFilter = {
+  $expr: { $or: [{ $eq: ["$role", "user"] }, { $eq: [{ $type: "$role" }, "missing"] }] },
+};
+// Ordinary equality queries also match arrays containing the requested value.
+export const activeAdminAccount = {
+  role: "admin" as const,
+  suspendedAt: null,
+  $expr: { $and: [
+    { $eq: ["$role", "admin"] },
+    { $eq: [{ $type: "$emailVerifiedAt" }, "date"] },
+    { $in: [{ $type: "$suspendedAt" }, ["null", "missing"]] },
+    { $isNumber: "$sessionVersion" },
+  ] },
+};
+export const activeOrdinaryAccount = { ...ordinaryRoleFilter, suspendedAt: null };
+
 const userSchema = new Schema({
+  role: { type: String, enum: ["user", "admin"] as UserRole[], default: "user", required: true, immutable: true },
+  suspendedAt: { type: Date, default: null },
+  adminMutationVersion: { type: Number, default: 0, select: false },
   name: { type: String, required: [true, "Name is required"], trim: true, minlength: [1, "Name cannot be empty"], maxlength: [80, "Name must be 80 characters or fewer"] },
   email: { type: String, required: [true, "Email is required"], trim: true, lowercase: true, maxlength: [254, "Email must be 254 characters or fewer"], match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Enter a valid email address"] },
   passwordHash: { type: String, required: [true, "Password hash is required"], select: false, minlength: [1, "Password hash cannot be empty"] },
@@ -34,6 +56,11 @@ const userSchema = new Schema({
   profileImage: { type: String, default: undefined, maxlength: 2048 },
   profileImagePublicId: { type: String, default: undefined, maxlength: 255 },
 }, { timestamps: true, versionKey: false });
+// Mongoose 8 skips this index during model initialization. Explicit operator DDL
+// owns its creation. Keep ordinary automatic indexes (especially unique email).
+export const SINGLE_ADMIN_INDEX = "user_single_admin_unique";
+const adminIndexOptions = { name: SINGLE_ADMIN_INDEX, unique: true, partialFilterExpression: { role: "admin" }, _autoIndex: false };
+userSchema.index({ role: 1 }, adminIndexOptions);
 userSchema.index({ email: 1 }, { unique: true, name: "user_email_unique" });
 userSchema.index({ emailVerifiedAt: 1, _id: 1 }, { name: "verified_users_cursor" });
 
@@ -43,7 +70,7 @@ userSchema.index({ emailVerifiedAt: 1, _id: 1 }, { name: "verified_users_cursor"
   const cached = mongoose.models.User;
   if (
     cached &&
-    (!cached.schema.path("settings") ||
+    (!cached.schema.path("role") || !cached.schema.path("adminMutationVersion") || !cached.schema.path("settings") ||
       !cached.schema.path("profileImage") ||
       !cached.schema.path("profileImagePublicId") ||
       !cached.schema.path("emailVerifiedAt") ||

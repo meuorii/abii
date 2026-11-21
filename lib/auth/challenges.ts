@@ -3,12 +3,12 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { AuthChallenge } from "@/models/AuthChallenge";
 import { hashOtp, generateOtp, generateChallengeId } from "./otp-crypto";
 import { connectToDatabase } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { activeOrdinaryAccount, User } from "@/models/User";
 import { checkAuthRateLimit } from "./rate-limit";
 
 export async function deliverChallenge(userId: string, purpose: "email_verification" | "password_reset", send: (code: string) => Promise<{ ok: boolean }>) {
   await connectToDatabase();
-  const account = await User.findById(userId).select("email").lean();
+  const account = await User.findOne({ _id: userId, ...activeOrdinaryAccount }).select("email").lean();
   if (!account) return false;
   const prior = await AuthChallenge.findOne({ userId, purpose }).select("resendAvailableAt").lean() as unknown as { resendAvailableAt: Date } | null;
   if (prior && prior.resendAvailableAt > new Date()) return false;

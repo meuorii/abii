@@ -2,7 +2,7 @@ import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { cache } from "react";
-import { User } from "@/models/User";
+import { activeOrdinaryAccount, User } from "@/models/User";
 import { connectToDatabase } from "@/lib/mongodb";
 import { measureServerOperation } from "@/lib/performance/server-timing";
 import { SESSION_AUDIENCE, SESSION_COOKIE, SESSION_COOKIE_OPTIONS, SESSION_DURATION_SECONDS, SESSION_ISSUER } from "@/lib/auth/constants";
@@ -17,10 +17,10 @@ function getSessionSecret(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-export async function createSession(userId: string): Promise<void> {
+export async function createSession(userId: string, expectedVersion: number): Promise<void> {
   await connectToDatabase();
-  const account = await User.findById(userId).select("emailVerifiedAt sessionVersion").lean();
-  if (!account || !(account.emailVerifiedAt instanceof Date) || !Number.isFinite(account.emailVerifiedAt.getTime())) throw new Error("Email verification is required before signing in.");
+  const account = await User.findOne({ _id: userId, ...activeOrdinaryAccount }).select("emailVerifiedAt sessionVersion").lean();
+  if (!account || (account.sessionVersion ?? 0) !== expectedVersion || !(account.emailVerifiedAt instanceof Date) || !Number.isFinite(account.emailVerifiedAt.getTime())) throw new Error("Email verification is required before signing in.");
   const now = Math.floor(Date.now() / 1000);
   const token = await new SignJWT({ sv: account.sessionVersion ?? 0 })
     .setProtectedHeader({ alg: "HS256" })
@@ -52,7 +52,7 @@ export async function readSessionUserId(token?: string): Promise<string | null> 
       issuer: SESSION_ISSUER,
       audience: SESSION_AUDIENCE,
     }));
-    return typeof payload.sub === "string" ? payload.sub : null;
+    return typeof payload.sub === "string" && /^[a-f0-9]{24}$/i.test(payload.sub) ? payload.sub : null;
   } catch {
     return null;
   }
@@ -66,10 +66,10 @@ export const getCurrentUser = cache(async function getCurrentUser() {
   await measureServerOperation("authentication database connection", connectToDatabase);
   let claims: { sv?: unknown };
   try { claims = (await jwtVerify(raw!, getSessionSecret(), { algorithms: ["HS256"], issuer: SESSION_ISSUER, audience: SESSION_AUDIENCE })).payload as { sv?: unknown }; } catch { return null; }
-  const user = await measureServerOperation("user lookup", () => User.findById(userId).select("name email createdAt profileImage settings.studyTimezone emailVerifiedAt sessionVersion").lean(), { database: true });
+  const user = await measureServerOperation("user lookup", () => User.findOne({ _id: userId, ...activeOrdinaryAccount }).select("name email createdAt profileImage settings.studyTimezone emailVerifiedAt sessionVersion").lean(), { database: true });
   // Pre-rollout signed sessions omitted `sv`; they remain valid at version zero
   // for already verified accounts. Unverified accounts still fail this guard.
-  if (!user || !(user.emailVerifiedAt instanceof Date) || !Number.isFinite(user.emailVerifiedAt.getTime()) || (claims.sv ?? 0) !== (user.sessionVersion ?? 0)) return null;
+  if (!user || !(user.emailVerifiedAt instanceof Date) || !Number.isFinite(user.emailVerifiedAt.getTime()) || (claims.sv === undefined ? 0 : claims.sv) !== (user.sessionVersion ?? 0)) return null;
   return user;
 });
 

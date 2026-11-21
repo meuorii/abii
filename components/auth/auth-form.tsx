@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast-provider";
-import { safeNextPath } from "@/lib/auth/redirect";
+import { safeAdminPath, safeNextPath } from "@/lib/auth/redirect";
 import { Eye, EyeOff } from "lucide-react";
 
 type Mode = "login" | "register";
@@ -50,6 +50,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
       // verification step, never a fully authenticated login.
       if (result.code === "VERIFICATION_FLOW_UNAVAILABLE") {
         setMessage(result.message || "We couldn't start email verification. Please try again shortly.");
+        return;
+      }
+      if (response.ok && result.code === "ADMIN_MFA_REQUIRED") {
+        const next = safeAdminPath(new URLSearchParams(window.location.search).get("next"));
+        router.replace(`/login/mfa?next=${encodeURIComponent(next)}`);
         return;
       }
       if (result.code === "EMAIL_VERIFICATION_REQUIRED") {
