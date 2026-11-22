@@ -6,6 +6,7 @@ import { OverviewSkeleton } from "@/components/admin/admin-overview";
 import { UsersSkeleton } from "@/components/admin/admin-users-skeleton";
 import { AnalyticsSkeleton } from "@/components/admin/admin-analytics-skeleton";
 
+import { SecuritySkeleton } from "@/components/admin/admin-security";
 import { PerformanceSkeleton } from "@/components/admin/admin-performance";
 
 export default function LoadingAdminPage() {
@@ -22,6 +23,9 @@ export default function LoadingAdminPage() {
   }
   if (pathname === "/admin/performance") {
     return <div className="grid gap-5 sm:gap-6">{hero}<PerformanceSkeleton controls /></div>;
+  }
+  if (pathname === "/admin/security") {
+    return <div className="grid gap-5 sm:gap-6">{hero}<SecuritySkeleton controls /></div>;
   }
   const hasSummary = pathname !== "/admin/settings";
   return (

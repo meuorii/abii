@@ -1,5 +1,7 @@
 import "server-only";
 import { createHmac } from "node:crypto";
+import { observeSecurity } from "./security-evidence";
+import { isScope } from "@/lib/admin/security-contract";
 import { AuthRateLimit } from "@/models/AuthRateLimit";
 import { connectToDatabase } from "@/lib/mongodb";
 
@@ -11,12 +13,16 @@ export async function checkAuthRateLimit(scope: string, identity: string, limit:
   const window = Math.floor(Date.now() / windowMs);
   await connectToDatabase();
   // A unique key and atomic increment count concurrent requests, including requests over the limit.
+  const observed = (allowed: boolean) => {
+    if (!allowed && isScope(scope)) observeSecurity({ kind: "rate-limited", scope });
+    return allowed;
+  };
   try {
     const result = await AuthRateLimit.findOneAndUpdate({ key, window }, { $inc: { count: 1 }, $setOnInsert: { expiresAt: new Date((window + 2) * windowMs) } }, { upsert: true, new: true });
-    return result.count <= limit;
+    return observed(result.count <= limit);
   } catch (error) {
     if (!(error && typeof error === "object" && "code" in error && error.code === 11000)) throw error;
     const result = await AuthRateLimit.findOneAndUpdate({ key, window }, { $inc: { count: 1 } }, { new: true });
-    return !!result && result.count <= limit;
+    return result ? observed(result.count <= limit) : false;
   }
 }

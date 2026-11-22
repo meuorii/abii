@@ -1,3 +1,4 @@
+import { observeSecurity } from "@/lib/auth/security-evidence";
 import { NextResponse, after } from "next/server";
 import { cookies } from "next/headers";
 import { ADMIN_COOKIE, CHALLENGE_COOKIE } from "@/lib/auth/admin-session";
@@ -32,5 +33,6 @@ export async function POST(request: Request) {
   await AuthChallenge.deleteMany({ userId, purpose: "email_verification" });
   await createSession(userId, account.sessionVersion ?? 0);
   await clearPendingIdentity();
+  observeSecurity({ kind: "email-login", learnerId: userId, operation: "first-verification" });
   return NextResponse.json({ message: "Email verified. Welcome to Abii!", redirectTo: safeNextPath(typeof body.next === "string" ? body.next : null) });
 }

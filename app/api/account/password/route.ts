@@ -1,3 +1,4 @@
+import { observeSecurity } from "@/lib/auth/security-evidence";
 import { NextResponse, after } from "next/server";
 import bcrypt from "bcryptjs";
 import { destroySession, getCurrentUser } from "@/lib/auth/session";
@@ -20,6 +21,7 @@ export async function PATCH(request: Request) {
   if (!account || !(await bcrypt.compare(currentPassword, account.passwordHash))) return NextResponse.json({ error: "Your current password is incorrect." }, { status: 400 });
   const updated = await User.findOneAndUpdate({ _id: account._id, passwordHash: account.passwordHash, ...activeOrdinaryAccount }, { $set: { passwordHash: await bcrypt.hash(newPassword, 12) }, $inc: { sessionVersion: 1 } }, { new: true }).select("sessionVersion").lean();
   if (!updated) return NextResponse.json({ error: "We could not update your password. Please try again." }, { status: 500 });
+  observeSecurity({ kind: "password-change", learnerId: String(account._id), operation: String(updated.sessionVersion) });
   after(async () => { await notifyAccountSecurityChange(String(account._id), "password_changed", `version-${updated.sessionVersion}`); });
   await destroySession();
   return NextResponse.json({ message: "Password changed. Please log in again.", redirectTo: "/login" });

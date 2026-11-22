@@ -35,19 +35,19 @@
 
 ## 5. Active handoff
 
-**Status** Phase 7 implemented. Production activation remains pending.
+**Status** Phase 8 implemented. Production activation remains pending.
 
-**Verified now** Trace-backed quiz request and operation histograms, authenticated reminder evidence, bounded reads, evidence-based health and incidents, and unavailable external uptime.
+**Verified now** Count-bearing forward authentication evidence, independent transactional audit history, bounded summaries, warning rules, exact-ID search, encrypted cursor pagination and safe details.
 
-**Files changed** `app/(admin)/admin/{performance/page.tsx,loading.tsx}`, `app/api/{quiz/[sessionId]/{route.ts,resume/route.ts},internal/notifications/{reminder-schedule,reminders}/route.ts}`, `components/admin/{admin-performance,admin-page,analytics-chart}.tsx`, `lib/{admin/performance.ts,performance/{monitoring,storage,server-timing,reminder-timing}.ts,quiz/service.ts}`, `scripts/{admin-performance.test.ts,admin-ui.browser.mjs}`, `package.json`, `docs/{ADMIN_CODEX_WORKFLOW,ADMIN_DASHBOARD_IMPLEMENTATION}.md`.
+**Files changed** `app/(admin)/admin/{loading.tsx,security/page.tsx}`, `app/api/{account/password,auth/{login,verify-email,forgot-password/{verify,reset}}}/route.ts`, `components/admin/{admin-page,admin-security,security-evidence-table}.tsx`, `lib/admin/{security,security-contract}.ts`, `lib/auth/{admin-audit,admin-factor,admin-session-state,rate-limit,security-evidence}.ts`, `models/AdminAuditLog.ts`, `scripts/{admin-security-logs.test.ts,admin-ui.browser.mjs}`, `package.json`, `docs/{ADMIN_CODEX_WORKFLOW,ADMIN_DASHBOARD_IMPLEMENTATION}.md`.
 
-**Tests** Isolated Phase 7 telemetry tests, administrator security and reporting, quiz and reminder regressions, TypeScript, lint, and loopback-isolated build passed. A production HTTP fixture completed quiz retry rounds and the private reminder route with telemetry storage unreachable. Three existing lint warnings remain.
+**Tests** Focused security logs, administrator security, Users, Overview, login and email authentication, TypeScript, lint and the loopback-isolated production build passed in isolation. Three existing lint warnings remain.
 
-**Browser QA** The full admin suite passed. Performance fit at 320, 375, 390, 768, 1024, 1280, 1440 and 1920px with keyboard and touch chart inspection, reduced motion and an isolated read failure. The standalone Due Review browser check timed out on Dashboard navigation before reaching quiz endpoints.
+**Browser QA** Full admin suite passed. Security fit at all eight requested widths with keyboard chart inspection, cursor navigation, exact-ID search, sheet focus restoration, empty and partial reads, and login success during a rejected diagnostic write.
 
-**Deployment gates** Approve dedicated telemetry storage and exact indexes, validate Vercel lifecycle and peak-load coverage in staging, and provision independent probes before reporting uptime. Collection requires an explicit flag. No production changes were made.
+**Deployment gates** Approve the existing retention and new explorer indexes, verify staging query plans and diagnostic failure isolation, and enable `ABII_SECURITY_EVENTS_ENABLED` at an agreed UTC time. Production indexes were not inspected or changed.
 
-**Next task** Run the documented telemetry storage and delivery checks on a representative staging deployment.
+**Next task** Run the documented security index and event-delivery checks against approved staging storage.
 
 ## 6. Update this compact handoff at the end of each task
 

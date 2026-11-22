@@ -14,7 +14,7 @@ const pages = {
   settings: ["Make every detail count.", "Manage the essentials that keep Abii running your way."],
 } as const;
 
-type Page = Exclude<keyof typeof pages, "overview" | "users" | "analytics" | "performance">;
+type Page = Exclude<keyof typeof pages, "overview" | "users" | "analytics" | "performance" | "security">;
 const unavailable = (message: string) => ({ kind: "unavailable", message }) as const;
 const stack = "grid min-w-0 gap-4";
 const split = `${stack} min-[880px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]`;
@@ -40,14 +40,6 @@ function PendingTable({ title, message }: { title: string; message: string }) {
 
 function PageContent({ page }: { page: Page }) {
   switch (page) {
-    case "security":
-      return <>
-        <Summary title="Security at a glance" labels={["Sign-ins", "Denied attempts", "Security events"]} message="Reporting unavailable" />
-        <div className={split}>
-          <PendingTable title="Audit history" message="Audit records and filters will appear when the history view is connected." />
-          <Pending title="Account access" message="Access and session tools are unavailable here." />
-        </div>
-      </>;
     case "announcements":
       return <>
         <Summary title="Publication summary" labels={["Drafts", "Scheduled", "Published"]} message="Publishing unavailable" />

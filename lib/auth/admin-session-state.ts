@@ -72,7 +72,7 @@ export async function validateAdminSession(raw: string, fresh = false): Promise<
     return { ...actor, name: account.name };
   } catch (error) {
     if (!(error instanceof AdminAccessError)) throw new AdminAccessError(503);
-    if (error.status !== 503) await recordAdminDenial("access-denied", actor.adminId);
+    if (error.status !== 503) await recordAdminDenial("access-denied", error.status === 403 ? actor.adminId : undefined, error.status === 403);
     throw error;
   }
 }

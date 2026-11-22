@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { ClientSession } from "mongoose";
 import { ADMIN_SUBJECT } from "@/models/Admin";
 import { actions, denials, AdminAuditLog, AdminSecurityEvent } from "@/models/AdminAuditLog";
+import { observeSecurity, securityCollectionEnabled } from "./security-evidence";
 import { connectToDatabase } from "@/lib/mongodb";
 
 export class AdminAuditStorageError extends Error {}
@@ -25,7 +26,11 @@ export async function requireAdminAuditStorage() {
   }
 }
 
-export async function recordAdminDenial(kind: typeof denials[number], actorId?: typeof ADMIN_SUBJECT) {
+export async function recordAdminDenial(kind: typeof denials[number], actorId?: typeof ADMIN_SUBJECT, verifiedAccess = false) {
+  if (securityCollectionEnabled()) {
+    observeSecurity({ kind, verifiedAccess });
+    return;
+  }
   try {
     await requireAdminAuditStorage();
     // Keep one representative denial per kind/minute across all visitors.

@@ -1,3 +1,4 @@
+import { observeSecurity } from "@/lib/auth/security-evidence";
 import { NextResponse, after } from "next/server";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
@@ -37,6 +38,10 @@ export async function POST(request: Request) {
   } finally { await session.endSession(); }
   if (!updated) return NextResponse.json({ message: "Your reset session expired. Request a new code." }, { status: 401 });
   await clearResetGrantCookie();
-  if (securityEvent) after(async () => { await notifyAccountSecurityChange(securityEvent!.userId, "password_reset", securityEvent!.operationId); });
+  const committed = securityEvent as { userId: string; operationId: string } | null;
+  if (committed) {
+    observeSecurity({ kind: "password-reset", learnerId: committed.userId, operation: committed.operationId });
+    after(async () => { await notifyAccountSecurityChange(committed.userId, "password_reset", committed.operationId); });
+  }
   return NextResponse.json({ message: "Password updated successfully. Please sign in again.", redirectTo: "/login" });
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
@@ -17,12 +17,15 @@ import { hashOtp } from "../lib/auth/otp-crypto.ts";
 import { buildMetricBatches, metricCollection, reminderCollection, metricTimeIndex, reminderTimeIndex, expiryIndex } from "../lib/performance/storage.ts";
 import { emptyDatabase, recordLatency, minute, retentionMs } from "../lib/performance/monitoring.ts";
 
+import { securityTimelineIndex, securityCorrelationIndex } from "../lib/admin/security-contract.ts";
+import { securityEvidence } from "../lib/auth/security-evidence.ts";
+
 const destinations = [
   ["", "Overview", "Everything in one view.", "Platform Overview", "overview"],
   ["/users", "Users", "Every learner matters.", "Learner directory", "users"],
   ["/analytics", "Analytics", "See how learning grows.", "Platform insights", "analytics"],
   ["/performance", "Performance", "Keep things running smoothly.", "System monitoring", "performance"],
-  ["/security", "Security", "A safer place to learn.", "Audit history", "security"],
+  ["/security", "Security", "A safer place to learn.", "Security overview", "security"],
   ["/announcements", "Announcements", "Share what’s new.", "Announcement list", "announcements"],
   ["/support", "Support", "Here to help, always.", "Conversation", "support"],
   ["/settings", "Settings", "Make every detail count.", "Workspace preferences", "settings"],
@@ -83,9 +86,11 @@ async function startServer(env, production = false) {
   });
   let output = "";
   let telemetryDropped = false;
+  let securityDropped = false;
   for (const stream of [child.stdout, child.stderr]) stream.on("data", chunk => {
     output = (output + chunk).slice(-3000);
     telemetryDropped ||= output.includes("abii.performance.delivery_incomplete");
+    securityDropped ||= output.includes("abii.security.evidence_incomplete");
   });
   const stop = async () => {
     if (child.exitCode !== null || child.signalCode !== null) return;
@@ -95,7 +100,7 @@ async function startServer(env, production = false) {
   };
   try {
     for (let attempt = 0; attempt < 240; attempt++) {
-      if (/Ready in/.test(output)) return { base, stop, telemetryDropped: () => telemetryDropped };
+      if (/Ready in/.test(output)) return { base, stop, telemetryDropped: () => telemetryDropped, securityDropped: () => securityDropped };
       if (child.exitCode !== null) break;
       await delay(250);
     }
@@ -106,11 +111,13 @@ async function startServer(env, production = false) {
   }
 }
 
-test("admin routes fail closed, require real MFA, and render the protected workspace", { timeout: 360_000 }, async () => {
+test("admin routes fail closed, require real MFA, and render the protected workspace", { timeout: 480_000 }, async () => {
+  const securityOnly = process.env.ABII_TEST_SECURITY_LOGS_ONLY === "1";
   const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const secret = randomBytes(32).toString("hex");
   const uri = replica.getUri("abii_admin_ui_fixture");
   const env = {
+    ABII_SECURITY_EVENTS_ENABLED: "true",
     ABII_PERF_COLLECTION: "1", ABII_PERF_MONGODB_URI: replica.getUri("abii_performance_ui_fixture"),
     CRON_SECRET: randomBytes(32).toString("hex"),
     MONGODB_URI: uri, AUTH_SECRET: secret, AUTH_OTP_SECRET: randomBytes(32).toString("hex"),
@@ -179,6 +186,20 @@ test("admin routes fail closed, require real MFA, and render the protected works
     await db.createCollection("adminauditlogs");
     await db.createCollection("adminsecurityevents");
     await db.collection("adminsecurityevents").insertOne({ _id: "fixture-recovery", kind: "recovery-denied", occurredAt: dayBefore(2) });
+    const auditLogs = db.collection("adminauditlogs");
+    const securityEvents = db.collection("adminsecurityevents");
+    for (const collection of [auditLogs, securityEvents]) await collection.createIndex({ occurredAt: -1, _id: -1 }, { name: securityTimelineIndex });
+    await auditLogs.createIndex({ correlationId: 1 }, { name: securityCorrelationIndex });
+    await securityEvents.createIndex({ occurredAt: 1 }, { expireAfterSeconds: 90 * 86400 });
+    const auditAt = new Date(Date.now() - 20 * minute);
+    const securityCorrelation = "61db623c-dc64-4c6b-9d92-f27e02ab688e";
+    await auditLogs.insertMany(Array.from({ length: 23 }, (_, index) => ({
+      action: index === 0 ? "user.restore" : "user.suspend", actorId: "admin:primary",
+      targetId: "61db623cdc644c6b9d92f27e", outcome: "committed", occurredAt: auditAt,
+      ...(index === 0 ? { correlationId: securityCorrelation } : {}), reason: "restricted fixture reason",
+    })));
+    const securitySlot = new Date(Math.floor(Date.now() / (5 * minute)) * 5 * minute - 10 * minute);
+    await securityEvents.insertOne({ ...securityEvidence({ kind: "rate-limited", scope: "login" }, securitySlot), count: 27 });
 
     const outageUri = replica.getUri("abii_telemetry_outage_learner_fixture");
     const outageDb = mongoose.connection.getClient().db("abii_telemetry_outage_learner_fixture");
@@ -191,7 +212,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
       question: "Fixture prompt", answer: "Durable" });
     server = await startServer({ ...env, MONGODB_URI: outageUri, ABII_ADMIN_UI_ENABLED: "",
       ABII_PERF_MONGODB_URI: "mongodb://127.0.0.1:1/abii_unreachable_fixture" }, process.env.ABII_TEST_PRODUCTION_GATE === "1");
-    for (const suffix of ["", "/settings", "/analytics", "/performance"]) {
+    for (const suffix of ["", "/settings", "/analytics", "/performance", "/security"]) {
       const closed = await fetch(server.base + "/admin" + suffix);
       assert.equal(closed.status, 404);
       assert.match(closed.headers.get("cache-control"), /private.*no-store/);
@@ -255,6 +276,12 @@ test("admin routes fail closed, require real MFA, and render the protected works
     page.on("pageerror", error => pageErrors.push(error.message));
     const post = (path, data) => context.request.post(base + path, { data, headers: { Origin: base } });
 
+    const wrong = "fixture wrong password";
+    assert.equal((await post("/api/auth/login", { email: learner.email, password: wrong })).status(), 401);
+    assert.equal((await post("/api/auth/login", { email: admin.email, password: wrong })).status(), 401);
+    const key = createHmac("sha256", env.AUTH_OTP_SECRET).update(JSON.stringify(["login", "limited@example.invalid"])).digest("hex");
+    await db.collection("authratelimits").insertOne({ key, window: Math.floor(Date.now() / (60 * minute)), count: 10, expiresAt: new Date(Date.now() + 60 * minute) });
+    assert.equal((await post("/api/auth/login", { email: "limited@example.invalid", password: wrong })).status(), 429);
     const login = await post("/api/auth/login", { email: learner.email, password });
     assert.equal(login.status(), 200);
     const learnerCookie = (await context.cookies()).find(cookie => cookie.name === "abii_session");
@@ -304,10 +331,25 @@ test("admin routes fail closed, require real MFA, and render the protected works
     await denied("", "Sign in to continue", `abii_admin=${await signed("abii-admin", true)}`);
     await denied("/analytics?period=90", "Sign in to continue", `abii_admin=${await signed("abii-admin", true)}`);
 
+    const incorrect = String((Number(totpAt(seed, Date.now())) + 1) % 1_000_000).padStart(6, "0");
+    assert.equal((await post("/api/auth/admin-mfa", { code: incorrect })).status(), 401);
     assert.equal((await post("/api/auth/admin-mfa", { code: totpAt(seed, Date.now()) })).status(), 200);
+    const expectedEvidence = ["learner-login", "learner-login-denied", "login-denied", "mfa-denied"];
+    for (let attempt = 0; attempt < 40; attempt++) {
+      if ((await securityEvents.distinct("kind", { format: 2, kind: { $in: expectedEvidence } })).length === expectedEvidence.length) break;
+      await delay(250);
+    }
+    for (const kind of expectedEvidence) {
+      const record = await securityEvents.findOne({ format: 2, kind });
+      assert.ok(record, kind);
+      assert.equal(record.actorId, kind === "learner-login" ? String(learner._id) : undefined);
+      assert.doesNotMatch(JSON.stringify(record), /@example\.invalid|fixture wrong password/);
+    }
+    assert.ok(await securityEvents.countDocuments({ format: 2, kind: "rate-limited", occurredAt: { $gt: securitySlot } }));
+    assert.equal(await auditLogs.countDocuments({ action: "login", actorId: "admin:primary", outcome: "committed" }), 1);
     const adminCookie = (await context.cookies()).find(cookie => cookie.name === "abii_admin");
     assert.ok(adminCookie);
-    for (const [suffix, label, headline, region, asset] of destinations) {
+    for (const [suffix, label, headline, region, asset] of securityOnly ? destinations.filter(item => item[4] === "security") : destinations) {
       await page.setViewportSize({ width: 1920, height: 951 });
       const response = await page.goto(base + "/admin" + suffix, { waitUntil: "domcontentloaded", timeout: 90_000 });
       assert.match(response.headers()["cache-control"], /\bno-store\b/);
@@ -317,13 +359,14 @@ test("admin routes fail closed, require real MFA, and render the protected works
       const image = page.locator(`main img[src*="admin-${asset}.png"]`);
       await image.evaluate(element => element.decode());
       assert.deepEqual(await page.evaluate(workspaceGeometry), learnerGeometry, `${label} desktop shell geometry`);
+      if (asset === "security") await page.getByRole("heading", { name: "Security & audit explorer" }).waitFor();
       if (asset === "performance") await page.getByRole("heading", { name: "Endpoint performance" }).waitFor();
       if (process.env.ABII_ADMIN_SCREENSHOTS) {
         await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `admin-${asset}-1920.png`), animations: "disabled" });
       }
       assert.equal(await image.getAttribute("alt"), "");
 
-      if (!["overview", "users", "analytics", "performance"].includes(asset)) assert.equal(await page.locator("main table, main input, main select").count(), 0);
+      if (!["overview", "users", "analytics", "performance", "security"].includes(asset)) assert.equal(await page.locator("main table, main input, main select").count(), 0);
       assert.ok(!(await page.locator("main").innerText()).includes(admin.email));
       for (const width of widths) {
         await page.setViewportSize({ width, height: 880 });
@@ -347,6 +390,61 @@ test("admin routes fail closed, require real MFA, and render the protected works
         assert.ok(Object.entries(geometry).every(([key, value]) => key === "bottomGap" ? value >= 0 && value <= 4 : value), `${label} at ${width}px: ${JSON.stringify(geometry)}`);
       }
     }
+
+    await page.goto(base + "/admin/security");
+    const security = page.getByRole("region", { name: "Security overview" });
+    const explorer = security.getByRole("region", { name: "Security and audit explorer" });
+    await security.getByText("Elevated rate limiting").waitFor();
+    const activity = security.getByRole("slider", { name: "Authentication activity interval values" });
+    await activity.focus();
+    await page.keyboard.press("End");
+    await page.waitForFunction(() => {
+      const slider = document.querySelector('[aria-label="Authentication activity interval values"]');
+      return slider && slider.getAttribute("aria-valuenow") === slider.getAttribute("aria-valuemax");
+    }, undefined, { timeout: 15_000 });
+    assert.doesNotMatch(await page.locator("main").innerText(), /restricted fixture reason/);
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await explorer.getByRole("heading").evaluate(el => el.scrollIntoView({ block: "start" }));
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector("main").scrollWidth <= innerWidth));
+      if (process.env.ABII_ADMIN_SCREENSHOTS) await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `security-explorer-${width}.png`), animations: "disabled" });
+    }
+    await explorer.getByRole("link", { name: "Older evidence" }).click();
+    await page.waitForURL(url => url.searchParams.has("cursor"), { timeout: 20_000 });
+    await explorer.getByRole("link", { name: "First page" }).waitFor({ timeout: 20_000 });
+    const filters = explorer.getByRole("form", { name: "Filter security evidence" });
+    await filters.getByRole("searchbox").fill(securityCorrelation);
+    await filters.getByRole("button", { name: "Apply filters" }).click();
+    await page.waitForURL(url => url.searchParams.get("q") === securityCorrelation, { timeout: 20_000 });
+    const detailButton = explorer.getByRole("button", { name: "Learner reactivated" });
+    await detailButton.focus();
+    await detailButton.press("Enter");
+    const detail = page.getByRole("dialog", { name: "Learner reactivated" });
+    await detail.getByText(securityCorrelation, { exact: true }).waitFor();
+    assert.doesNotMatch(await detail.innerText(), /restricted fixture reason/);
+    if (process.env.ABII_ADMIN_SCREENSHOTS) await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "security-detail-1440.png"), animations: "disabled" });
+    await page.keyboard.press("Escape");
+    await detail.waitFor({ state: "hidden" });
+    assert.equal(await detailButton.evaluate(node => document.activeElement === node), true);
+    await page.goto(base + "/admin/security?kind=provision");
+    await explorer.getByText("No matching security or audit events.").waitFor();
+    await page.goto(base + "/admin/security?cursor=invalid");
+    await page.getByRole("alert").getByText(/page link has expired/).waitFor();
+    await securityEvents.dropIndex(securityTimelineIndex);
+    await page.goto(base + "/admin/security");
+    await explorer.getByText(/Pagination is paused/).waitFor();
+    await securityEvents.createIndex({ occurredAt: -1, _id: -1 }, { name: securityTimelineIndex });
+    await db.command({ collMod: "adminsecurityevents", validator: { format: { $ne: 2 } } });
+    try {
+      assert.equal((await fetch(base + "/api/auth/login", { method: "POST", headers: { Origin: base, "Content-Type": "application/json" },
+        body: JSON.stringify({ email: learner.email, password }) })).status, 200);
+      for (let attempt = 0; attempt < 32 && !server.securityDropped(); attempt++) await delay(250);
+      assert.equal(server.securityDropped(), true);
+    } finally {
+      await db.command({ collMod: "adminsecurityevents", validator: {} });
+    }
+
+    if (securityOnly) return;
 
     await page.goto(base + "/admin");
     const period = page.getByLabel("Reporting period");

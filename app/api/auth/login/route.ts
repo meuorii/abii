@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { observeSecurity } from "@/lib/auth/security-evidence";
 import { recordAdminDenial } from "@/lib/auth/admin-audit";
 import { ADMIN_CHALLENGE_LIFETIME, AdminFactorRateLimitError, revokeAdminChallenge, startAdminChallenge } from "@/lib/auth/admin-factor";
 import { AdminIntegrityError, adminEmailReserved, readActiveAdmin } from "@/lib/auth/admin-identity";
@@ -9,7 +10,6 @@ import { SESSION_COOKIE_OPTIONS } from "@/lib/auth/constants";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "@/lib/mongodb";
 import { activeOrdinaryAccount, User } from "@/models/User";
-import { ADMIN_SUBJECT } from "@/models/Admin";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { validateLogin } from "@/lib/auth/validation";
 import { clearPendingIdentity, setPendingIdentity } from "@/lib/auth/tickets";
@@ -44,7 +44,8 @@ export async function POST(request: Request) {
     const adminMatches = admin?.email === values.email && matches &&
       Buffer.byteLength(values.password, "utf8") <= 72 && !values.password.includes("\0");
     if (!adminMatches && (!user || !matches)) {
-      if (reserved) await recordAdminDenial("login-denied", ADMIN_SUBJECT);
+      if (reserved) await recordAdminDenial("login-denied");
+      else observeSecurity({ kind: "learner-login-denied" });
       return privateJson({ message: "Email or password is incorrect. Please try again." }, 401);
     }
     const jar = await cookies();
@@ -97,6 +98,7 @@ export async function POST(request: Request) {
       }, 202);
     }
     await createSession(user.id, user.sessionVersion ?? 0);
+    observeSecurity({ kind: "learner-login", learnerId: user.id });
     return privateJson({ code: "AUTHENTICATED", redirectTo: "/dashboard" });
   } catch (error) {
     if (error instanceof AdminFactorRateLimitError) return privateJson({ message: "Too many attempts. Please wait and try again." }, 429);

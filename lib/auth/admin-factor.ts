@@ -148,7 +148,7 @@ export async function verifyAdminChallenge(token: string, code: string) {
     await auditAdmin("login", ADMIN_SUBJECT, ADMIN_SUBJECT, session);
     return { version, authenticatedAt };
   });
-  if (!result) await recordAdminDenial("mfa-denied", ADMIN_SUBJECT);
+  if (!result) await recordAdminDenial("mfa-denied");
   return result;
 }
 
@@ -175,6 +175,6 @@ export async function replaceAdminFactor(credential: Credential, expectedVersion
     await auditAdmin(usingRecovery ? "recover" : "rotate", ADMIN_SUBJECT, ADMIN_SUBJECT, session);
     return { seed: enrollment.seed, proof: enrollment.proof };
   });
-  if (!result) await recordAdminDenial("recovery-denied", ADMIN_SUBJECT);
+  if (!result) await recordAdminDenial("recovery-denied");
   return result;
 }

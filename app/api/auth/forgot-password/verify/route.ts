@@ -1,3 +1,4 @@
+import { observeSecurity } from "@/lib/auth/security-evidence";
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { activeOrdinaryAccount, User } from "@/models/User";
@@ -17,7 +18,10 @@ export async function POST(request: Request) {
   if (!(await rateAllowedByTrustedIp(request, "recovery-verify-ip", 30, 60 * 60_000))) return limited();
   await connectToDatabase();
   const user = await User.findOne({ email, ...activeOrdinaryAccount }).select("_id").lean();
-  if (!user || !(await consumeChallenge(String(user._id), "password_reset", code))) return NextResponse.json({ message: "The recovery code is incorrect or expired." }, { status: 400 });
+  if (!user || !(await consumeChallenge(String(user._id), "password_reset", code))) {
+    observeSecurity({ kind: "learner-recovery-denied" });
+    return NextResponse.json({ message: "The recovery code is incorrect or expired." }, { status: 400 });
+  }
   const raw = newGrant();
   await PasswordResetGrant.create({ userId: user._id, tokenHash: hashGrant(raw), expiresAt: new Date(Date.now() + 5 * 60_000) });
   // The random grant is carried only inside a signed HttpOnly cookie.
