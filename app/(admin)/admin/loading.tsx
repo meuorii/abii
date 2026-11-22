@@ -6,6 +6,8 @@ import { OverviewSkeleton } from "@/components/admin/admin-overview";
 import { UsersSkeleton } from "@/components/admin/admin-users-skeleton";
 import { AnalyticsSkeleton } from "@/components/admin/admin-analytics-skeleton";
 
+import { PerformanceSkeleton } from "@/components/admin/admin-performance";
+
 export default function LoadingAdminPage() {
   const pathname = usePathname();
   const hero = <SkeletonBlock className="h-[170px] rounded-[20px] sm:h-[250px] lg:h-[282px] xl:h-[312px]" />;
@@ -18,7 +20,10 @@ export default function LoadingAdminPage() {
   if (pathname === "/admin/analytics") {
     return <div className="grid gap-5 sm:gap-6">{hero}<AnalyticsSkeleton controls /></div>;
   }
-  const hasSummary = pathname !== "/admin/performance" && pathname !== "/admin/settings";
+  if (pathname === "/admin/performance") {
+    return <div className="grid gap-5 sm:gap-6">{hero}<PerformanceSkeleton controls /></div>;
+  }
+  const hasSummary = pathname !== "/admin/settings";
   return (
     <SkeletonRegion label="Loading workspace" className="grid gap-5 sm:gap-6">
       {hero}

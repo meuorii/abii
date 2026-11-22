@@ -35,17 +35,19 @@
 
 ## 5. Active handoff
 
-**Status** Phase 6 implemented and verified in isolation. Production rollout remains pending.
+**Status** Phase 7 implemented. Production activation remains pending.
 
-**Verified now** Seven aggregate sections, adjacent 7/30/90-day UTC windows, matched activation horizons, D1/D7/D30 cohort maturity, and explicit retained quiz coverage. Browser charts and cohort layouts passed at 320, 375, 390, 768, 1024, 1280, 1440 and 1920px.
+**Verified now** Trace-backed quiz request and operation histograms, authenticated reminder evidence, bounded reads, evidence-based health and incidents, and unavailable external uptime.
 
-**Files changed** `app/(admin)/admin/{analytics/page.tsx,loading.tsx}`, `components/admin/{admin-analytics,admin-analytics-skeleton,analytics-chart,admin-page}.tsx`, `lib/admin/{analytics,analytics-contract,reporting,overview}.ts`, `scripts/{admin-analytics.test.ts,admin-ui.browser.mjs}`, `package.json`, `docs/{ADMIN_CODEX_WORKFLOW,ADMIN_DASHBOARD_IMPLEMENTATION}.md`.
+**Files changed** `app/(admin)/admin/{performance/page.tsx,loading.tsx}`, `app/api/{quiz/[sessionId]/{route.ts,resume/route.ts},internal/notifications/{reminder-schedule,reminders}/route.ts}`, `components/admin/{admin-performance,admin-page,analytics-chart}.tsx`, `lib/{admin/performance.ts,performance/{monitoring,storage,server-timing,reminder-timing}.ts,quiz/service.ts}`, `scripts/{admin-performance.test.ts,admin-ui.browser.mjs}`, `package.json`, `docs/{ADMIN_CODEX_WORKFLOW,ADMIN_DASHBOARD_IMPLEMENTATION}.md`.
 
-**Tests** Passed `test:admin-analytics`, `test:admin-security`, `test:admin-ui`, `test:admin-overview`, `test:admin-users`, `typecheck`, `lint`, and a loopback-isolated `build`. Three pre-existing lint warnings remain.
+**Tests** Isolated Phase 7 telemetry tests, administrator security and reporting, quiz and reminder regressions, TypeScript, lint, and loopback-isolated build passed. A production HTTP fixture completed quiz retry rounds and the private reminder route with telemetry storage unreachable. Three existing lint warnings remain.
 
-**Deployment gates** Confirm date-leading indexes for large Analytics collections and existing quiz TTL coverage. Obtain separate approval for any index or forward-only mode instrumentation. No production changes were made. Phase 5 rollout prerequisites remain recorded in the roadmap.
+**Browser QA** The full admin suite passed. Performance fit at 320, 375, 390, 768, 1024, 1280, 1440 and 1920px with keyboard and touch chart inspection, reduced motion and an isolated read failure. The standalone Due Review browser check timed out on Dashboard navigation before reaching quiz endpoints.
 
-**Next bounded task** Run representative 90-day explain plans on a staging Atlas deployment and review candidate indexes before rollout.
+**Deployment gates** Approve dedicated telemetry storage and exact indexes, validate Vercel lifecycle and peak-load coverage in staging, and provision independent probes before reporting uptime. Collection requires an explicit flag. No production changes were made.
+
+**Next task** Run the documented telemetry storage and delivery checks on a representative staging deployment.
 
 ## 6. Update this compact handoff at the end of each task
 

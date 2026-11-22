@@ -97,11 +97,11 @@ export async function resumeSession(userId: Types.ObjectId | string, sessionId: 
   if (!isValidObjectId(sessionId)) return fail(404, "This quiz session has expired or could not be found.");
   await connectToDatabase();
   const now = new Date();
-  const candidate = await QuizSession.findOne({ _id: sessionId, userId, status: "active", expiresAt: { $gt: now }, "questions.0.prompt": { $type: "string" } }).select("questions.answered").lean();
+  const candidate = await measureServerOperation("quiz resume lookup", () => QuizSession.findOne({ _id: sessionId, userId, status: "active", expiresAt: { $gt: now }, "questions.0.prompt": { $type: "string" } }).select("questions.answered").lean(), { database: true });
   const resumedAfterProgress = Boolean(candidate?.questions?.some((question) => question.answered));
   const update: Record<string, unknown> = { $set: { lastActivityAt: now, expiresAt: activeExpiry(now) } };
   if (resumedAfterProgress) update.$min = { resumedAt: now };
-  const session = await QuizSession.findOneAndUpdate({ _id: sessionId, userId, status: "active", expiresAt: { $gt: now }, "questions.0.prompt": { $type: "string" } }, update, { new: true }).select("_id expiresAt lastActivityAt resumedAt").lean();
+  const session = await measureServerOperation("quiz resume update", () => QuizSession.findOneAndUpdate({ _id: sessionId, userId, status: "active", expiresAt: { $gt: now }, "questions.0.prompt": { $type: "string" } }, update, { new: true }).select("_id expiresAt lastActivityAt resumedAt").lean(), { database: true });
   if (!session) return fail(404, "This quiz session has expired or could not be found.");
   return { ok: true as const, id: String(session._id), expiresAt: session.expiresAt, lastActivityAt: session.lastActivityAt };
 }
@@ -109,7 +109,7 @@ export async function resumeSession(userId: Types.ObjectId | string, sessionId: 
 export async function discardSession(userId: Types.ObjectId | string, sessionId: string) {
   if (!isValidObjectId(sessionId)) return fail(404, "This active quiz could not be found.");
   await connectToDatabase();
-  const result = await QuizSession.deleteOne({ _id: sessionId, userId, status: "active" });
+  const result = await measureServerOperation("quiz discard update", () => QuizSession.deleteOne({ _id: sessionId, userId, status: "active" }), { database: true });
   return result.deletedCount ? { ok: true as const } : fail(404, "This active quiz could not be found.");
 }
 

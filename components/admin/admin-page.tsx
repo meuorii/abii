@@ -1,7 +1,7 @@
 import "server-only";
 import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { getAdminPageAccess } from "@/lib/auth/admin-page-access";
-import { AdminFeedback, AdminPanel, AdminTable, ChartPanel, MetricCard } from "./admin-ui";
+import { AdminFeedback, AdminPanel, AdminTable, MetricCard } from "./admin-ui";
 
 const pages = {
   overview: ["Everything in one view.", "A clearer picture of everything happening across Abii."],
@@ -14,7 +14,7 @@ const pages = {
   settings: ["Make every detail count.", "Manage the essentials that keep Abii running your way."],
 } as const;
 
-type Page = Exclude<keyof typeof pages, "overview" | "users" | "analytics">;
+type Page = Exclude<keyof typeof pages, "overview" | "users" | "analytics" | "performance">;
 const unavailable = (message: string) => ({ kind: "unavailable", message }) as const;
 const stack = "grid min-w-0 gap-4";
 const split = `${stack} min-[880px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]`;
@@ -40,14 +40,6 @@ function PendingTable({ title, message }: { title: string; message: string }) {
 
 function PageContent({ page }: { page: Page }) {
   switch (page) {
-    case "performance":
-      return <>
-        <div className={split}>
-          <ChartPanel title="Response latency" content={unavailable("Latency measurements will appear when monitoring is connected.")} />
-          <Pending title="Service status" message="Current service status is unknown. Monitoring is unavailable." />
-        </div>
-        <PendingTable title="Endpoint monitoring" message="Endpoint measurements are unavailable." />
-      </>;
     case "security":
       return <>
         <Summary title="Security at a glance" labels={["Sign-ins", "Denied attempts", "Security events"]} message="Reporting unavailable" />

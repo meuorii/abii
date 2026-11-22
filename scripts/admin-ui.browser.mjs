@@ -14,11 +14,14 @@ import { chromium } from "playwright";
 import { digest, prepareEnrollment, totpAt } from "../lib/auth/admin-factor-crypto.ts";
 import { hashOtp } from "../lib/auth/otp-crypto.ts";
 
+import { buildMetricBatches, metricCollection, reminderCollection, metricTimeIndex, reminderTimeIndex, expiryIndex } from "../lib/performance/storage.ts";
+import { emptyDatabase, recordLatency, minute, retentionMs } from "../lib/performance/monitoring.ts";
+
 const destinations = [
   ["", "Overview", "Everything in one view.", "Platform Overview", "overview"],
   ["/users", "Users", "Every learner matters.", "Learner directory", "users"],
   ["/analytics", "Analytics", "See how learning grows.", "Platform insights", "analytics"],
-  ["/performance", "Performance", "Keep things running smoothly.", "Endpoint monitoring", "performance"],
+  ["/performance", "Performance", "Keep things running smoothly.", "System monitoring", "performance"],
   ["/security", "Security", "A safer place to learn.", "Audit history", "security"],
   ["/announcements", "Announcements", "Share what’s new.", "Announcement list", "announcements"],
   ["/support", "Support", "Here to help, always.", "Conversation", "support"],
@@ -79,7 +82,11 @@ async function startServer(env, production = false) {
     stdio: ["ignore", "pipe", "pipe"], windowsHide: true,
   });
   let output = "";
-  for (const stream of [child.stdout, child.stderr]) stream.on("data", chunk => { output = (output + chunk).slice(-3000); });
+  let telemetryDropped = false;
+  for (const stream of [child.stdout, child.stderr]) stream.on("data", chunk => {
+    output = (output + chunk).slice(-3000);
+    telemetryDropped ||= output.includes("abii.performance.delivery_incomplete");
+  });
   const stop = async () => {
     if (child.exitCode !== null || child.signalCode !== null) return;
     const closed = new Promise(resolve => child.once("exit", resolve));
@@ -88,7 +95,7 @@ async function startServer(env, production = false) {
   };
   try {
     for (let attempt = 0; attempt < 240; attempt++) {
-      if (/Ready in/.test(output)) return { base, stop };
+      if (/Ready in/.test(output)) return { base, stop, telemetryDropped: () => telemetryDropped };
       if (child.exitCode !== null) break;
       await delay(250);
     }
@@ -99,11 +106,13 @@ async function startServer(env, production = false) {
   }
 }
 
-test("admin routes fail closed, require real MFA, and render the protected workspace", { timeout: 240_000 }, async () => {
+test("admin routes fail closed, require real MFA, and render the protected workspace", { timeout: 360_000 }, async () => {
   const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const secret = randomBytes(32).toString("hex");
   const uri = replica.getUri("abii_admin_ui_fixture");
   const env = {
+    ABII_PERF_COLLECTION: "1", ABII_PERF_MONGODB_URI: replica.getUri("abii_performance_ui_fixture"),
+    CRON_SECRET: randomBytes(32).toString("hex"),
     MONGODB_URI: uri, AUTH_SECRET: secret, AUTH_OTP_SECRET: randomBytes(32).toString("hex"),
     ADMIN_MFA_KEY_ID: "fixture", ADMIN_MFA_KEYS: JSON.stringify({ fixture: randomBytes(32).toString("base64") }),
     BREVO_API_KEY: "", BREVO_SENDER_EMAIL: "",
@@ -116,6 +125,28 @@ test("admin routes fail closed, require real MFA, and render the protected works
   try {
     await mongoose.connect(uri);
     const db = mongoose.connection.db;
+    const performance = mongoose.connection.getClient().db("abii_performance_ui_fixture");
+    const metrics = performance.collection(metricCollection);
+    const jobs = performance.collection(reminderCollection);
+    await metrics.createIndex({ bucket: -1 }, { name: metricTimeIndex });
+    await jobs.createIndex({ startedAt: -1 }, { name: reminderTimeIndex });
+    for (const collection of [metrics, jobs]) await collection.createIndex({ expiresAt: 1 }, { name: expiryIndex, expireAfterSeconds: 0 });
+    const now = Math.floor(Date.now() / minute) * minute;
+    for (const minutesAgo of [4, 9, 14, 19, 24, 29]) {
+      const at = now - minutesAgo * minute;
+      const database = emptyDatabase();
+      recordLatency(database.queries, 22);
+      const rows = Array.from({ length: 105 }, (_, index) => ({
+        route: index < 100 ? "quiz.answer" : "quiz.finish",
+        status: index % 10 === 0 ? 500 : index % 4 === 0 ? 400 : 200,
+        ms: index % 10 === 0 ? 250 : 30 + minutesAgo * 2, at, database,
+      }));
+      await metrics.insertMany(buildMetricBatches(rows));
+    }
+    const slot = new Date(Math.floor((now - 16 * minute) / (15 * minute)) * 15 * minute);
+    await jobs.insertOne({ _id: "fixture-job", source: "scheduled", scheduledAt: slot, startedAt: new Date(+slot + 5000),
+      finishedAt: new Date(+slot + 6800), expiresAt: new Date(+slot + retentionMs),
+      completion: { outcome: "completed", summary: { examined: 11, created: 3, errors: 0, existing: 8, suppressed: 0, hasMore: false, busy: false, batches: 1 } } });
     const users = db.collection("users");
     const admin = { _id: "primary", name: "Fixture Admin", email: "ui-admin@example.invalid" };
     const learner = { _id: new mongoose.Types.ObjectId(), role: "user", name: "Fixture Learner", email: "ui-learner@example.invalid" };
@@ -149,12 +180,49 @@ test("admin routes fail closed, require real MFA, and render the protected works
     await db.createCollection("adminsecurityevents");
     await db.collection("adminsecurityevents").insertOne({ _id: "fixture-recovery", kind: "recovery-denied", occurredAt: dayBefore(2) });
 
-    server = await startServer({ ...env, ABII_ADMIN_UI_ENABLED: "" }, process.env.ABII_TEST_PRODUCTION_GATE === "1");
-    for (const suffix of ["", "/settings", "/analytics"]) {
+    const outageUri = replica.getUri("abii_telemetry_outage_learner_fixture");
+    const outageDb = mongoose.connection.getClient().db("abii_telemetry_outage_learner_fixture");
+    const quizLearner = new mongoose.Types.ObjectId();
+    const quizSubject = new mongoose.Types.ObjectId();
+    await outageDb.collection("users").insertOne({ _id: quizLearner, role: "user", name: "Outage fixture",
+      email: "phase7-outage@example.invalid", emailVerifiedAt: new Date(), sessionVersion: 0 });
+    await outageDb.collection("subjects").insertOne({ _id: quizSubject, userId: quizLearner, name: "Outage fixture" });
+    await outageDb.collection("flashcards").insertOne({ userId: quizLearner, subjectId: quizSubject, flashcardType: "standard",
+      question: "Fixture prompt", answer: "Durable" });
+    server = await startServer({ ...env, MONGODB_URI: outageUri, ABII_ADMIN_UI_ENABLED: "",
+      ABII_PERF_MONGODB_URI: "mongodb://127.0.0.1:1/abii_unreachable_fixture" }, process.env.ABII_TEST_PRODUCTION_GATE === "1");
+    for (const suffix of ["", "/settings", "/analytics", "/performance"]) {
       const closed = await fetch(server.base + "/admin" + suffix);
       assert.equal(closed.status, 404);
       assert.match(closed.headers.get("cache-control"), /private.*no-store/);
     }
+    const learnerToken = await new SignJWT({ sv: 0 }).setProtectedHeader({ alg: "HS256" }).setSubject(String(quizLearner))
+      .setIssuedAt().setExpirationTime("10m").setIssuer("abii").setAudience("abii-web").sign(new TextEncoder().encode(secret));
+    const quizPost = (path, body) => fetch(server.base + path, {
+      method: "POST", headers: { Cookie: `abii_session=${learnerToken}`, Origin: server.base, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const startedQuiz = await quizPost("/api/quiz/start", { scope: "all", type: "identification" });
+    assert.equal(startedQuiz.status, 201);
+    const { sessionId } = await startedQuiz.json();
+    const sessionPath = `/api/quiz/${sessionId}`;
+    for (let round = 1; round <= 3; round++) {
+      const answer = await quizPost(sessionPath + "/answer", { questionIndex: round - 1, answer: "Durable" });
+      assert.equal(answer.status, 200);
+      assert.equal((await answer.json()).result.correct, true);
+      const finished = await quizPost(sessionPath + "/finish", {});
+      assert.equal(finished.status, 200);
+      const result = await finished.json();
+      assert.equal(round < 3 ? result.retry : result.transitioned, true);
+    }
+    assert.equal(await outageDb.collection("quizsessions").countDocuments({ userId: quizLearner, status: "completed" }), 1);
+    const outageReminder = await fetch(server.base + "/api/internal/notifications/reminders", {
+      headers: { authorization: `Bearer ${env.CRON_SECRET}` },
+    });
+    assert.equal(outageReminder.status, 200);
+    for (let attempt = 0; attempt < 32 && !server.telemetryDropped(); attempt++) await delay(250);
+    assert.equal(server.telemetryDropped(), true);
+
     const learnerDetailPath = `/api/admin/users/${learner._id}`;
     assert.equal((await fetch(server.base + learnerDetailPath)).status, 404);
     await server.stop();
@@ -190,6 +258,22 @@ test("admin routes fail closed, require real MFA, and render the protected works
     const login = await post("/api/auth/login", { email: learner.email, password });
     assert.equal(login.status(), 200);
     const learnerCookie = (await context.cookies()).find(cookie => cookie.name === "abii_session");
+    const malformedAnswer = await context.request.post(base + "/api/quiz/fixture-invalid-session/answer", {
+      headers: { Origin: base, "Content-Type": "application/json" }, data: Buffer.from("{"),
+    });
+    assert.equal(malformedAnswer.status(), 400);
+    assert.match((await malformedAnswer.json()).error, /check your answer/i);
+    const privateReminderPath = base + "/api/internal/notifications/reminders";
+    assert.equal((await context.request.get(privateReminderPath)).status(), 401);
+    assert.equal((await context.request.get(privateReminderPath, { headers: { authorization: `Bearer ${env.CRON_SECRET}` } })).status(), 200);
+    const malformedMetric = { "rows.0.route": "quiz.answer", "rows.0.requests.clientErrors": 1, "rows.0.requests.latency.count": 1 };
+    for (let attempt = 0; attempt < 40; attempt++) {
+      if (await metrics.countDocuments(malformedMetric) && await jobs.countDocuments({ source: "private", finishedAt: { $exists: true } })) break;
+      await delay(250);
+    }
+    assert.equal(await metrics.countDocuments(malformedMetric), 1);
+    assert.equal(await jobs.countDocuments({ source: "private", finishedAt: { $exists: true } }), 1);
+    assert.doesNotMatch(JSON.stringify(await metrics.findOne(malformedMetric)), /fixture-invalid-session|ui-learner@/);
     assert.equal((await fetch(base + learnerDetailPath)).status, 401);
     assert.equal((await context.request.get(base + learnerDetailPath)).status(), 403);
     assert.ok(learnerCookie);
@@ -225,7 +309,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     assert.ok(adminCookie);
     for (const [suffix, label, headline, region, asset] of destinations) {
       await page.setViewportSize({ width: 1920, height: 951 });
-      const response = await page.goto(base + "/admin" + suffix);
+      const response = await page.goto(base + "/admin" + suffix, { waitUntil: "domcontentloaded", timeout: 90_000 });
       assert.match(response.headers()["cache-control"], /\bno-store\b/);
       await page.getByRole("heading", { level: 1, name: headline }).waitFor();
       await page.getByRole("heading", { name: region, exact: true }).waitFor();
@@ -233,15 +317,33 @@ test("admin routes fail closed, require real MFA, and render the protected works
       const image = page.locator(`main img[src*="admin-${asset}.png"]`);
       await image.evaluate(element => element.decode());
       assert.deepEqual(await page.evaluate(workspaceGeometry), learnerGeometry, `${label} desktop shell geometry`);
+      if (asset === "performance") await page.getByRole("heading", { name: "Endpoint performance" }).waitFor();
       if (process.env.ABII_ADMIN_SCREENSHOTS) {
         await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `admin-${asset}-1920.png`), animations: "disabled" });
       }
       assert.equal(await image.getAttribute("alt"), "");
-      if (!["overview", "users", "analytics"].includes(asset)) assert.equal(await page.locator("main table, main input, main select").count(), 0);
+
+      if (!["overview", "users", "analytics", "performance"].includes(asset)) assert.equal(await page.locator("main table, main input, main select").count(), 0);
       assert.ok(!(await page.locator("main").innerText()).includes(admin.email));
       for (const width of widths) {
         await page.setViewportSize({ width, height: 880 });
         const geometry = await page.evaluate(adminHeroGeometry);
+        if (!geometry.fits && asset === "performance") {
+          if (process.env.ABII_ADMIN_SCREENSHOTS) {
+            await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `performance-overflow-${width}.png`), animations: "disabled" });
+          }
+          const overflow = await page.evaluate(() => {
+            const main = document.querySelector("main");
+            return {
+              viewport: [innerWidth, document.documentElement.scrollWidth, main.clientWidth, main.scrollWidth],
+              elements: [...main.querySelectorAll("*")].filter(el => {
+                const edge = el.getBoundingClientRect().right;
+                return edge > innerWidth && !el.closest("[role=region][tabindex]");
+              }).slice(0, 15).map(el => [el.tagName, el.className, Math.round(el.getBoundingClientRect().right)]),
+            };
+          });
+          assert.fail(`Performance at ${width}px overflows: ${JSON.stringify(overflow)}`);
+        }
         assert.ok(Object.entries(geometry).every(([key, value]) => key === "bottomGap" ? value >= 0 && value <= 4 : value), `${label} at ${width}px: ${JSON.stringify(geometry)}`);
       }
     }
@@ -331,6 +433,50 @@ test("admin routes fail closed, require real MFA, and render the protected works
         }
       }
     }
+    await page.goto(base + "/admin/performance", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    const monitoring = page.getByRole("region", { name: "System monitoring" });
+    await monitoring.getByText("Independent availability probes have not been configured.").first().waitFor();
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 900 });
+      await monitoring.getByRole("heading", { name: "Endpoint performance" }).waitFor();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector("main").scrollWidth <= document.querySelector("main").clientWidth), `Performance fits at ${width}px`);
+      if (process.env.ABII_ADMIN_SCREENSHOTS && [320, 390, 1440].includes(width)) {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `performance-${width}.png`), animations: "disabled", fullPage: true });
+      }
+    }
+    await monitoring.getByRole("link", { name: "1 hour" }).click();
+    await page.waitForURL("**/admin/performance?period=1h");
+    const slider = monitoring.getByRole("slider", { name: "API latency interval values" });
+    await slider.focus();
+    await slider.press("End");
+    assert.match(await slider.getAttribute("aria-valuetext"), /samples?/);
+    if (process.env.ABII_ADMIN_SCREENSHOTS) {
+      await monitoring.getByRole("heading", { name: "API latency trend" }).evaluate(node => node.scrollIntoView({ block: "start" }));
+      await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "performance-trends.png"), animations: "disabled" });
+    }
+    const touchContext = await browser.newContext({ reducedMotion: "reduce", hasTouch: true, viewport: { width: 390, height: 900 },
+      storageState: await context.storageState() });
+    try {
+      const touchPage = await touchContext.newPage();
+      await touchPage.goto(base + "/admin/performance?period=1h");
+      const touchSlider = touchPage.getByRole("slider", { name: "API latency interval values" });
+      await touchSlider.tap({ position: { x: 25, y: 35 } });
+      assert.match(await touchSlider.getAttribute("aria-valuetext"), /samples?/);
+      assert.notEqual(await touchSlider.getAttribute("aria-valuenow"), await touchSlider.getAttribute("aria-valuemax"));
+    } finally {
+      await touchContext.close();
+    }
+    await monitoring.getByRole("rowheader", { name: /Submit answer/ }).waitFor();
+    await monitoring.getByText(/11 examined/).waitFor();
+    await monitoring.getByText("Elevated server errors").waitFor();
+    const deniedPerformance = await fetch(base + "/admin/performance?period=7d", { headers: { RSC: "1", "Next-Router-Prefetch": "1" } });
+    assert.doesNotMatch(await deniedPerformance.text(), /Endpoint performance|Submit answer/);
+    await metrics.dropIndex(metricTimeIndex);
+    await page.goto(base + "/admin/performance?period=7d");
+    await monitoring.getByText("Monitoring storage could not be read.", { exact: true }).first().waitFor();
+    await monitoring.getByText(/11 examined/).waitFor();
+
     const deniedAnalytics = await fetch(base + "/admin/analytics?period=90", { headers: { RSC: "1", "Next-Router-Prefetch": "1" } });
     assert.doesNotMatch(await deniedAnalytics.text(), /Platform insights|Retention cohort matrix/);
     const corruptSubject = await db.collection("subjects").insertOne({ userId: learner._id, createdAt: [dayBefore(2)] });

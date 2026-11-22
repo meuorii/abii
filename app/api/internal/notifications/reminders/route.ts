@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorizeReminderRequest } from "@/lib/notifications/scheduler-auth";
+import { withReminderPerformance } from "@/lib/performance/reminder-timing";
 import { runReminderBatch } from "@/lib/notifications/reminders";
 
 export const runtime = "nodejs";
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
   if (authorization === "missing_secret") return NextResponse.json({ error: "Scheduler is not configured." }, { status: 503, headers: { "Cache-Control": "private, no-store" } });
   if (authorization !== "authorized") return NextResponse.json({ error: "Unauthorized." }, { status: 401, headers: { "Cache-Control": "private, no-store" } });
   try {
-    const result = await runReminderBatch(new Date(), 50);
+    const result = await withReminderPerformance({ kind: "private" }, () => runReminderBatch(new Date(), 50));
     return NextResponse.json(result, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("Study reminder scheduler batch failed.", { failure: error instanceof Error ? error.name : "UnknownError" });
