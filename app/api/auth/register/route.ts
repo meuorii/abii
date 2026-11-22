@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { adminEmailReserved } from "@/lib/auth/admin-identity";
 import { validateRegistration } from "@/lib/auth/validation";
 import { deliverChallenge } from "@/lib/auth/challenges";
 import { sendVerificationEmail } from "@/lib/email/brevo";
@@ -27,9 +28,9 @@ export async function POST(request: Request) {
   let createdUser: { id: string; name: string } | null = null;
   try {
     await connectToDatabase();
-    const existing = await User.exists({ email: values.email });
-    if (existing) return NextResponse.json({ message: "We couldn't create your account with those details. Try signing in or use another email." }, { status: 409 });
     const passwordHash = await bcrypt.hash(values.password, 12);
+    const existing = await User.exists({ email: values.email }) || await adminEmailReserved(values.email);
+    if (existing) return NextResponse.json({ message: "We couldn't create your account with those details. Try signing in or use another email." }, { status: 409 });
     const user = await User.create({
       name: values.name,
       email: values.email,

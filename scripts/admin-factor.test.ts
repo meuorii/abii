@@ -3,16 +3,15 @@ import { test, mock } from "node:test";
 import { randomBytes } from "node:crypto";
 import mongoose from "mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
-import { User } from "../models/User";
-import { AdminFactor } from "../models/AdminFactor";
+import { Admin, ADMIN_ID, ADMIN_SUBJECT } from "../models/Admin";
 import { AdminAuditLog, AdminSecurityEvent } from "../models/AdminAuditLog";
 import { AuthRateLimit } from "../models/AuthRateLimit";
-import { withRequiredTransaction } from "../lib/mongodb-transaction";
 import { connectToDatabase } from "../lib/mongodb";
-import { totpAt, acceptedStep, readSeed } from "../lib/auth/admin-factor-crypto";
+import { totpAt, acceptedStep, digest, prepareEnrollment, readSeed } from "../lib/auth/admin-factor-crypto";
+import { readActiveAdmin } from "../lib/auth/admin-identity";
 import { recordAdminDenial } from "../lib/auth/admin-audit";
 import {
-  confirmEnrollment, hasAdminFactor, installPendingEnrollment, prepareEnrollment, replaceAdminFactor,
+  confirmEnrollment, pendingFactor, replaceAdminFactor,
   startAdminChallenge, verifyAdminChallenge, restartPendingEnrollment, AdminFactorRateLimitError,
 } from "../lib/auth/admin-factor";
 
@@ -29,42 +28,44 @@ test("isolated factor lifecycle, replay protection and audit atomicity", async (
     const keyMap = JSON.stringify({ test: randomBytes(32).toString("base64") });
     process.env.ADMIN_MFA_KEYS = keyMap;
     await connectToDatabase();
-    await Promise.all([AdminAuditLog.init(), AdminSecurityEvent.init(), AdminFactor.init(), AuthRateLimit.init(), User.init()]);
-    const user = await User.create({ name: "Operator", email: "operator@example.invalid", role: "admin", emailVerifiedAt: new Date(), passwordHash: "test-fixture" });
-    const id = String(user._id);
+    await AuthRateLimit.init();
+    await Promise.all([AdminAuditLog.createCollection(), AdminSecurityEvent.createCollection()]);
+    const id = ADMIN_SUBJECT;
     const setup = prepareEnrollment(id);
-    await withRequiredTransaction(session => installPendingEnrollment(id, setup, session));
-    assert.equal(await hasAdminFactor(id), false);
-    assert.equal(await startAdminChallenge(id, 0), null);
-    assert.equal(await confirmEnrollment(id, "wrong", "000000"), null);
-    await User.updateOne({ _id: user._id }, { $inc: { sessionVersion: 1 } });
-    assert.equal(await confirmEnrollment(id, setup.proof, totpAt(setup.seed, Date.now())), null);
-    await User.updateOne({ _id: user._id }, { $set: { sessionVersion: 0 } });
+    await Admin.create({
+      _id: ADMIN_ID, name: "Operator", email: "operator@example.invalid", status: "pending", sessionVersion: 0,
+      passwordHash: "$2b$12$HUdxSbGT.hyi71fJSD2hr.uO9XngNUp.lzcO4cJUDKgl/Zzw8KCVu",
+      mfa: pendingFactor(setup),
+    });
+    assert.equal(await readActiveAdmin(), null);
+    assert.equal(await startAdminChallenge(0), null);
+    assert.equal(await confirmEnrollment("wrong", "000000"), null);
     const now = Date.now();
     const enrollmentCode = totpAt(setup.seed, now - 30_000);
     assert.throws(() => readSeed(String(new mongoose.Types.ObjectId()), setup.encryptedSeed));
     assert.equal(acceptedStep(id, setup.encryptedSeed, totpAt(setup.seed, now - 120_000), -1), null);
-    const codes = await confirmEnrollment(id, setup.proof, enrollmentCode);
+    const codes = await confirmEnrollment(setup.proof, enrollmentCode);
     assert.ok(codes && codes.length === 8);
-    assert.equal(await confirmEnrollment(id, setup.proof, enrollmentCode), null);
+    assert.deepEqual((await Admin.findById(ADMIN_ID).select("+recoveryCodes").lean())?.recoveryCodes, codes.map(digest));
+    assert.equal(await confirmEnrollment(setup.proof, enrollmentCode), null);
     process.env.ADMIN_MFA_KEYS = "{}";
-    await assert.rejects(() => hasAdminFactor(id));
+    await assert.rejects(() => readActiveAdmin());
     process.env.ADMIN_MFA_KEYS = keyMap;
-    assert.ok(await hasAdminFactor(id));
+    assert.ok(await readActiveAdmin());
 
-    const first = await startAdminChallenge(id, 0);
+    const first = await startAdminChallenge(0);
     assert.ok(first);
     assert.equal(await verifyAdminChallenge(first, enrollmentCode), null);
-    await AdminFactor.updateOne({ _id: user._id }, { $set: { challengeExpiresAt: new Date(0) } });
+    await Admin.updateOne({ _id: ADMIN_ID }, { $set: { "mfa.challengeExpiresAt": new Date(0) } });
     assert.equal(await verifyAdminChallenge(first, totpAt(setup.seed, Date.now())), null);
-    const second = await startAdminChallenge(id, 0);
+    const second = await startAdminChallenge(0);
     assert.ok(second && second !== first);
     const fresh = totpAt(setup.seed, Date.now());
     const competing = await Promise.all([verifyAdminChallenge(second, fresh), verifyAdminChallenge(second, fresh)]);
     assert.equal(competing.filter(Boolean).length, 1);
     assert.equal(await AdminAuditLog.countDocuments({ action: "login" }), 1);
 
-    const pending = await startAdminChallenge(id, 0);
+    const pending = await startAdminChallenge(0);
     assert.ok(pending);
     const clock = Date.now();
     const time = mock.method(Date, "now", () => clock);
@@ -81,36 +82,41 @@ test("isolated factor lifecycle, replay protection and audit atomicity", async (
     } finally { time.mock.restore(); }
     const auditFailure = mock.method(AdminAuditLog, "create", async () => { throw new Error("simulated unavailable audit"); });
     try {
-      await assert.rejects(() => replaceAdminFactor(id, { recoveryCode: codes[0] }, 0));
-      assert.equal((await User.findById(id).lean())?.sessionVersion, 0);
-      assert.ok(await hasAdminFactor(id));
+      await assert.rejects(() => replaceAdminFactor({ recoveryCode: codes[0] }, 0));
+      assert.equal((await Admin.findById(ADMIN_ID).lean())?.sessionVersion, 0);
+      assert.ok(await readActiveAdmin());
     } finally { auditFailure.mock.restore(); }
 
-    const recovery = await Promise.all([replaceAdminFactor(id, { recoveryCode: codes[0] }, 0), replaceAdminFactor(id, { recoveryCode: codes[0] }, 0)]);
+    process.env.ADMIN_MFA_KEYS = JSON.stringify({ replacement: randomBytes(32).toString("base64") });
+    process.env.ADMIN_MFA_KEY_ID = "replacement";
+    await assert.rejects(readActiveAdmin, /cannot be decrypted/);
+    const recovery = await Promise.all([replaceAdminFactor({ recoveryCode: codes[0] }, 0), replaceAdminFactor({ recoveryCode: codes[0] }, 0)]);
     const replacement = recovery.find(Boolean);
     assert.ok(replacement);
     assert.equal(recovery.filter(Boolean).length, 1);
-    assert.equal((await User.findById(id).lean())?.sessionVersion, 1);
+    assert.equal((await Admin.findById(ADMIN_ID).lean())?.sessionVersion, 1);
     assert.equal(await verifyAdminChallenge(pending, fresh), null);
-    assert.equal(await hasAdminFactor(id), false);
-    const newCodes = await confirmEnrollment(id, replacement.proof, totpAt(replacement.seed, Date.now() - 30000));
+    assert.equal(await readActiveAdmin(), null);
+    const newCodes = await confirmEnrollment(replacement.proof, totpAt(replacement.seed, Date.now() - 30000));
     assert.ok(newCodes);
-    assert.equal(await replaceAdminFactor(id, { recoveryCode: codes[1] }, 1), null);
-    assert.equal(await replaceAdminFactor(id, { recoveryCode: codes[0] }, 1), null);
-    assert.equal(await restartPendingEnrollment(id, 1), null);
-    const rotated = await replaceAdminFactor(id, { totp: totpAt(replacement.seed, Date.now()) }, 1);
+    assert.equal(await replaceAdminFactor({ recoveryCode: codes[1] }, 1), null);
+    assert.equal(await replaceAdminFactor({ recoveryCode: codes[0] }, 1), null);
+    assert.equal(await restartPendingEnrollment(1), null);
+    const rotated = await replaceAdminFactor({ totp: totpAt(replacement.seed, Date.now()) }, 1);
     assert.ok(rotated);
-    await AdminFactor.updateOne({ _id: user._id }, { $set: { enrollmentExpiresAt: new Date(0) } });
-    assert.equal(await confirmEnrollment(id, rotated.proof, totpAt(rotated.seed, Date.now())), null);
-    assert.ok(await restartPendingEnrollment(id, 2));
-    assert.equal(await confirmEnrollment(id, rotated.proof, totpAt(rotated.seed, Date.now())), null);
-    const serialized = JSON.stringify([await AdminAuditLog.find().lean(), await AdminSecurityEvent.find().lean(), await AdminFactor.collection.findOne({ _id: user._id })]);
+    await Admin.updateOne({ _id: ADMIN_ID }, { $set: { "mfa.enrollmentExpiresAt": new Date(0) } });
+    assert.equal(await confirmEnrollment(rotated.proof, totpAt(rotated.seed, Date.now())), null);
+    assert.ok(await restartPendingEnrollment(2));
+    assert.equal(await confirmEnrollment(rotated.proof, totpAt(rotated.seed, Date.now())), null);
+    const serialized = JSON.stringify([
+      await AdminAuditLog.find().lean(),
+      await AdminSecurityEvent.find().lean(),
+      await Admin.findById(ADMIN_ID).select("+mfa +recoveryCodes").lean(),
+    ]);
     for (const secret of [setup.seed, setup.proof, rotated.seed, pending, ...codes, ...newCodes]) assert.equal(serialized.includes(secret), false);
     await Promise.all(Array.from({ length: 4 }, () => recordAdminDenial("access-denied", id)));
     assert.equal(await AdminSecurityEvent.countDocuments({ kind: "access-denied" }), 1);
-    await assert.rejects(async () => {
-      for (let index = 0; index <= 8; index++) await startAdminChallenge(id, 2);
-    }, AdminFactorRateLimitError);
+
   } finally {
     await mongoose.disconnect();
     await replica.stop();

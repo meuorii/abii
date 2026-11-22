@@ -15,7 +15,7 @@ export async function adminCookieOrDeny(): Promise<string> {
   if (jar.get(SESSION_COOKIE)?.value && (process.env.AUTH_SECRET?.length ?? 0) < 32) throw new AdminAccessError(503);
   let ordinary;
   try { ordinary = await getCurrentUser(); } catch { throw new AdminAccessError(503); }
-  await recordAdminDenial("access-denied", ordinary ? String(ordinary._id) : undefined);
+  await recordAdminDenial("access-denied");
   throw new AdminAccessError(ordinary ? 403 : 401);
 }
 

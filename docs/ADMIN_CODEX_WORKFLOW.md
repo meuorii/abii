@@ -11,9 +11,9 @@
 
 ## 2. Skills and implementation discipline
 
-- Default to **one primary skill and at most one supporting skill per task**. For Phase 2: `api-security` + `mongodb-mongoose` when needed; substitute `backend-architecture` if the task concerns service/session boundaries. Do not repeatedly load skill instructions that are already available in the current session.
+- Use **one primary skill and at most one supporting skill per stage**. For Phase 2, pair `graphify` with `api-security` for dependency review, `mongodb-mongoose` with `ponytail` for the singleton and setup, and `api-security` with `mongodb-mongoose` for authentication review and validation.
 - Apply Ponytail principles: smallest complete, readable, well-tested solution. Do not remove security controls, audit guarantees, validation, or tests to save tokens.
-- Graphify is optional: use an existing working index if available; otherwise use targeted `rg`/imports. Do not install or regenerate it just for exploration.
+- Follow `graphify`'s narrow lookup guidance. Use an existing working index if available, or trace targeted `rg` results and imports. Avoid installing or generating an index for a narrow review.
 - Avoid broad refactors, new dependencies, speculative abstractions, and unrelated formatting.
 - Make **one cohesive, reviewable change** at a time; implement and verify before expanding scope.
 
@@ -33,19 +33,17 @@
 - Never reveal secrets, passwords, recovery codes, OTP values, tokens, or connection strings in output or handoffs.
 - Do not begin another phase automatically.
 
-## 5. Active handoff — Phase 2
+## 5. Active handoff
 
-**Status** Code Complete — Deployment Pending.
+**Status** Phase 2 uses `abii.admins` for the singleton identity and MFA. Production provisioning awaits operator authorization.
 
-**Verified** Isolated replica-set tests covered effective partial uniqueness, competing provisioning for distinct emails, factor enrollment and recovery, MFA throttling, replay and logout races, session revocation, and auditable writes. A fixture application role verified the collection-scoped `listIndexes` grant. Route tests covered admin account protection and ordinary registration, verification, login, logout, recovery, and account operations.
+**Verified** The isolated authenticated replica set exercised simultaneous claim, audit rollback, expired pending enrollment, and preservation of learner records and the legacy index. Security tests also exercise replay, credential recovery, session revocation and legacy conflicts.
 
-**Tests** `npm.cmd run test:admin-security` 8/8, `test:auth-login` 1/1, `test:auth-email` 5/5, `test:auth-ui` 4/4. `typecheck`, `lint`, and `build` passed. Lint and build reported the three documented baseline lint warnings. Build used an unreachable loopback MongoDB URI and fixture configuration.
+**Validation** `test:admin-security` 14/14, `test:auth-login` 1/1, `test:auth-email` 5/5, and `test:admin-ui` 1/1 covering all eight pages. Typecheck, lint and the loopback-isolated production build passed. Lint and build reported three existing warnings.
 
-**Files changed** `scripts/admin-factor.test.ts`, `scripts/admin-operator.test.ts`, `scripts/admin-session.test.ts`, `docs/ADMIN_CODEX_WORKFLOW.md`, `docs/ADMIN_DASHBOARD_IMPLEMENTATION.md`.
+**Deployment gates** Resolve any legacy administrator and missing existing security storage under separate approval. Verify Atlas inventory, scoped permissions, mailbox ownership, trusted deployment configuration, and an independent restore. The named backup passed a restore dry-run.
 
-**Deployment gates** Approve read-only operator access to the named target for topology and index verification. Verify collection-scoped `listIndexes` using the deployed application's credential and check the deployed HTTPS origin and MFA keyring configuration. Separately approve any index preparation and private provisioning and enrollment. Rehearse recovery on an isolated deployment before activation. Keep admin dashboard routes closed until these checks pass.
-
-**Next task** Have an authorized operator run the read-only `verify` procedure in `docs/ADMIN_OPERATOR.md` on the independently confirmed target and record the application credential's index access.
+**Next task** Follow `docs/ADMIN_OPERATOR.md` and run `npm run admin:setup` in the authorized production window.
 
 ## 6. Update this compact handoff at the end of each task
 

@@ -1,4 +1,6 @@
 import { NextResponse, after } from "next/server";
+import { cookies } from "next/headers";
+import { ADMIN_COOKIE, CHALLENGE_COOKIE } from "@/lib/auth/admin-session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { activeOrdinaryAccount, User } from "@/models/User";
 import { AuthChallenge } from "@/models/AuthChallenge";
@@ -11,6 +13,10 @@ import { notifyAccountSecurityChange } from "@/lib/notifications/producers";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
   if (!validOrigin(request)) return NextResponse.json({ message: "Invalid request origin." }, { status: 403 });
+  const jar = await cookies();
+  if (jar.has(ADMIN_COOKIE) || jar.has(CHALLENGE_COOKIE)) {
+    return NextResponse.json({ message: "Sign out before verifying an ordinary account." }, { status: 409 });
+  }
   const userId = await readPendingIdentity();
   if (!userId) return NextResponse.json({ message: "Your verification session expired. Please sign in again." }, { status: 401 });
   let body: { code?: unknown; next?: unknown }; try { body = await request.json(); } catch { body = {}; }

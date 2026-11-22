@@ -265,18 +265,38 @@ test("existing account login routes unverified users through OTP and preserves v
     await db.collection("passwordresetgrants").insertOne({ userId: registered._id, tokenHash: createHash("sha256").update(rawGrant).digest("hex"), expiresAt: new Date(Date.now() + 60000), consumedAt: null });
     assert.equal((await post("/api/auth/forgot-password/reset", { password: newPassword, confirmPassword: newPassword }, `abii_password_reset_v2=${staleTicket}`)).response.status, 401);
     assert.equal((await users.findOne({ email })).passwordHash, registered.passwordHash);
-    const { prepareEnrollment, totpAt } = await import("../lib/auth/admin-factor-crypto.ts");
-    const enrollment = prepareEnrollment(String(registered._id));
-    await users.createIndex({ role: 1 }, {
-      name: "user_single_admin_unique", unique: true, partialFilterExpression: { role: "admin" },
+    const { digest, prepareEnrollment, totpAt } = await import("../lib/auth/admin-factor-crypto.ts");
+    const enrollment = prepareEnrollment("admin:primary");
+    const adminEmail = "separate-administrator@example.invalid";
+    const admins = db.collection("admins");
+    await db.createCollection("adminauditlogs");
+    await db.createCollection("adminsecurityevents");
+    await admins.insertOne({
+      _id: "primary", name: "Fixture admin", email: adminEmail, passwordHash: await bcrypt.hash(fixturePassword, 12),
+      status: "active", sessionVersion: 0, createdAt: now, updatedAt: now,
+      mfa: { encryptedSeed: enrollment.encryptedSeed, lastStep: Math.floor(Date.now() / 30_000) - 2, completedChallenges: [] },
+      recoveryCodes: Array.from({ length: 8 }, (_, index) => digest(String(index))),
     });
-    await db.collection("adminfactors").insertOne({ _id: registered._id, state: "active", encryptedSeed: enrollment.encryptedSeed, lastStep: -1, recoveryHashes: [] });
     async function adminPost(path, body, header, origin = base) {
       return fetch(base + path, { method: "POST", headers: { Origin: origin, Cookie: header, "Content-Type": "application/json" }, body: JSON.stringify(body) });
     }
-    const passwordOnly = await adminPost("/api/auth/login", { email, password: fixturePassword }, "");
+    const oldLogin = await adminPost("/api/auth/login", { email, password: fixturePassword }, "");
+    const blockedLogin = await adminPost("/api/auth/login", { email: adminEmail, password: fixturePassword }, "");
+    assert.equal(oldLogin.status, 401);
+    assert.equal(blockedLogin.status, 401);
+    assert.deepEqual(await oldLogin.json(), await blockedLogin.json());
+    await users.updateOne({ _id: registered._id }, { $set: { role: "user" } });
+    const wrongAdminPassword = await adminPost("/api/auth/login", { email: adminEmail, password: "incorrect" }, "");
+    assert.equal(wrongAdminPassword.status, 401);
+    assert.deepEqual(await wrongAdminPassword.json(), wrong.body);
+    assert.equal((await post("/api/auth/register", { name: "Attempted duplicate", email: adminEmail, password: fixturePassword, role: "admin" })).response.status, 409);
+    assert.equal(await users.countDocuments({ email: adminEmail }), 0);
+    assert.deepEqual((await post("/api/auth/forgot-password", { email: adminEmail })).body, recoveryResponse.body);
+    assert.equal((await post("/api/auth/forgot-password/verify", { email: adminEmail, code: "123456" })).response.status, 400);
+    const passwordOnly = await adminPost("/api/auth/login", { email: adminEmail, password: fixturePassword }, ordinaryCookie);
     assert.equal((await passwordOnly.json()).code, "ADMIN_MFA_REQUIRED");
     assert.ok(!cookie(passwordOnly, "abii_admin"));
+    assert.equal(cookie(passwordOnly, "abii_session"), "");
     const pendingMfa = cookie(passwordOnly, "abii_admin_pending");
     assert.ok(pendingMfa);
     const challengeCookie = "abii_admin_pending=" + pendingMfa;
@@ -291,12 +311,16 @@ test("existing account login routes unverified users through OTP and preserves v
     assert.ok(authenticated.headers.getSetCookie().some(row => row.startsWith("abii_admin=") && /max-age=1800/i.test(row) && /httponly/i.test(row) && /samesite=strict/i.test(row)));
     assert.ok((await adminPost("/api/auth/admin-mfa", secondFactor, challengeCookie)).status >= 400);
     assert.equal((await get("/api/data/export", "abii_session=" + adminJwt)).response.status, 401);
+    assert.equal((await get("/api/data/export", "abii_admin=" + adminJwt)).response.status, 401);
+    assert.equal((await patch("/api/account/profile", { name: "Changed", email: adminEmail }, "abii_admin=" + adminJwt)).response.status, 401);
+    assert.equal((await deleteAccount("abii_admin=" + adminJwt)).status, 401);
     const pendingOnlyLogout = await adminPost("/api/auth/logout", {}, challengeCookie);
     assert.equal(pendingOnlyLogout.status, 200);
     assert.ok(pendingOnlyLogout.headers.getSetCookie().some(row => row.startsWith("abii_admin=") && /max-age=0/i.test(row)));
-    assert.equal((await users.findOne({ email })).sessionVersion, 1);
+    assert.equal((await admins.findOne({ _id: "primary" })).sessionVersion, 1);
     assert.equal((await adminPost("/api/auth/logout", {}, "abii_admin=" + adminJwt)).status, 200);
-    assert.equal((await users.findOne({ email })).sessionVersion, 1);
+    assert.equal((await admins.findOne({ _id: "primary" })).sessionVersion, 1);
+    assert.equal((await users.findOne({ email })).sessionVersion, 0);
     await users.updateOne({ _id: registered._id }, { $set: { role: "user", suspendedAt: new Date() }, $inc: { sessionVersion: 1 } });
     assert.equal((await get("/api/data/export", ordinaryCookie)).response.status, 401);
     assert.ok((await post("/api/auth/login", { email, password: fixturePassword })).response.status >= 400);

@@ -1,7 +1,6 @@
 
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -11,6 +10,11 @@ import { ScrollRootProvider } from "@/components/motion/scroll-root-context";
 import { LayoutDashboard, BookOpen, RotateCcw, ChartNoAxesColumn, Settings, ChevronDown, Award } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { NotificationProvider } from "@/components/notifications/notification-context";
+import {
+  WorkspaceBrandMark, WorkspaceSidebarFooter, workspaceBrandSubtitle, workspaceHeader,
+  workspaceAccountButton, workspaceAvatar, workspaceAccountName, workspaceChevron, workspaceAccountPanel,
+  workspaceNavLink, workspaceNavActive, workspaceNavInactive,
+} from "@/components/ui/workspace-chrome";
 
 const desktopNavigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -53,25 +57,10 @@ function Brand({ compact = false }: { compact?: boolean }) {
         compact ? "gap-2" : "flex-col items-start gap-1"
       }`}
     >
-      <span className="flex items-center gap-2.5">
-        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FFE8EF]">
-          <Image
-            src="/abii-head.png"
-            alt="Abii mascot"
-            width={40}
-            height={40}
-            priority
-            className="h-full w-full object-contain"
-          />
-        </span>
-
-        <span className="font-brand text-[29px] leading-none text-[#E9577D]">
-          Abii
-        </span>
-      </span>
+      <WorkspaceBrandMark alt="Abii mascot" />
 
       {!compact && (
-        <span className="pl-[48px] text-[10px] leading-4 text-[#8B7C84]">
+        <span className={workspaceBrandSubtitle}>
           Learn a little, remember a lot.
         </span>
       )}
@@ -150,11 +139,7 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex min-h-[43px] items-center gap-3 rounded-[10px] px-3.5 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] ${
-                    active
-                      ? "bg-[#FFE8EF] text-[#E9577D]"
-                      : "text-[#6F8293] hover:bg-[#FFF4F7] hover:text-[#2F2930]"
-                  }`}
+                  className={`${workspaceNavLink} ${active ? workspaceNavActive : workspaceNavInactive}`}
                 >
                   <item.icon aria-hidden="true" className="h-5 w-5" />
 
@@ -164,23 +149,11 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
             })}
           </nav>
 
-          <div className="pointer-events-none relative mt-auto h-[110px] overflow-hidden px-5 pb-5 pt-2">
-            <p className="relative z-10 text-[11px] leading-[1.65] text-[#8B9BAA]">
-              <span className="mb-1 block text-base leading-none text-[#FF9FBA]">
-                ♥
-              </span>
-              Small steps,
-              <br />
-              big progress!
-            </p>
-
-            <div className="absolute -bottom-8 -left-5 h-20 w-40 rounded-[50%] bg-[#FFF0F5]" />
-            <div className="absolute -bottom-10 left-16 h-20 w-28 rounded-[50%] bg-[#FFF0F5]" />
-          </div>
+          <WorkspaceSidebarFooter />
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="relative z-20 flex h-[76px] shrink-0 items-center justify-between border-b border-[#F4EDF0] bg-white px-4 sm:px-6 lg:justify-end lg:px-8">
+          <header className={workspaceHeader}>
             <div className="lg:hidden">
               <Brand compact />
             </div>
@@ -199,9 +172,9 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
                   aria-label="Open account menu"
                   aria-expanded={profileMenuOpen}
                   onClick={() => { window.dispatchEvent(new Event("abii:close-notification-popover")); setProfileMenuOpen((open) => !open); }}
-                  className="flex min-h-10 items-center gap-2.5 rounded-full px-1.5 py-1 text-left transition-colors hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]"
+                  className={workspaceAccountButton}
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FFE0E9] text-sm font-semibold text-[#D94E7B]">
+                  <span className={workspaceAvatar}>
                     {profileImage ? (
                       <img
                         src={profileImage}
@@ -213,15 +186,15 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
                     )}
                   </span>
 
-                  <span className="hidden max-w-[150px] truncate text-xs font-medium text-[#657B8E] sm:block">
+                  <span className={workspaceAccountName}>
                     {userName || "Abii learner"}
                   </span>
 
-                  <ChevronDown aria-hidden="true" className="hidden h-4 w-4 text-[#8292A0] sm:block" />
+                  <ChevronDown aria-hidden="true" className={workspaceChevron} />
                 </button>
 
                 {profileMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-48 rounded-xl border border-[#E8E2E5] bg-white p-2 shadow-lg">
+                  <div className={workspaceAccountPanel}>
                     <Link
                       href="/profile"
                       aria-current={pathname === "/profile" ? "page" : undefined}

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 export type AbiiHeroVariant =
   | "dashboard"
+  | "admin"
   | "subjects"
   | "review"
   | "progress"
@@ -29,6 +30,16 @@ type VariantStyle = {
 };
 
 const variants: Record<AbiiHeroVariant, VariantStyle> = {
+  admin: {
+    section: "sm:border-[#F6DCE5]",
+    layout: "sm:min-h-[248px] lg:min-h-[280px] xl:min-h-[310px]",
+    content: "sm:max-w-[56%] sm:px-8 sm:py-8 lg:px-9",
+    mascot: "sm:w-[40%]",
+    mascotAnchor: "sm:right-[3%]",
+    // Every admin PNG has visible artwork through its bottom row.
+    mascotFrame: "sm:top-3 sm:bottom-0",
+    imageSizes: "(max-width: 639px) 36vw, (max-width: 1023px) 248px, 310px",
+  },
   dashboard: {
     section: "sm:rounded-[20px] sm:border-[#F6DCE5] sm:bg-[#FFF0F5]",
     layout: "sm:min-h-[248px] lg:min-h-[254px]",
@@ -169,6 +180,7 @@ export function AbiiPageHero({
 }: AbiiPageHeroProps) {
   const style = variants[variant];
   const hasPreTitle = variant === "quiz-session" && preTitle != null;
+  const admin = variant === "admin";
 
   return (
     <section
@@ -176,7 +188,7 @@ export function AbiiPageHero({
       className={`abii-page-hero relative isolate overflow-hidden rounded-[20px] border border-[#F5DDE5] bg-[#FFF0F5] ${style.section} ${className}`}
     >
       {decoration}
-      <div className={`abii-page-hero__layout relative z-10 grid min-h-[168px] grid-cols-[minmax(0,1fr)_minmax(78px,34%)] items-stretch gap-x-2 pl-4 pr-3 pt-3.5 pb-0 min-[360px]:grid-cols-[minmax(0,1fr)_minmax(100px,38%)] sm:flex sm:min-h-0 sm:items-center sm:gap-0 sm:px-0 sm:py-0 ${style.layout}`}>
+      <div className={`abii-page-hero__layout relative z-10 grid min-h-[168px] grid-cols-[minmax(0,1fr)_minmax(78px,34%)] items-stretch gap-x-2 pl-4 pr-3 pt-3.5 pb-0 min-[360px]:grid-cols-[minmax(0,1fr)_minmax(100px,38%)] sm:flex sm:items-center sm:gap-0 sm:px-0 sm:py-0 ${admin ? "" : "sm:min-h-0"} ${style.layout}`}>
         <div className={`abii-page-hero__content relative z-10 flex min-w-0 flex-col justify-center py-3 sm:w-full ${style.content}`}>
           {eyebrow != null && <div className="abii-page-hero__eyebrow abii-enter min-w-0">{eyebrow}</div>}
           {preTitle != null && <div className={`abii-page-hero__pre-title ${hasPreTitle ? "abii-enter-1" : "abii-enter-3"} min-w-0 break-words`}>{preTitle}</div>}
@@ -185,7 +197,7 @@ export function AbiiPageHero({
           {metadata != null && <div className="abii-page-hero__metadata abii-enter abii-enter-3 min-w-0 break-words">{metadata}</div>}
           {actions != null && <div className="abii-page-hero__actions abii-enter abii-enter-4 min-w-0">{actions}</div>}
         </div>
-        <div className={`abii-page-hero__mascot abii-enter-art pointer-events-none relative col-start-2 row-start-1 flex min-h-[154px] min-w-0 items-end justify-center min-[360px]:min-h-[158px] sm:absolute ${style.mascotAnchor ?? "sm:right-0"} sm:col-auto sm:row-auto sm:min-h-0 sm:items-end ${style.mascotFrame ? "" : "sm:top-0 sm:bottom-0"} ${style.mascot} ${style.mascotFrame ?? ""}`}>
+        <div className={`abii-page-hero__mascot abii-enter-art pointer-events-none relative col-start-2 row-start-1 flex min-w-0 items-end justify-center ${admin ? "max-sm:min-h-[154px] min-[360px]:max-sm:min-h-[158px]" : "min-h-[154px] min-[360px]:min-h-[158px] sm:min-h-0"} sm:absolute ${style.mascotAnchor ?? "sm:right-0"} sm:col-auto sm:row-auto sm:items-end ${style.mascotFrame ? "" : "sm:top-0 sm:bottom-0"} ${style.mascot} ${style.mascotFrame ?? ""}`}>
           <Image
             src={mascotSrc}
             alt={mascotAlt}

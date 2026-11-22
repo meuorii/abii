@@ -6,6 +6,8 @@ import { privateJson, trustedAdminOrigin } from "@/lib/auth/admin-http";
 import { SESSION_COOKIE_OPTIONS } from "@/lib/auth/constants";
 import { rateAllowedByTrustedIp } from "@/lib/auth/http";
 import { safeAdminPath } from "@/lib/auth/redirect";
+import { destroySession } from "@/lib/auth/session";
+import { clearAuthFlowCookies } from "@/lib/auth/tickets";
 
 export const runtime = "nodejs";
 
@@ -22,6 +24,8 @@ export async function POST(request: Request) {
     if (!await rateAllowedByTrustedIp(request, "admin-mfa-ip", 20, 300_000)) throw new AdminFactorRateLimitError();
     const token = await finishAdminLogin(pending, body.code);
     if (!token) return privateJson({ message: "Check your code. If the request has expired, sign in again." }, 401);
+    await destroySession();
+    await clearAuthFlowCookies();
     jar.set(CHALLENGE_COOKIE, "", { ...SESSION_COOKIE_OPTIONS, maxAge: 0 });
     jar.set(ADMIN_COOKIE, token, { ...SESSION_COOKIE_OPTIONS, maxAge: ADMIN_LIFETIME });
     return privateJson({ redirectTo: safeAdminPath(body.next) });

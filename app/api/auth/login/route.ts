@@ -1,13 +1,15 @@
 import { cookies } from "next/headers";
 import { recordAdminDenial } from "@/lib/auth/admin-audit";
-import { AdminFactorRateLimitError, cancelAdminChallenge, startAdminChallenge } from "@/lib/auth/admin-factor";
+import { ADMIN_CHALLENGE_LIFETIME, AdminFactorRateLimitError, revokeAdminChallenge, startAdminChallenge } from "@/lib/auth/admin-factor";
+import { AdminIntegrityError, adminEmailReserved, readActiveAdmin } from "@/lib/auth/admin-identity";
 import { ADMIN_COOKIE, CHALLENGE_COOKIE } from "@/lib/auth/admin-session";
 import { revokeAdminSession } from "@/lib/auth/admin-session-state";
 import { privateJson, trustedAdminOrigin } from "@/lib/auth/admin-http";
 import { SESSION_COOKIE_OPTIONS } from "@/lib/auth/constants";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { activeOrdinaryAccount, User } from "@/models/User";
+import { ADMIN_SUBJECT } from "@/models/Admin";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { validateLogin } from "@/lib/auth/validation";
 import { clearPendingIdentity, setPendingIdentity } from "@/lib/auth/tickets";
@@ -16,6 +18,7 @@ import { sendVerificationEmail } from "@/lib/email/brevo";
 import { rateAllowed, rateAllowedByTrustedIp, validOrigin } from "@/lib/auth/http";
 
 export const runtime = "nodejs";
+const dummyPasswordHash = "$2b$12$HUdxSbGT.hyi71fJSD2hr.uO9XngNUp.lzcO4cJUDKgl/Zzw8KCVu";
 
 export async function POST(request: Request) {
   if (!validOrigin(request)) return privateJson({ message: "Invalid request origin." }, 403);
@@ -31,35 +34,43 @@ export async function POST(request: Request) {
     if (!(await rateAllowedByTrustedIp(request, "login-ip", 30, 60 * 60_000))) return privateJson({ message: "Too many attempts. Please wait and try again." }, 429);
 
     await connectToDatabase();
-    const user = await User.findOne({ email: values.email }).select("+passwordHash");
-    const matches = user ? await bcrypt.compare(values.password, user.passwordHash) : false;
-    if (!user || !matches || user.suspendedAt) {
-      if (user?.role === "admin") await recordAdminDenial("login-denied", user.id);
+    const reserved = await adminEmailReserved(values.email);
+    const admin = reserved ? await readActiveAdmin().catch(error => {
+      if (error instanceof AdminIntegrityError) return null;
+      throw error;
+    }) : null;
+    const user = reserved ? null : await User.findOne({ email: values.email, ...activeOrdinaryAccount }).read("primary").select("+passwordHash");
+    const matches = await bcrypt.compare(values.password, admin?.passwordHash ?? user?.passwordHash ?? dummyPasswordHash);
+    const adminMatches = admin?.email === values.email && matches &&
+      Buffer.byteLength(values.password, "utf8") <= 72 && !values.password.includes("\0");
+    if (!adminMatches && (!user || !matches)) {
+      if (reserved) await recordAdminDenial("login-denied", ADMIN_SUBJECT);
       return privateJson({ message: "Email or password is incorrect. Please try again." }, 401);
     }
     const jar = await cookies();
     const priorAdmin = jar.get(ADMIN_COOKIE)?.value;
     const priorChallenge = jar.get(CHALLENGE_COOKIE)?.value;
-    let version = user.sessionVersion ?? 0;
-    if ((user.role === "admin" || priorAdmin || priorChallenge) && !trustedAdminOrigin(request)) return privateJson({ message: "Invalid request origin." }, 403);
+    if ((adminMatches || priorAdmin || priorChallenge) && !trustedAdminOrigin(request)) return privateJson({ message: "Invalid request origin." }, 403);
     if (priorChallenge) {
-      await cancelAdminChallenge(priorChallenge);
+      await revokeAdminChallenge(priorChallenge);
       jar.set(CHALLENGE_COOKIE, "", { ...SESSION_COOKIE_OPTIONS, maxAge: 0 });
     }
     if (priorAdmin) {
-      const revoked = await revokeAdminSession(priorAdmin);
+      await revokeAdminSession(priorAdmin);
       jar.set(ADMIN_COOKIE, "", { ...SESSION_COOKIE_OPTIONS, maxAge: 0 });
-      if (revoked && revoked.userId === user.id && revoked.version === version) version += 1;
     }
-    if (user.role === "admin") {
-      if (!(user.emailVerifiedAt instanceof Date)) return privateJson({ message: "Sign-in unavailable." }, 403);
-      const challenge = await startAdminChallenge(user.id, version);
+    if (admin && adminMatches) {
+      // Re-read after revocation but require the same verified password and active identity.
+      const current = await readActiveAdmin();
+      const challenge = current?.passwordHash === admin.passwordHash
+        ? await startAdminChallenge(current.sessionVersion) : null;
       if (!challenge) return privateJson({ message: "Sign-in unavailable." }, 403);
       await destroySession();
       await clearPendingIdentity();
-      jar.set(CHALLENGE_COOKIE, challenge, { ...SESSION_COOKIE_OPTIONS, maxAge: 300 });
+      jar.set(CHALLENGE_COOKIE, challenge, { ...SESSION_COOKIE_OPTIONS, maxAge: ADMIN_CHALLENGE_LIFETIME });
       return privateJson({ code: "ADMIN_MFA_REQUIRED" }, 202);
     }
+    if (!user) return privateJson({ message: "Email or password is incorrect. Please try again." }, 401);
     if (!(user.emailVerifiedAt instanceof Date)) {
       // A legacy cookie must not survive a successful password check for an
       // unverified account. The pending ticket below is deliberately not a session.

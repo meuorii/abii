@@ -1,182 +1,180 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { type ClientSession, Types } from "mongoose";
-import { AdminFactor } from "@/models/AdminFactor";
-import { activeAdminAccount, User } from "@/models/User";
+import { Admin, ADMIN_ID, ADMIN_SUBJECT } from "@/models/Admin";
 import { withRequiredTransaction } from "@/lib/mongodb-transaction";
 import { connectToDatabase } from "@/lib/mongodb";
 import { checkAuthRateLimit } from "./rate-limit";
-import { auditAdmin, recordAdminDenial } from "./admin-audit";
-import { acceptedStep, digest, prepareEnrollment, readSeed } from "./admin-factor-crypto";
+import { auditAdmin, recordAdminDenial, requireAdminAuditStorage } from "./admin-audit";
+import { assertNoLegacyAdmin, readActiveAdmin, readAdmin } from "./admin-identity";
+import { acceptedStep, digest, prepareEnrollment } from "./admin-factor-crypto";
 
-export { prepareEnrollment };
-type Enrollment = ReturnType<typeof prepareEnrollment>;
 type Credential = { recoveryCode: string } | { totp: string };
-
-const adminState = activeAdminAccount;
-const clearChallenge = { challengeHash: "", challengeVersion: "", challengeExpiresAt: "" };
+const id = { _id: ADMIN_ID };
+const active = { ...id, status: "active" as const };
+const pending = { ...id, status: "pending" as const };
+const clearChallenge = { "mfa.challengeHash": "", "mfa.challengeVersion": "", "mfa.challengeExpiresAt": "" };
 export const ADMIN_LIFETIME = 1800;
+export const ADMIN_CHALLENGE_LIFETIME = 300;
 
 export class AdminFactorRateLimitError extends Error {
   constructor() { super("Too many attempts. Please try again later."); }
 }
 
-async function limit(scope: string, id: string) {
-  if (!await checkAuthRateLimit("admin-" + scope, id, 8, 5 * 60_000)) throw new AdminFactorRateLimitError();
+async function limit(scope: string) {
+  if (!await checkAuthRateLimit("admin-" + scope, ADMIN_SUBJECT, 8, 5 * 60_000)) throw new AdminFactorRateLimitError();
 }
 
-function pending(enrollment: Enrollment, enrollmentVersion: number) {
+export function pendingFactor(enrollment: ReturnType<typeof prepareEnrollment>) {
   return {
-    state: "pending" as const, encryptedSeed: enrollment.encryptedSeed,
-    proofHash: enrollment.proofHash, enrollmentExpiresAt: enrollment.expiresAt, enrollmentVersion,
-    lastStep: -1, recoveryHashes: [], completedChallenges: [],
+    encryptedSeed: enrollment.encryptedSeed, proofHash: enrollment.proofHash,
+    enrollmentExpiresAt: enrollment.expiresAt, lastStep: -1, completedChallenges: [],
   };
 }
 
-/** Called by the private operator during the same transaction that creates the identity. */
-export async function installPendingEnrollment(userId: string, enrollment: Enrollment, session: ClientSession) {
-  if (!session.inTransaction()) throw new Error("Enrollment requires an active transaction.");
-  const user = await User.findOne({ _id: userId, ...adminState }).select("sessionVersion").session(session).lean();
-  if (!user) throw new Error("Verified administrator required for enrollment.");
-  await AdminFactor.create([{ _id: new Types.ObjectId(userId), ...pending(enrollment, user.sessionVersion) }], { session });
-}
-
-export async function hasAdminFactor(userId: string) {
-  await connectToDatabase();
-  const row = await AdminFactor.findOne({ _id: userId, state: "active" }).select("+encryptedSeed").lean();
-  if (!row) return false;
-  // Detect key loss or damaged authenticated ciphertext during privileged identity validation.
-  readSeed(userId, row.encryptedSeed);
-  return true;
-}
-
-export async function confirmEnrollment(userId: string, proof: string, code: string) {
-  await limit("enroll", userId);
-  const proofHash = digest(proof);
+export async function confirmEnrollment(proof: string, code: string) {
+  await requireAdminAuditStorage();
+  await limit("enroll");
   return withRequiredTransaction(async session => {
-    const now = new Date();
-    const filter = { _id: userId, state: "pending", proofHash, enrollmentExpiresAt: { $gt: now } };
-    const row = await AdminFactor.findOne(filter).session(session).select("+encryptedSeed").lean();
-    if (!row || typeof row.enrollmentVersion !== "number" ||
-        !await User.exists({ _id: userId, sessionVersion: row.enrollmentVersion, ...adminState }).session(session)) return null;
-    const step = acceptedStep(userId, row.encryptedSeed, code, row.lastStep);
+    await assertNoLegacyAdmin(session);
+    const row = await readAdmin(session);
+    const proofHash = digest(proof);
+    if (row?.status !== "pending" || row.mfa.proofHash !== proofHash ||
+        !row.mfa.enrollmentExpiresAt || row.mfa.enrollmentExpiresAt <= new Date()) return null;
+    const step = acceptedStep(ADMIN_SUBJECT, row.mfa.encryptedSeed, code, row.mfa.lastStep);
     if (step === null) return null;
     const codes = Array.from({ length: 8 }, () => randomBytes(20).toString("hex"));
-    const changed = await AdminFactor.updateOne(filter, { $set: {
-      state: "active", lastStep: step, recoveryHashes: codes.map(digest),
-    }, $unset: { proofHash: "", enrollmentExpiresAt: "", enrollmentVersion: "" } }, { session });
+    const changed = await Admin.updateOne({
+      ...pending, sessionVersion: row.sessionVersion,
+      "mfa.proofHash": proofHash, "mfa.enrollmentExpiresAt": { $gt: new Date() },
+    }, {
+      $set: { status: "active", "mfa.lastStep": step, recoveryCodes: codes.map(digest) },
+      $unset: { "mfa.proofHash": "", "mfa.enrollmentExpiresAt": "" },
+    }, { session, runValidators: true });
     if (!changed.modifiedCount) return null;
-    await auditAdmin("enroll", userId, userId, session);
+    await auditAdmin("enroll", ADMIN_SUBJECT, ADMIN_SUBJECT, session);
     return codes;
   });
 }
 
-/** CLI-only. Requires private operator identity verification before issuing a replacement. */
-export async function restartPendingEnrollment(userId: string, expectedVersion: number) {
-  await limit("restart", userId);
+export type EnrollmentRestartStage = "restart audit storage" | "restart rate limit" | "restart transaction" |
+  "restart account recheck" | "restart factor update" | "restart audit write" | "restart transaction commit";
+
+/** Private CLI only, after verifying the original password. */
+export async function restartPendingEnrollment(expectedVersion: number, onStage?: (stage: EnrollmentRestartStage) => void) {
+  onStage?.("restart audit storage");
+  await requireAdminAuditStorage();
+  onStage?.("restart rate limit");
+  await limit("restart");
+  onStage?.("restart transaction");
   return withRequiredTransaction(async session => {
-    if (!await User.exists({ _id: userId, sessionVersion: expectedVersion, ...adminState }).session(session)) return null;
-    const enrollment = prepareEnrollment(userId);
-    const replaced = await AdminFactor.updateOne({
-      _id: userId, state: "pending", enrollmentExpiresAt: { $lte: new Date() },
-    }, { $set: pending(enrollment, expectedVersion) }, { session });
+    onStage?.("restart account recheck");
+    await assertNoLegacyAdmin(session);
+    const row = await readAdmin(session);
+    if (row?.status !== "pending" || row.sessionVersion !== expectedVersion) return null;
+    onStage?.("restart factor update");
+    const enrollment = prepareEnrollment(ADMIN_SUBJECT);
+    const replaced = await Admin.updateOne({
+      ...pending, sessionVersion: expectedVersion, "mfa.enrollmentExpiresAt": { $lte: new Date() },
+    }, { $set: { mfa: pendingFactor(enrollment) } }, { session, runValidators: true });
     if (!replaced.modifiedCount) return null;
-    await auditAdmin("enrollment-restart", userId, userId, session);
+    onStage?.("restart audit write");
+    await auditAdmin("enrollment-restart", ADMIN_SUBJECT, ADMIN_SUBJECT, session);
+    onStage?.("restart transaction commit");
     return { seed: enrollment.seed, proof: enrollment.proof };
   });
 }
 
-/** Only the password verifier may issue an opaque, browser-held, single-use challenge. */
-export async function startAdminChallenge(userId: string, version: number) {
-  await limit("challenge", userId);
-  if (!await User.exists({ _id: userId, sessionVersion: version, ...adminState })) return null;
-  const token = randomBytes(32).toString("base64url");
-  const changed = await AdminFactor.updateOne({ _id: userId, state: "active" }, { $set: {
-    challengeHash: digest(token), challengeVersion: version, challengeExpiresAt: new Date(Date.now() + 300_000),
-  } });
-  return changed.modifiedCount ? token : null;
-}
-
-export async function cancelAdminChallenge(token: string) {
-  if (!/^[\w-]{43}$/.test(token)) return;
+/** Only the password verifier may issue an opaque, browser-held challenge. */
+export async function startAdminChallenge(version: number) {
   await connectToDatabase();
-  await AdminFactor.updateOne({ challengeHash: digest(token) }, { $unset: clearChallenge });
+  const row = await readActiveAdmin();
+  if (!row || row.sessionVersion !== version) return null;
+  await requireAdminAuditStorage();
+  await limit("challenge");
+  const token = randomBytes(32).toString("base64url");
+  const changed = await Admin.updateOne({ ...active, sessionVersion: version }, { $set: {
+    "mfa.challengeHash": digest(token), "mfa.challengeVersion": version,
+    "mfa.challengeExpiresAt": new Date(Date.now() + ADMIN_CHALLENGE_LIFETIME * 1000),
+  } }, { runValidators: true });
+  return changed.modifiedCount ? token : null;
 }
 
 export async function revokeAdminChallenge(token: string) {
   if (!/^[\w-]{43}$/.test(token)) return;
-  await connectToDatabase();
+  await requireAdminAuditStorage();
   const hash = digest(token);
   await withRequiredTransaction(async session => {
-    // Completion and cancellation write the same factor row, so a conflict retries against the winner.
-    const canceled = await AdminFactor.updateOne({ challengeHash: hash }, { $unset: clearChallenge }, { session });
+    // Completion, cancellation and version changes all write the singleton.
+    const canceled = await Admin.updateOne({ ...id, "mfa.challengeHash": hash }, { $unset: clearChallenge }, { session });
     if (canceled.modifiedCount) return;
-
-    const live = { hash, expiresAt: { $gt: new Date() } };
-    const factor = await AdminFactor.findOne({ state: "active", completedChallenges: { $elemMatch: live } })
-      .select({ completedChallenges: { $elemMatch: live } }).session(session).lean();
-    const completed = factor?.completedChallenges?.[0];
-    if (!factor || !completed) return;
-    const changed = await User.updateOne({ ...adminState, _id: factor._id, sessionVersion: completed.version },
+    const row = await Admin.findOne({ ...id, "mfa.completedChallenges": { $elemMatch: { hash, expiresAt: { $gt: new Date() } } } })
+      .select("+mfa sessionVersion").session(session).lean();
+    if (!row?.mfa.completedChallenges.some(item => item.hash === hash && item.version === row.sessionVersion && item.expiresAt > new Date())) return;
+    const changed = await Admin.updateOne({ ...id, sessionVersion: row.sessionVersion },
       { $inc: { sessionVersion: 1 } }, { session });
-    if (changed.modifiedCount) await auditAdmin("logout", String(factor._id), String(factor._id), session);
+    if (changed.modifiedCount) await auditAdmin("logout", ADMIN_SUBJECT, ADMIN_SUBJECT, session);
   });
 }
 
 export async function verifyAdminChallenge(token: string, code: string) {
   if (!/^[\w-]{43}$/.test(token) || !/^\d{6}$/.test(code)) return null;
   await connectToDatabase();
-  const filter = { challengeHash: digest(token), state: "active" };
-  const owner = await AdminFactor.findOne(filter).select("_id").lean();
-  if (!owner) return null;
-  const userId = String(owner._id);
-  await limit("verify", userId);
+  const challengeHash = digest(token);
+  const filter = { ...active, "mfa.challengeHash": challengeHash };
+  if (!await Admin.exists(filter).read("primary")) return null;
+  await requireAdminAuditStorage();
+  await limit("verify");
   const result = await withRequiredTransaction(async session => {
-    const current = { ...filter, _id: owner._id, challengeExpiresAt: { $gt: new Date() } };
-    const row = await AdminFactor.findOne(current).select("+encryptedSeed +completedChallenges").session(session).lean();
-    if (!row || typeof row.challengeVersion !== "number") return null;
-    const version = row.challengeVersion;
-    if (!await User.exists({ _id: owner._id, sessionVersion: version, ...adminState }).session(session)) return null;
-    const step = acceptedStep(userId, row.encryptedSeed, code, row.lastStep);
+    const row = await readActiveAdmin(session);
+    if (!row || row.mfa.challengeHash !== challengeHash || row.mfa.challengeVersion !== row.sessionVersion ||
+        !row.mfa.challengeExpiresAt || row.mfa.challengeExpiresAt <= new Date()) return null;
+    const step = acceptedStep(ADMIN_SUBJECT, row.mfa.encryptedSeed, code, row.mfa.lastStep);
     if (step === null) return null;
     const authenticatedAt = Math.floor(Date.now() / 1000);
-    const completedChallenges: { hash: string; version: number; expiresAt: Date }[] = (row.completedChallenges ?? []).filter(item =>
-      item.version === version && item.expiresAt.getTime() > authenticatedAt * 1000);
-    // Keep the digest through the JWT lifetime even if a later login replaces the pending slot.
-    completedChallenges.push({ hash: filter.challengeHash, version, expiresAt: new Date((authenticatedAt + ADMIN_LIFETIME) * 1000) });
-    const changed = await AdminFactor.updateOne({ ...current, lastStep: { $lt: step } },
-      { $set: { lastStep: step, completedChallenges }, $unset: clearChallenge }, { session });
+    const version = row.sessionVersion;
+    const completedChallenges = row.mfa.completedChallenges
+      .filter(item => item.version === version && item.expiresAt.getTime() > authenticatedAt * 1000)
+      .map(({ hash, version, expiresAt }) => ({ hash, version, expiresAt }));
+    // Keep the digest through the JWT lifetime to revoke a response racing logout.
+    completedChallenges.push({ hash: challengeHash, version, expiresAt: new Date((authenticatedAt + ADMIN_LIFETIME) * 1000) });
+    const changed = await Admin.updateOne({
+      ...filter, sessionVersion: version, "mfa.lastStep": { $lt: step },
+      "mfa.challengeExpiresAt": { $gt: new Date() },
+    }, {
+      $set: { "mfa.lastStep": step, "mfa.completedChallenges": completedChallenges, lastLoginAt: new Date(authenticatedAt * 1000) },
+      $unset: clearChallenge,
+    }, { session, runValidators: true });
     if (!changed.modifiedCount) return null;
-    await auditAdmin("login", userId, userId, session);
-    return { userId, version, authenticatedAt };
+    await auditAdmin("login", ADMIN_SUBJECT, ADMIN_SUBJECT, session);
+    return { version, authenticatedAt };
   });
-  if (!result) await recordAdminDenial("mfa-denied", userId);
+  if (!result) await recordAdminDenial("mfa-denied", ADMIN_SUBJECT);
   return result;
 }
 
-/** Operator-only credential recovery after independent identity checks. No session is issued. */
-export async function replaceAdminFactor(userId: string, credential: Credential, expectedVersion: number, newPasswordHash?: string) {
-  await limit("recover", userId);
+/** Recovery codes are operator-only and consumed by replacing the entire factor and code set. */
+export async function replaceAdminFactor(credential: Credential, expectedVersion: number, newPasswordHash?: string) {
+  await requireAdminAuditStorage();
+  await limit("recover");
   const result = await withRequiredTransaction(async session => {
-    const row = await AdminFactor.findOne({ _id: userId, state: "active" }).select("+encryptedSeed").session(session).lean();
-    if (!row) return null;
     const usingRecovery = "recoveryCode" in credential;
-    const step = usingRecovery ? null : acceptedStep(userId, row.encryptedSeed, credential.totp, row.lastStep);
-    if (usingRecovery ? !/^[0-9a-f]{40}$/.test(credential.recoveryCode) : step === null) return null;
-    const identity = { _id: userId, sessionVersion: expectedVersion, ...adminState };
-    if (!await User.exists(identity).session(session)) return null;
-    const enrollment = prepareEnrollment(userId);
-    const condition = usingRecovery ? { recoveryHashes: digest(credential.recoveryCode) } : { lastStep: { $lt: step! } };
-    const changed = await AdminFactor.updateOne({ _id: userId, state: "active", ...condition },
-      { $set: pending(enrollment, expectedVersion + 1), $unset: clearChallenge }, { session });
+    await assertNoLegacyAdmin(session);
+    const row = await readAdmin(session, { allowUnreadableFactor: usingRecovery });
+    if (row?.status !== "active" || row.sessionVersion !== expectedVersion) return null;
+    if (usingRecovery) {
+      if (!/^[0-9a-f]{40}$/.test(credential.recoveryCode) || !row.recoveryCodes.includes(digest(credential.recoveryCode))) return null;
+    } else if (acceptedStep(ADMIN_SUBJECT, row.mfa.encryptedSeed, credential.totp, row.mfa.lastStep) === null) {
+      return null;
+    }
+    const enrollment = prepareEnrollment(ADMIN_SUBJECT);
+    const changed = await Admin.updateOne({ ...active, sessionVersion: expectedVersion }, {
+      $set: { status: "pending", mfa: pendingFactor(enrollment), recoveryCodes: [], ...(newPasswordHash ? { passwordHash: newPasswordHash } : {}) },
+      $inc: { sessionVersion: 1 },
+    }, { session, runValidators: true });
     if (!changed.modifiedCount) return null;
-    const updated = await User.updateOne(identity, {
-      $inc: { sessionVersion: 1 }, ...(newPasswordHash ? { $set: { passwordHash: newPasswordHash } } : {}),
-    }, { session });
-    if (!updated.modifiedCount) throw new Error("Administrator state changed during recovery.");
-    await auditAdmin(usingRecovery ? "recover" : "rotate", userId, userId, session);
+    await auditAdmin(usingRecovery ? "recover" : "rotate", ADMIN_SUBJECT, ADMIN_SUBJECT, session);
     return { seed: enrollment.seed, proof: enrollment.proof };
   });
-  if (!result) await recordAdminDenial("recovery-denied", userId);
+  if (!result) await recordAdminDenial("recovery-denied", ADMIN_SUBJECT);
   return result;
 }

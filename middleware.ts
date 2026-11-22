@@ -8,6 +8,12 @@ function secret() {
 }
 
 export async function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname === "/admin" || request.nextUrl.pathname.startsWith("/admin/")) {
+    const response = process.env.ABII_ADMIN_UI_ENABLED === "true" ? NextResponse.next() : new NextResponse("Not found", { status: 404 });
+    response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return response;
+  }
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const key = secret();
   let valid = false;
@@ -32,6 +38,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/admin/:path*",
     "/dashboard/:path*",
     "/subjects/:path*",
     "/review/:path*",
