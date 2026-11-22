@@ -7,11 +7,11 @@ import { connectToDatabase } from "@/lib/mongodb";
 
 export class AdminAuditStorageError extends Error {}
 
-export async function auditAdmin(action: typeof actions[number], actorId: string, targetId: string, session: ClientSession) {
+export async function auditAdmin(action: typeof actions[number], actorId: string, targetId: string, session: ClientSession, reason?: string) {
   if (!session.inTransaction()) throw new Error("Admin audit requires an active transaction.");
   if (actorId !== ADMIN_SUBJECT) throw new Error("Invalid administrator audit actor.");
   const correlationId = randomUUID();
-  await AdminAuditLog.create([{ action, actorId, targetId, correlationId, outcome: "committed" }], { session });
+  await AdminAuditLog.create([{ action, actorId, targetId, correlationId, outcome: "committed", ...(reason === undefined ? {} : { reason }) }], { session });
   await AdminSecurityEvent.create([{ _id: correlationId, kind: action, actorId }], { session });
 }
 

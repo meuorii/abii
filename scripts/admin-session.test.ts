@@ -52,13 +52,35 @@ test("admin sessions require the MFA audience, live factor, current scalar accou
     assert.equal((await validateAdminSession(token, true)).adminId, ADMIN_SUBJECT);
     const users = mongoose.connection.db!.collection("users");
     const ordinary = await User.create({ email: "ordinary@example.invalid", name: "Test", passwordHash: "fixture", emailVerifiedAt: new Date() });
-    assert.equal(await setUserSuspended(ADMIN_ID, true, token), false);
-    assert.equal(await setUserSuspended(ordinary.id, true, token), true);
-    assert.equal(await setUserSuspended(ordinary.id, true, token), false);
+    await assert.rejects(setUserSuspended(ordinary.id, true, "  ", token));
+    assert.equal(await setUserSuspended(ADMIN_ID, true, "Account review", token), false);
+    assert.equal(await setUserSuspended(ordinary.id, true, "  Account review  ", token), true);
+    assert.equal(await setUserSuspended(ordinary.id, true, "Account review", token), false);
     assert.ok((await User.findById(ordinary._id).lean())?.suspendedAt instanceof Date);
-    assert.equal(await setUserSuspended(ordinary.id, false, token), true);
+    assert.equal(await setUserSuspended(ordinary.id, false, "Review completed", token), true);
     assert.equal((await User.findById(ordinary._id).lean())?.sessionVersion, 2);
     assert.equal(await AdminAuditLog.countDocuments({ targetId: ordinary.id }), 2);
+    assert.equal((await AdminAuditLog.findOne({ targetId: ordinary.id, action: "user.suspend" }).lean())?.reason, "Account review");
+    const concurrent = await Promise.all([
+      setUserSuspended(ordinary.id, true, "Concurrent request one", token, 2),
+      setUserSuspended(ordinary.id, true, "Concurrent request two", token, 2),
+    ]);
+    assert.equal(concurrent.filter(Boolean).length, 1);
+    assert.equal((await User.findById(ordinary._id).lean())?.sessionVersion, 3);
+    await mongoose.connection.db!.command({ collMod: "adminsecurityevents", validator: { kind: { $ne: "user.restore" } } });
+    await assert.rejects(setUserSuspended(ordinary.id, false, "Audit must commit", token, 3), rejected(503));
+    assert.ok((await User.findById(ordinary._id).lean())?.suspendedAt instanceof Date);
+    assert.equal((await User.findById(ordinary._id).lean())?.sessionVersion, 3);
+    assert.equal(await AdminAuditLog.countDocuments({ targetId: ordinary.id }), 3);
+    await mongoose.connection.db!.command({ collMod: "adminsecurityevents", validator: {} });
+    const restores = await Promise.all([
+      setUserSuspended(ordinary.id, false, "Concurrent restore one", token, 3),
+      setUserSuspended(ordinary.id, false, "Concurrent restore two", token, 3),
+    ]);
+    assert.equal(restores.filter(Boolean).length, 1);
+    assert.equal((await User.findById(ordinary._id).lean())?.sessionVersion, 4);
+    assert.equal(await setUserSuspended(ordinary.id, true, "Stale account revision", token, 2), false);
+    assert.equal(await AdminAuditLog.countDocuments({ targetId: ordinary.id }), 4);
     const key = new TextEncoder().encode(process.env.AUTH_SECRET);
     const now = Math.floor(Date.now() / 1000);
     const issue = (changes: object) => new SignJWT({ ...claims, ...changes }).setProtectedHeader({ alg: "HS256", typ: "abii-admin+jwt" }).sign(key);
@@ -70,7 +92,7 @@ test("admin sessions require the MFA audience, live factor, current scalar accou
     await assert.rejects(validateAdminSession(await issue({ iat: now - 301, exp: now + 300 }), true), rejected(403));
     const ordinaryJWT = await new SignJWT({ sv: 0 }).setProtectedHeader({ alg: "HS256" }).setSubject(ordinary.id)
       .setIssuer("abii").setAudience("abii-web").setIssuedAt().setExpirationTime("5m").sign(key);
-    await assert.rejects(setUserSuspended(ordinary.id, true, ordinaryJWT), rejected(401));
+    await assert.rejects(setUserSuspended(ordinary.id, true, "Account review", ordinaryJWT), rejected(401));
     const keys = process.env.ADMIN_MFA_KEYS;
     delete process.env.ADMIN_MFA_KEYS;
     await assert.rejects(validateAdminSession(token), rejected(503));
@@ -88,7 +110,7 @@ test("admin sessions require the MFA audience, live factor, current scalar accou
     await revokeAdminSession(token);
     await assert.rejects(validateAdminSession(token), rejected(401));
     await revokeAdminSession(token);
-    await assert.rejects(setUserSuspended(ordinary.id, true, token), rejected(401));
+    await assert.rejects(setUserSuspended(ordinary.id, true, "Account review", token), rejected(401));
     assert.equal(await AdminAuditLog.countDocuments({ action: "logout" }), 1);
     assert.equal((await Admin.findById(ADMIN_ID).lean())?.sessionVersion, 1);
 

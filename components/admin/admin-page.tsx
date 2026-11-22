@@ -14,7 +14,7 @@ const pages = {
   settings: ["Make every detail count.", "Manage the essentials that keep Abii running your way."],
 } as const;
 
-type Page = Exclude<keyof typeof pages, "overview">;
+type Page = Exclude<keyof typeof pages, "overview" | "users" | "analytics">;
 const unavailable = (message: string) => ({ kind: "unavailable", message }) as const;
 const stack = "grid min-w-0 gap-4";
 const split = `${stack} min-[880px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]`;
@@ -40,20 +40,6 @@ function PendingTable({ title, message }: { title: string; message: string }) {
 
 function PageContent({ page }: { page: Page }) {
   switch (page) {
-    case "users":
-      return <>
-        <Summary title="Accounts at a glance" labels={["All accounts", "Verified accounts", "Suspended accounts"]} message="Directory unavailable" />
-        <PendingTable title="Learner directory" message="Account search, filters, and directory results will appear when the directory is connected." />
-      </>;
-    case "analytics":
-      return <>
-        <Pending title="Reporting period" message="Date ranges will be available when reporting is connected." />
-        <Summary title="Learning summary" labels={["Study sessions", "Cards reviewed", "Active learners"]} message="Reporting unavailable" />
-        <div className={split}>
-          <ChartPanel title="Study trends" content={unavailable("Time-series reporting is unavailable.")} />
-          <ChartPanel title="Review outcomes" content={unavailable("Review reporting is unavailable.")} />
-        </div>
-      </>;
     case "performance":
       return <>
         <div className={split}>

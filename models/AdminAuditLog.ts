@@ -7,6 +7,7 @@ const schema = new Schema({
   actorId: { type: String, required: true },
   targetId: { type: String, required: true },
   action: { type: String, enum: actions, required: true },
+  reason: { type: String, trim: true, minlength: 3, maxlength: 500, required: function (this: { action?: string }): boolean { return this.action === "user.suspend" || this.action === "user.restore"; } },
   correlationId: { type: String, required: true },
   outcome: { type: String, enum: ["committed"], required: true },
   occurredAt: { type: Date, default: Date.now, required: true },

@@ -35,17 +35,17 @@
 
 ## 5. Active handoff
 
-**Status** Phase 4 Overview implemented with isolated validation. See section 14 of `docs/ADMIN_DASHBOARD_IMPLEMENTATION.md` for the metric contract and query bounds.
+**Status** Phase 6 implemented and verified in isolation. Production rollout remains pending.
 
-**Verified** Complete UTC periods, retained-learner counts, quiz deduplication and session reconciliation, five projected recent rows, local failure states, and server authorization. Browser coverage includes responsive layout, chart keyboard controls, reduced motion, and period switching.
+**Verified now** Seven aggregate sections, adjacent 7/30/90-day UTC windows, matched activation horizons, D1/D7/D30 cohort maturity, and explicit retained quiz coverage. Browser charts and cohort layouts passed at 320, 375, 390, 768, 1024, 1280, 1440 and 1920px.
 
-**Validation** `test:admin-overview` 2/2, `test:admin-security` 14/14, `test:admin-ui` 1/1, TypeScript, lint, and the loopback-isolated production build passed. Lint and build reported three existing warnings.
+**Files changed** `app/(admin)/admin/{analytics/page.tsx,loading.tsx}`, `components/admin/{admin-analytics,admin-analytics-skeleton,analytics-chart,admin-page}.tsx`, `lib/admin/{analytics,analytics-contract,reporting,overview}.ts`, `scripts/{admin-analytics.test.ts,admin-ui.browser.mjs}`, `package.json`, `docs/{ADMIN_CODEX_WORKFLOW,ADMIN_DASHBOARD_IMPLEMENTATION}.md`.
 
-**Files changed** `app/(admin)/admin/{page,loading}.tsx`, `components/admin/{admin-page,admin-overview,overview-chart}.tsx`, `lib/admin/overview.ts`, `scripts/admin-overview.test.ts`, `scripts/admin-ui.browser.mjs`, `package.json`.
+**Tests** Passed `test:admin-analytics`, `test:admin-security`, `test:admin-ui`, `test:admin-overview`, `test:admin-users`, `typecheck`, `lint`, and a loopback-isolated `build`. Three pre-existing lint warnings remain.
 
-**Remaining** Wide-range history on larger collections requires date-leading indexes. Health and support-ticket telemetry remain unavailable. Production plans and privileges require separate verification.
+**Deployment gates** Confirm date-leading indexes for large Analytics collections and existing quiz TTL coverage. Obtain separate approval for any index or forward-only mode instrumentation. No production changes were made. Phase 5 rollout prerequisites remain recorded in the roadmap.
 
-**Next bounded task** In an authorized staging window, check Overview query plans and the candidate indexes before any production index proposal.
+**Next bounded task** Run representative 90-day explain plans on a staging Atlas deployment and review candidate indexes before rollout.
 
 ## 6. Update this compact handoff at the end of each task
 

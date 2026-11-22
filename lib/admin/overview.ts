@@ -8,32 +8,10 @@ import { QuizSession } from "@/models/QuizSession";
 import { AchievementEvent } from "@/models/AchievementEvent";
 import { AdminSecurityEvent, denials } from "@/models/AdminAuditLog";
 
-const dayMs = 86_400_000;
-const maxTimeMS = 1500;
-const aggregateOptions = { maxTimeMS, allowDiskUse: false };
-// On larger collections require the approved date-leading index rather than scanning history.
-const unindexedCollectionLimit = 50_000;
-export type ReportingDays = 7 | 30 | 90;
-export type DailyCount = { day: string; count: number };
+import { aggregateOptions, dayKey, fillDays, reportingMaxTimeMS as maxTimeMS, reportingWindow, unindexedCollectionLimit } from "./reporting";
+export { reportingWindow } from "./reporting";
+export type { DailyCount, ReportingDays } from "./reporting";
 type Bucket = { _id: string; count: number };
-
-export function reportingWindow(value: unknown, now = new Date()) {
-  const days: ReportingDays = value === "7" ? 7 : value === "90" ? 90 : 30;
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  return { days, start: new Date(+end - days * dayMs), end };
-}
-
-function fillDays(window: ReturnType<typeof reportingWindow>, buckets: Bucket[]): DailyCount[] {
-  const counts = new Map(buckets.map(bucket => [bucket._id, bucket.count]));
-  return Array.from({ length: window.days }, (_, offset) => {
-    const day = new Date(+window.start + offset * dayMs).toISOString().slice(0, 10);
-    return { day, count: counts.get(day) ?? 0 };
-  });
-}
-
-const dayKey = (date: string) => ({
-  $dateToString: { date, format: "%Y-%m-%d", timezone: "UTC" },
-});
 
 // Runs after grouping by owner, so each aggregate joins each owner at most once.
 function retainedOwner(): PipelineStage[] {

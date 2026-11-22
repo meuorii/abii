@@ -13,6 +13,8 @@
     "test:admin-security": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-factor.test.ts scripts/admin-operator.test.ts scripts/admin-session.test.ts scripts/admin-bootstrap.test.ts",
     "test:admin-ui": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-ui.browser.mjs",
     "test:admin-overview": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-overview.test.ts",
+    "test:admin-users": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-users.test.ts",
+    "test:admin-analytics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-analytics.test.ts",
     "test:skeleton": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/skeleton-system.test.ts",
     "test:skeleton:browser": "node scripts/skeleton-system.browser.mjs",
     "test:skeleton:routes": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/skeleton-routes.browser.mjs",

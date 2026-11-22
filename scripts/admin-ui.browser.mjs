@@ -12,11 +12,12 @@ import mongoose from "mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import { chromium } from "playwright";
 import { digest, prepareEnrollment, totpAt } from "../lib/auth/admin-factor-crypto.ts";
+import { hashOtp } from "../lib/auth/otp-crypto.ts";
 
 const destinations = [
   ["", "Overview", "Everything in one view.", "Platform Overview", "overview"],
   ["/users", "Users", "Every learner matters.", "Learner directory", "users"],
-  ["/analytics", "Analytics", "See how learning grows.", "Reporting period", "analytics"],
+  ["/analytics", "Analytics", "See how learning grows.", "Platform insights", "analytics"],
   ["/performance", "Performance", "Keep things running smoothly.", "Endpoint monitoring", "performance"],
   ["/security", "Security", "A safer place to learn.", "Audit history", "security"],
   ["/announcements", "Announcements", "Share what’s new.", "Announcement list", "announcements"],
@@ -109,6 +110,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
   };
   process.env.ADMIN_MFA_KEY_ID = env.ADMIN_MFA_KEY_ID;
   process.env.ADMIN_MFA_KEYS = env.ADMIN_MFA_KEYS;
+  process.env.AUTH_OTP_SECRET = env.AUTH_OTP_SECRET;
   let server;
   let browser;
   try {
@@ -127,11 +129,16 @@ test("admin routes fail closed, require real MFA, and render the protected works
       { ...learner, passwordHash, emailVerifiedAt: new Date(), sessionVersion: 0, createdAt: dayBefore(2) },
       { _id: olderId, name: "Older fixture", role: "user", createdAt: dayBefore(16) },
     ]);
-    await db.collection("flashcards").insertOne({ userId: learner._id, flashcardType: "standard", question: "private fixture prompt" });
+    await db.collection("flashcards").insertOne({ userId: learner._id, flashcardType: "standard", question: "private fixture prompt", createdAt: dayBefore(2) });
+    await db.collection("subjects").insertOne({ userId: learner._id, name: "Private analytics subject", createdAt: dayBefore(2) });
     await db.collection("reviewrecords").insertMany([
-      { userId: learner._id, reviewedAt: dayBefore(2) },
-      { userId: olderId, reviewedAt: dayBefore(16) },
+      { userId: learner._id, reviewedAt: dayBefore(2), result: "correct" },
+      { userId: olderId, reviewedAt: dayBefore(16), result: "wrong" },
     ]);
+    const quizTime = new Date(+midnight - 1000);
+    await db.collection("quizsessions").insertOne({ userId: learner._id, status: "completed", type: "random",
+      completedAt: quizTime, expiresAt: new Date(+quizTime + 86_400_000),
+      questions: [{ type: "multiple-choice", prompt: "Private analytics quiz" }] });
     const { encryptedSeed, seed } = prepareEnrollment("admin:primary");
     await db.collection("admins").insertOne({
       ...admin, passwordHash: await bcrypt.hash(password, 12), createdAt: new Date(), updatedAt: new Date(),
@@ -143,11 +150,13 @@ test("admin routes fail closed, require real MFA, and render the protected works
     await db.collection("adminsecurityevents").insertOne({ _id: "fixture-recovery", kind: "recovery-denied", occurredAt: dayBefore(2) });
 
     server = await startServer({ ...env, ABII_ADMIN_UI_ENABLED: "" }, process.env.ABII_TEST_PRODUCTION_GATE === "1");
-    for (const suffix of ["", "/settings"]) {
+    for (const suffix of ["", "/settings", "/analytics"]) {
       const closed = await fetch(server.base + "/admin" + suffix);
       assert.equal(closed.status, 404);
       assert.match(closed.headers.get("cache-control"), /private.*no-store/);
     }
+    const learnerDetailPath = `/api/admin/users/${learner._id}`;
+    assert.equal((await fetch(server.base + learnerDetailPath)).status, 404);
     await server.stop();
     server = await startServer({ ...env, ABII_ADMIN_UI_ENABLED: "true" });
     const base = server.base;
@@ -181,6 +190,8 @@ test("admin routes fail closed, require real MFA, and render the protected works
     const login = await post("/api/auth/login", { email: learner.email, password });
     assert.equal(login.status(), 200);
     const learnerCookie = (await context.cookies()).find(cookie => cookie.name === "abii_session");
+    assert.equal((await fetch(base + learnerDetailPath)).status, 401);
+    assert.equal((await context.request.get(base + learnerDetailPath)).status(), 403);
     assert.ok(learnerCookie);
     for (const [suffix] of destinations) await denied(suffix, "Administrator access required", `abii_session=${learnerCookie.value}`);
     await page.goto(base + "/dashboard");
@@ -207,6 +218,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     };
     await denied("", "Sign in to continue", `abii_admin=${await signed("abii-web", false)}`);
     await denied("", "Sign in to continue", `abii_admin=${await signed("abii-admin", true)}`);
+    await denied("/analytics?period=90", "Sign in to continue", `abii_admin=${await signed("abii-admin", true)}`);
 
     assert.equal((await post("/api/auth/admin-mfa", { code: totpAt(seed, Date.now()) })).status(), 200);
     const adminCookie = (await context.cookies()).find(cookie => cookie.name === "abii_admin");
@@ -225,7 +237,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
         await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `admin-${asset}-1920.png`), animations: "disabled" });
       }
       assert.equal(await image.getAttribute("alt"), "");
-      if (asset !== "overview") assert.equal(await page.locator("main table, main input, main select").count(), 0);
+      if (!["overview", "users", "analytics"].includes(asset)) assert.equal(await page.locator("main table, main input, main select").count(), 0);
       assert.ok(!(await page.locator("main").innerText()).includes(admin.email));
       for (const width of widths) {
         await page.setViewportSize({ width, height: 880 });
@@ -263,6 +275,222 @@ test("admin routes fail closed, require real MFA, and render the protected works
     assert.ok(!(await page.locator("main").innerText()).includes("private fixture prompt"));
     const unauthenticatedReport = await fetch(base + "/admin?period=7");
     assert.doesNotMatch(await unauthenticatedReport.text(), /Older fixture|Active Learners/);
+
+    await page.goto(base + "/admin/analytics");
+    const analytics = page.getByRole("region", { name: "Platform insights" });
+    const periods = analytics.getByRole("navigation", { name: "Reporting period" });
+    const signupChart = analytics.getByRole("slider", { name: "User growth daily values" });
+    const metricValue = label => analytics.locator("dt").filter({ hasText: new RegExp(`^${label}$`, "i") }).locator("..").locator("dd > p").first();
+    assert.equal(await periods.getByRole("link", { name: "30 days" }).getAttribute("aria-current"), "page");
+    assert.equal(await metricValue("New users").textContent(), "2");
+    for (const region of ["User growth", "Active learners", "Account activation", "Learning retention", "Review activity", "Quiz modes", "Subjects and flashcards"]) {
+      await analytics.getByRole("region", { name: region, exact: true }).waitFor();
+    }
+    await analytics.getByRole("region", { name: "Quiz modes" }).getByText("Partial coverage").waitFor();
+    await analytics.getByRole("listitem").filter({ hasText: "Random" }).getByText("100%").waitFor();
+    assert.doesNotMatch(await analytics.innerText(), /private fixture prompt|Private analytics quiz|Private analytics subject|ui-learner@/i);
+    await periods.getByRole("link", { name: "7 days" }).click();
+    await page.waitForURL("**/admin/analytics?period=7");
+    await analytics.getByRole("region", { name: "User growth", exact: true }).getByText("Prior period 0").waitFor();
+    assert.equal(await metricValue("New users").textContent(), "1");
+    assert.equal(await metricValue("Active learners").textContent(), "1");
+    assert.equal(await signupChart.getAttribute("aria-valuemax"), "7");
+    await signupChart.press("Home");
+    await signupChart.press("ArrowRight");
+    assert.equal(await signupChart.getAttribute("aria-valuenow"), "2");
+    const chartBounds = await signupChart.boundingBox();
+    assert.ok(chartBounds);
+    await signupChart.dispatchEvent("pointerdown", { pointerType: "touch", clientX: chartBounds.x + chartBounds.width - 1 });
+    assert.equal(await signupChart.getAttribute("aria-valuenow"), "7");
+    await analytics.getByRole("region", { name: "User growth", exact: true }).locator("summary").click();
+    await analytics.getByRole("region", { name: "User growth data table" }).waitFor();
+    assert.equal(await analytics.getByRole("region", { name: "User growth data table" }).locator("tbody tr").count(), 7);
+    await periods.getByRole("link", { name: "90 days" }).click();
+    await page.waitForURL("**/admin/analytics?period=90");
+    await signupChart.waitFor();
+    assert.equal(await signupChart.getAttribute("aria-valuemax"), "90");
+    assert.equal(await periods.getByRole("link", { name: "90 days" }).getAttribute("aria-current"), "page");
+    const cohort = analytics.getByRole("region", { name: "Retention cohort matrix" });
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 900 });
+      assert.ok(await cohort.evaluate(element => {
+        const main = document.querySelector("main");
+        return document.documentElement.scrollWidth <= innerWidth && main.scrollWidth <= main.clientWidth && element.getBoundingClientRect().right <= innerWidth;
+      }), `analytics fits at ${width}px`);
+      if (width === 375) assert.ok(await cohort.evaluate(element => element.scrollWidth === element.clientWidth), "all cohort columns fit at 375px");
+      if (process.env.ABII_ADMIN_SCREENSHOTS && [375, 1440].includes(width)) {
+        await analytics.evaluate(element => element.scrollIntoView({ block: "start" }));
+        await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `analytics-growth-${width}.png`), animations: "disabled" });
+        await cohort.evaluate(element => element.closest("section").scrollIntoView({ block: "start" }));
+        await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `analytics-retention-${width}.png`), animations: "disabled" });
+        if (width === 1440) {
+          await analytics.getByRole("heading", { name: "Learning behavior" }).evaluate(element => element.scrollIntoView({ block: "start" }));
+          await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "analytics-behavior-1440.png"), animations: "disabled" });
+          await analytics.getByRole("heading", { name: "Content creation" }).evaluate(element => element.scrollIntoView({ block: "start" }));
+          await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "analytics-content-1440.png"), animations: "disabled" });
+        }
+      }
+    }
+    const deniedAnalytics = await fetch(base + "/admin/analytics?period=90", { headers: { RSC: "1", "Next-Router-Prefetch": "1" } });
+    assert.doesNotMatch(await deniedAnalytics.text(), /Platform insights|Retention cohort matrix/);
+    const corruptSubject = await db.collection("subjects").insertOne({ userId: learner._id, createdAt: [dayBefore(2)] });
+    try {
+      await page.goto(base + "/admin/analytics?period=7");
+      await analytics.getByText("Subject creation could not be loaded for this period.").waitFor();
+      await analytics.getByRole("link", { name: "Reload report" }).waitFor();
+      await analytics.getByRole("slider", { name: "Flashcards created daily values" }).waitFor();
+    } finally {
+      await db.collection("subjects").deleteOne({ _id: corruptSubject.insertedId });
+    }
+
+    await users.insertMany(Array.from({ length: 22 }, (_, index) => ({
+      role: "user", name: `Directory fixture ${String(index).padStart(2, "0")}`,
+      email: `directory-${index}@example.invalid`, createdAt: dayBefore(3),
+    })));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(base + "/admin/users");
+    const directory = page.getByRole("region", { name: "Learner directory" });
+    await directory.getByText("Showing 1–20 of 24").waitFor();
+    if (process.env.ABII_ADMIN_SCREENSHOTS) {
+      await directory.evaluate(node => node.scrollIntoView({ block: "start" }));
+      await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "users-directory-1440.png"), animations: "disabled" });
+      await page.setViewportSize({ width: 375, height: 820 });
+      await directory.evaluate(node => node.scrollIntoView({ block: "start" }));
+      await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "users-directory-375.png"), animations: "disabled" });
+      await page.setViewportSize({ width: 1440, height: 900 });
+    }
+    const toolbar = directory.getByRole("form", { name: "Filter learners" });
+    await toolbar.getByRole("searchbox").fill("DIRECTORY");
+    await toolbar.getByLabel("Verification").selectOption("unverified");
+    await toolbar.getByLabel("Account status").selectOption("active");
+    await toolbar.getByLabel("Sort by").selectOption("name-desc");
+    await toolbar.getByRole("searchbox").press("Enter");
+    await directory.getByText("Showing 1–20 of 22").waitFor();
+    assert.equal(new URL(page.url()).searchParams.get("sort"), "name-desc");
+    assert.match(await directory.getByRole("row").nth(1).innerText(), /Directory fixture 21/);
+    await directory.getByRole("link", { name: "Next" }).click();
+    await directory.getByText("Showing 21–22 of 22").waitFor();
+    assert.ok(new URL(page.url()).searchParams.has("cursor"));
+    assert.equal(new URL(page.url()).searchParams.get("q"), "DIRECTORY");
+    await page.reload();
+    await directory.getByText("Showing 21–22 of 22").waitFor();
+    const previous = directory.getByRole("link", { name: "Previous" });
+    const previousHref = await previous.getAttribute("href");
+    await previous.click();
+    await page.waitForURL(base + previousHref);
+    await directory.getByText("Showing 1–20 of 22").waitFor({ timeout: 10_000 }).catch(async error => {
+      throw new Error(`Previous page displayed ${await directory.locator("footer").innerText()} at ${new URL(page.url()).pathname}. ${pageErrors.join(" ")}`, { cause: error });
+    });
+    await toolbar.getByRole("searchbox").fill("missing-fixture");
+    await toolbar.getByRole("button", { name: "Apply" }).click();
+    await directory.getByText("No matching users").waitFor();
+    await directory.getByRole("link", { name: "Reset filters" }).last().click();
+    await directory.getByText("Showing 1–20 of 24").waitFor();
+    await page.goto(base + "/admin/users?cursor=invalid");
+    await directory.getByRole("alert").getByText("This directory page link is invalid or expired.").waitFor();
+
+    await page.goto(base + "/admin/users?q=Fixture&status=active");
+    const detailsButton = directory.getByRole("button", { name: "View details for Fixture Learner" });
+    const sheet = page.getByRole("dialog", { name: "Account details" });
+    const endpoint = "**" + learnerDetailPath;
+    let detailRequested = false;
+    await page.route(endpoint, route => {
+      detailRequested = true;
+      return route.fulfill({ status: 503, json: { message: "Account details are temporarily unavailable." } });
+    });
+    await page.waitForFunction(() => [...document.querySelectorAll("button")].some(node => node.getAttribute("aria-label") === "View details for Fixture Learner" && !node.disabled && node.offsetWidth > 0));
+    await detailsButton.focus();
+    await detailsButton.press("Enter");
+    await sheet.getByRole("alert").getByText("Account details are temporarily unavailable.").waitFor({ timeout: 10_000 }).catch(async error => {
+      const content = await page.locator("dialog[open]").allTextContents();
+      throw new Error(`Detail request intercepted: ${detailRequested}. Dialog: ${content.join(" ")}. Page errors: ${pageErrors.join(" ")}`, { cause: error });
+    });
+    await page.unroute(endpoint);
+    let releaseDetail;
+    const intercepted = new Promise(resolve => { releaseDetail = resolve; });
+    let continueDetail;
+    const release = new Promise(resolve => { continueDetail = resolve; });
+    await page.route(endpoint, async route => { releaseDetail(); await release; await route.continue(); }, { times: 1 });
+    await sheet.getByRole("button", { name: "Try again" }).click();
+    await intercepted;
+    await sheet.getByRole("status", { name: "Loading account details" }).waitFor();
+    continueDetail();
+    await sheet.getByRole("heading", { name: "Learning statistics" }).waitFor();
+    assert.ok(!(await sheet.innerText()).includes("private fixture prompt"));
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 820 });
+      assert.ok(await sheet.evaluate(node => {
+        const rect = node.getBoundingClientRect();
+        return rect.right <= innerWidth && rect.width === (innerWidth < 640 ? innerWidth : 480) && node.scrollWidth <= node.clientWidth;
+      }), `detail sheet fits at ${width}px`);
+      if (process.env.ABII_ADMIN_SCREENSHOTS && [375, 1440].includes(width)) {
+        await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `users-detail-${width}.png`), animations: "disabled" });
+      }
+    }
+    await page.keyboard.press("Escape");
+    await sheet.waitFor({ state: "hidden" });
+    assert.equal(await detailsButton.evaluate(element => element === document.activeElement), true);
+    await detailsButton.click();
+    await sheet.getByRole("button", { name: "Suspend account" }).click();
+    const suspend = page.getByRole("dialog", { name: "Suspend this account?" });
+    const reason = suspend.getByRole("textbox", { name: "Reason (required)" });
+    assert.equal(await reason.evaluate(element => element === document.activeElement), true);
+    await reason.fill("  ");
+    await suspend.getByRole("button", { name: "Confirm suspension" }).click();
+    await suspend.getByRole("alert").getByText("Enter at least 3 characters.").waitFor();
+    await page.keyboard.press("Escape");
+    await sheet.getByRole("button", { name: "Suspend account" }).waitFor();
+    const detailResponse = await context.request.get(base + learnerDetailPath);
+    assert.match(detailResponse.headers()["cache-control"], /private, no-store/);
+    const { revision } = await detailResponse.json();
+    const patch = (data, headers = { Origin: base }) => context.request.patch(base + learnerDetailPath, { data, headers });
+    assert.equal((await patch({ action: "suspend", revision, reason: "Fixture review" }, { Origin: "https://outside.invalid" })).status(), 403);
+    assert.equal((await patch({ action: "suspend", revision, reason: "Fixture review", role: "admin" })).status(), 400);
+    assert.equal((await patch({ action: "suspend", revision, reason: " " })).status(), 400);
+    assert.equal((await patch({ action: "suspend", revision, reason: "x".repeat(4500) })).status(), 413);
+    assert.equal((await context.request.get(base + "/api/admin/users/primary")).status(), 400);
+    const challengeId = randomBytes(16).toString("hex");
+    const recoveryCode = String(Math.floor(100000 + Math.random() * 900000));
+    await db.collection("authchallenges").insertOne({
+      userId: learner._id, challengeId, purpose: "password_reset", expiresAt: new Date(Date.now() + 180_000),
+      codeHash: hashOtp(String(learner._id), "password_reset", challengeId, recoveryCode),
+      attemptCount: 0, consumedAt: null, lockedAt: null,
+    });
+    await sheet.getByRole("button", { name: "Suspend account" }).click();
+    await reason.fill("Isolated browser fixture review");
+    await page.route(endpoint, route => route.request().method() === "PATCH" ? route.abort() : route.continue(), { times: 1 });
+    await suspend.getByRole("button", { name: "Confirm suspension" }).click();
+    await suspend.getByRole("alert").getByText(/Review the account before confirming again/).waitFor();
+    assert.equal(await reason.inputValue(), "Isolated browser fixture review");
+    if (process.env.ABII_ADMIN_SCREENSHOTS) {
+      await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "users-confirmation-1920.png"), animations: "disabled" });
+    }
+    await suspend.getByRole("button", { name: "Confirm suspension" }).click();
+    await sheet.getByText("Account suspended successfully.").waitFor();
+    await detailsButton.waitFor({ state: "hidden" });
+    assert.equal((await patch({ action: "suspend", revision, reason: "Repeated request" })).status(), 409);
+    const oldSession = { headers: { Cookie: `abii_session=${learnerCookie.value}` } };
+    assert.equal((await fetch(base + "/api/quiz/active", oldSession)).status, 401);
+    const suspendedLogin = await fetch(base + "/api/auth/login", { method: "POST", headers: { Origin: base, "Content-Type": "application/json" }, body: JSON.stringify({ email: learner.email, password }) });
+    assert.equal(suspendedLogin.status, 401);
+    assert.equal((await post("/api/auth/forgot-password/verify", { email: learner.email, code: recoveryCode })).status(), 400);
+    assert.equal((await db.collection("authchallenges").findOne({ challengeId })).consumedAt, null);
+    await sheet.getByRole("button", { name: "Reactivate account" }).click();
+    const restore = page.getByRole("dialog", { name: "Reactivate this account?" });
+    await restore.getByRole("textbox", { name: "Reason (required)" }).fill("Isolated browser fixture restored");
+    await restore.getByRole("button", { name: "Confirm reactivation" }).click();
+    await sheet.getByText("Account reactivated successfully.").waitFor();
+    await sheet.getByRole("button", { name: "Suspend account" }).waitFor();
+    assert.equal((await fetch(base + "/api/quiz/active", oldSession)).status, 401);
+    const audits = await db.collection("adminauditlogs").find({ targetId: String(learner._id) }).sort({ occurredAt: 1 }).toArray();
+    assert.deepEqual(audits.map(audit => [audit.action, audit.reason, audit.outcome]), [
+      ["user.suspend", "Isolated browser fixture review", "committed"],
+      ["user.restore", "Isolated browser fixture restored", "committed"],
+    ]);
+    assert.equal((await users.findOne({ _id: learner._id })).sessionVersion, 2);
+    assert.equal(await db.collection("flashcards").countDocuments({ userId: learner._id }), 1);
+    await page.keyboard.press("Escape");
+    await sheet.waitFor({ state: "hidden" });
 
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.goto(base + "/admin");
