@@ -14,7 +14,7 @@ import { chromium } from "playwright";
 import { digest, prepareEnrollment, totpAt } from "../lib/auth/admin-factor-crypto.ts";
 
 const destinations = [
-  ["", "Overview", "Everything in one view.", "Platform snapshot", "overview"],
+  ["", "Overview", "Everything in one view.", "Platform Overview", "overview"],
   ["/users", "Users", "Every learner matters.", "Learner directory", "users"],
   ["/analytics", "Analytics", "See how learning grows.", "Reporting period", "analytics"],
   ["/performance", "Performance", "Keep things running smoothly.", "Endpoint monitoring", "performance"],
@@ -119,7 +119,19 @@ test("admin routes fail closed, require real MFA, and render the protected works
     const learner = { _id: new mongoose.Types.ObjectId(), role: "user", name: "Fixture Learner", email: "ui-learner@example.invalid" };
     const password = randomBytes(24).toString("hex");
     const passwordHash = await bcrypt.hash(password, 4);
-    await users.insertOne({ ...learner, passwordHash, emailVerifiedAt: new Date(), sessionVersion: 0 });
+    const midnight = new Date();
+    midnight.setUTCHours(0, 0, 0, 0);
+    const dayBefore = days => new Date(+midnight - days * 86_400_000);
+    const olderId = new mongoose.Types.ObjectId();
+    await users.insertMany([
+      { ...learner, passwordHash, emailVerifiedAt: new Date(), sessionVersion: 0, createdAt: dayBefore(2) },
+      { _id: olderId, name: "Older fixture", role: "user", createdAt: dayBefore(16) },
+    ]);
+    await db.collection("flashcards").insertOne({ userId: learner._id, flashcardType: "standard", question: "private fixture prompt" });
+    await db.collection("reviewrecords").insertMany([
+      { userId: learner._id, reviewedAt: dayBefore(2) },
+      { userId: olderId, reviewedAt: dayBefore(16) },
+    ]);
     const { encryptedSeed, seed } = prepareEnrollment("admin:primary");
     await db.collection("admins").insertOne({
       ...admin, passwordHash: await bcrypt.hash(password, 12), createdAt: new Date(), updatedAt: new Date(),
@@ -128,6 +140,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     });
     await db.createCollection("adminauditlogs");
     await db.createCollection("adminsecurityevents");
+    await db.collection("adminsecurityevents").insertOne({ _id: "fixture-recovery", kind: "recovery-denied", occurredAt: dayBefore(2) });
 
     server = await startServer({ ...env, ABII_ADMIN_UI_ENABLED: "" }, process.env.ABII_TEST_PRODUCTION_GATE === "1");
     for (const suffix of ["", "/settings"]) {
@@ -212,7 +225,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
         await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `admin-${asset}-1920.png`), animations: "disabled" });
       }
       assert.equal(await image.getAttribute("alt"), "");
-      assert.equal(await page.locator("main table, main input, main select").count(), 0);
+      if (asset !== "overview") assert.equal(await page.locator("main table, main input, main select").count(), 0);
       assert.ok(!(await page.locator("main").innerText()).includes(admin.email));
       for (const width of widths) {
         await page.setViewportSize({ width, height: 880 });
@@ -220,6 +233,36 @@ test("admin routes fail closed, require real MFA, and render the protected works
         assert.ok(Object.entries(geometry).every(([key, value]) => key === "bottomGap" ? value >= 0 && value <= 4 : value), `${label} at ${width}px: ${JSON.stringify(geometry)}`);
       }
     }
+
+    await page.goto(base + "/admin");
+    const period = page.getByLabel("Reporting period");
+    assert.equal(await period.inputValue(), "30");
+    const metric = label => page.getByRole("heading", { name: label, exact: true }).locator("..").locator("p").first();
+    assert.equal(await metric("Total Users").textContent(), "2");
+    assert.equal(await metric("New Users").textContent(), "2");
+    await period.selectOption("7");
+    await page.getByRole("button", { name: "Apply" }).click();
+    await page.waitForURL("**/admin?period=7");
+    assert.equal(await metric("Total Users").textContent(), "2");
+    assert.equal(await metric("New Users").textContent(), "1");
+    assert.equal(await metric("Active Learners").textContent(), "1");
+    if (process.env.ABII_ADMIN_SCREENSHOTS) {
+      for (const width of [1920, 375]) {
+        await page.setViewportSize({ width, height: 950 });
+        await page.locator("#user-growth").evaluate(element => element.scrollIntoView({ block: "start" }));
+        await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `overview-trends-${width}.png`), animations: "disabled" });
+      }
+    }
+    const growth = page.getByRole("slider", { name: "User Growth" });
+    await growth.press("Home");
+    await growth.press("ArrowRight");
+    assert.equal(await growth.getAttribute("aria-valuenow"), "2");
+    const values = page.locator("details").filter({ has: page.getByRole("table", { name: "User Growth daily counts in UTC", includeHidden: true }) });
+    await values.locator("summary").click();
+    assert.equal(await values.locator("tbody tr").count(), 7);
+    assert.ok(!(await page.locator("main").innerText()).includes("private fixture prompt"));
+    const unauthenticatedReport = await fetch(base + "/admin?period=7");
+    assert.doesNotMatch(await unauthenticatedReport.text(), /Older fixture|Active Learners/);
 
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.goto(base + "/admin");

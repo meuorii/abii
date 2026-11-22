@@ -2,13 +2,18 @@
 
 import { usePathname } from "next/navigation";
 import { SkeletonBlock, SkeletonRegion } from "@/components/ui/skeleton";
+import { OverviewSkeleton } from "@/components/admin/admin-overview";
 
 export default function LoadingAdminPage() {
   const pathname = usePathname();
+  const hero = <SkeletonBlock className="h-[170px] rounded-[20px] sm:h-[250px] lg:h-[282px] xl:h-[312px]" />;
+  if (pathname === "/admin") {
+    return <div className="grid gap-5 sm:gap-6">{hero}<OverviewSkeleton /></div>;
+  }
   const hasSummary = pathname !== "/admin/performance" && pathname !== "/admin/settings";
   return (
     <SkeletonRegion label="Loading workspace" className="grid gap-5 sm:gap-6">
-      <SkeletonBlock className="h-[170px] rounded-[20px] sm:h-[250px] lg:h-[282px] xl:h-[312px]" />
+      {hero}
       {pathname === "/admin/analytics" && <SkeletonBlock className="h-24 rounded-2xl" />}
       {hasSummary && <div className="grid gap-3 sm:grid-cols-3">
         {Array.from({ length: 3 }, (_, index) => <SkeletonBlock key={index} className="h-20 rounded-2xl" />)}

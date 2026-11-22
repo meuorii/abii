@@ -35,15 +35,17 @@
 
 ## 5. Active handoff
 
-**Status** Phase 2 uses `abii.admins` for the singleton identity and MFA. Production provisioning awaits operator authorization.
+**Status** Phase 4 Overview implemented with isolated validation. See section 14 of `docs/ADMIN_DASHBOARD_IMPLEMENTATION.md` for the metric contract and query bounds.
 
-**Verified** The isolated authenticated replica set exercised simultaneous claim, audit rollback, expired pending enrollment, and preservation of learner records and the legacy index. Security tests also exercise replay, credential recovery, session revocation and legacy conflicts.
+**Verified** Complete UTC periods, retained-learner counts, quiz deduplication and session reconciliation, five projected recent rows, local failure states, and server authorization. Browser coverage includes responsive layout, chart keyboard controls, reduced motion, and period switching.
 
-**Validation** `test:admin-security` 14/14, `test:auth-login` 1/1, `test:auth-email` 5/5, and `test:admin-ui` 1/1 covering all eight pages. Typecheck, lint and the loopback-isolated production build passed. Lint and build reported three existing warnings.
+**Validation** `test:admin-overview` 2/2, `test:admin-security` 14/14, `test:admin-ui` 1/1, TypeScript, lint, and the loopback-isolated production build passed. Lint and build reported three existing warnings.
 
-**Deployment gates** Resolve any legacy administrator and missing existing security storage under separate approval. Verify Atlas inventory, scoped permissions, mailbox ownership, trusted deployment configuration, and an independent restore. The named backup passed a restore dry-run.
+**Files changed** `app/(admin)/admin/{page,loading}.tsx`, `components/admin/{admin-page,admin-overview,overview-chart}.tsx`, `lib/admin/overview.ts`, `scripts/admin-overview.test.ts`, `scripts/admin-ui.browser.mjs`, `package.json`.
 
-**Next task** Follow `docs/ADMIN_OPERATOR.md` and run `npm run admin:setup` in the authorized production window.
+**Remaining** Wide-range history on larger collections requires date-leading indexes. Health and support-ticket telemetry remain unavailable. Production plans and privileges require separate verification.
+
+**Next bounded task** In an authorized staging window, check Overview query plans and the candidate indexes before any production index proposal.
 
 ## 6. Update this compact handoff at the end of each task
 

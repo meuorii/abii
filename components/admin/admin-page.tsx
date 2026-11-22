@@ -14,7 +14,7 @@ const pages = {
   settings: ["Make every detail count.", "Manage the essentials that keep Abii running your way."],
 } as const;
 
-type Page = keyof typeof pages;
+type Page = Exclude<keyof typeof pages, "overview">;
 const unavailable = (message: string) => ({ kind: "unavailable", message }) as const;
 const stack = "grid min-w-0 gap-4";
 const split = `${stack} min-[880px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]`;
@@ -40,15 +40,6 @@ function PendingTable({ title, message }: { title: string; message: string }) {
 
 function PageContent({ page }: { page: Page }) {
   switch (page) {
-    case "overview":
-      return <>
-        <Summary title="Platform snapshot" labels={["Learner accounts", "Study activity", "Open support requests"]} message="Reporting unavailable" />
-        <div className={split}>
-          <ChartPanel title="Study activity" description="Study sessions over time" content={unavailable("Activity trends will appear when reporting is connected.")} />
-          <Pending title="Needs attention" message="Service and support signals are unavailable." />
-        </div>
-        <Pending title="Recent activity" message="The activity feed is unavailable." />
-      </>;
     case "users":
       return <>
         <Summary title="Accounts at a glance" labels={["All accounts", "Verified accounts", "Suspended accounts"]} message="Directory unavailable" />
@@ -106,15 +97,21 @@ function PageContent({ page }: { page: Page }) {
   }
 }
 
-export async function AdminPage({ page }: { page: Page }) {
-  if ((await getAdminPageAccess()).status !== 200) return null;
+export function AdminPageHero({ page }: { page: keyof typeof pages }) {
   const [title, description] = pages[page];
   return (
-    <div className="grid min-w-0 gap-5 sm:gap-6">
       <AbiiPageHero variant="admin" headingId="admin-page-title" priority
         title={<h1 className="text-[clamp(1.25rem,3.3vw,2.8rem)] leading-[1.08] font-bold tracking-[-0.04em] text-[#203D50]">{title}</h1>}
         description={<p className="mt-3 max-w-[42ch] text-xs leading-5 text-[#6C8192] sm:text-sm sm:leading-6">{description}</p>}
         mascotSrc={`/dashboard-hero/admin/admin-${page}.png`} mascotAlt="" />
+  );
+}
+
+export async function AdminPage({ page }: { page: Page }) {
+  if ((await getAdminPageAccess()).status !== 200) return null;
+  return (
+    <div className="grid min-w-0 gap-5 sm:gap-6">
+      <AdminPageHero page={page} />
       <PageContent page={page} />
     </div>
   );
