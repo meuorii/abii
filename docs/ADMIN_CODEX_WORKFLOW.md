@@ -35,19 +35,19 @@
 
 ## 5. Active handoff
 
-**Status** Phase 8 implemented. Production activation remains pending.
+**Status** Phase 9 implemented. Production delivery activation is pending.
 
-**Verified now** Count-bearing forward authentication evidence, independent transactional audit history, bounded summaries, warning rules, exact-ID search, encrypted cursor pagination and safe details.
+**Verified now** Revision-aware drafts and scheduling, content-bound audience confirmation, transactional publication and receipt-backed delivery, safe erasure, and retries from committed checkpoints.
 
-**Files changed** `app/(admin)/admin/{loading.tsx,security/page.tsx}`, `app/api/{account/password,auth/{login,verify-email,forgot-password/{verify,reset}}}/route.ts`, `components/admin/{admin-page,admin-security,security-evidence-table}.tsx`, `lib/admin/{security,security-contract}.ts`, `lib/auth/{admin-audit,admin-factor,admin-session-state,rate-limit,security-evidence}.ts`, `models/AdminAuditLog.ts`, `scripts/{admin-security-logs.test.ts,admin-ui.browser.mjs}`, `package.json`, `docs/{ADMIN_CODEX_WORKFLOW,ADMIN_DASHBOARD_IMPLEMENTATION}.md`.
+**Files changed** `app/(admin)/admin/{announcements/page.tsx,loading.tsx}`, `app/api/{admin/announcements,account,internal/notifications/reminder-schedule}/route.ts`, `components/admin/{admin-page,admin-announcements,announcement-editor}.tsx`, `lib/{admin/{announcement-contract,announcements,security,security-contract},auth/admin-session-state,mongodb-transaction,notifications/{announcement-worker,announcements,service}}.ts`, `models/{Announcement,Notification,User,AdminAuditLog}.ts`, `scripts/{admin-announcements.test.ts,admin-ui.browser.mjs,notification-events.test.ts}`, `package.json`, `docs/{ADMIN_CODEX_WORKFLOW,ADMIN_DASHBOARD_IMPLEMENTATION}.md`.
 
-**Tests** Focused security logs, administrator security, Users, Overview, login and email authentication, TypeScript, lint and the loopback-isolated production build passed in isolation. Three existing lint warnings remain.
+**Tests** Focused delivery and notification, reminder, administrator security, security logs, TypeScript, lint and loopback-only production build passed. Three existing lint warnings remain.
 
-**Browser QA** Full admin suite passed. Security fit at all eight requested widths with keyboard chart inspection, cursor navigation, exact-ID search, sheet focus restoration, empty and partial reads, and login success during a rejected diagnostic write.
+**Browser QA** Full admin suite passed with the production feature-gate check. Announcement editor, dialog and delivery detail fit all eight widths. Drafts, estimates, scheduling, cancellation, confirmation focus, failed delivery and retry, search, and unavailable storage were exercised.
 
-**Deployment gates** Approve the existing retention and new explorer indexes, verify staging query plans and diagnostic failure isolation, and enable `ABII_SECURITY_EVENTS_ENABLED` at an agreed UTC time. Production indexes were not inspected or changed.
+**Deployment gates** Verify approved queue, listing, receipt and inbox indexes, test the existing private 15-minute dispatch in staging, and enable `ABII_ANNOUNCEMENTS_DELIVERY_ENABLED` only after approval. No production resources changed.
 
-**Next task** Run the documented security index and event-delivery checks against approved staging storage.
+**Next task** Provision and validate the documented Phase 9 storage and scheduler prerequisites on approved staging infrastructure.
 
 ## 6. Update this compact handoff at the end of each task
 

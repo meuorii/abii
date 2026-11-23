@@ -37,6 +37,7 @@ const userSchema = new Schema({
   emailVerifiedAt: { type: Date, default: null },
   // Internal ownership marker used only by the explicitly invoked demo seeder.
   demoSeedKey: { type: String, select: false },
+  announcementDeliveryVersion: { type: Number, select: false },
   sessionVersion: { type: Number, default: 0, min: 0 },
   settings: { type: userSettingsSchema, default: () => ({}) },
   profileImage: { type: String, default: undefined, maxlength: 2048 },
@@ -56,7 +57,7 @@ userSchema.index({ emailVerifiedAt: 1, _id: 1 }, { name: "verified_users_cursor"
       !cached.schema.path("profileImagePublicId") ||
       !cached.schema.path("emailVerifiedAt") ||
       !cached.schema.path("demoSeedKey") ||
-      !cached.schema.path("sessionVersion") ||
+      !cached.schema.path("sessionVersion") || !cached.schema.path("announcementDeliveryVersion") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("featuredBadges") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("featuredBadges.dashboardCustomized") ||
       !(cached.schema.path("settings") as unknown as { schema?: { path: (name: string) => unknown } }).schema?.path("studyTimezone") ||

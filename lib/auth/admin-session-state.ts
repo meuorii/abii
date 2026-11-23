@@ -90,11 +90,12 @@ export async function revokeAdminSession(raw: string) {
   });
 }
 
-export async function withFreshAdminMutation<T>(rawAdminCookie: string, operation: (actorId: string, session: ClientSession) => Promise<T>) {
-  const actor = await validateAdminSession(rawAdminCookie, true);
+export async function withFreshAdminMutation<T>(rawAdminCookie: string, operation: (actorId: string, session: ClientSession) => Promise<T>, options: { fresh?: boolean } = {}) {
+  const fresh = options.fresh ?? true;
+  const actor = await validateAdminSession(rawAdminCookie, fresh);
   return withRequiredTransaction(async session => {
     const now = Math.floor(Date.now() / 1000);
-    if (now - actor.authenticatedAt >= STEP_UP_AGE) throw new AdminAccessError(403);
+    if (fresh && now - actor.authenticatedAt >= STEP_UP_AGE) throw new AdminAccessError(403);
     // Serialize with concurrent session revocation and credential changes on this identity.
     const account = await readActiveAdmin(session);
     if (!account || account.sessionVersion !== actor.version) throw new AdminAccessError(401);

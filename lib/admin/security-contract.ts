@@ -1,6 +1,10 @@
 export const auditLabels = {
   provision: "Administrator provisioned", enroll: "MFA enrolled", "enrollment-restart": "MFA enrollment restarted",
   rotate: "MFA rotated", recover: "Administrator recovery", login: "Administrator MFA succeeded",
+  "announcement.create": "Announcement created", "announcement.edit": "Announcement edited",
+  "announcement.schedule": "Announcement scheduled", "announcement.reschedule": "Announcement rescheduled",
+  "announcement.cancel": "Announcement canceled", "announcement.publish": "Announcement publication committed",
+  "announcement.retry": "Announcement delivery retried",
   logout: "Administrator sessions revoked", "user.suspend": "Learner suspended", "user.restore": "Learner reactivated",
 } as const;
 
@@ -53,7 +57,7 @@ export type SecurityRow = {
   lastAt: number;
   actor: Actor;
   actorId: string | null;
-  target: { kind: "Administrator" | "Learner"; id: string } | null;
+  target: { kind: "Administrator" | "Learner" | "Announcement"; id: string } | null;
   outcome: Outcome;
   correlation: string | null;
   count: number | null;

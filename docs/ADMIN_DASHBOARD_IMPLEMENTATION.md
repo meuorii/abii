@@ -170,7 +170,7 @@ Warnings predate the documentation change. No production job, email, database mi
 |6|Platform analytics and coverage reporting|Complete in isolated validation, production rollout pending|
 |7|Performance and job monitoring|Implemented. Production activation and independent probes pending.|
 |8|Security timeline and alerts|Implemented. Production index verification and activation pending.|
-|9|Announcements|Not Started|
+|9|Announcements|Implemented. Production storage and delivery activation pending.|
 |10|Support|Not Started|
 |11|Settings|Not Started|
 |12|Integrated verification and controlled release|Not Started|
@@ -287,3 +287,29 @@ Phase 8 requires separate operator approval for query indexes and collection act
 | `authratelimits` | Preserve the existing unique key/window and `expiresAt` TTL indexes. No reporting access is required. |
 
 Use standard visible, non-partial indexes with simple collation for the Phase 8 queries. The application database user needs scoped read access to both collections and existing authorized audit write privileges. Forward collection needs scoped `listIndexes`, `insert` and `update` on `adminsecurityevents`. Confirm indexes and query plans on representative staging data, then verify normal authentication decisions during an injected log-write failure. Enable forward observations on an approved deployment and record the UTC activation time. Disable the flag and redeploy to stop the new producer. Existing stored evidence remains queryable until its established TTL expires. No backfill or retention migration is required.
+
+## Phase 9 announcement publication and rollout
+
+The administrator workspace uses the existing UI feature gate, live administrator session, trusted origin and private no-store JSON responses. Draft creation and editing require an authenticated administrator. Scheduling, canceling, publishing and retrying require recent MFA. Each mutation carries the saved revision. Publication additionally requires an explicit confirmation and a five-minute encrypted audience preview bound to the normalized content. Administrative transitions, including eventual scheduled commitment, co-commit their existing audit records and security shadows. Phase 8 displays these as Announcement targets.
+
+- Draft and canceled records can be edited. A schedule can be updated or canceled until a worker commits it. ?Published? counts committed announcements, including queued, publishing, delivered and delivery issues. The issues count is the committed subset with stalled delivery. ?Delivered? requires a completed cursor sweep. A broken batch can remain failed or incomplete until an administrator confirms retry.
+- The selected date and time use UTC. The existing private Vercel reminder dispatch runs every 15 minutes. It registers an isolated after-response announcement pass when `ABII_ANNOUNCEMENTS_DELIVERY_ENABLED=true`. Reminder settings, authorization and cadence are unchanged. A second recurring dispatch would consume additional team run quota. Vercel jitter, skipped runs and backlog can delay delivery. An immediate publication queues durably and gets a best-effort after-response pass. The shared dispatcher picks up any remaining work. [Vercel Schedules limits](https://vercel.com/docs/schedules/limits)
+- A single indexed claim moves a publication?s next eligible time to its lease expiry. Lease and revision checks fence overlapping runs. A worker handles one publication per invocation, with a 32-second soft delivery budget, up to eight pages, and 12-second transaction deadlines. Renewed leases last 90 seconds. An expired lease is eligible again through the same dispatcher. The next eligible time, last attempt, retry count and unresolved batch size are stored. No unconfirmed page advances the cursor.
+- Managed publication IDs use `admin.<objectId>`, which legacy CLI IDs could never pass. Learner notification keys remain `whats-new:<publicationId>`. The publication boundary includes the highest existing account ID, the verified-by cutoff and the fixed audience policy at commitment. Recipient pages are sorted by ID, with 100 recipients by default and a 500-recipient cap. Live delivery rechecks active ordinary-account status, scalar verification timestamps, and the What?s New preference. Notice and receipt writes are batched inside one transaction. A conditional account write serializes delivery with opt-outs, suspension and erasure. No parallel operations run inside a page transaction.
+- Each successful page atomically writes new inbox entries, durable receipts, counters and its cursor. Receipts survive individual inbox deletion and are erased with the account in the existing account-deletion transaction. Completed progress stays as aggregate totals. ?Previously completed? is included in Delivered. ?Suppressed? counts candidates excluded at the final eligibility check. ?Remaining estimate? derives from the commitment snapshot and may change in accuracy as accounts are erased or eligibility changes. Inbox creation does not measure reads.
+- List reads are limited to 20 records with encrypted, filter-bound timestamp/ID cursors. The title filter matches a literal prefix and exact ID search accepts a workspace ID or publication ID. The editor guards link navigation and hard refresh when changes are unsaved. Locking the publication freezes content, destination and audience for retry.
+
+### Operator prerequisites and rollback
+
+No Phase 9 collection or index is auto-created. Before approved activation, provision or verify the following indexes with simple collation and a replica-set or sharded deployment that supports transactions.
+
+| Collection | Index |
+|---|---|
+| `announcements` | Standard unique `_id_`. `announcement_queue` on `{ nextRunAt: 1, _id: 1 }`, `announcement_updated` on `{ updatedAt: -1, _id: -1 }`, and `announcement_created` on `{ createdAt: -1, _id: -1 }`. |
+| `announcementreceipts` | Standard unique string `_id_` for publication/recipient identity and `announcement_receipt_owner` on `{ userId: 1 }` for account erasure. Receipts have no TTL while the account exists. |
+| `notifications` | Existing non-partial, non-sparse unique `notification_owner_dedupe_unique` on `{ userId: 1, dedupeKey: 1 }`. Keep existing inbox indexes. |
+| `users`, `adminauditlogs`, `adminsecurityevents` | Keep existing indexes and audit retention. Delivery needs user reads and the scoped `announcementDeliveryVersion` increment. Existing audit validators must accept the Phase 9 action names. |
+
+Allow the application role to list the required indexes and write only the relevant records. Test the private schedule, delivery transactions, rollback and receipt erasure against an approved staging environment before enabling the flag. Disable the flag and redeploy to pause new and queued delivery. Wait for in-flight worker leases to settle and retain cursors, notifications and receipts. Existing reminder dispatch remains enabled. Keep receipt storage across rollbacks.
+
+The operator CLI still defaults to a read-only dry run. Explicit `--apply` requires the receipt and inbox indexes plus transaction support. Legacy CLI IDs keep their original alphabet, and an explicit rerun uses the same receipt-aware batched writer. Visible legacy inbox records can be reconciled into receipts. Previously removed CLI notifications without receipts cannot be reconstructed, so reuse of historical IDs requires existing operational evidence. Phase 9 does not backfill or claim delivery for those publications.

@@ -8,12 +8,13 @@ export class TransactionUnavailableError extends Error {
   }
 }
 
-export async function withRequiredTransaction<T>(operation: (session: ClientSession) => Promise<T>): Promise<T> {
+export async function withRequiredTransaction<T>(operation: (session: ClientSession) => Promise<T>, options: { timeoutMS?: number } = {}): Promise<T> {
   const session = await mongoose.startSession();
   try {
     let result: T;
     try {
       result = await session.withTransaction(() => operation(session), {
+        ...(options.timeoutMS === undefined ? {} : { timeoutMS: options.timeoutMS }),
         readConcern: { level: "snapshot" },
         writeConcern: { w: "majority" },
       }) as T;

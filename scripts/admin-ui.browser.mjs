@@ -20,6 +20,9 @@ import { emptyDatabase, recordLatency, minute, retentionMs } from "../lib/perfor
 import { securityTimelineIndex, securityCorrelationIndex } from "../lib/admin/security-contract.ts";
 import { securityEvidence } from "../lib/auth/security-evidence.ts";
 
+import { Announcement, AnnouncementReceipt } from "../models/Announcement.ts";
+import { Notification } from "../models/Notification.ts";
+
 const destinations = [
   ["", "Overview", "Everything in one view.", "Platform Overview", "overview"],
   ["/users", "Users", "Every learner matters.", "Learner directory", "users"],
@@ -113,11 +116,13 @@ async function startServer(env, production = false) {
 
 test("admin routes fail closed, require real MFA, and render the protected workspace", { timeout: 480_000 }, async () => {
   const securityOnly = process.env.ABII_TEST_SECURITY_LOGS_ONLY === "1";
+  const announcementsOnly = process.env.ABII_TEST_ANNOUNCEMENTS_ONLY === "1";
   const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const secret = randomBytes(32).toString("hex");
   const uri = replica.getUri("abii_admin_ui_fixture");
   const env = {
     ABII_SECURITY_EVENTS_ENABLED: "true",
+    ABII_ANNOUNCEMENTS_DELIVERY_ENABLED: "true",
     ABII_PERF_COLLECTION: "1", ABII_PERF_MONGODB_URI: replica.getUri("abii_performance_ui_fixture"),
     CRON_SECRET: randomBytes(32).toString("hex"),
     MONGODB_URI: uri, AUTH_SECRET: secret, AUTH_OTP_SECRET: randomBytes(32).toString("hex"),
@@ -154,6 +159,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     await jobs.insertOne({ _id: "fixture-job", source: "scheduled", scheduledAt: slot, startedAt: new Date(+slot + 5000),
       finishedAt: new Date(+slot + 6800), expiresAt: new Date(+slot + retentionMs),
       completion: { outcome: "completed", summary: { examined: 11, created: 3, errors: 0, existing: 8, suppressed: 0, hasMore: false, busy: false, batches: 1 } } });
+    await Promise.all([Announcement.syncIndexes(), AnnouncementReceipt.syncIndexes(), Notification.syncIndexes()]);
     const users = db.collection("users");
     const admin = { _id: "primary", name: "Fixture Admin", email: "ui-admin@example.invalid" };
     const learner = { _id: new mongoose.Types.ObjectId(), role: "user", name: "Fixture Learner", email: "ui-learner@example.invalid" };
@@ -212,7 +218,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
       question: "Fixture prompt", answer: "Durable" });
     server = await startServer({ ...env, MONGODB_URI: outageUri, ABII_ADMIN_UI_ENABLED: "",
       ABII_PERF_MONGODB_URI: "mongodb://127.0.0.1:1/abii_unreachable_fixture" }, process.env.ABII_TEST_PRODUCTION_GATE === "1");
-    for (const suffix of ["", "/settings", "/analytics", "/performance", "/security"]) {
+    for (const suffix of ["", "/settings", "/analytics", "/performance", "/security", "/announcements"]) {
       const closed = await fetch(server.base + "/admin" + suffix);
       assert.equal(closed.status, 404);
       assert.match(closed.headers.get("cache-control"), /private.*no-store/);
@@ -304,6 +310,8 @@ test("admin routes fail closed, require real MFA, and render the protected works
     assert.equal((await fetch(base + learnerDetailPath)).status, 401);
     assert.equal((await context.request.get(base + learnerDetailPath)).status(), 403);
     assert.ok(learnerCookie);
+    const previewRequest = { action: "preview", title: "Fixture", message: "Fixture" };
+    assert.equal((await post("/api/admin/announcements", previewRequest)).status(), 403);
     for (const [suffix] of destinations) await denied(suffix, "Administrator access required", `abii_session=${learnerCookie.value}`);
     await page.goto(base + "/dashboard");
     await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Dashboard", exact: true }).waitFor();
@@ -349,7 +357,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     assert.equal(await auditLogs.countDocuments({ action: "login", actorId: "admin:primary", outcome: "committed" }), 1);
     const adminCookie = (await context.cookies()).find(cookie => cookie.name === "abii_admin");
     assert.ok(adminCookie);
-    for (const [suffix, label, headline, region, asset] of securityOnly ? destinations.filter(item => item[4] === "security") : destinations) {
+    for (const [suffix, label, headline, region, asset] of securityOnly || announcementsOnly ? destinations.filter(item => item[4] === (securityOnly ? "security" : "announcements")) : destinations) {
       await page.setViewportSize({ width: 1920, height: 951 });
       const response = await page.goto(base + "/admin" + suffix, { waitUntil: "domcontentloaded", timeout: 90_000 });
       assert.match(response.headers()["cache-control"], /\bno-store\b/);
@@ -366,7 +374,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
       }
       assert.equal(await image.getAttribute("alt"), "");
 
-      if (!["overview", "users", "analytics", "performance", "security"].includes(asset)) assert.equal(await page.locator("main table, main input, main select").count(), 0);
+      if (!["overview", "users", "analytics", "performance", "security", "announcements"].includes(asset)) assert.equal(await page.locator("main table, main input, main select").count(), 0);
       assert.ok(!(await page.locator("main").innerText()).includes(admin.email));
       for (const width of widths) {
         await page.setViewportSize({ width, height: 880 });
@@ -388,6 +396,109 @@ test("admin routes fail closed, require real MFA, and render the protected works
           assert.fail(`Performance at ${width}px overflows: ${JSON.stringify(overflow)}`);
         }
         assert.ok(Object.entries(geometry).every(([key, value]) => key === "bottomGap" ? value >= 0 && value <= 4 : value), `${label} at ${width}px: ${JSON.stringify(geometry)}`);
+      }
+    }
+
+    if (!securityOnly) {
+      // The browser only publishes into this loopback replica-set fixture.
+      await page.goto(base + "/admin/announcements");
+      await page.getByText("No announcements yet. Create a draft to get started.").waitFor({ timeout: 20_000 });
+      assert.equal((await fetch(base + "/api/admin/announcements", { method: "POST", headers: { Origin: base, "Content-Type": "application/json" },
+        body: JSON.stringify(previewRequest) })).status, 401);
+      assert.equal((await context.request.post(base + "/api/admin/announcements", { headers: { Origin: "https://outside.invalid" }, data: previewRequest })).status(), 403);
+      await page.getByRole("link", { name: "Create new" }).click();
+      const editor = page.getByRole("region", { name: "Create announcement" });
+      await editor.getByRole("textbox", { name: "Announcement title" }).fill("Fixture study release");
+      await editor.getByRole("textbox", { name: "Message" }).fill("A new way to work through the review queue.");
+      await editor.getByLabel("Destination").selectOption("/review");
+      await editor.getByRole("button", { name: "Estimate audience" }).click();
+      await editor.getByText(/estimated recipient/).waitFor({ timeout: 15_000 });
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: 900 });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector("main").scrollWidth <= innerWidth), `Announcement editor fits at ${width}px`);
+        if (process.env.ABII_ADMIN_SCREENSHOTS && [320, 390, 1440].includes(width)) {
+          await editor.getByRole("heading", { name: "Create announcement" }).evaluate(el => el.scrollIntoView({ block: "start" }));
+          await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `announcement-editor-${width}.png`), animations: "disabled" });
+        }
+      }
+      await editor.getByRole("link", { name: "Back to announcements" }).click();
+      const discard = page.getByRole("dialog", { name: "Discard unsaved changes?" });
+      await discard.waitFor();
+      await page.keyboard.press("Escape");
+      await discard.waitFor({ state: "hidden" });
+      assert.equal(await editor.getByRole("textbox", { name: "Announcement title" }).inputValue(), "Fixture study release");
+      await editor.getByRole("button", { name: "Save draft" }).click();
+      const details = page.getByRole("region", { name: "Selected announcement" });
+      await details.getByText("Draft created", { exact: true }).waitFor({ timeout: 20_000 });
+      const publicationId = await details.getByText(/^admin\.[0-9a-f]{24}$/).textContent();
+      await details.getByRole("link", { name: "Edit", exact: true }).click();
+      const edit = page.getByRole("region", { name: "Edit announcement" });
+      await edit.getByRole("textbox", { name: "Message" }).fill("Organize today's study session in the review queue.");
+      const future = new Date(Date.now() + 360_000).toISOString();
+      await edit.getByLabel("Date", { exact: true }).fill(future.slice(0, 10));
+      await edit.getByLabel("Time", { exact: true }).fill(future.slice(11, 16));
+      await edit.getByRole("button", { name: "Schedule", exact: true }).click();
+      const scheduleDialog = page.getByRole("dialog", { name: "Confirm publication schedule" });
+      await scheduleDialog.getByRole("button", { name: "Confirm schedule" }).click();
+      await details.getByText("Schedule created", { exact: true }).waitFor({ timeout: 20_000 });
+      assert.equal(await db.collection("notifications").countDocuments({ dedupeKey: `whats-new:${publicationId}` }), 0);
+      await details.getByRole("button", { name: "Cancel schedule" }).click();
+      await page.getByRole("dialog", { name: "Cancel scheduled publication?" }).getByRole("button", { name: "Confirm cancellation" }).click();
+      await details.getByText("Schedule canceled", { exact: true }).first().waitFor({ timeout: 20_000 });
+      await details.getByRole("link", { name: "Edit", exact: true }).click();
+      await edit.getByRole("button", { name: "Publish now" }).click();
+      const confirm = page.getByRole("dialog", { name: "Publish this announcement?" });
+      await confirm.getByText(/cannot be recalled/).waitFor({ timeout: 20_000 });
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: 900 });
+        assert.ok(await confirm.evaluate(dialog => {
+          const box = dialog.getBoundingClientRect();
+          return box.left >= 0 && box.right <= innerWidth && dialog.scrollWidth <= dialog.clientWidth;
+        }), `Publication confirmation fits at ${width}px`);
+      }
+      await page.keyboard.press("Escape");
+      await confirm.waitFor({ state: "hidden" });
+      await page.waitForFunction(() => document.activeElement?.textContent === "Publish now", undefined, { timeout: 10_000 });
+      await edit.getByRole("button", { name: "Publish now" }).click();
+      await confirm.getByText(/cannot be recalled/).waitFor({ timeout: 20_000 });
+      if (process.env.ABII_ADMIN_SCREENSHOTS) {
+        await page.setViewportSize({ width: 390, height: 900 });
+        await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "announcement-confirm-390.png"), animations: "disabled" });
+      }
+      assert.equal(await db.collection("notifications").countDocuments({ dedupeKey: `whats-new:${publicationId}` }), 0);
+      await db.command({ collMod: "notifications", validator: { dedupeKey: { $ne: `whats-new:${publicationId}` } } });
+      try {
+        await confirm.getByRole("button", { name: "Confirm publication" }).click();
+        await details.getByText("Failed", { exact: true }).waitFor({ timeout: 35_000 });
+        await details.getByText(/recipients in the unresolved batch/).waitFor({ timeout: 15_000 });
+      } finally {
+        await db.command({ collMod: "notifications", validator: {} });
+      }
+      await details.getByRole("button", { name: "Retry delivery" }).click();
+      await page.getByRole("dialog", { name: "Retry delivery?" }).getByRole("button", { name: "Confirm retry" }).click();
+      await details.getByText("Delivered", { exact: true }).waitFor({ timeout: 35_000 });
+      assert.equal(await db.collection("notifications").countDocuments({ dedupeKey: `whats-new:${publicationId}`, userId: learner._id }), 1);
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: 900 });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector("main").scrollWidth <= innerWidth), `Delivery detail fits at ${width}px`);
+      }
+      if (process.env.ABII_ADMIN_SCREENSHOTS) {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await details.evaluate(el => el.scrollIntoView({ block: "start" }));
+        await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "announcement-delivery-1440.png"), animations: "disabled" });
+      }
+      const filter = page.getByRole("form", { name: "Filter announcements" });
+      await filter.getByRole("searchbox").fill(publicationId);
+      await filter.getByRole("button", { name: "Apply" }).click();
+      await page.waitForURL(url => url.searchParams.get("q") === publicationId, { timeout: 20_000 });
+      await page.getByRole("link", { name: /Fixture study release/ }).waitFor({ timeout: 20_000 });
+      await db.collection("announcements").dropIndex("announcement_updated");
+      await page.goto(base + "/admin/announcements");
+      await page.getByRole("alert").filter({ hasText: "Announcement storage is unavailable." }).waitFor({ timeout: 20_000 });
+      await db.collection("announcements").createIndex({ updatedAt: -1, _id: -1 }, { name: "announcement_updated" });
+      if (announcementsOnly) {
+        assert.deepEqual(pageErrors, []);
+        return;
       }
     }
 

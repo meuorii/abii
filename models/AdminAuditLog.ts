@@ -1,8 +1,8 @@
 import "server-only";
-import { eventLabels, rateScopes } from "@/lib/admin/security-contract";
+import { auditLabels, eventLabels, rateScopes } from "@/lib/admin/security-contract";
 import mongoose, { Schema, type Model, type InferSchemaType } from "mongoose";
 
-export const actions = ["provision", "enroll", "enrollment-restart", "rotate", "recover", "login", "logout", "user.suspend", "user.restore"] as const;
+export const actions = Object.keys(auditLabels) as (keyof typeof auditLabels)[];
 export const denials = ["login-denied", "mfa-denied", "access-denied", "recovery-denied"] as const;
 const schema = new Schema({
   actorId: { type: String, required: true },

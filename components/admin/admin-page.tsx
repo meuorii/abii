@@ -14,7 +14,7 @@ const pages = {
   settings: ["Make every detail count.", "Manage the essentials that keep Abii running your way."],
 } as const;
 
-type Page = Exclude<keyof typeof pages, "overview" | "users" | "analytics" | "performance" | "security">;
+type Page = Exclude<keyof typeof pages, "overview" | "users" | "analytics" | "performance" | "security" | "announcements">;
 const unavailable = (message: string) => ({ kind: "unavailable", message }) as const;
 const stack = "grid min-w-0 gap-4";
 const split = `${stack} min-[880px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]`;
@@ -40,14 +40,6 @@ function PendingTable({ title, message }: { title: string; message: string }) {
 
 function PageContent({ page }: { page: Page }) {
   switch (page) {
-    case "announcements":
-      return <>
-        <Summary title="Publication summary" labels={["Drafts", "Scheduled", "Published"]} message="Publishing unavailable" />
-        <div className={split}>
-          <PendingTable title="Announcement list" message="The announcement list is unavailable." />
-          <Pending title="Publishing" message="Drafting and scheduling will be available when publishing is connected." />
-        </div>
-      </>;
     case "support":
       return <>
         <Summary title="Ticket status" labels={["Open", "Awaiting reply", "Resolved"]} message="Ticketing unavailable" />

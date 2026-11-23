@@ -8,7 +8,7 @@ const metadataSchema = new Schema({
   sessionId: { type: String, maxlength: 64, match: /^[a-f\d]{24}$/i },
   badgeId: { type: String, maxlength: 64, match: /^[a-z0-9-]+$/i },
   eventId: { type: String, maxlength: 160, trim: true, match: /^[a-z0-9:_-]+$/i },
-  announcementId: { type: String, maxlength: 64, match: /^[a-z0-9_-]+$/i },
+  announcementId: { type: String, maxlength: 64, match: /^(?:[a-z0-9_-]+|admin\.[a-f0-9]{24})$/i },
   count: { type: Number, min: 0, max: 1_000_000, validate: Number.isInteger },
   periodKey: { type: String, maxlength: 40, match: /^[a-z0-9:_-]+$/i },
 }, { _id: false, strict: "throw" });

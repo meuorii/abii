@@ -69,7 +69,7 @@ export function projectSecurity(raw: Document, source: Source): SecurityRow | nu
     if (typeof raw.action !== "string" || !Object.hasOwn(auditLabels, raw.action) || raw.outcome !== "committed" || raw.actorId !== ADMIN_SUBJECT) return null;
     const kind = raw.action as keyof typeof auditLabels;
     const target = raw.targetId === ADMIN_SUBJECT ? { kind: "Administrator" as const, id: ADMIN_SUBJECT }
-      : isAccountId(raw.targetId) ? { kind: "Learner" as const, id: raw.targetId } : null;
+      : isAccountId(raw.targetId) ? { kind: kind.startsWith("announcement.") ? "Announcement" as const : "Learner" as const, id: raw.targetId } : null;
     return { id, source, kind, label: auditLabels[kind], at, lastAt: at, actor: "admin", actorId: ADMIN_SUBJECT, target,
       outcome: kind === "login" ? "success" : "committed", correlation: isCorrelationId(raw.correlationId) ? raw.correlationId : null,
       count: 1, scope: null, coverage: "committed" };

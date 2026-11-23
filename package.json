@@ -13,6 +13,7 @@
     "test:admin-security": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-factor.test.ts scripts/admin-operator.test.ts scripts/admin-session.test.ts scripts/admin-bootstrap.test.ts",
     "test:admin-performance": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-performance.test.ts",
     "test:admin-security-logs": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-security-logs.test.ts",
+    "test:admin-announcements": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-announcements.test.ts",
     "test:admin-ui": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-ui.browser.mjs",
     "test:admin-overview": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-overview.test.ts",
     "test:admin-users": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-users.test.ts",

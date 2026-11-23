@@ -15,7 +15,7 @@ function ownerId(value: string): Types.ObjectId {
   return new Types.ObjectId(value);
 }
 
-function validateInput(input: CreateNotificationInput): CreateNotificationInput {
+export function validateNotificationInput(input: CreateNotificationInput): CreateNotificationInput {
   if (!input || typeof input !== "object" || !isNotificationType(input.type)) throw new NotificationInputError("A valid notification type is required.");
   if (typeof input.title !== "string" || !input.title.trim() || input.title.trim().length > 120) throw new NotificationInputError("Notification title must contain 1 to 120 characters.");
   if (typeof input.message !== "string" || !input.message.trim() || input.message.trim().length > 500) throw new NotificationInputError("Notification message must contain 1 to 500 characters.");
@@ -58,7 +58,7 @@ function decodeCursor(value: string | undefined): { createdAt: Date; id: Types.O
 /** Create a trusted notification. The unique owner/key index is the idempotency authority. */
 export async function createNotification(userId: string, rawInput: CreateNotificationInput): Promise<CreateNotificationResult> {
   const userObjectId = ownerId(userId);
-  const input = validateInput(rawInput);
+  const input = validateNotificationInput(rawInput);
   await connectToDatabase();
   const user = await User.findById(userObjectId).select("settings.notifications settings.dailyStudyTime").lean();
   if (!user) throw new Error("Notification owner does not exist.");

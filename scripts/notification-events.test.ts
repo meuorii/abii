@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import mongoose, { Types } from "mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 import { User } from "../models/User";
 import { UserBadge } from "../models/UserBadge";
 import { AchievementEvent } from "../models/AchievementEvent";
+import { AnnouncementReceipt } from "../models/Announcement";
 import { Notification } from "../models/Notification";
 import { connectToDatabase } from "../lib/mongodb";
 import { BADGE_BY_ID } from "../lib/badges/catalog";
@@ -13,12 +14,12 @@ import { notifyLiveBadgeAward, notifyQuizMilestoneForCompletion, notifyAccountSe
 import { publishWhatsNewAnnouncement } from "../lib/notifications/announcements";
 
 test("trusted event producers publish only verified, opted-in events idempotently", { timeout: 120_000 }, async () => {
-  const server = await MongoMemoryServer.create();
+  const server = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const previousUri = process.env.MONGODB_URI;
   try {
     process.env.MONGODB_URI = server.getUri("abii_notification_events_test");
     await connectToDatabase();
-    await Promise.all([User.syncIndexes(), UserBadge.syncIndexes(), AchievementEvent.syncIndexes(), Notification.syncIndexes()]);
+    await Promise.all([User.syncIndexes(), UserBadge.syncIndexes(), AchievementEvent.syncIndexes(), Notification.syncIndexes(), AnnouncementReceipt.syncIndexes()]);
     const userIndexes = await User.collection.indexes();
     assert.ok(userIndexes.some((index) => index.name === "verified_users_cursor"), "verified announcement recipients use a bounded indexed cursor");
     const eventIndexes = await AchievementEvent.collection.indexes();
@@ -121,6 +122,10 @@ test("trusted event producers publish only verified, opted-in events idempotentl
     assert.equal(await Notification.countDocuments({ userId: optedOut._id, type: "whats_new" }), 0);
     assert.equal(await Notification.countDocuments({ userId: unverified._id, type: "whats_new" }), 0);
     await assert.rejects(publishWhatsNewAnnouncement({ announcement: { ...announcement, target: "https://example.invalid" }, apply: false }), /safe internal route/i);
+    await Notification.deleteOne({ userId: eligible._id, dedupeKey: "whats-new:study-tools-v1" });
+    const afterRemoval = await publishWhatsNewAnnouncement({ announcement, apply: true });
+    assert.equal(afterRemoval.mode === "published" ? afterRemoval.alreadyExists : -1, 1);
+    assert.equal(await Notification.countDocuments({ userId: eligible._id, dedupeKey: "whats-new:study-tools-v1" }), 0);
     assert.ok(await User.exists({ _id: eligible._id }));
   } finally {
     await mongoose.disconnect();
