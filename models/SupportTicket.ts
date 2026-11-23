@@ -1,0 +1,18 @@
+import "server-only";
+import mongoose, { Schema, type InferSchemaType, type Model } from "mongoose";
+
+const encrypted = new Schema({ version: { type: Number, required: true }, keyId: { type: String, required: true }, nonce: { type: String, required: true }, ciphertext: { type: String, required: true }, tag: { type: String, required: true } }, { _id: false, strict: "throw" });
+const ticketSchema = new Schema({ submissionKey: { type: String, required: true }, payloadHash: { type: String, required: true }, reference: { type: String, required: true }, source: { type: String, enum: ["public_contact"], required: true }, customerName: { type: String, required: true }, customerEmail: { type: String, required: true }, customerEmailKey: { type: String, required: true }, category: { type: String, required: true }, status: { type: String, enum: ["new", "open", "awaiting_reply", "resolved"], required: true }, revision: { type: Number, required: true, default: 0 }, notificationState: { type: String, enum: ["pending", "accepted", "failed", "uncertain"], required: true, default: "pending" }, lastActivityAt: { type: Date, required: true }, lastResponseAt: Date, resolvedAt: Date }, { collection: "supporttickets", timestamps: true, versionKey: false, strict: "throw", autoCreate: false, autoIndex: false });
+ticketSchema.index({ submissionKey: 1 }, { unique: true, name: "support_ticket_submission_unique" });
+ticketSchema.index({ status: 1, lastActivityAt: -1, _id: -1 }, { name: "support_ticket_status_activity" });
+ticketSchema.index({ createdAt: -1, _id: -1 }, { name: "support_ticket_created" });
+ticketSchema.index({ customerEmailKey: 1, lastActivityAt: -1 }, { name: "support_ticket_customer" });
+ticketSchema.index({ reference: 1 }, { unique: true, name: "support_ticket_reference_unique" });
+const activitySchema = new Schema({ ticketId: { type: Schema.Types.ObjectId, required: true }, kind: { type: String, enum: ["customer_message", "internal_note", "admin_response", "status_change", "delivery"], required: true }, body: encrypted, actorId: String, fromStatus: String, toStatus: String, operationId: String, deliveryState: String, providerMessageId: String }, { collection: "supportticketactivities", timestamps: true, versionKey: false, strict: "throw", autoCreate: false, autoIndex: false });
+activitySchema.index({ ticketId: 1, createdAt: 1, _id: 1 }, { name: "support_activity_timeline" });
+const operationSchema = new Schema({ ticketId: { type: Schema.Types.ObjectId, required: true }, operationId: { type: String, required: true }, body: { type: encrypted, required: true }, recipient: { type: String, required: true }, recipientName: { type: String, required: true }, reference: { type: String, required: true }, state: { type: String, enum: ["pending", "sending", "accepted", "failed", "uncertain"], required: true }, providerMessageId: String, error: String, claimedAt: Date }, { collection: "supportresponseoperations", timestamps: true, versionKey: false, strict: "throw", autoCreate: false, autoIndex: false });
+operationSchema.index({ ticketId: 1, operationId: 1 }, { unique: true, name: "support_response_operation_unique" });
+export type SupportTicketDocument = InferSchemaType<typeof ticketSchema>;
+export const SupportTicket: Model<SupportTicketDocument> = mongoose.models.SupportTicket ?? mongoose.model<SupportTicketDocument>("SupportTicket", ticketSchema);
+export const SupportTicketActivity = mongoose.models.SupportTicketActivity ?? mongoose.model("SupportTicketActivity", activitySchema);
+export const SupportResponseOperation = mongoose.models.SupportResponseOperation ?? mongoose.model("SupportResponseOperation", operationSchema);

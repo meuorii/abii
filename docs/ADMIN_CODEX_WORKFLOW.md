@@ -35,19 +35,19 @@
 
 ## 5. Active handoff
 
-**Status** Phase 9 implemented. Production delivery activation is pending.
+**Status** Phase 10 code-complete pending a captured production-build exit result.
 
-**Verified now** Revision-aware drafts and scheduling, content-bound audience confirmation, transactional publication and receipt-backed delivery, safe erasure, and retries from committed checkpoints.
+**Verified now** Support concurrency (14), isolated authenticated harness (1), support-management (4), administrator security (14), and isolated Support browser QA (1) passed. Browser QA uses real MFA, temporary MongoDB, real ticket/note/status interactions, and browser-mocked reply outcomes only; no live Brevo request is possible.
 
 **Files changed** `app/(admin)/admin/{announcements/page.tsx,loading.tsx}`, `app/api/{admin/announcements,account,internal/notifications/reminder-schedule}/route.ts`, `components/admin/{admin-page,admin-announcements,announcement-editor}.tsx`, `lib/{admin/{announcement-contract,announcements,security,security-contract},auth/admin-session-state,mongodb-transaction,notifications/{announcement-worker,announcements,service}}.ts`, `models/{Announcement,Notification,User,AdminAuditLog}.ts`, `scripts/{admin-announcements.test.ts,admin-ui.browser.mjs,notification-events.test.ts}`, `package.json`, `docs/{ADMIN_CODEX_WORKFLOW,ADMIN_DASHBOARD_IMPLEMENTATION}.md`.
 
-**Tests** Focused delivery and notification, reminder, administrator security, security logs, TypeScript, lint and loopback-only production build passed. Three existing lint warnings remain.
+**Tests** TypeScript and lint passed. `next build` compiled and completed type validation, but this execution channel did not return its final process exit code; do not mark the build passed until that is captured.
 
 **Browser QA** Full admin suite passed with the production feature-gate check. Announcement editor, dialog and delivery detail fit all eight widths. Drafts, estimates, scheduling, cancellation, confirmation focus, failed delivery and retry, search, and unavailable storage were exercised.
 
 **Deployment gates** Verify approved queue, listing, receipt and inbox indexes, test the existing private 15-minute dispatch in staging, and enable `ABII_ANNOUNCEMENTS_DELIVERY_ENABLED` only after approval. No production resources changed.
 
-**Next task** Provision and validate the documented Phase 9 storage and scheduler prerequisites on approved staging infrastructure.
+**Next task** Capture one definitive `npm run build` exit result in the release environment before production activation.
 
 ## 6. Update this compact handoff at the end of each task
 

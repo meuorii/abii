@@ -3,6 +3,7 @@ import mongoose, { Schema } from "mongoose";
 
 const schema = new Schema({
   key: { type: String, required: true },
+  payloadHash: { type: String, required: true },
   status: { type: String, enum: ["processing", "accepted", "failed"], required: true },
   expiresAt: { type: Date, required: true },
 }, { versionKey: false });

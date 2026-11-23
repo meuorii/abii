@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { limited, rateAllowed, rateAllowedByTrustedIp, validOrigin } from "@/lib/auth/http";
@@ -6,6 +6,9 @@ import { sendTransactionalEmail } from "@/lib/email/brevo";
 import { renderSupportEmail } from "@/lib/email/support-template";
 import { validateSupportContact } from "@/lib/support/validation";
 import { SupportSubmission } from "@/models/SupportSubmission";
+import { SupportTicket } from "@/models/SupportTicket";
+import { createSupportTicket } from "@/lib/support/tickets";
+import { withRequiredTransaction } from "@/lib/mongodb-transaction";
 
 export const runtime = "nodejs";
 
@@ -79,15 +82,17 @@ export async function POST(request: Request) {
     const secret = process.env.AUTH_OTP_SECRET;
     if (!secret || secret.length < 32) return safeFailure();
     const key = createHmac("sha256", secret).update(idempotencyKey).digest("hex");
+    const payloadHash = createHash("sha256").update(JSON.stringify(values)).digest("hex");
     await connectToDatabase();
 
     let reserved = false;
     try {
-      await SupportSubmission.create({ key, status: "processing", expiresAt: new Date(Date.now() + processingExpiry) });
+      await SupportSubmission.create({ key, payloadHash, status: "processing", expiresAt: new Date(Date.now() + processingExpiry) });
       reserved = true;
     } catch (error) {
       if (!(error && typeof error === "object" && "code" in error && error.code === 11000)) throw error;
-      const previous = await SupportSubmission.findOne({ key }).lean() as { status?: string; expiresAt?: Date } | null;
+      const previous = await SupportSubmission.findOne({ key }).lean() as { status?: string; payloadHash?: string; expiresAt?: Date } | null;
+      if (previous?.payloadHash !== payloadHash) return NextResponse.json({ message: "This form submission key cannot be reused." }, { status: 409 });
       if (previous?.status === "accepted") return NextResponse.json({ message: "Your message was already submitted." });
       if (previous?.status === "failed" || (previous?.status === "processing" && previous.expiresAt && previous.expiresAt.getTime() <= Date.now())) {
         const reclaimFilter = previous.status === "failed"
@@ -103,8 +108,23 @@ export async function POST(request: Request) {
       if (!reserved) return NextResponse.json({ message: "This message is already being processed. Please wait before retrying." }, { status: 409 });
     }
 
+    // The durable ticket is intentionally separate from the expiring delivery reservation.
+    let ticket;
+    try {
+      ticket = await withRequiredTransaction(session => createSupportTicket({ submissionKey: key, payloadHash, ...values }, session));
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error && error.code === 11000) {
+        const prior = await SupportTicket.findOne({ submissionKey: key }).lean() as { payloadHash?: string } | null;
+        if (prior?.payloadHash === payloadHash) return NextResponse.json({ message: "Your message was already submitted." });
+        if (prior) return NextResponse.json({ message: "This form submission key cannot be reused." }, { status: 409 });
+      }
+      await SupportSubmission.updateOne({ key }, { $set: { status: "failed", expiresAt: new Date(Date.now() + processingExpiry) } });
+      return safeFailure();
+    }
+
     const recipient = process.env.SUPPORT_INBOX_EMAIL?.trim().toLowerCase();
     if (!recipient || recipient.length > 254 || !emailPattern.test(recipient)) {
+      await SupportTicket.updateOne({ _id: ticket._id }, { $set: { notificationState: "failed" } });
       await SupportSubmission.updateOne({ key }, { $set: { status: "failed", expiresAt: new Date(Date.now() + processingExpiry) } });
       return safeFailure();
     }
@@ -119,19 +139,25 @@ export async function POST(request: Request) {
       });
     } catch {
       // Configuration/template errors occur before a provider response, so a retry is safe.
+      await SupportTicket.updateOne({ _id: ticket._id }, { $set: { notificationState: "failed" } });
       await SupportSubmission.updateOne({ key }, { $set: { status: "failed", expiresAt: new Date(Date.now() + processingExpiry) } });
       return safeFailure();
     }
     if (!result.ok) {
       if (result.status === 0 || result.status >= 500) {
         // Keep the idempotency reservation after an ambiguous provider result.
+        await SupportTicket.updateOne({ _id: ticket._id }, { $set: { notificationState: "uncertain" } });
         return safeFailure();
       }
+      await SupportTicket.updateOne({ _id: ticket._id }, { $set: { notificationState: "failed" } });
       await SupportSubmission.updateOne({ key }, { $set: { status: "failed", expiresAt: new Date(Date.now() + processingExpiry) } });
       return safeFailure(result.status === 429 ? 503 : 502);
     }
 
-    await SupportSubmission.updateOne({ key }, { $set: { status: "accepted", expiresAt: new Date(Date.now() + acceptedExpiry) } });
+    await Promise.all([
+      SupportSubmission.updateOne({ key }, { $set: { status: "accepted", expiresAt: new Date(Date.now() + acceptedExpiry) } }),
+      SupportTicket.updateOne({ _id: ticket._id }, { $set: { notificationState: "accepted" } }),
+    ]);
     return NextResponse.json({ message: "Message submitted to Abii support." }, { status: 202 });
   } catch {
     return safeFailure();

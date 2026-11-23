@@ -5,6 +5,7 @@ export const auditLabels = {
   "announcement.schedule": "Announcement scheduled", "announcement.reschedule": "Announcement rescheduled",
   "announcement.cancel": "Announcement canceled", "announcement.publish": "Announcement publication committed",
   "announcement.retry": "Announcement delivery retried",
+  "support.status": "Support ticket status changed", "support.note": "Support note added", "support.response": "Support response submitted",
   logout: "Administrator sessions revoked", "user.suspend": "Learner suspended", "user.restore": "Learner reactivated",
 } as const;
 

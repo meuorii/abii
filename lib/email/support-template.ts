@@ -23,3 +23,8 @@ export function renderSupportEmail(input: SupportEmailInput) {
   const text = `ABII SUPPORT\nNew support message\n\nCategory: ${input.category}\nName: ${input.name}\nEmail: ${input.email}\n\nMessage:\n${input.message}\n\nSubmitted: ${input.submittedAt.toISOString()}`;
   return { subject, html, text };
 }
+
+export function renderSupportReply(input: { name: string; reference: string; message: string }) {
+  const name = escapeHtml(input.name); const reference = escapeHtml(input.reference); const message = escapeHtml(input.message).replace(/\r?\n/g, "<br>");
+  return { subject: `Re: your Abii support request (${input.reference})`, html: `<!doctype html><html lang="en"><body style="margin:0;background:#fff7f9;color:#2f2930;font-family:Arial,Helvetica,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 16px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#fff;border:1px solid #e8e2e5;border-radius:16px"><tr><td style="padding:30px"><p style="margin:0;color:#e9577d;font-size:12px;font-weight:bold;letter-spacing:1.2px">ABII SUPPORT</p><p style="margin:20px 0 0;font-size:15px">Hello ${name},</p><p style="margin:14px 0;font-size:15px;line-height:1.7;overflow-wrap:anywhere">${message}</p><p style="margin:20px 0 0;font-size:15px">Warmly,<br>Abii Support</p><p style="margin:24px 0 0;padding-top:16px;border-top:1px solid #e8e2e5;color:#756b72;font-size:12px">Ticket reference: ${reference}</p></td></tr></table></td></tr></table></body></html>`, text: `ABII SUPPORT\n\nHello ${input.name},\n\n${input.message}\n\nWarmly,\nAbii Support\n\nTicket reference: ${input.reference}` };
+}
