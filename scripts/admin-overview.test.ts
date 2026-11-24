@@ -27,12 +27,15 @@ test("Overview aggregates retained accounts, reviews, quiz evidence and redacted
     const [learner, suspended, legacy, excluded, deleted, quiz, expired, recovered, companion] = ids;
     const users = db.collection("users");
     await users.insertMany([
-      { _id: learner, name: "Current", email: "private@example.invalid", passwordHash: "private", role: "user", createdAt: start, emailVerifiedAt: now },
+      { _id: learner, name: "Current", email: "private@example.invalid", passwordHash: "private", role: "user", createdAt: start, emailVerifiedAt: now, profileImage: "https://res.cloudinary.com/abii/image/upload/current.png" },
       { _id: suspended, name: "Suspended", role: "user", createdAt: new Date(+end - 1), suspendedAt: now },
       { _id: legacy, name: "Legacy", createdAt: end },
       { _id: excluded, name: "Excluded", role: "admin", createdAt: start },
     ]);
-    await db.collection("flashcards").insertMany([{ flashcardType: "standard" }, { flashcardType: "enumeration" }]);
+    await db.collection("flashcards").insertMany([
+      { userId: learner, flashcardType: "standard", createdAt: start },
+      { userId: learner, flashcardType: "enumeration", createdAt: new Date("2026-11-20T00:00:00Z") },
+    ]);
     await db.collection("reviewrecords").insertMany([
       { userId: learner, reviewedAt: start }, { userId: learner, reviewedAt: new Date("2026-11-19") },
       { userId: learner, reviewedAt: new Date("2026-11-19") }, { userId: suspended, reviewedAt: new Date(+end - 1) },
@@ -46,6 +49,7 @@ test("Overview aggregates retained accounts, reviews, quiz evidence and redacted
       { userId: learner, kind: "resumed-quiz-completed", sessionId: companion, occurredAt: start },
       { userId: deleted, kind: "quiz-completed", sessionId: recovered, occurredAt: start },
       { userId: learner, kind: "quiz-completed", idempotencyKey: "quiz-completed:" + new mongoose.Types.ObjectId(), occurredAt: start },
+      ...Array.from({ length: 4 }, () => ({ userId: learner, kind: "quiz-completed", idempotencyKey: "quiz-completed:" + new mongoose.Types.ObjectId(), occurredAt: new Date(+start - 1) })),
     ]);
     await db.collection("quizsessions").insertMany([
       { _id: quiz, userId: learner, status: "completed", completedAt: start, expiresAt: new Date(+now + 60_000) },
@@ -61,11 +65,22 @@ test("Overview aggregates retained accounts, reviews, quiz evidence and redacted
     t.diagnostic(`Small fixture Overview read took ${Math.round(performance.now() - began)}ms.`);
     assert.equal(report.totalUsers, 3);
     assert.equal(report.totalFlashcards, 2);
+    assert.equal(report.trends.totalFlashcards.series?.reduce((sum, point) => sum + point.count, 0), 2);
+    assert.equal(report.trends.totalFlashcards.availability, "partial");
     assert.equal(report.growth?.reduce((sum, point) => sum + point.count, 0), 2);
     assert.equal(report.reviews?.active, 2);
     assert.deepEqual(report.reviews?.series.map(point => point.count), [1, 0, 0, 0, 2, 0, 1]);
     assert.equal(report.completedQuizzes, 3);
+    assert.deepEqual([report.trends.registrations.current, report.trends.registrations.previous, report.trends.registrations.absoluteChange, report.trends.registrations.percentageChange], [2, 0, 2, null]);
+    assert.deepEqual([report.trends.activeLearners.current, report.trends.activeLearners.previous, report.trends.activeLearners.absoluteChange], [2, 1, 1]);
+    assert.deepEqual(report.trends.activeLearners.series?.map(point => point.count), [1, 0, 0, 0, 1, 0, 1]);
+    assert.deepEqual([report.trends.completedQuizzes.current, report.trends.completedQuizzes.previous, report.trends.completedQuizzes.absoluteChange, report.trends.completedQuizzes.percentageChange], [3, 4, -1, -25]);
+    assert.equal(report.trends.completedQuizzes.series?.reduce((sum, point) => sum + point.count, 0), 3);
+    assert.equal(report.trends.totalUsers.percentageChange, null);
+    assert.equal(report.trends.totalUsers.comparisonLabel, "Registration activity");
     assert.deepEqual(report.recent?.map(row => [row.name, row.status]), [["Legacy", "Unverified"], ["Suspended", "Suspended"], ["Current", "Verified"]]);
+    assert.equal(report.recent?.find(row => row.name === "Current")?.profileImage, "https://res.cloudinary.com/abii/image/upload/current.png");
+    assert.equal(report.recent?.find(row => row.name === "Legacy")?.profileImage, null);
     assert.equal(report.attention?.kind, "login-denied");
     assert.doesNotMatch(JSON.stringify(report), /private|passwordHash|Excluded/);
     const longer = await readOverview("30", now);
@@ -108,6 +123,7 @@ test("Overview aggregates retained accounts, reviews, quiz evidence and redacted
     assert.equal(empty.totalUsers, 0);
     assert.equal(empty.reviews?.active, 0);
     assert.equal(empty.completedQuizzes, 0);
+    assert.deepEqual([empty.trends.completedQuizzes.absoluteChange, empty.trends.completedQuizzes.percentageChange, empty.trends.completedQuizzes.direction], [0, null, "flat"]);
     assert.deepEqual(empty.recent, []);
     assert.equal(empty.attention, null);
   } finally {

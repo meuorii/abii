@@ -14,7 +14,7 @@ export default function LoadingAdminPage() {
   const pathname = usePathname();
   const hero = <SkeletonBlock className="h-[170px] rounded-[20px] sm:h-[250px] lg:h-[282px] xl:h-[312px]" />;
   if (pathname === "/admin") {
-    return <div className="grid gap-5 sm:gap-6">{hero}<OverviewSkeleton /></div>;
+    return <div className="grid gap-5 sm:gap-6"><SkeletonBlock className="h-[164px] rounded-[18px] sm:h-[188px] lg:h-[204px]" /><OverviewSkeleton /></div>;
   }
   if (pathname === "/admin/users") {
     return <div className="grid gap-5 sm:gap-6">{hero}<UsersSkeleton /></div>;

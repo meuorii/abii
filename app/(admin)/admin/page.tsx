@@ -12,7 +12,7 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   if ((await getAdminPageAccess()).status !== 200) return null;
   const { period } = await searchParams;
   return (
-    <div className="grid min-w-0 gap-5 sm:gap-6">
+    <div className="admin-overview-workspace grid min-w-0 gap-5 sm:gap-6">
       <AdminPageHero page="overview" />
       <Suspense fallback={<OverviewSkeleton />}>
         <OverviewData period={period} />

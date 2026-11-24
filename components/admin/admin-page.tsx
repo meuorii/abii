@@ -4,7 +4,7 @@ import { getAdminPageAccess } from "@/lib/auth/admin-page-access";
 import { AdminFeedback, AdminPanel, AdminTable, MetricCard } from "./admin-ui";
 
 const pages = {
-  overview: ["Everything in one view.", "A clearer picture of everything happening across Abii."],
+  overview: ["Everything in one view.", "Your platform, people, and activity."],
   users: ["Every learner matters.", "Keep accounts organized and the learning space welcoming."],
   analytics: ["See how learning grows.", "Understand the activity and progress behind each study session."],
   performance: ["Keep things running smoothly.", "Stay close to Abii’s speed, stability, and reliability."],
@@ -62,7 +62,8 @@ function PageContent({ page }: { page: Page }) {
 export function AdminPageHero({ page }: { page: keyof typeof pages }) {
   const [title, description] = pages[page];
   return (
-      <AbiiPageHero variant="admin" headingId="admin-page-title" priority
+      <AbiiPageHero variant={page === "overview" ? "admin-overview" : "admin"} headingId="admin-page-title" priority
+        eyebrow={page === "overview" ? <span className="text-xs font-semibold tracking-[0.08em] text-[#812544]">ADMIN OVERVIEW</span> : undefined}
         title={<h1 className="text-[clamp(1.25rem,3.3vw,2.8rem)] leading-[1.08] font-bold tracking-[-0.04em] text-[#203D50]">{title}</h1>}
         description={<p className="mt-3 max-w-[42ch] text-xs leading-5 text-[#6C8192] sm:text-sm sm:leading-6">{description}</p>}
         mascotSrc={`/dashboard-hero/admin/admin-${page}.png`} mascotAlt="" />

@@ -54,6 +54,7 @@
   "dependencies": {
     "@vercel/schedules": "^0.0.3",
     "bcryptjs": "^3.0.3",
+    "echarts": "^6.1.0",
     "jose": "^6.1.0",
     "lucide-react": "^1.61.0",
     "mongodb-connection-string-url": "^3.0.2",

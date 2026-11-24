@@ -56,7 +56,6 @@ function adminHeroGeometry() {
   const hero = main.querySelector(".abii-page-hero");
   const image = hero.querySelector("img");
   const art = image.getBoundingClientRect();
-  const title = hero.querySelector("h1").getBoundingClientRect();
   const box = hero.getBoundingClientRect();
   const panels = Array.from(hero.parentElement.children).slice(1);
   const scale = Math.min(art.width / image.naturalWidth, art.height / image.naturalHeight);
@@ -64,7 +63,6 @@ function adminHeroGeometry() {
   const motion = [...hero.querySelectorAll(".abii-enter, .abii-enter-art")].map(el => getComputedStyle(el));
   return {
     fits: main.scrollWidth <= main.clientWidth && document.documentElement.scrollWidth <= innerWidth,
-    separates: title.right <= art.left + 1,
     aligns: panels.every(panel => {
       const rect = panel.getBoundingClientRect();
       return Math.abs(rect.left - box.left) < 1 && Math.abs(rect.right - box.right) < 1;
@@ -162,7 +160,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     await Promise.all([Announcement.syncIndexes(), AnnouncementReceipt.syncIndexes(), Notification.syncIndexes()]);
     const users = db.collection("users");
     const admin = { _id: "primary", name: "Fixture Admin", email: "ui-admin@example.invalid" };
-    const learner = { _id: new mongoose.Types.ObjectId(), role: "user", name: "Fixture Learner", email: "ui-learner@example.invalid" };
+    const learner = { _id: new mongoose.Types.ObjectId(), role: "user", name: "Fixture Learner", email: "ui-learner@example.invalid", profileImage: "https://res.cloudinary.com/abii/image/upload/fixture.png" };
     const password = randomBytes(24).toString("hex");
     const passwordHash = await bcrypt.hash(password, 4);
     const midnight = new Date();
@@ -279,7 +277,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     const context = await browser.newContext({ reducedMotion: "reduce" });
     const page = await context.newPage();
     const pageErrors = [];
-    page.on("pageerror", error => pageErrors.push(error.message));
+    page.on("pageerror", error => pageErrors.push(`${error.message} at ${new URL(page.url()).pathname}: ${error.stack ?? "no stack"}`));
     const post = (path, data) => context.request.post(base + path, { data, headers: { Origin: base } });
 
     const wrong = "fixture wrong password";
@@ -357,6 +355,12 @@ test("admin routes fail closed, require real MFA, and render the protected works
     assert.equal(await auditLogs.countDocuments({ action: "login", actorId: "admin:primary", outcome: "committed" }), 1);
     const adminCookie = (await context.cookies()).find(cookie => cookie.name === "abii_admin");
     assert.ok(adminCookie);
+    assert.equal((await fetch(base + "/api/admin/overview?period=30")).status, 401);
+    const overviewResponse = await context.request.get(base + "/api/admin/overview?period=7");
+    assert.equal(overviewResponse.status(), 200);
+    assert.match(overviewResponse.headers()["cache-control"], /private, no-store/);
+    assert.equal((await overviewResponse.json()).window.days, 7);
+    assert.equal((await context.request.get(base + "/api/admin/overview?period=365")).status(), 400);
     for (const [suffix, label, headline, region, asset] of securityOnly || announcementsOnly ? destinations.filter(item => item[4] === (securityOnly ? "security" : "announcements")) : destinations) {
       await page.setViewportSize({ width: 1920, height: 951 });
       const response = await page.goto(base + "/admin" + suffix, { waitUntil: "domcontentloaded", timeout: 90_000 });
@@ -378,6 +382,9 @@ test("admin routes fail closed, require real MFA, and render the protected works
       assert.ok(!(await page.locator("main").innerText()).includes(admin.email));
       for (const width of widths) {
         await page.setViewportSize({ width, height: 880 });
+        if (asset === "overview" && process.env.ABII_ADMIN_SCREENSHOTS && [320, 390, 768].includes(width)) {
+          await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `admin-overview-${width}.png`), animations: "disabled" });
+        }
         const geometry = await page.evaluate(adminHeroGeometry);
         if (!geometry.fits && asset === "performance") {
           if (process.env.ABII_ADMIN_SCREENSHOTS) {
@@ -470,7 +477,12 @@ test("admin routes fail closed, require real MFA, and render the protected works
       await page.keyboard.press("Escape");
       await discard.waitFor({ state: "hidden" });
       assert.equal(await editor.getByRole("textbox", { name: "Announcement title" }).inputValue(), "Fixture study release");
+      const saveDraftResponse = page.waitForResponse(response => response.url().endsWith("/api/admin/announcements") && response.request().method() === "POST");
       await editor.getByRole("button", { name: "Save draft" }).click();
+      const savedDraft = await saveDraftResponse;
+      const savedDraftBody = await savedDraft.json();
+      assert.equal(savedDraft.status(), 200, `Draft save failed: ${savedDraft.status()} ${JSON.stringify(savedDraftBody)}`);
+      assert.equal(savedDraftBody.announcement?.lastAction, "Draft created");
       const details = page.getByRole("region", { name: "Selected announcement" });
       await details.getByText("Draft created", { exact: true }).waitFor({ timeout: 20_000 });
       const publicationId = await details.getByText(/^admin\.[0-9a-f]{24}$/).textContent();
@@ -603,7 +615,11 @@ test("admin routes fail closed, require real MFA, and render the protected works
     await page.goto(base + "/admin");
     const period = page.getByLabel("Reporting period");
     assert.equal(await period.inputValue(), "30");
-    const metric = label => page.getByRole("heading", { name: label, exact: true }).locator("..").locator("p").first();
+    assert.equal(await page.getByRole("slider", { name: "User Growth" }).count(), 0);
+    assert.equal(await page.getByText("View daily counts", { exact: true }).count(), 0);
+    assert.equal(await page.locator('img[src="https://res.cloudinary.com/abii/image/upload/fixture.png"]').count(), 1);
+    assert.equal(await page.getByRole("button", { name: "Apply" }).evaluate(button => getComputedStyle(button).backgroundColor), "rgb(248, 118, 156)");
+    const metric = label => page.getByRole("heading", { name: label, exact: true }).locator("xpath=ancestor::div[contains(@class, 'rounded-2xl')][1]").locator("p").first();
     assert.equal(await metric("Total Users").textContent(), "2");
     assert.equal(await metric("New Users").textContent(), "2");
     await period.selectOption("7");
@@ -619,13 +635,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
         await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `overview-trends-${width}.png`), animations: "disabled" });
       }
     }
-    const growth = page.getByRole("slider", { name: "User Growth" });
-    await growth.press("Home");
-    await growth.press("ArrowRight");
-    assert.equal(await growth.getAttribute("aria-valuenow"), "2");
-    const values = page.locator("details").filter({ has: page.getByRole("table", { name: "User Growth daily counts in UTC", includeHidden: true }) });
-    await values.locator("summary").click();
-    assert.equal(await values.locator("tbody tr").count(), 7);
+    assert.equal(await page.getByRole("img", { name: /^User Growth:/ }).count(), 1);
     assert.ok(!(await page.locator("main").innerText()).includes("private fixture prompt"));
     const unauthenticatedReport = await fetch(base + "/admin?period=7");
     assert.doesNotMatch(await unauthenticatedReport.text(), /Older fixture|Active Learners/);

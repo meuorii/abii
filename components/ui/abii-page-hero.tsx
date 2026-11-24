@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 export type AbiiHeroVariant =
   | "dashboard"
   | "admin"
+  | "admin-overview"
   | "subjects"
   | "review"
   | "progress"
@@ -39,6 +40,15 @@ const variants: Record<AbiiHeroVariant, VariantStyle> = {
     // Every admin PNG has visible artwork through its bottom row.
     mascotFrame: "sm:top-3 sm:bottom-0",
     imageSizes: "(max-width: 639px) 36vw, (max-width: 1023px) 248px, 310px",
+  },
+  "admin-overview": {
+    section: "rounded-[18px] border-border bg-[var(--overview-pink)]",
+    layout: "min-h-[164px] sm:min-h-[188px] lg:min-h-[204px]",
+    content: "max-w-full px-4 py-5 sm:max-w-[48%] sm:px-7 sm:py-6 min-[1024px]:max-w-[58%]",
+    mascot: "w-[34%] sm:w-[32%]",
+    mascotAnchor: "right-[2%]",
+    mascotFrame: "max-sm:top-0 sm:top-2 bottom-0",
+    imageSizes: "(max-width: 639px) 120px, (max-width: 1023px) 220px, 280px",
   },
   dashboard: {
     section: "sm:rounded-[20px] sm:border-[#F6DCE5] sm:bg-[#FFF0F5]",
@@ -180,10 +190,11 @@ export function AbiiPageHero({
 }: AbiiPageHeroProps) {
   const style = variants[variant];
   const hasPreTitle = variant === "quiz-session" && preTitle != null;
-  const admin = variant === "admin";
+  const admin = variant === "admin" || variant === "admin-overview";
 
   return (
     <section
+      data-variant={variant}
       aria-labelledby={headingId}
       className={`abii-page-hero relative isolate overflow-hidden rounded-[20px] border border-[#F5DDE5] bg-[#FFF0F5] ${style.section} ${className}`}
     >

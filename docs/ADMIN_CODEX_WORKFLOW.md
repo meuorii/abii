@@ -35,19 +35,17 @@
 
 ## 5. Active handoff
 
-**Status:** Phase 12 Complete; all twelve implementation phases are complete.
+**Status:** Admin Overview redesign and analytics implementation complete; no deployment performed.
 
-**Verified:** 56 service, domain, and browser tests passed. `test:admin-support-ui` 1/1 (exit 0); `test:admin-ui` 1/1 (exit 0). TypeScript and build passed; 43/43 static pages generated. ESLint passed with three established warnings; `git diff --check` passed.
+**Verified now:** Overview tests 2/2, admin security tests 14/14, admin browser regression 1/1, TypeScript, lint (three established warnings), production build (43/43 static pages), protected Overview API checks, profile-photo fallback/projection, accent button color, and viewport checks from 320px through 1920px. The Overview charts use hover tooltips without sliders or daily-count dropdowns.
 
-**Production bundle:** Admin route sizes match the Phase 11 baseline except Support +0.04 kB and Settings +0.01 kB; First Load JS is unchanged.
+**Files changed:** Overview report/API, Overview page and chart components, hero variant, scoped styles, loading state, focused tests, and implementation docs.
 
-**Accessibility:** Targeted improvements are implemented; this is not a formal WCAG 2.2 AA conformance audit.
+**Remaining:** Formal WCAG conformance has not been audited.
 
-**Production:** No deployment or production data change was performed. Operator approval, feature-gate configuration, database/index verification, key custody, delivery services, scheduler readiness, backup/restore, and deployment smoke checks remain required before activation.
+**Blockers / deployment gates:** None for code completion. Production deployment, database writes/index changes, and operator actions were not performed.
 
-**Files changed:** See the Phase 12 finalization entry in `docs/ADMIN_DASHBOARD_IMPLEMENTATION.md` and the current working-tree diff.
-
-**Next:** No further implementation phase. Complete the documented operator checks before production activation.
+**Next task:** Operator review before any production deployment; no database/index action is included in this change.
 
 ## 6. Update this compact handoff at the end of each task
 
