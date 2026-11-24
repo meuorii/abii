@@ -6,6 +6,9 @@ export const auditLabels = {
   "announcement.cancel": "Announcement canceled", "announcement.publish": "Announcement publication committed",
   "announcement.retry": "Announcement delivery retried",
   "support.status": "Support ticket status changed", "support.note": "Support note added", "support.response": "Support response submitted",
+  "settings.profile": "Administrator profile updated", "settings.preferences": "Administrator preferences updated",
+  "settings.monitoring": "Monitoring alert preferences updated", "settings.platform": "Platform support notice updated",
+  "settings.password": "Administrator password changed and sessions revoked",
   logout: "Administrator sessions revoked", "user.suspend": "Learner suspended", "user.restore": "Learner reactivated",
 } as const;
 
@@ -22,7 +25,7 @@ export const rateScopes = [
   "login", "login-ip", "admin-mfa-ip", "admin-challenge", "admin-verify", "admin-recover", "admin-enroll",
   "admin-restart", "admin-operator", "recovery", "recovery-ip", "recovery-resend", "recovery-resend-ip",
   "recovery-verify", "recovery-verify-ip", "password-reset", "password-reset-ip", "verify", "verify-ip", "verify-send",
-  "register", "register-ip", "otp-send", "admin-user-detail", "admin-user-transition",
+  "register", "register-ip", "otp-send", "admin-user-detail", "admin-user-transition", "admin-password-change",
 ] as const;
 
 export type AuditKind = keyof typeof auditLabels;

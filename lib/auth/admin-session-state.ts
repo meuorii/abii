@@ -105,7 +105,7 @@ export async function withFreshAdminMutation<T>(rawAdminCookie: string, operatio
   }).catch((error: unknown) => {
     if (error instanceof AdminAccessError) throw error;
     // Domain input/conflict errors are safe for their route boundary to classify.
-    if (error instanceof Error && (error.name === "SupportInputError" || error.name === "SupportConflict")) throw error;
+    if (error instanceof Error && (error.name === "SupportInputError" || error.name === "SupportConflict" || error.name === "SettingsInputError" || error.name === "SettingsConflict" || error.name === "SettingsRateLimitError")) throw error;
     throw new AdminAccessError(503);
   });
 }

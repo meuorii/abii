@@ -35,19 +35,17 @@
 
 ## 5. Active handoff
 
-**Status** Phase 10 code-complete pending a captured production-build exit result.
+**Status:** Phase 11 corrected; final browser/build terminal summaries still need capture.
 
-**Verified now** Support concurrency (14), isolated authenticated harness (1), support-management (4), administrator security (14), and isolated Support browser QA (1) passed. Browser QA uses real MFA, temporary MongoDB, real ticket/note/status interactions, and browser-mocked reply outcomes only; no live Brevo request is possible.
+**Verified now:** Settings replica-set regression (4) covers first creation, notice enable/clear, revisions, audit, Unicode password limit, and session revocation. Admin security (14), TypeScript, lint (three existing warnings), and browser script syntax passed.
 
-**Files changed** `app/(admin)/admin/{announcements/page.tsx,loading.tsx}`, `app/api/{admin/announcements,account,internal/notifications/reminder-schedule}/route.ts`, `components/admin/{admin-page,admin-announcements,announcement-editor}.tsx`, `lib/{admin/{announcement-contract,announcements,security,security-contract},auth/admin-session-state,mongodb-transaction,notifications/{announcement-worker,announcements,service}}.ts`, `models/{Announcement,Notification,User,AdminAuditLog}.ts`, `scripts/{admin-announcements.test.ts,admin-ui.browser.mjs,notification-events.test.ts}`, `package.json`, `docs/{ADMIN_CODEX_WORKFLOW,ADMIN_DASHBOARD_IMPLEMENTATION}.md`.
+**Corrections:** Route maps exact service payloads; disabled notices allow empty text; enabled notices require text; settings saves return the committed profile fence; drafts are independent and committed-only warning behavior is preserved; password rate limits return 429.
 
-**Tests** TypeScript and lint passed. `next build` compiled and completed type validation, but this execution channel did not return its final process exit code; do not mark the build passed until that is captured.
+**Files changed:** `app/(admin)/admin/settings/page.tsx`, `app/api/admin/settings/route.ts`, `app/support/page.tsx`, `components/{admin/admin-settings,landing/support/support-page-content}.tsx`, `lib/{admin/{settings,settings-contract,security-contract},auth/admin-session-state}.ts`, `models/AdminSettings.ts`, `scripts/{admin-settings.test,admin-ui.browser}.mjs`, `package.json`, `docs/ADMIN_CODEX_WORKFLOW.md`.
 
-**Browser QA** Full admin suite passed with the production feature-gate check. Announcement editor, dialog and delivery detail fit all eight widths. Drafts, estimates, scheduling, cancellation, confirmation focus, failed delivery and retry, search, and unavailable storage were exercised.
+**Remaining:** Capture final `test:admin-ui` and `build` exits. Before production first-write, an operator may need to pre-create the empty `adminsettings` collection if the Atlas role lacks collection-creation permission; no index is required.
 
-**Deployment gates** Verify approved queue, listing, receipt and inbox indexes, test the existing private 15-minute dispatch in staging, and enable `ABII_ANNOUNCEMENTS_DELIVERY_ENABLED` only after approval. No production resources changed.
-
-**Next task** Capture one definitive `npm run build` exit result in the release environment before production activation.
+**Next task:** Capture the two terminal results; do not begin Phase 12 automatically.
 
 ## 6. Update this compact handoff at the end of each task
 

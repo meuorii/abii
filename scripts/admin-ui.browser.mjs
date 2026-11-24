@@ -31,7 +31,7 @@ const destinations = [
   ["/security", "Security", "A safer place to learn.", "Security overview", "security"],
   ["/announcements", "Announcements", "Share what’s new.", "Announcement list", "announcements"],
   ["/support", "Support", "Here to help, always.", "Conversation", "support"],
-  ["/settings", "Settings", "Make every detail count.", "Workspace preferences", "settings"],
+  ["/settings", "Settings", "Make every detail count.", "Administrator profile & security", "settings"],
 ];
 const widths = [320, 375, 390, 768, 1024, 1280, 1440, 1920];
 
@@ -374,7 +374,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
       }
       assert.equal(await image.getAttribute("alt"), "");
 
-      if (!["overview", "users", "analytics", "performance", "security", "announcements"].includes(asset)) assert.equal(await page.locator("main table, main input, main select").count(), 0);
+      if (!["overview", "users", "analytics", "performance", "security", "announcements", "support", "settings"].includes(asset)) assert.equal(await page.locator("main table, main input, main select").count(), 0);
       assert.ok(!(await page.locator("main").innerText()).includes(admin.email));
       for (const width of widths) {
         await page.setViewportSize({ width, height: 880 });
@@ -397,6 +397,49 @@ test("admin routes fail closed, require real MFA, and render the protected works
         }
         assert.ok(Object.entries(geometry).every(([key, value]) => key === "bottomGap" ? value >= 0 && value <= 4 : value), `${label} at ${width}px: ${JSON.stringify(geometry)}`);
       }
+    }
+
+    if (!securityOnly && !announcementsOnly) {
+      assert.equal((await fetch(base + "/api/admin/settings")).status, 401);
+      assert.equal((await context.request.post(base + "/api/admin/settings", { headers: { Origin: "https://outside.invalid" }, data: { action: "profile" } })).status(), 403);
+      await page.goto(base + "/admin/settings");
+      const settingsPost = () => page.waitForResponse(response => response.url().endsWith("/api/admin/settings") && response.request().method() === "POST");
+      const displayName = page.getByLabel("Display name");
+      await displayName.fill("Settings Fixture Admin");
+      const profileRequest = settingsPost();
+      await page.getByRole("button", { name: "Save profile" }).click();
+      assert.equal((await profileRequest).status(), 200);
+      await page.getByText("Saved successfully.").waitFor();
+      assert.equal((await db.collection("admins").findOne({ _id: "primary" })).name, "Settings Fixture Admin");
+      await page.reload();
+      assert.equal(await page.getByLabel("Display name").inputValue(), "Settings Fixture Admin");
+      await page.getByLabel("Warn before this session expires").uncheck();
+      const preferencesRequest = settingsPost();
+      await page.getByRole("button", { name: "Save preferences" }).click();
+      assert.equal((await preferencesRequest).status(), 200);
+      await page.getByLabel("Server-error threshold").selectOption("10");
+      const monitoringRequest = settingsPost();
+      await page.getByRole("button", { name: "Save monitoring alerts" }).click();
+      assert.equal((await monitoringRequest).status(), 200);
+      await displayName.fill("Settings Final Admin");
+      const sequentialProfileRequest = settingsPost();
+      await page.getByRole("button", { name: "Save profile" }).click();
+      assert.equal((await sequentialProfileRequest).status(), 200);
+      await page.getByLabel("Show a public support notice").check();
+      await page.getByLabel("Notice text").fill("Fixture public support notice.");
+      const platformRequest = settingsPost();
+      await page.getByRole("button", { name: "Save platform configuration" }).click();
+      assert.equal((await platformRequest).status(), 200);
+      await page.goto(base + "/support");
+      await page.getByText("Fixture public support notice.", { exact: true }).waitFor();
+      await page.goto(base + "/admin/settings");
+      await page.getByLabel("Show a public support notice").uncheck();
+      await page.getByLabel("Notice text").fill("");
+      const clearNoticeRequest = settingsPost();
+      await page.getByRole("button", { name: "Save platform configuration" }).click();
+      assert.equal((await clearNoticeRequest).status(), 200);
+      await page.goto(base + "/support");
+      assert.equal(await page.getByText("Fixture public support notice.", { exact: true }).count(), 0);
     }
 
     if (!securityOnly) {
@@ -888,6 +931,25 @@ test("admin routes fail closed, require real MFA, and render the protected works
     await dialog.getByRole("link", { name: "Support" }).click();
     await page.getByRole("heading", { level: 1, name: "Here to help, always." }).waitFor();
     assert.equal(await drawerButton.getAttribute("aria-expanded"), "false");
+
+    if (!securityOnly && !announcementsOnly) {
+      assert.equal((await context.request.post(base + "/api/auth/login", { headers: { Origin: base }, data: { email: admin.email, password } })).status(), 202);
+      assert.equal((await context.request.post(base + "/api/auth/admin-mfa", { headers: { Origin: base }, data: { code: totpAt(seed, Date.now()) } })).status(), 200);
+      await page.goto(base + "/admin/settings");
+      await page.getByLabel("Current password").fill(password);
+      await page.getByLabel("New password", { exact: true }).fill("Fixture replacement password 456");
+      await page.getByLabel("Confirm new password").fill("Fixture replacement password 456");
+      await page.getByLabel("I understand this signs out every administrator session.").check();
+      const passwordRequest = page.waitForResponse(response => response.url().endsWith("/api/admin/settings") && response.request().method() === "POST");
+      await page.getByRole("button", { name: "Change password and sign out" }).click();
+      assert.equal((await passwordRequest).status(), 200);
+      await page.waitForURL(base + "/login");
+      assert.equal((await context.request.post(base + "/api/auth/login", { headers: { Origin: base }, data: { email: admin.email, password } })).status(), 401);
+      await delay(31_000);
+      assert.equal((await context.request.post(base + "/api/auth/login", { headers: { Origin: base }, data: { email: admin.email, password: "Fixture replacement password 456" } })).status(), 202);
+      assert.equal((await context.request.post(base + "/api/auth/admin-mfa", { headers: { Origin: base }, data: { code: totpAt(seed, Date.now()) } })).status(), 200);
+      await denied("/settings", "Sign in to continue", `abii_admin=${adminCookie.value}`);
+    }
 
     const legacy = (await users.insertOne({ email: "legacy-admin@example.invalid", role: "admin" })).insertedId;
     await denied("/security", "Sign-in verification unavailable", `abii_admin=${adminCookie.value}`, true);

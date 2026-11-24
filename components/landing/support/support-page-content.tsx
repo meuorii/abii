@@ -20,7 +20,7 @@ function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior, block: "start" });
 }
 
-export function SupportPageContent() {
+export function SupportPageContent({ notice }: { notice?: string | null }) {
   const [categoryId, setCategoryId] = useState(helpCategories[0].id);
   const [guideId, setGuideId] = useState(helpCategories[0].guides[0].id);
   const [openFaq, setOpenFaq] = useState<string | null>(null);
@@ -42,6 +42,7 @@ export function SupportPageContent() {
 
   return <div className="bg-white text-foreground">
     <a className="absolute left-4 top-3 z-50 -translate-y-[180%] bg-white px-5 py-3 focus:translate-y-0 focus:outline-3 focus:outline-pink-active" href="#support-main">Skip to content</a>
+    {notice && <p role="status" className="mx-auto mt-3 w-[min(1152px,calc(100%-2.5rem))] rounded-xl border border-[#F0D7E0] bg-[#FFF7FA] px-4 py-3 text-sm leading-6 text-[#5E4E5A]">{notice}</p>}
     <LandingNav />
     <main id="support-main" tabIndex={-1}>
       <ResponsiveHero image="/landing/support/support-hero.png" titleId="support-title" mobileImageClassName="object-[72%_center]" desktopImageClassName="md:object-[58%_center] xl:object-center">
