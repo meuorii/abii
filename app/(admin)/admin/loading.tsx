@@ -31,6 +31,22 @@ export default function LoadingAdminPage() {
   if (pathname === "/admin/announcements") {
     return <div className="grid gap-5 sm:gap-6">{hero}<AnnouncementsSkeleton /></div>;
   }
+  if (pathname === "/admin/support") {
+    return <SkeletonRegion label="Loading support workspace" className="grid gap-5 sm:gap-6">
+      {hero}
+      <div className="grid grid-cols-3 gap-3">{[0, 1, 2].map(item => <SkeletonBlock key={item} className="h-20 rounded-xl" />)}</div>
+      <div className="grid gap-4 min-[880px]:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]"><SkeletonBlock className="h-72 rounded-xl" /><SkeletonBlock className="h-96 rounded-xl" /></div>
+    </SkeletonRegion>;
+  }
+  if (pathname === "/admin/settings") {
+    return <SkeletonRegion label="Loading administrator settings" className="grid gap-5 sm:gap-6">
+      {hero}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.9fr)]">
+        <div className="grid gap-4"><SkeletonBlock className="h-64 rounded-xl" /><SkeletonBlock className="h-72 rounded-xl" /><SkeletonBlock className="h-64 rounded-xl" /></div>
+        <div className="grid content-start gap-4"><SkeletonBlock className="h-72 rounded-xl" /><SkeletonBlock className="h-80 rounded-xl" /></div>
+      </div>
+    </SkeletonRegion>;
+  }
   const hasSummary = pathname !== "/admin/settings";
   return (
     <SkeletonRegion label="Loading workspace" className="grid gap-5 sm:gap-6">

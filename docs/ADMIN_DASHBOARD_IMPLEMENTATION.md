@@ -172,9 +172,9 @@ Warnings predate the documentation change. No production job, email, database mi
 |7|Performance and job monitoring|Implemented. Production activation and independent probes pending.|
 |8|Security timeline and alerts|Implemented. Production index verification and activation pending.|
 |9|Announcements|Implemented. Production storage and delivery activation pending.|
-|10|Support|Not Started|
-|11|Settings|Not Started|
-|12|Integrated verification and controlled release|Not Started|
+|10|Support|Implemented and isolated regression verified; production email/storage prerequisites remain operator controlled|
+|11|Settings|Implemented and isolated service/browser corrections verified; production collection permissions require operator confirmation|
+|12|Final UI/UX, performance, accessibility, security review and production readiness|Complete in isolated validation; production rollout and operator verification remain pending|
 
 ## 12. Phase 2 handoff
 
@@ -314,3 +314,13 @@ No Phase 9 collection or index is auto-created. Before approved activation, prov
 Allow the application role to list the required indexes and write only the relevant records. Test the private schedule, delivery transactions, rollback and receipt erasure against an approved staging environment before enabling the flag. Disable the flag and redeploy to pause new and queued delivery. Wait for in-flight worker leases to settle and retain cursors, notifications and receipts. Existing reminder dispatch remains enabled. Keep receipt storage across rollbacks.
 
 The operator CLI still defaults to a read-only dry run. Explicit `--apply` requires the receipt and inbox indexes plus transaction support. Legacy CLI IDs keep their original alphabet, and an explicit rerun uses the same receipt-aware batched writer. Visible legacy inbox records can be reconciled into receipts. Previously removed CLI notifications without receipts cannot be reconstructed, so reuse of historical IDs requires existing operational evidence. Phase 9 does not backfill or claim delivery for those publications.
+
+## Phase 12 finalization status
+
+Phase 12 and the twelve-phase implementation roadmap are **Complete** based on the reported isolated validation. Retained the shared administrator panel refinement and added page-specific Support and Settings loading skeletons. Corrected Support reply-operation state so an unresolved operation is scoped to its ticket. Application code was unchanged after the successful validation; this final update changes documentation only. Production deployment has not been performed.
+
+Reported final validation: 56 service, domain, and browser tests passed, including `npm run test:admin-support-ui` (1/1, exit 0, 27,333.3122 ms) and `npm run test:admin-ui` (1/1, exit 0, 155,237.3309 ms). Previously reported settings, security, overview, users, analytics, performance, security-log, announcement, support-management, and support-concurrency suites also passed. TypeScript, ESLint, production build (43/43 static pages, exit 0), and `git diff --check` passed. ESLint retains the three established warnings (`components/app-shell.tsx`, `lib/mongodb.ts`, `lib/quiz/normalize.ts`).
+
+The final admin route sizes / First Load JS are Overview 3.63 kB / 112 kB; Users 9.69 kB / 123 kB; Analytics 2.79 kB / 114 kB; Performance 2.79 kB / 114 kB; Security 1.85 kB / 118 kB; Announcements 194 B / 119 kB; Support 6.78 kB / 118 kB; Settings 7.04 kB / 115 kB. Against the Phase 11 baseline, only Support (+0.04 kB) and Settings (+0.01 kB) changed in route size; First Load JS is unchanged.
+
+Automated mutation fixtures used MongoMemoryReplSet. No Atlas data, live credentials, external delivery, or deployment settings were modified. Accessibility work was targeted; formal WCAG 2.2 AA conformance is not claimed. Production gate activation and operator prerequisites remain separate from implementation completion.

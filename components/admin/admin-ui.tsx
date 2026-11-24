@@ -42,12 +42,12 @@ export function AdminPanel({ title, description, actions, children }: {
   title: string; description?: string; actions?: ReactNode; children: ReactNode;
 }) {
   return (
-    <Card padding="none" className="min-w-0 overflow-hidden">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#F0E5E9] px-4 py-3.5 sm:px-5">
+    <Card padding="none" className="min-w-0 overflow-hidden rounded-xl">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#F0E5E9] px-4 py-3 sm:px-5">
         <div><CardTitle>{title}</CardTitle>{description && <CardDescription>{description}</CardDescription>}</div>
         {actions}
       </div>
-      <div className="px-4 py-4 sm:px-5">{children}</div>
+      <div className="px-4 py-3.5 sm:px-5 sm:py-4">{children}</div>
     </Card>
   );
 }
