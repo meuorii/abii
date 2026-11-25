@@ -69,7 +69,7 @@ export function Mascot({ state = "welcome", size = "md", className = "", alt }: 
       aria-label={alt ?? asset.alt}
     >
       {imageFailed ? (
-        <div className="flex h-full w-full items-center justify-center rounded-2xl border border-[#F5D9E2] bg-pink-soft px-2 text-center text-xs font-semibold text-[#756B72]">
+        <div className="flex h-full w-full items-center justify-center rounded-2xl border border-border bg-surface-hover px-2 text-center text-xs font-semibold text-muted">
           Abii
         </div>
       ) : (

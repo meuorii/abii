@@ -23,10 +23,43 @@
   --pink-soft: var(--admin-secondary);
   --pink-card: var(--admin-secondary);
   --pink-active: var(--admin-accent);
+  --surface: var(--admin-surface);
+  --primary: #FF6F96;
+  --primary-hover: var(--admin-accent);
+  --primary-active: #E9577D;
+  --primary-foreground: #30252D;
+  --surface-hover: #FFF1F5;
+  --surface-selected: var(--admin-secondary);
+  --success: #5C947A;
+  --success-bg: #EAF8F0;
+  --success-text: #286C4A;
+  --warning: #B28A54;
+  --warning-bg: #FFF8EE;
+  --warning-text: #8A683B;
+  --error: #C76F7D;
+  --error-bg: #FFF1F1;
+  --error-text: #8B273F;
   --overview-base: var(--admin-background);
   --overview-pink: var(--admin-secondary);
   --overview-accent: var(--admin-accent);
   background: var(--admin-background);
+}
+.admin-modal-theme {
+  --background: #FFF9FC;
+  --foreground: #30252D;
+  --muted: #66565F;
+  --border: #FFDBED;
+  --surface: #FFFFFF;
+  --secondary-surface: #FFDBED;
+  --primary: #FF6F96;
+  --primary-hover: #F8769C;
+  --primary-active: #E9577D;
+  --primary-foreground: #30252D;
+  --surface-hover: #FFF7F9;
+  --surface-selected: #FFDBED;
+  --error: #C76F7D;
+  --error-bg: #FFF1F1;
+  --error-text: #8B273F;
 }
 .admin-shell__frame,
 .admin-shell__sidebar,
@@ -218,18 +251,34 @@
 
 :root {
   color-scheme: light;
-  --background: #ffffff;
-  --foreground: #2f2930;
-  --muted: #756b72;
-  --border: #e8e2e5;
-  --pink-soft: #fff7f9;
-  --pink-card: #ffe8ef;
-  --pink: #ffc9d8;
-  --pink-accent: #ff9fba;
-  --pink-primary: #ff6f96;
-  --pink-active: #e9577d;
-  --success: #eaf8f0;
-  --error: #fff1f1;
+  --background: #FAF9F7;
+  --foreground: #30262B;
+  --muted: #6F5964;
+  --border: #E8DDE1;
+  --surface: #FFFFFF;
+  --secondary-surface: #FFE8EF;
+  --primary: #F8769C;
+  --primary-hover: #EC658D;
+  --primary-active: #D9547D;
+  --primary-foreground: #FFFFFF;
+  --surface-hover: #FFF1F5;
+  --surface-selected: #FFE8EF;
+  --success: #5C947A;
+  --success-bg: #EDF5EF;
+  --success-text: #3D7259;
+  --warning: #B28A54;
+  --warning-bg: #FBF3E7;
+  --warning-text: #8A683B;
+  --error: #C76F7D;
+  --error-bg: #FCECEF;
+  --error-text: #A94D61;
+  /* Legacy aliases retained while token-based screens migrate. */
+  --pink-soft: #FFF1F5;
+  --pink-card: var(--secondary-surface);
+  --pink: var(--secondary-surface);
+  --pink-accent: var(--primary-hover);
+  --pink-primary: var(--primary);
+  --pink-active: var(--primary-active);
 }
 
 /* Full-width structural layout for the shared authentication pages. */
@@ -440,7 +489,22 @@
   --color-pink-primary: var(--pink-primary);
   --color-pink-active: var(--pink-active);
   --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-text: var(--success-text);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-text: var(--warning-text);
   --color-error: var(--error);
+  --color-error-bg: var(--error-bg);
+  --color-error-text: var(--error-text);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-selected: var(--surface-selected);
+  --color-secondary-surface: var(--secondary-surface);
   --font-sans: var(--font-onest), Arial, Helvetica, sans-serif;
 }
 
@@ -735,9 +799,9 @@ summary {
 }
 
 .abii-toast {
-  --toast-bg: #fff7f9;
-  --toast-accent: #ff5fa2;
-  --toast-label: #e95791;
+  --toast-bg: var(--secondary-surface);
+  --toast-accent: var(--primary);
+  --toast-label: var(--foreground);
   position: relative;
   isolation: isolate;
   min-height: 166px;
@@ -753,7 +817,7 @@ summary {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.92);
   border-radius: 29px;
-  background: linear-gradient(116deg, color-mix(in srgb, var(--toast-bg) 93%, white), var(--toast-bg));
+  background: var(--toast-bg);
   box-shadow: inset 0 0 0 1px rgba(234, 216, 224, 0.48);
 }
 
@@ -821,7 +885,7 @@ summary {
 
 .abii-toast-title {
   margin: 11px 0 0;
-  color: #2f2930;
+  color: var(--foreground);
   font-size: 20px;
   font-weight: 750;
   letter-spacing: -0.025em;
@@ -831,7 +895,7 @@ summary {
 
 .abii-toast-message {
   margin: 10px 0 0;
-  color: #756b72;
+  color: var(--muted);
   font-size: 14px;
   font-weight: 400;
   line-height: 1.45;

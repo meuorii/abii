@@ -10,12 +10,12 @@ type ButtonProps = ComponentPropsWithRef<"button"> & {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-pink-primary text-[#2F2930] shadow-sm hover:bg-pink-active hover:text-white",
-  secondary: "bg-pink-card text-foreground hover:bg-pink-soft",
+    "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover active:bg-primary-active",
+  secondary: "bg-secondary-surface text-foreground hover:bg-surface-hover",
   outline:
-    "border border-border bg-white text-foreground hover:border-pink hover:bg-pink-soft",
-  ghost: "bg-transparent text-muted hover:bg-pink-soft hover:text-foreground",
-  danger: "bg-error text-[#8B273F] hover:bg-[#FFE3E5]",
+    "border border-border bg-surface text-foreground hover:border-primary hover:bg-surface-hover",
+  ghost: "bg-transparent text-muted hover:bg-surface-hover hover:text-foreground",
+  danger: "border border-error/30 bg-error-bg text-error-text hover:bg-error/15",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -37,7 +37,7 @@ export function Button({
       className={[
         "inline-flex items-center justify-center gap-2 rounded-xl font-semibold",
         "transition-colors duration-150",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-active focus-visible:ring-offset-2",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2",
         "disabled:pointer-events-none disabled:opacity-50",
         variantClasses[variant],
         sizeClasses[size],

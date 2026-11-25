@@ -33,8 +33,8 @@ export function Navigation({ brand = "abii", items = defaultItems }: NavigationP
                 "rounded-xl px-3 py-2 text-sm font-semibold transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-active",
                 item.active
-                  ? "bg-pink-soft text-pink-active"
-                  : "text-muted hover:bg-pink-soft hover:text-foreground",
+                  ? "bg-surface-selected text-primary-hover"
+                  : "text-muted hover:bg-surface-hover hover:text-foreground",
               ].join(" ")}
             >
               {item.label}

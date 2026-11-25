@@ -4,7 +4,7 @@ const inputClasses = [
   "w-full rounded-xl border border-border bg-white px-3.5 py-3 text-sm text-foreground",
   "placeholder:text-muted/80",
   "transition-colors",
-  "focus:border-pink-active focus:outline-none focus:ring-2 focus:ring-pink/50",
+  "focus:border-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/30",
   "disabled:cursor-not-allowed disabled:bg-pink-soft disabled:opacity-70",
 ].join(" ");
 
@@ -32,13 +32,13 @@ export function TextInput({
       </label>
       <input
         id={inputId}
-        className={[inputClasses, error ? "border-[#C43D57] focus:ring-[#C43D57]/20" : "", className].join(" ")}
+        className={[inputClasses, error ? "border-error focus:ring-error/20" : "", className].join(" ")}
         aria-invalid={Boolean(error)}
         aria-describedby={messageId}
         {...props}
       />
       {error ? (
-        <p id={messageId} className="text-sm font-medium text-[#A82D48]">{error}</p>
+        <p id={messageId} className="text-sm font-medium text-error-text">{error}</p>
       ) : hint ? (
         <p id={messageId} className="text-sm text-muted">{hint}</p>
       ) : null}
@@ -70,13 +70,13 @@ export function TextArea({
       </label>
       <textarea
         id={inputId}
-        className={[inputClasses, "min-h-28 resize-y", error ? "border-[#C43D57]" : "", className].join(" ")}
+        className={[inputClasses, "min-h-28 resize-y", error ? "border-error" : "", className].join(" ")}
         aria-invalid={Boolean(error)}
         aria-describedby={messageId}
         {...props}
       />
       {error ? (
-        <p id={messageId} className="text-sm font-medium text-[#A82D48]">{error}</p>
+        <p id={messageId} className="text-sm font-medium text-error-text">{error}</p>
       ) : hint ? (
         <p id={messageId} className="text-sm text-muted">{hint}</p>
       ) : null}
