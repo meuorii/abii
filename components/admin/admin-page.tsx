@@ -5,9 +5,9 @@ import { AdminFeedback, AdminPanel, AdminTable, MetricCard } from "./admin-ui";
 
 const pages = {
   overview: ["Everything in one view.", "Your platform, people, and activity."],
-  users: ["Every learner matters.", "Keep accounts organized and the learning space welcoming."],
-  analytics: ["See how learning grows.", "Understand the activity and progress behind each study session."],
-  performance: ["Keep things running smoothly.", "Stay close to Abii’s speed, stability, and reliability."],
+  users: ["Every learner matters.", "Manage accounts and keep Abii welcoming."],
+  analytics: ["See how learning grows.", "Understand the activity behind every study session."],
+  performance: ["Keep things running smoothly.", "Monitor Abii’s speed, stability, and reliability."],
   security: ["A safer place to learn.", "Keep track of access and the actions that protect Abii."],
   announcements: ["Share what’s new.", "Make every update clear, thoughtful, and timely."],
   support: ["Here to help, always.", "Keep conversations organized and support within reach."],
@@ -62,10 +62,10 @@ function PageContent({ page }: { page: Page }) {
 export function AdminPageHero({ page }: { page: keyof typeof pages }) {
   const [title, description] = pages[page];
   return (
-      <AbiiPageHero variant={page === "overview" ? "admin-overview" : "admin"} headingId="admin-page-title" priority
-        eyebrow={page === "overview" ? <span className="text-xs font-semibold tracking-[0.08em] text-[#812544]">ADMIN OVERVIEW</span> : undefined}
-        title={<h1 className="text-[clamp(1.25rem,3.3vw,2.8rem)] leading-[1.08] font-bold tracking-[-0.04em] text-[#203D50]">{title}</h1>}
-        description={<p className="mt-3 max-w-[42ch] text-xs leading-5 text-[#6C8192] sm:text-sm sm:leading-6">{description}</p>}
+      <AbiiPageHero variant={page === "overview" || page === "users" || page === "analytics" || page === "performance" ? "admin-overview" : "admin"} headingId="admin-page-title" priority
+        eyebrow={page === "overview" ? <span className="text-xs font-semibold tracking-[0.08em] text-[#812544]">ADMIN OVERVIEW</span> : page === "users" ? "USER MANAGEMENT" : page === "analytics" ? "PLATFORM ANALYTICS" : page === "performance" ? "SYSTEM PERFORMANCE" : undefined}
+        title={<h1 className="text-[clamp(1.25rem,3.3vw,2.8rem)] leading-[1.08] font-bold tracking-[-0.04em] text-[#30252D]">{title}</h1>}
+        description={<p className="mt-3 max-w-[42ch] text-xs leading-5 text-[#66565F] sm:text-sm sm:leading-6">{description}</p>}
         mascotSrc={`/dashboard-hero/admin/admin-${page}.png`} mascotAlt="" />
   );
 }

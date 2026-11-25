@@ -1,51 +1,45 @@
 "use client";
 
-import { BadgeCheck, ChevronLeft, ChevronRight, CircleSlash2, Mail, Search, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { Card } from "@/components/ui/card";
+import { OverviewDonut } from "@/components/admin/overview-chart";
 import { type AccountCounts, type DirectoryUser, type UsersPage, type UsersQuery, userSearchLimit, usersHref, usersPath } from "@/lib/admin/users-contract";
 import { AccountAvatar, AccountFlags, UserDetailSheet, accountDate, control } from "./admin-user-detail";
 
 const number = new Intl.NumberFormat("en-US");
-const stats = [
-  { key: "total", label: "Total Users", caption: "All learner accounts", Icon: Users, tone: "text-[#91314E]" },
-  { key: "verified", label: "Verified Accounts", caption: "Email confirmed", Icon: BadgeCheck, tone: "text-[#256047]" },
-  { key: "unverified", label: "Unverified Accounts", caption: "Awaiting email verification", Icon: Mail, tone: "text-muted" },
-  { key: "suspended", label: "Suspended Accounts", caption: "Sign-in blocked", Icon: CircleSlash2, tone: "text-[#91314E]" },
-] as const;
-
 export function AccountOverview({ counts }: { counts: AccountCounts | null }) {
-  return (
-    <section aria-labelledby="account-overview">
-      <h2 id="account-overview" className="mb-3 text-lg font-bold tracking-tight">Account overview</h2>
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        {stats.map(({ key, label, caption, Icon, tone }) => (
-          <Card key={key} padding="none" className="min-w-0 px-3 py-3.5 shadow-none sm:p-4">
-            <div className="flex items-start justify-between gap-1.5">
-              <h3 className="text-[13px] font-semibold leading-5 sm:text-sm">{label}</h3>
-              <Icon aria-hidden="true" size={17} className={`mt-0.5 shrink-0 ${tone}`} />
-            </div>
-            <p className="mt-1.5 text-[1.65rem] leading-none font-bold tracking-tight tabular-nums sm:text-[2rem]">{counts ? number.format(counts[key]) : <span aria-label="Unavailable">–</span>}</p>
-            <p className="mt-2 text-xs leading-4.5 text-muted">{caption}</p>
-          </Card>
-        ))}
+  const share = counts?.total ? counts.verified / counts.total * 100 : null;
+  const pct = (value: number) => counts?.total ? Math.round(value / counts.total * 100) : null;
+  return <section aria-labelledby="account-overview">
+    <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2"><h2 id="account-overview" className="text-lg font-bold tracking-tight">Account Overview</h2><p className="text-xs text-muted">Current account snapshot</p></header>
+    <div className="grid min-w-0 gap-3 min-[1050px]:grid-cols-12">
+      <Card data-overview-feature padding="md" className="grid min-w-0 gap-3 border-transparent bg-[#FFDBED] min-[1050px]:col-span-5 min-[1050px]:row-span-2">
+        <div><h3 className="text-sm font-semibold">Total Users</h3><p className="mt-2 text-4xl font-semibold leading-none tabular-nums">{counts ? number.format(counts.total) : "Unavailable"}</p><p className="mt-2 text-sm text-muted">Registered learner accounts</p></div>
+        <div className="flex items-center gap-3 border-t border-[#F8769C]/30 pt-3">
+          {share === null ? <p className="grid size-24 shrink-0 place-items-center rounded-full border-[10px] border-[#FFDBED] text-xs text-muted">No eligible accounts</p> : <div className="relative"><OverviewDonut value={counts!.verified} total={counts!.total} label={`${Math.round(share)} percent verified; ${counts!.verified} verified of ${counts!.total} accounts`} /><span className="pointer-events-none absolute inset-0 grid place-items-center text-sm font-semibold tabular-nums">{Math.round(share)}%</span></div>}
+          <div><p className="text-sm font-semibold">Email verified</p><p className="mt-1 text-xs text-muted">{counts ? `${number.format(counts.verified)} of ${number.format(counts.total)} users` : "Account totals unavailable"}</p></div>
+        </div>
+      </Card>
+      <div className="grid gap-3 sm:grid-cols-2 min-[1050px]:col-span-7">
+        {counts ? ([ ["Verified Users", counts.verified], ["Unverified Users", counts.unverified] ] as const).map(([label, value]) => <Card key={label} padding="md" className="grid content-between gap-4 shadow-none"><div className="flex items-baseline justify-between gap-2"><h3 className="text-sm font-semibold">{label}</h3><span className="text-xs tabular-nums text-muted">{pct(value) === null ? "—" : `${pct(value)}%`}</span></div><p className="text-3xl font-semibold tabular-nums">{number.format(value)}</p><div className="h-2 overflow-hidden rounded-full bg-[#FFDBED]"><div className="h-full rounded-full bg-[#F8769C]" style={{ width: `${pct(value) ?? 0}%` }} /></div></Card>) : <Card padding="md" className="sm:col-span-2"><p className="text-sm text-muted">Verification counts are unavailable.</p></Card>}
+        <Card padding="md" className="flex items-center justify-between gap-3 shadow-none sm:col-span-2"><div><h3 className="text-sm font-semibold">Suspended Accounts</h3><p className="mt-1 text-xs text-muted">Sign-in restricted</p></div><div className="text-right"><p className="text-3xl font-semibold tabular-nums">{counts ? number.format(counts.suspended) : "Unavailable"}</p><p className="text-xs text-muted">{counts && pct(counts.suspended) !== null ? `${pct(counts.suspended)}% of all accounts` : "Share unavailable"}</p></div></Card>
       </div>
-      {!counts && <p role="status" className="mt-2 text-sm text-muted">Account totals are temporarily unavailable. Refresh the page to retry.</p>}
-    </section>
-  );
+    </div>
+    {!counts && <p role="status" className="mt-2 text-sm text-muted">Account totals are temporarily unavailable. Refresh the page to retry.</p>}
+  </section>;
 }
-
 const fields = [
   { name: "verification", label: "Verification", options: [["all", "All verification"], ["verified", "Verified"], ["unverified", "Unverified"]] },
   { name: "status", label: "Account status", options: [["all", "All statuses"], ["active", "Active"], ["suspended", "Suspended"]] },
-  { name: "sort", label: "Sort by", options: [["newest", "Newest joined"], ["oldest", "Oldest joined"], ["name-asc", "Name A to Z"], ["name-desc", "Name Z to A"]] },
 ] as const;
+const sortOptions = [["newest", "Newest first"], ["oldest", "Oldest first"], ["name-asc", "Name A to Z"], ["name-desc", "Name Z to A"]] as const;
 
 function Identity({ user }: { user: DirectoryUser }) {
   return <div className="flex min-w-0 items-center gap-2.5">
-    <AccountAvatar name={user.name} />
+    <AccountAvatar name={user.name} profileImage={user.profileImage} />
     <div className="min-w-0">
       <p className="break-words font-semibold [overflow-wrap:anywhere]">{user.name}</p>
       <p className="mt-0.5 break-words text-xs text-muted [overflow-wrap:anywhere]">{user.email || "Email unavailable"}</p>
@@ -79,11 +73,18 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
     <section aria-labelledby="learner-directory" className="min-w-0">
       <Card padding="none" className="overflow-hidden shadow-none">
         <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-4 py-3.5 sm:px-5">
-          <h2 ref={heading} tabIndex={-1} id="learner-directory" className="text-lg font-bold tracking-tight">Learner directory</h2>
+          <div><h2 ref={heading} tabIndex={-1} id="learner-directory" className="text-lg font-bold tracking-tight">User Directory</h2><p className="mt-0.5 text-xs text-muted">Browse and manage learner accounts.</p></div>
           {page && page.total !== null && <p className="text-sm text-muted tabular-nums">{number.format(page.total)} {page.total === 1 ? "user" : "users"}</p>}
         </header>
+        <nav aria-label="Quick account filters" className="flex flex-wrap gap-1.5 border-b border-border px-4 py-2.5 sm:px-5">
+          {([ ["All users", "all", "all"], ["Verified", "verified", "all"], ["Unverified", "unverified", "all"], ["Suspended", "all", "suspended"] ] as const).map(([label, verification, status]) => {
+            const href = usersHref({ ...query, verification, status });
+            const selectedFilter = query.verification === verification && query.status === status;
+            return <Link key={label} href={href} prefetch={false} scroll={false} aria-current={selectedFilter ? "page" : undefined} className={`${control} border-transparent px-3 text-xs font-semibold ${selectedFilter ? "bg-[#FFDBED] text-[#30252D]" : "text-muted hover:bg-[#FFDBED]"}`}>{label}</Link>;
+          })}
+        </nav>
         <form key={usersHref(query)} method="get" action={usersPath} aria-label="Filter learners" onSubmit={onFilter}
-          className="grid gap-3 border-b border-border p-4 sm:px-5 xl:flex xl:items-end">
+          className="flex flex-wrap items-end gap-3 border-b border-border p-4 sm:px-5">
           <label className="grid min-w-0 flex-1 gap-1.5 text-xs font-semibold">
             Search
             <span className="relative">
@@ -92,20 +93,23 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
                 defaultValue={query.q} placeholder="Search by name or email" />
             </span>
           </label>
-          <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
-            {fields.map(({ name, label, options }) => (
-              <label key={name} className="grid min-w-0 gap-1.5 text-xs font-semibold">
-                {label}
-                <select className={`${control} w-full px-2 font-medium sm:w-auto sm:px-3`} name={name} defaultValue={query[name]}>
-                  {options.map(([key, value]) => <option key={key} value={key}>{value}</option>)}
-                </select>
-              </label>
-            ))}
-            <div className="flex flex-wrap items-end gap-1.5 self-end">
-              <button className={`${control} border-[#F1CBD8] bg-pink-soft px-3.5 font-semibold text-[#91314E] hover:bg-pink-card`} disabled={pending}>Apply</button>
-              <button type="reset" onClick={() => navigate(usersPath)} className={`${control} border-transparent px-2 text-muted hover:bg-pink-soft`}>Reset<span className="sr-only"> filters</span></button>
+          <details className="group relative">
+            <summary className={`${control} flex cursor-pointer list-none items-center justify-center px-3 text-xs font-semibold marker:hidden hover:bg-[#FFDBED] [&::-webkit-details-marker]:hidden`}>Filters</summary>
+            <div className="relative z-10 mt-2 grid w-full gap-3 rounded-xl border border-[#FFDBED] bg-[#FFF9FC] p-4 sm:grid-cols-2">
+              {fields.map(({ name, label, options }) => <label key={name} className="grid min-w-0 gap-1.5 text-xs font-semibold">{label}
+                <select className={`${control} w-full px-2 font-medium`} name={name} defaultValue={query[name]}>{options.map(([key, value]) => <option key={key} value={key}>{value}</option>)}</select>
+              </label>)}
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <button className={`${control} border-[#FFDBED] bg-[#FFDBED] px-3.5 font-semibold`} disabled={pending}>Apply</button>
+                <button type="reset" onClick={() => navigate(usersPath)} className={`${control} border-transparent px-2 text-muted hover:bg-[#FFDBED]`}>Reset<span className="sr-only"> filters</span></button>
+              </div>
             </div>
-          </div>
+          </details>
+          <label className="grid gap-1 text-xs font-semibold">Sort by
+            <select className={`${control} min-w-36 px-2 font-medium`} name="sort" defaultValue={query.sort}>
+              {sortOptions.map(([key, value]) => <option key={key} value={key}>{value}</option>)}
+            </select>
+          </label>
         </form>
         <div aria-busy={pending}>
           {pending && <p role="status" className="border-b border-border bg-pink-soft px-4 py-2 text-xs text-[#91314E] sm:px-5">Updating directory…</p>}
@@ -119,7 +123,7 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
           </div> : page && <>
             <table className="hidden w-full table-fixed text-left text-sm md:table">
               <caption className="sr-only">Learner accounts</caption>
-              <thead className="border-b border-border bg-[#FFFAFC] text-xs text-[#665C65]">
+              <thead className="border-b border-border bg-[#FFDBED]/35 text-xs text-[#66565F]">
                 <tr>
                   <th scope="col" className="w-[34%] px-5 py-3 font-semibold">User</th>
                   <th scope="col" className="px-2 py-3 font-semibold">Verification</th>
@@ -129,7 +133,7 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {page.rows.map(user => <tr className="hover:bg-[#FFFAFC]" key={user.id}>
+                {page.rows.map(user => <tr className="hover:bg-[#FFDBED]/20" key={user.id}>
                   <th scope="row" className="px-5 py-2.5 text-left font-normal"><Identity user={user} /></th>
                   <td className="px-2 py-2"><AccountFlags user={user} kind="verification" /></td>
                   <td className="px-2 py-2"><AccountFlags user={user} kind="status" /></td>

@@ -15,6 +15,21 @@
   --overview-accent-ink: #4F1027;
   background-color: var(--overview-base);
 }
+.admin-refined {
+  --overview-base: #FFF9FC;
+  --overview-pink: #FFDBED;
+  --overview-accent: #F8769C;
+  --overview-accent-ink: #30252D;
+  --background: #FFF9FC;
+  --border: rgb(255 219 237 / 55%);
+  --muted: #66565F;
+  --pink-soft: #FFDBED;
+  --pink-card: #FFDBED;
+  --pink-active: #F8769C;
+  background-color: #FFF9FC;
+}
+.admin-refined :focus-visible { outline-color: #F8769C; }
+.admin-loading-refined { --skeleton-base: #FFDBED; --skeleton-highlight: rgb(255 249 252 / 48%); --skeleton-surface: #FFF9FC; --skeleton-border: #FFDBED; }
 .admin-overview-workspace [data-overview-feature] { background-color: var(--overview-pink); }
 @media (min-width: 640px) and (max-width: 1599.98px) {
   .admin-overview-workspace .abii-page-hero[data-variant="admin-overview"] .abii-page-hero__layout { display: grid; grid-template-columns: minmax(0, 1fr) 32%; align-items: stretch; }

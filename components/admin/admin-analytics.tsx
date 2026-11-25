@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { AnalyticsChart } from "./analytics-chart";
+import { AdminDonut, AdminSparkline, type SparklineUnit } from "./admin-echart";
 import {
   type AnalyticsReport, type Comparison, type Fraction, type MetricResult, type ReviewTotals, type Trend,
   countChange, quizModes, rate, retentionHorizon,
@@ -14,10 +15,10 @@ const dayFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numer
 const shortDate = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const timeFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC", hour12: false });
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9B3054]";
-const berry = "#B44368";
-const navy = "#446D83";
-const teal = "#458272";
-const muted = "#9A7B8B";
+const berry = "#F8769C";
+const navy = "#F8769C";
+const teal = "#F8769C";
+const muted = "#FFDBED";
 const percent = (value: number | null) => value === null ? "—" : `${decimal.format(value)}%`;
 const periodRange = (window: ReportingWindow) => dayFormat.formatRange(window.start, new Date(+window.end - dayMs));
 const unwrap = <T,>(result: MetricResult<T>) => result.status === "unavailable" ? null : result.value;
@@ -40,20 +41,20 @@ function rateComparison(value: Comparison<Fraction>) {
   return `${signed(current - previous, " pp")} from prior ${percent(previous)}`;
 }
 
-function Metric({ label, value, comparison }: { label: string; value: string | null; comparison: string }) {
-  return <div className="min-w-0 p-3.5 sm:px-5 sm:py-4">
+function Metric({ label, value, comparison, featured = false, sparkline, unit = "count" }: { label: string; value: string | null; comparison: string; featured?: boolean; sparkline?: { day: string; count: number | null }[] | null; unit?: SparklineUnit }) {
+  return <div className={`min-w-0 rounded-xl border border-[#FFDBED] p-3.5 shadow-none sm:px-5 sm:py-4 ${featured ? "bg-[#FFDBED]" : "bg-[#FFF9FC]"}`}>
     <dt className="text-xs font-semibold text-[#574650] sm:text-sm">{label}</dt>
     <dd>
       <p className="mt-1 text-[1.7rem] leading-none font-bold tracking-[-0.03em] tabular-nums sm:text-[2rem]">{value ?? <span aria-label="Unavailable">—</span>}</p>
-      <p className="mt-2 text-xs leading-5 text-muted">{comparison}</p>
+      <div className="mt-2 flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2"><p className="min-w-0 max-w-full break-words text-xs leading-5 text-muted">{comparison}</p>{sparkline?.length ? <div className="w-20 shrink-0"><AdminSparkline name={`${label} daily trend`} timestamps={sparkline.map(point => point.day)} values={sparkline.map(point => point.count)} unit={unit} /></div> : null}</div>
     </dd>
   </div>;
 }
 
-function Panel({ id, title, description, alignChart = false, children }: {
-  id: string; title: string; description: string; alignChart?: boolean; children: ReactNode;
+function Panel({ id, title, description, alignChart = false, className = "", children }: {
+  id: string; title: string; description: string; alignChart?: boolean; className?: string; children: ReactNode;
 }) {
-  return <Card padding="none" className="min-w-0 p-4 shadow-none sm:p-5">
+  return <Card padding="none" className={`min-w-0 p-4 shadow-none sm:p-5 ${className}`}>
     <section aria-labelledby={id}>
       <h3 id={id} className="text-lg font-bold tracking-tight">{title}</h3>
       <p className={`mt-0.5 max-w-[68ch] text-sm leading-5 text-muted ${alignChart ? "min-[980px]:min-h-10" : ""}`}>{description}</p>
@@ -82,9 +83,8 @@ function TrendBody({ title, label, trend, kind, color, empty }: {
 
 function RetentionCell({ value }: { value: Fraction }) {
   const measured = rate(value);
-  const tone = measured === null ? "bg-[#FAF8F9] text-muted" : measured >= 66 ? "bg-[#F3CDDB] text-[#66384A]" :
-    measured >= 33 ? "bg-[#FAE3EC] text-[#66384A]" : measured > 0 ? "bg-[#FFF1F6] text-[#66384A]" : "bg-[#FAF8F9] text-[#574650]";
-  return <div className={`rounded-md px-1 py-1.5 leading-4 tabular-nums [overflow-wrap:anywhere] sm:px-2 ${tone}`}>
+  const opacity = measured === null ? 0 : 22 + Math.round(measured * 0.58);
+  return <div style={{ backgroundColor: measured === null ? "#FFF9FC" : `color-mix(in srgb, #F8769C ${opacity}%, #FFDBED)` }} className="rounded-md px-1 py-1.5 leading-4 tabular-nums text-[#30252D] [overflow-wrap:anywhere] sm:px-2">
     {measured === null ? <span className="text-xs" aria-label="Return day has yet to end">—</span> : <>
       <span className="block font-bold">{percent(measured)}</span>
       <span className="block text-[11px]">{number.format(value.counted)}/{number.format(value.eligible)}</span>
@@ -101,10 +101,10 @@ export function AnalyticsControls({ window, previous }: { window: ReportingWindo
       <p className="mt-1 text-sm leading-5 text-muted"><span className="font-semibold text-foreground">{periodRange(window)} UTC</span></p>
       <p className="text-xs leading-5 text-muted">Compared with {periodRange(previous)} UTC</p>
     </div>
-    <nav aria-label="Reporting period" className="inline-flex max-w-full rounded-xl border border-border bg-[#FBF8FA] p-1">
+    <nav aria-label="Reporting period" className="inline-flex max-w-full rounded-xl border border-border bg-[#FFF9FC] p-1">
       {reportingPeriods.map(days => <Link key={days} href={`/admin/analytics?period=${days}`} prefetch={false} scroll={false}
-        aria-current={days === window.days ? "page" : undefined} className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-lg px-3 text-xs font-semibold sm:px-4 sm:text-sm ${focus} ${days === window.days
-          ? "bg-[#FFE6EF] text-[#853750]" : "text-muted hover:bg-white hover:text-foreground"}`}>{days} days</Link>)}
+        aria-label={`${days} days`} aria-current={days === window.days ? "page" : undefined} className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-lg px-3 text-xs font-semibold sm:px-4 sm:text-sm ${focus} ${days === window.days
+          ? "bg-[#FFDBED] text-[#30252D]" : "text-muted hover:bg-white hover:text-foreground"}`}>{days}D</Link>)}
     </nav>
   </header>;
 }
@@ -127,41 +127,40 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
   const hasUnavailable = [report.growth, report.active, report.activation, report.retention, report.reviews,
     report.quizzes, report.subjects, report.flashcards].some(metric => metric.status === "unavailable");
 
-  return <div className="grid min-w-0 gap-6 sm:gap-7">
-    <div>
-      <dl className="grid grid-cols-2 overflow-hidden rounded-2xl border border-border bg-white [&>div:nth-child(even)]:border-l [&>div:nth-child(n+3)]:border-t [&>div]:border-border lg:grid-cols-4 lg:[&>div:nth-child(3)]:border-l lg:[&>div:nth-child(n+3)]:border-t-0">
-        <Metric label="New users" value={growth && number.format(growth.current)} comparison={growth ? countComparison(growth) : "Unavailable"} />
-        <Metric label="Active learners" value={active && number.format(active.current)} comparison={active ? countComparison(active) : "Unavailable"} />
-        <Metric label="24-hour verification" value={activation && percent(verification)} comparison={activation ? rateComparison(activation) : "Unavailable"} />
-        <Metric label="Review attempts" value={reviewCounts && number.format(reviewCounts.current)} comparison={reviewCounts ? countComparison(reviewCounts) : "Unavailable"} />
+  return <div className="grid min-w-0 grid-cols-1 gap-4 sm:gap-5 min-[1100px]:grid-cols-12">
+    <div className="min-w-0 min-[1100px]:col-span-12">
+      <dl className="grid grid-cols-2 gap-3 min-[1100px]:grid-cols-4">
+        <Metric label="New users" value={growth && number.format(growth.current)} comparison={growth ? countComparison(growth) : "Unavailable"} featured sparkline={growth?.daily ?? null} />
+        <Metric label="Active learners" value={active && number.format(active.current)} comparison={active ? countComparison(active) : "Unavailable"} sparkline={active?.daily ?? null} />
+        <Metric label="Review attempts" value={reviewCounts && number.format(reviewCounts.current)} comparison={reviewCounts ? countComparison(reviewCounts) : "Unavailable"} sparkline={reviews?.daily.map(({ day, attempts }) => ({ day, count: attempts })) ?? null} />
+        <Metric label="Review accuracy" value={reviews ? percent(rate(accuracy(reviews.current))) : null} comparison={reviews ? rateComparison({ current: accuracy(reviews.current), previous: accuracy(reviews.previous) }) : "Unavailable"} sparkline={reviews?.daily.map(point => ({ day: point.day, count: point.correct + point.wrong ? point.correct / (point.correct + point.wrong) * 100 : null })) ?? null} unit="percent" />
       </dl>
       {hasUnavailable && <p role="status" className="mt-3 rounded-lg bg-pink-soft px-3 py-2 text-sm text-[#694453]">
         Some metrics could not be loaded. <a className="rounded font-semibold underline underline-offset-2" href={`/admin/analytics?period=${report.window.days}`}>Reload report</a>
       </p>}
     </div>
 
-    <section aria-labelledby="analytics-growth" className="grid min-w-0 gap-3">
-      <h2 id="analytics-growth" className="text-base font-bold tracking-tight">Growth and engagement</h2>
-      <div className="grid min-w-0 gap-3 min-[980px]:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <Panel id="analytics-signups" title="User growth" alignChart description="Daily registrations among accounts still on Abii. Deleted registrations are absent.">
-          {growth ? <TrendBody title="User growth" label="Registrations" trend={growth} kind="area" color={berry} empty="No retained accounts were created in this period." /> : <Unavailable result={report.growth} />}
-        </Panel>
-        <Panel id="analytics-active" title="Active learners" alignChart description="Distinct reviewers per day and across the full period.">
-          {active ? <TrendBody title="Active learners" label="Learners" trend={active} kind="bars" color={navy} empty="No learners recorded a review in this period." /> : <Unavailable result={report.active} />}
-        </Panel>
-      </div>
+    <section aria-labelledby="analytics-growth-section" className="order-1 grid min-w-0 gap-3 min-[1100px]:col-span-8">
+      <h2 id="analytics-growth-section" className="sr-only">Growth & Engagement</h2>
+      <Panel id="analytics-growth" title="Growth & Engagement" description="Daily registrations and distinct active learners. The two series are not additive.">
+        {growth && active ? <>
+          <AnalyticsChart title="Growth and engagement" days={growth.daily.map(point => point.day)} kind="lines" empty="No learner activity or retained registrations in this period." series={[
+            { label: "Active learners", color: berry, area: true, values: active.daily.map(point => point.count) },
+            { label: "New users", color: berry, dash: "6 4", values: growth.daily.map(point => point.count) },
+          ]} />
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted"><span>{number.format(growth.current)} registrations · {countComparison(growth)}</span><span>{number.format(active.current)} period distinct active learners · {countComparison(active)}</span></div>
+        </> : <>{!growth && <Unavailable result={report.growth} />}{!active && <Unavailable result={report.active} />}</>}
+      </Panel>
     </section>
 
-    <section aria-labelledby="analytics-lifecycle" className="grid min-w-0 gap-3">
-      <h2 id="analytics-lifecycle" className="text-base font-bold tracking-tight">Account lifecycle</h2>
-      <div className="grid min-w-0 gap-3 min-[980px]:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-        <Panel id="analytics-activation" title="Account activation" description="Email verification within 24 hours of signup. Both periods include only registrations that had the full 24 hours by period end.">
+    <section aria-labelledby="analytics-lifecycle" className="contents">
+      <h2 id="analytics-lifecycle" className="sr-only">Account lifecycle</h2>
+      <div className="contents">
+        <Panel id="analytics-activation" title="Email Activation" description="Verified within 24 hours of signup." className="order-2 min-[1100px]:col-span-4">
           {activation ? <div className="mt-4">
             <p className="text-3xl leading-none font-bold tabular-nums">{percent(verification)}</p>
             <p className="mt-1.5 text-xs text-muted">{rateComparison(activation)}</p>
-            {verification !== null ? <div aria-hidden="true" className="mt-4 h-2.5 overflow-hidden rounded-full bg-[#F4EAF0]">
-              <div className="h-full rounded-full bg-[#B44368]" style={{ width: `${verification}%` }} />
-            </div> : <p className="mt-3 text-sm text-muted">No signups had 24 hours to verify.</p>}
+            {verification !== null ? <div className="mt-3 flex items-center gap-3"><div className="relative"><AdminDonut value={activation.current.counted} total={activation.current.eligible} label={`${percent(verification)} verified email within 24 hours; ${activation.current.counted} of ${activation.current.eligible} eligible registrations`} /><span aria-hidden="true" className="pointer-events-none absolute inset-0 grid size-32 place-items-center text-sm font-bold tabular-nums">{percent(verification)}</span></div><p className="text-xs text-muted">{number.format(activation.current.counted)} of {number.format(activation.current.eligible)} eligible signups<br />activated within 24 hours</p></div> : <p className="mt-3 text-sm text-muted">No signups had 24 hours to verify.</p>}
             <dl className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-3">
               <div><dt className="text-xs text-muted">Verified in 24 hours</dt><dd className="mt-1 font-bold tabular-nums">{number.format(activation.current.counted)}</dd></div>
               <div><dt className="text-xs text-muted">Eligible signups</dt><dd className="mt-1 font-bold tabular-nums">{number.format(activation.current.eligible)}</dd></div>
@@ -169,7 +168,7 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
             <p className="mt-3 text-xs leading-5 text-muted">Verification measures email confirmation. First-study activation needs separate instrumentation.</p>
           </div> : <Unavailable result={report.activation} />}
         </Panel>
-        <Panel id="analytics-retention" title="Learning retention" description="A learner returns when they record a review on day 1, 7, or 30 after signup, by UTC date.">
+        <Panel id="analytics-retention" title="Learning Retention" description="Cohort analysis · exact-day learning returns, measured by UTC date." className="order-5 min-[1100px]:col-span-12">
           {retention ? <>
             <dl className="mt-3.5 grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-[#FFFAFC]">
               {retentionHorizon.map(horizon => <div key={horizon} className="min-w-0 px-2 py-2.5 sm:px-3">
@@ -180,7 +179,7 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
               </div>)}
             </dl>
             {cohorts.length ? <div role="region" aria-label="Retention cohort matrix" tabIndex={0} className={`mt-3 max-h-72 overflow-auto rounded-lg border border-border ${focus}`}>
-              <table className="w-full min-w-[300px] text-left text-xs max-sm:table-fixed">
+              <table className="w-full min-w-[220px] table-fixed text-left text-xs">
                 <caption className="sr-only">Weekly signup cohorts with returned and eligible counts for days 1, 7 and 30</caption>
                 <thead className="sticky top-0 bg-white text-muted"><tr>
                   <th scope="col" className="px-2 py-2 max-sm:w-[27%]">Signup dates</th><th scope="col" className="px-1.5 py-2 max-sm:w-[18%]">Signups</th>
@@ -199,10 +198,10 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
       </div>
     </section>
 
-    <section aria-labelledby="analytics-behavior" className="grid min-w-0 gap-3">
-      <h2 id="analytics-behavior" className="text-base font-bold tracking-tight">Learning behavior</h2>
-      <div className="grid min-w-0 gap-3 min-[980px]:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <Panel id="analytics-review" title="Review activity" description="Recorded flashcard review attempts by day. Accuracy uses attempts with a known outcome.">
+    <section aria-labelledby="analytics-behavior" className="contents">
+      <h2 id="analytics-behavior" className="sr-only">Learning behavior</h2>
+      <div className="contents">
+        <Panel id="analytics-review" title="Review Activity" description="Recorded review outcomes by day." className="order-3 min-[1100px]:col-span-8">
           {reviews && reviewCounts ? <>
             <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <strong className="text-2xl font-bold tabular-nums">{number.format(reviews.current.attempts)}</strong>
@@ -210,17 +209,11 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
             </div>
             <p className="mt-1 text-xs text-muted"><strong className="text-foreground">{percent(rate(accuracy(reviews.current)))} accuracy</strong>
               {" · "}{rateComparison({ current: accuracy(reviews.current), previous: accuracy(reviews.previous) })}</p>
-            <ul aria-label="Review outcomes" className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
-              {tracks.map(track => <li key={track.key} className="inline-flex items-center gap-1.5">
-                <span aria-hidden="true" className="size-2 rounded-[2px]" style={{ backgroundColor: track.color }} />
-                {track.label} <strong className="text-foreground tabular-nums">{number.format(reviews.current[track.key])}</strong>
-              </li>)}
-            </ul>
-            <AnalyticsChart title="Review activity" days={reviews.daily.map(point => point.day)} kind="bars" empty="No reviews were recorded in this period."
+            <AnalyticsChart title="Review activity" days={reviews.daily.map(point => point.day)} kind="bars" stacked empty="No reviews were recorded in this period."
               series={tracks.map(track => ({ label: track.label, color: track.color, values: reviews.daily.map(point => point[track.key]) }))} />
           </> : <Unavailable result={report.reviews} />}
         </Panel>
-        <Panel id="analytics-quizzes" title="Quiz modes" description="Mode selected when starting a completed quiz session.">
+        <Panel id="analytics-quizzes" title="Quiz Preferences" description="Available completed-session sample." className="order-4 min-[1100px]:col-span-4">
           {quizzes ? <>
             <div className="mt-3 rounded-lg bg-[#FFF2F7] px-3 py-2 text-xs leading-5 text-[#66384A]">
               <p className="font-bold">Partial coverage</p>
@@ -228,40 +221,24 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
             </div>
             {quizzes.first && quizzes.last && <p className="mt-3 text-xs leading-5 text-muted">Observed {timeFormat.format(new Date(quizzes.first))}
               {quizzes.first !== quizzes.last && ` to ${timeFormat.format(new Date(quizzes.last))}`} UTC</p>}
-            {quizTotal ? <ul aria-label="Distribution among sessions with a known mode" className="mt-3 space-y-3">
-              {quizModes.map(mode => {
-                const count = quizzes.modes[mode.id];
-                const share = rate({ counted: count, eligible: quizTotal }) ?? 0;
-                return <li key={mode.id}>
-                  <div className="flex justify-between gap-2 text-sm"><span className="font-medium">{mode.label}</span>
-                    <span className="text-muted tabular-nums">{number.format(count)} <span className="ml-1 font-semibold text-foreground">{percent(share)}</span></span></div>
-                  <div aria-hidden="true" className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#F4EAF0]"><div className="h-full rounded-full bg-[#B44368]" style={{ width: `${share}%` }} /></div>
-                </li>;
-              })}
-            </ul> : <p className="mt-3 text-sm text-muted">No completed sessions with a known mode survived in this period.</p>}
+            {quizTotal ? <><p className="mt-3 text-xs text-muted">{number.format(quizTotal)} sessions with known mode</p><AnalyticsChart title="Quiz preferences" days={quizModes.map(mode => mode.id)} categories={quizModes.map(mode => mode.label)} horizontal stacked={false} kind="bars" unit="sessions" empty="No completed sessions with a known mode survived in this period." series={[{ label: "Completed sessions", color: berry, values: quizModes.map(mode => quizzes.modes[mode.id]) }]} /><dl className="grid grid-cols-2 gap-x-4 border-t border-border pt-2 text-xs">{quizModes.map(mode => <div key={mode.id} className="flex justify-between gap-1 py-1"><dt>{mode.label}</dt><dd className="tabular-nums">{number.format(quizzes.modes[mode.id])} · {percent(rate({ counted: quizzes.modes[mode.id], eligible: quizTotal }))}</dd></div>)}</dl></> : <p className="mt-3 text-sm text-muted">No completed sessions with a known mode survived in this period.</p>}
             {quizzes.unknown > 0 && <p className="mt-3 text-xs text-muted">{number.format(quizzes.unknown)} with unknown mode, excluded from shares.</p>}
           </> : <Unavailable result={report.quizzes} />}
         </Panel>
       </div>
     </section>
 
-    <section aria-labelledby="analytics-content" className="grid min-w-0 gap-3">
-      <h2 id="analytics-content" className="text-base font-bold tracking-tight">Content creation</h2>
-      <Panel id="analytics-creation" title="Subjects and flashcards" description="Daily creations among surviving materials. Deleted items are absent. Each enumeration flashcard counts as one card. Charts use separate vertical scales.">
-        <div className="mt-4 grid min-w-0 gap-4 md:grid-cols-2 md:gap-6">
-          <section className="min-w-0" aria-labelledby="analytics-subjects">
-            <h4 id="analytics-subjects" className="font-semibold">Subjects created</h4>
-            {subjects ? <TrendBody title="Subjects created" label="Subjects" trend={subjects} kind="bars" color={navy} empty="No surviving subjects were created in this period." /> : <Unavailable result={report.subjects} />}
-          </section>
-          <section className="min-w-0 border-t border-border pt-4 md:border-t-0 md:border-l md:pt-0 md:pl-6" aria-labelledby="analytics-flashcards">
-            <h4 id="analytics-flashcards" className="font-semibold">Flashcards created</h4>
-            {flashcards ? <TrendBody title="Flashcards created" label="Flashcards" trend={flashcards} kind="bars" color={berry} empty="No surviving flashcards were created in this period." /> : <Unavailable result={report.flashcards} />}
-          </section>
-        </div>
+    <section aria-label="Content creation" className="contents">
+      <h2 className="sr-only">Content creation</h2>
+      <Panel id="analytics-subjects" title="Subjects Created" description="Retained subject records created per UTC day; deleted records are absent." className="order-6 min-[1100px]:col-span-6">
+        {subjects ? <TrendBody title="Subjects created" label="Subjects" trend={subjects} kind="bars" color={navy} empty="No surviving subjects were created in this period." /> : <Unavailable result={report.subjects} />}
+      </Panel>
+      <Panel id="analytics-flashcards" title="Flashcards Created" description="Retained flashcard records created per UTC day; deleted records are absent." className="order-7 min-[1100px]:col-span-6">
+        {flashcards ? <TrendBody title="Flashcards created" label="Flashcards" trend={flashcards} kind="bars" color={berry} empty="No surviving flashcards were created in this period." /> : <Unavailable result={report.flashcards} />}
       </Panel>
     </section>
 
-    <footer className="space-y-1 border-t border-border pt-3 text-xs leading-5 text-muted">
+    <footer className="order-8 space-y-1 border-t border-border pt-3 text-xs leading-5 text-muted min-[1100px]:col-span-12">
       <p>Reports use complete UTC days and exclude the administrator and marked demo accounts. Historical totals reflect records still held by Abii.</p>
       <p>Read at {timeFormat.format(new Date(report.measuredAt))} UTC</p>
     </footer>

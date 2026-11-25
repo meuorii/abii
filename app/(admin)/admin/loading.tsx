@@ -13,17 +13,18 @@ import { PerformanceSkeleton } from "@/components/admin/admin-performance";
 export default function LoadingAdminPage() {
   const pathname = usePathname();
   const hero = <SkeletonBlock className="h-[170px] rounded-[20px] sm:h-[250px] lg:h-[282px] xl:h-[312px]" />;
+  const compactHero = <SkeletonBlock className="h-[164px] rounded-[18px] sm:h-[188px] lg:h-[204px]" />;
   if (pathname === "/admin") {
     return <div className="grid gap-5 sm:gap-6"><SkeletonBlock className="h-[164px] rounded-[18px] sm:h-[188px] lg:h-[204px]" /><OverviewSkeleton /></div>;
   }
   if (pathname === "/admin/users") {
-    return <div className="grid gap-5 sm:gap-6">{hero}<UsersSkeleton /></div>;
+    return <div className="admin-loading-refined grid gap-5 bg-[#FFF9FC] sm:gap-6">{compactHero}<UsersSkeleton /></div>;
   }
   if (pathname === "/admin/analytics") {
-    return <div className="grid gap-5 sm:gap-6">{hero}<AnalyticsSkeleton controls /></div>;
+    return <div className="admin-loading-refined grid gap-5 bg-[#FFF9FC] sm:gap-6">{compactHero}<AnalyticsSkeleton controls /></div>;
   }
   if (pathname === "/admin/performance") {
-    return <div className="grid gap-5 sm:gap-6">{hero}<PerformanceSkeleton controls /></div>;
+    return <div className="admin-loading-refined grid gap-5 bg-[#FFF9FC] sm:gap-6">{compactHero}<PerformanceSkeleton controls /></div>;
   }
   if (pathname === "/admin/security") {
     return <div className="grid gap-5 sm:gap-6">{hero}<SecuritySkeleton controls /></div>;

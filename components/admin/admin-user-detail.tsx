@@ -1,6 +1,7 @@
 "use client";
 
 import { BadgeCheck, CircleSlash2, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { SkeletonBlock, SkeletonRegion } from "@/components/ui/skeleton";
@@ -17,18 +18,22 @@ export function accountDate(date: string | null) {
   return date ? datetime.format(new Date(date)) : "Unavailable";
 }
 
-export function AccountAvatar({ name, large }: { name: string; large?: boolean }) {
+export function AccountAvatar({ name, profileImage, large }: { name: string; profileImage?: string | null; large?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [profileImage]);
   const initials = name.trim().split(/\s+/u).slice(0, 2).map(word => Array.from(word)[0]).join("").toUpperCase();
-  return <span aria-hidden="true" className={`inline-grid shrink-0 place-items-center rounded-xl bg-pink-card font-bold text-[#794357] ${large ? "size-12 text-lg" : "size-9 text-xs"}`}>{initials || "?"}</span>;
+  return <span aria-hidden="true" className={`relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#FFDBED] font-bold text-[#30252D] ${large ? "size-[76px] text-xl" : "size-10 text-xs"}`}>
+    {profileImage && !failed ? <Image src={profileImage} alt="" fill sizes={large ? "76px" : "40px"} unoptimized className="object-cover" onError={() => setFailed(true)} /> : initials || "?"}
+  </span>;
 }
 
 export function AccountFlags({ user, kind }: { user: DirectoryUser; kind: "verification" | "status" }) {
   if (kind === "verification") return user.verifiedAt
-    ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#256047]"><BadgeCheck aria-hidden="true" size={14} />Verified</span>
+    ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#66565F]"><BadgeCheck aria-hidden="true" size={14} />Verified</span>
     : <span className="text-xs font-medium text-muted">Unverified</span>;
   return user.suspendedAt
     ? <span className="inline-flex items-center gap-1 rounded-md bg-pink-soft px-1.5 py-1 text-xs font-semibold text-[#91314E]"><CircleSlash2 aria-hidden="true" size={13} />Suspended</span>
-    : <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#544650]"><span aria-hidden="true" className="size-1.5 rounded-full bg-[#47886B]" />Active</span>;
+    : <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#66565F]"><span aria-hidden="true" className="size-1.5 rounded-full bg-[#F8769C]" />Active</span>;
 }
 
 const learning = [
@@ -225,7 +230,7 @@ export function UserDetailSheet({ user, onClose, onChanged, onRefresh, fallbackF
           </div>}
           <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
             <button type="button" className={`${control} px-3 hover:bg-pink-soft`} disabled={pending} onClick={cancelConfirmation}>Cancel</button>
-            <button className={`${control} border-transparent px-3 font-semibold text-white disabled:opacity-55 ${suspending ? "bg-[#A92D4A] hover:bg-[#8C233D]" : "bg-[#2B644E] hover:bg-[#204D3B]"}`}
+            <button className={`${control} border-transparent bg-[#F8769C] px-3 font-semibold text-[#30252D] hover:bg-[#FFDBED] disabled:opacity-55`}
               disabled={pending || error?.code === "reauthenticate"}>{pending ? "Confirming…" : suspending ? "Confirm suspension" : "Confirm reactivation"}</button>
           </div>
         </form>
@@ -239,9 +244,9 @@ export function UserDetailSheet({ user, onClose, onChanged, onRefresh, fallbackF
         </div>
       ) : detail && (
         <div className="divide-y divide-border px-4 sm:px-6">
-          <section className="py-5">
+          <section className="my-4 rounded-2xl bg-[#FFDBED] px-3 py-4 sm:px-4">
             <div className="flex items-center gap-3">
-              <AccountAvatar name={identity.name} large />
+              <AccountAvatar name={identity.name} profileImage={identity.profileImage} large />
               <div className="min-w-0 [overflow-wrap:anywhere]">
                 <h3 className="text-xl font-bold leading-tight tracking-tight">{identity.name}</h3>
                 <p className="mt-0.5 text-sm text-muted">{identity.email || "Email unavailable"}</p>
@@ -270,7 +275,7 @@ export function UserDetailSheet({ user, onClose, onChanged, onRefresh, fallbackF
             <h3 className="font-bold tracking-tight">Account access</h3>
             <p className="mt-1 text-sm leading-6 text-muted">{suspended ? "This learner’s sign-in is currently blocked." : "Suspending this account blocks sign-in and ends existing sessions."}</p>
             <button ref={actionButton} type="button" onClick={() => { setNotice(""); setReason(""); setConfirmation(suspended ? "reactivate" : "suspend"); }}
-              className={`${control} mt-3 px-3 font-semibold ${suspended ? "text-[#256047] hover:bg-success" : "border-[#F1CBD8] text-[#91314E] hover:bg-pink-soft"}`}>
+              className={`${control} mt-3 border-[#FFDBED] px-3 font-semibold text-[#30252D] hover:bg-[#FFDBED]`}>
               {suspended ? "Reactivate account" : "Suspend account"}
             </button>
           </section>

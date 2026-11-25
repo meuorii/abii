@@ -14,10 +14,10 @@ import { openUsersToken, sealUsersToken } from "./users-tokens";
 const maxTimeMS = 1500;
 const pageSize = 20;
 const smallDirectoryLimit = 50_000;
-const projection = "_id name email createdAt emailVerifiedAt suspendedAt";
+const projection = "_id name email profileImage createdAt emailVerifiedAt suspendedAt";
 const nameCollation = { locale: "en", strength: 2 } as const;
 type Lookup = FilterQuery<UserDocument>;
-type Row = { _id: Types.ObjectId; name?: string; email?: string; createdAt?: Date; emailVerifiedAt?: Date | null; suspendedAt?: Date | null };
+type Row = { _id: Types.ObjectId; name?: string; email?: string; profileImage?: string | null; createdAt?: Date; emailVerifiedAt?: Date | null; suspendedAt?: Date | null };
 type Cursor = { id: string; sortValue: string | null; direction: "next" | "previous" };
 
 export class UsersQueryError extends Error {}
@@ -46,10 +46,18 @@ function dateString(value: unknown) {
   return value instanceof Date && Number.isFinite(+value) ? value.toISOString() : null;
 }
 
+function safeProfileImage(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "res.cloudinary.com" && !url.username && !url.password ? url.href : null;
+  } catch { return null; }
+}
+
 function projectUser(row: Row): DirectoryUser {
   return {
     id: row._id.toHexString(), name: typeof row.name === "string" ? row.name : "Unnamed user",
-    email: typeof row.email === "string" ? row.email : "", joinedAt: dateString(row.createdAt),
+    email: typeof row.email === "string" ? row.email : "", profileImage: safeProfileImage(row.profileImage), joinedAt: dateString(row.createdAt),
     verifiedAt: dateString(row.emailVerifiedAt), suspendedAt: dateString(row.suspendedAt),
   };
 }

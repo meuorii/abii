@@ -38,11 +38,11 @@ export function MetricCard({ label, metric, expanded = false }: { label: string;
   );
 }
 
-export function AdminPanel({ title, description, actions, children }: {
-  title: string; description?: string; actions?: ReactNode; children: ReactNode;
+export function AdminPanel({ title, description, actions, children, className = "" }: {
+  title: string; description?: string; actions?: ReactNode; children: ReactNode; className?: string;
 }) {
   return (
-    <Card padding="none" className="min-w-0 overflow-hidden rounded-xl">
+    <Card padding="none" className={`min-w-0 overflow-hidden rounded-xl ${className}`}>
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#F0E5E9] px-4 py-3 sm:px-5">
         <div><CardTitle>{title}</CardTitle>{description && <CardDescription>{description}</CardDescription>}</div>
         {actions}

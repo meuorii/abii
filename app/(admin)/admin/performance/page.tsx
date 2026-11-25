@@ -15,7 +15,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
   const now = new Date();
   const window = monitoringWindow(period, now);
   return (
-    <div className="grid min-w-0 gap-5 sm:gap-6">
+    <div className="admin-overview-workspace admin-refined grid min-w-0 gap-5 bg-[#FFF9FC] sm:gap-6">
       <AdminPageHero page="performance" />
       <section aria-labelledby="system-monitoring" className="grid min-w-0 gap-4">
         <PerformanceControls window={window} />

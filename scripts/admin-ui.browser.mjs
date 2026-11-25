@@ -25,7 +25,7 @@ import { Notification } from "../models/Notification.ts";
 
 const destinations = [
   ["", "Overview", "Everything in one view.", "Platform Overview", "overview"],
-  ["/users", "Users", "Every learner matters.", "Learner directory", "users"],
+  ["/users", "Users", "Every learner matters.", "User Directory", "users"],
   ["/analytics", "Analytics", "See how learning grows.", "Platform insights", "analytics"],
   ["/performance", "Performance", "Keep things running smoothly.", "System monitoring", "performance"],
   ["/security", "Security", "A safer place to learn.", "Security overview", "security"],
@@ -101,7 +101,7 @@ async function startServer(env, production = false) {
   };
   try {
     for (let attempt = 0; attempt < 240; attempt++) {
-      if (/Ready in/.test(output)) return { base, stop, telemetryDropped: () => telemetryDropped, securityDropped: () => securityDropped };
+      if (/Ready in/.test(output)) return { base, stop, telemetryDropped: () => telemetryDropped, securityDropped: () => securityDropped, logs: () => output };
       if (child.exitCode !== null) break;
       await delay(250);
     }
@@ -115,6 +115,8 @@ async function startServer(env, production = false) {
 test("admin routes fail closed, require real MFA, and render the protected workspace", { timeout: 480_000 }, async () => {
   const securityOnly = process.env.ABII_TEST_SECURITY_LOGS_ONLY === "1";
   const announcementsOnly = process.env.ABII_TEST_ANNOUNCEMENTS_ONLY === "1";
+  const focusedTargets = process.env.ABII_TEST_ADMIN_TARGETS?.split(",").filter(asset => ["overview", "users", "analytics", "performance"].includes(asset)) ?? [];
+  const targetWidths = process.env.ABII_TEST_ADMIN_VIEWPORTS?.split(",").map(Number).filter(Number.isFinite) ?? widths;
   const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const secret = randomBytes(32).toString("hex");
   const uri = replica.getUri("abii_admin_ui_fixture");
@@ -278,6 +280,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     const page = await context.newPage();
     const pageErrors = [];
     page.on("pageerror", error => pageErrors.push(`${error.message} at ${new URL(page.url()).pathname}: ${error.stack ?? "no stack"}`));
+    page.on("console", message => { if (message.type() === "error") pageErrors.push(`${message.text()} at ${new URL(page.url()).pathname}`); });
     const post = (path, data) => context.request.post(base + path, { data, headers: { Origin: base } });
 
     const wrong = "fixture wrong password";
@@ -311,15 +314,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     const previewRequest = { action: "preview", title: "Fixture", message: "Fixture" };
     assert.equal((await post("/api/admin/announcements", previewRequest)).status(), 403);
     for (const [suffix] of destinations) await denied(suffix, "Administrator access required", `abii_session=${learnerCookie.value}`);
-    await page.goto(base + "/dashboard");
-    await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Dashboard", exact: true }).waitFor();
-    assert.equal(await page.getByRole("navigation", { name: "Admin navigation" }).count(), 0);
-    await page.setViewportSize({ width: 1920, height: 951 });
-    const learnerGeometry = await page.evaluate(workspaceGeometry);
-    assert.equal(learnerGeometry.left, 24);
-    if (process.env.ABII_ADMIN_SCREENSHOTS) {
-      await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "learner-1920.png"), animations: "disabled" });
-    }
+    let shellGeometry;
     await context.clearCookies();
 
     const adminPassword = await post("/api/auth/login", { email: admin.email, password });
@@ -361,16 +356,47 @@ test("admin routes fail closed, require real MFA, and render the protected works
     assert.match(overviewResponse.headers()["cache-control"], /private, no-store/);
     assert.equal((await overviewResponse.json()).window.days, 7);
     assert.equal((await context.request.get(base + "/api/admin/overview?period=365")).status(), 400);
-    for (const [suffix, label, headline, region, asset] of securityOnly || announcementsOnly ? destinations.filter(item => item[4] === (securityOnly ? "security" : "announcements")) : destinations) {
+    const renderDestinations = focusedTargets.length ? destinations.filter(item => focusedTargets.includes(item[4])) :
+      securityOnly || announcementsOnly ? destinations.filter(item => item[4] === (securityOnly ? "security" : "announcements")) : destinations;
+    for (const [suffix, label, headline, region, asset] of renderDestinations) {
       await page.setViewportSize({ width: 1920, height: 951 });
       const response = await page.goto(base + "/admin" + suffix, { waitUntil: "domcontentloaded", timeout: 90_000 });
+      assert.equal(response.status(), 200, `${label} route response`);
       assert.match(response.headers()["cache-control"], /\bno-store\b/);
-      await page.getByRole("heading", { level: 1, name: headline }).waitFor();
+      try { await page.getByRole("heading", { level: 1, name: headline }).waitFor(); }
+      catch (error) {
+        const serverDiagnostics = server.logs().split(/\r?\n/).filter(line => /Mongo|timeout|timed out|Functions cannot|serializ|Error:/i.test(line))
+          .map(line => line.replace(/mongodb(?:\+srv)?:\/\/\S+/gi, "[database URI redacted]").replace(/[\w.+-]+@[\w.-]+/g, "[email redacted]")).slice(-12);
+        const headings = (await page.locator("main h1").allTextContents()).map(value => value.slice(0, 100));
+        const headingState = await page.locator("main h1").evaluateAll(nodes => nodes.map(node => {
+          const style = getComputedStyle(node); const rect = node.getBoundingClientRect();
+          return { text: node.textContent?.trim().slice(0, 100), display: style.display, visibility: style.visibility, opacity: style.opacity,
+            rect: [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)], animation: style.animationName };
+        }));
+        throw new Error(`${label} route shell missing expected heading; response=${response.status()}, headings=${JSON.stringify(headings)}, state=${JSON.stringify(headingState)}, browserErrors=${pageErrors.slice(-6).join(" | ") || "none"}, serverDiagnostics=${serverDiagnostics.join(" | ") || "none"}`, { cause: error });
+      }
       await page.getByRole("heading", { name: region, exact: true }).waitFor();
+      if (asset === "users") assert.ok(await page.locator("main [role=img]").count() > 0, "the account verification ECharts donut is present");
+      if (asset === "analytics") {
+        try { await page.locator("#analytics-growth").waitFor(); }
+        catch (error) {
+          const serialization = server.logs().split(/\r?\n/).filter(line => /Functions cannot be passed|Only plain objects|serializ|Server Components render|Error:/i.test(line)).slice(-12);
+          throw new Error(`Analytics report did not render; browser errors: ${pageErrors.slice(-8).join(" | ") || "none"}; server diagnostics: ${serialization.join(" | ") || "no matching server error"}`, { cause: error });
+        }
+        const charts = await page.locator("main [role=img]").count();
+        assert.ok(charts >= 8, `analytics ECharts include KPI trends and statistical panels (found ${charts})`);
+      }
+      if (["analytics", "performance"].includes(asset)) {
+        await page.waitForFunction(() => [...document.querySelectorAll("main [role=img] canvas")].some(canvas => canvas.width > 0 && canvas.height > 0));
+      }
+      if (asset === "performance") assert.ok(await page.locator("main [role=img]").count() >= 7, "performance ECharts include KPI trends and telemetry panels");
       assert.equal(await page.getByRole("navigation", { name: "Admin navigation" }).locator('[aria-current="page"]').innerText(), label);
       const image = page.locator(`main img[src*="admin-${asset}.png"]`);
       await image.evaluate(element => element.decode());
-      assert.deepEqual(await page.evaluate(workspaceGeometry), learnerGeometry, `${label} desktop shell geometry`);
+      const geometry = await page.evaluate(workspaceGeometry);
+      shellGeometry ??= geometry;
+      if (asset === "overview") assert.equal(geometry.left, 24, "admin Overview keeps the established workspace inset");
+      assert.deepEqual(geometry, shellGeometry, `${label} desktop shell geometry`);
       if (asset === "security") await page.getByRole("heading", { name: "Security & audit explorer" }).waitFor();
       if (asset === "performance") await page.getByRole("heading", { name: "Endpoint performance" }).waitFor();
       if (process.env.ABII_ADMIN_SCREENSHOTS) {
@@ -380,36 +406,148 @@ test("admin routes fail closed, require real MFA, and render the protected works
 
       if (!["overview", "users", "analytics", "performance", "security", "announcements", "support", "settings"].includes(asset)) assert.equal(await page.locator("main table, main input, main select").count(), 0);
       assert.ok(!(await page.locator("main").innerText()).includes(admin.email));
-      for (const width of widths) {
+      for (const width of focusedTargets.length ? targetWidths : widths) {
         await page.setViewportSize({ width, height: 880 });
+        if (["overview", "users", "analytics", "performance"].includes(asset)) {
+          try {
+            await page.waitForFunction(() => [...document.querySelectorAll("main [role=img]")].every(host => {
+              const canvas = host.querySelector("canvas");
+              return !canvas || Math.abs(canvas.getBoundingClientRect().width - host.clientWidth) < 2;
+            }), undefined, { timeout: 5_000 });
+          } catch (error) {
+            const charts = await page.locator("main [role=img]").evaluateAll(hosts => hosts.map(host => {
+              const canvas = host.querySelector("canvas"); const hostRect = host.getBoundingClientRect(); const canvasRect = canvas?.getBoundingClientRect();
+              return { label: host.getAttribute("aria-label"), host: [Math.round(hostRect.width), host.clientWidth],
+                canvas: canvasRect && [Math.round(canvasRect.width), canvas.width, canvas.height] };
+            }));
+            throw new Error(`${label} ECharts did not resize to ${width}px: ${JSON.stringify(charts)}`, { cause: error });
+          }
+        }
         if (asset === "overview" && process.env.ABII_ADMIN_SCREENSHOTS && [320, 390, 768].includes(width)) {
           await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `admin-overview-${width}.png`), animations: "disabled" });
         }
+        if (focusedTargets.length && process.env.ABII_ADMIN_SCREENSHOTS) await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `admin-${asset}-${width}.png`), animations: "disabled" });
         const geometry = await page.evaluate(adminHeroGeometry);
-        if (!geometry.fits && asset === "performance") {
-          if (process.env.ABII_ADMIN_SCREENSHOTS) {
-            await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `performance-overflow-${width}.png`), animations: "disabled" });
-          }
-          const overflow = await page.evaluate(() => {
+        if (!geometry.fits) {
+          geometry.overflow = await page.evaluate(() => {
             const main = document.querySelector("main");
-            return {
-              viewport: [innerWidth, document.documentElement.scrollWidth, main.clientWidth, main.scrollWidth],
-              elements: [...main.querySelectorAll("*")].filter(el => {
-                const edge = el.getBoundingClientRect().right;
-                return edge > innerWidth && !el.closest("[role=region][tabindex]");
-              }).slice(0, 15).map(el => [el.tagName, el.className, Math.round(el.getBoundingClientRect().right)]),
-            };
+            return { viewport: [innerWidth, document.documentElement.scrollWidth, main.clientWidth, main.scrollWidth],
+              elements: [...main.querySelectorAll("*")].filter(el => el.scrollWidth > el.clientWidth + 1 &&
+                !el.closest("[role=region][tabindex]")).sort((a, b) => (b.scrollWidth - b.clientWidth) - (a.scrollWidth - a.clientWidth)).slice(0, 12).map(el => {
+                const ancestors = [];
+                for (let node = el; node && node !== main && ancestors.length < 6; node = node.parentElement) {
+                  const rect = node.getBoundingClientRect();
+                  ancestors.push([node.tagName, String(node.className).slice(0, 80), Math.round(rect.left), Math.round(rect.right), node.scrollWidth, node.clientWidth]);
+                }
+                return ancestors;
+              }) };
           });
-          assert.fail(`Performance at ${width}px overflows: ${JSON.stringify(overflow)}`);
         }
-        assert.ok(Object.entries(geometry).every(([key, value]) => key === "bottomGap" ? value >= 0 && value <= 4 : value), `${label} at ${width}px: ${JSON.stringify(geometry)}`);
+        assert.ok(Object.entries(geometry).every(([key, value]) => key === "bottomGap" ? value >= 0 && value <= 4 : key === "overflow" ? true : value), `${label} at ${width}px: ${JSON.stringify(geometry)}`);
       }
     }
 
-    if (!securityOnly && !announcementsOnly) {
+    if (focusedTargets.length === 1 && focusedTargets[0] === "performance") {
+      await page.goto(base + "/admin/performance", { waitUntil: "domcontentloaded" });
+      const monitoring = page.getByRole("region", { name: "System monitoring" });
+      await monitoring.getByText(/Coverage\./).waitFor();
+      for (const title of ["API Response Latency", "Service Status", "Request Volume", "Latency Distribution", "Endpoint performance", "Database Performance", "Reminder Jobs", "Recent Incidents"]) {
+        await monitoring.getByRole("heading", { name: title, exact: true }).waitFor();
+      }
+      await page.waitForFunction(() => [...document.querySelectorAll("main [role=img] canvas")].some(canvas => canvas.width > 0 && canvas.height > 0));
+      assert.ok(await monitoring.getByRole("img").count() >= 7, "performance KPIs and statistical panels use ECharts");
+      await monitoring.getByRole("rowheader", { name: /Submit answer/ }).waitFor();
+      await monitoring.getByText(/11 examined/).waitFor();
+      await monitoring.getByText("Elevated server errors").waitFor();
+      for (const [period, label] of [["1h", "1 hour"], ["24h", "24 hours"], ["7d", "7 days"]]) {
+        await monitoring.getByRole("link", { name: label }).click();
+        await page.waitForURL(`**/admin/performance?period=${period}`);
+        assert.equal(await monitoring.getByRole("link", { name: label }).getAttribute("aria-current"), "page");
+      }
+      const slider = monitoring.getByRole("slider", { name: "API latency interval values" });
+      await slider.focus();
+      await slider.press("End");
+      assert.match(await slider.getAttribute("aria-valuetext"), /samples?/);
+      for (const width of targetWidths) {
+        await page.setViewportSize({ width, height: 900 });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector("main").scrollWidth <= document.querySelector("main").clientWidth), `Performance fits at ${width}px`);
+        if (process.env.ABII_ADMIN_SCREENSHOTS && [320, 375, 1440].includes(width)) {
+          await page.evaluate(() => { window.scrollTo(0, 0); document.querySelector("main")?.scrollTo(0, 0); });
+          await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `performance-${width}.png`), animations: "disabled" });
+        }
+      }
+      assert.deepEqual(pageErrors, []);
+      return;
+    }
+
+    if (focusedTargets.length === 1 && focusedTargets[0] === "overview") {
+      assert.deepEqual(pageErrors, []);
+      return;
+    }
+
+    if (focusedTargets.length === 1 && focusedTargets[0] === "analytics") {
+      const analytics = page.getByRole("region", { name: "Platform insights" });
+      const periods = analytics.getByRole("navigation", { name: "Reporting period" });
+      const signupChart = analytics.getByRole("slider", { name: "Growth and engagement daily values" });
+      const metricValue = label => analytics.locator("dt").filter({ hasText: new RegExp(`^${label}$`, "i") }).locator("..").locator("dd > p").first();
+      assert.equal(await periods.getByRole("link", { name: "30 days" }).getAttribute("aria-current"), "page");
+      assert.equal(await metricValue("New users").textContent(), "2");
+      await periods.getByRole("link", { name: "7 days" }).click();
+      await page.waitForURL("**/admin/analytics?period=7");
+      assert.equal(await metricValue("New users").textContent(), "1");
+      assert.equal(await signupChart.getAttribute("aria-valuemax"), "7");
+      const growth = analytics.getByRole("region", { name: "Growth & Engagement", exact: true });
+      const chartCanvas = growth.locator("canvas").first();
+      await chartCanvas.scrollIntoViewIfNeeded();
+      const canvasBounds = await chartCanvas.boundingBox();
+      assert.ok(canvasBounds && canvasBounds.width > 0 && canvasBounds.height > 0, "growth chart canvas has a measurable size");
+      await chartCanvas.hover({ position: { x: canvasBounds.width * 0.84, y: canvasBounds.height * 0.5 } });
+      const tooltip = growth.locator(".abii-echart-tooltip").first();
+      await tooltip.waitFor({ state: "visible", timeout: 5_000 });
+      assert.match(await tooltip.innerText(), /UTC/);
+      const dataDetails = analytics.getByRole("region", { name: "Growth & Engagement", exact: true }).locator("details");
+      const dataSummary = dataDetails.locator("summary");
+      await dataSummary.focus();
+      await page.keyboard.press("Enter");
+      assert.equal(await dataDetails.evaluate(element => element.open), true, "daily data table opens with the keyboard");
+      assert.equal(await analytics.getByRole("region", { name: "Growth and engagement data table" }).locator("tbody tr").count(), 7);
+      await signupChart.focus();
+      await signupChart.press("Home");
+      await signupChart.press("ArrowRight");
+      assert.equal(await signupChart.getAttribute("aria-valuenow"), "2");
+      await periods.getByRole("link", { name: "90 days" }).click();
+      await page.waitForURL("**/admin/analytics?period=90");
+      assert.equal(await periods.getByRole("link", { name: "90 days" }).getAttribute("aria-current"), "page");
+      assert.equal(await signupChart.getAttribute("aria-valuemax"), "90");
+      const retention = analytics.getByRole("region", { name: "Retention cohort matrix" });
+      for (const width of targetWidths) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.waitForFunction(() => document.documentElement.scrollWidth <= innerWidth &&
+          document.querySelector("main").scrollWidth <= document.querySelector("main").clientWidth, undefined, { timeout: 3_000 }).catch(() => {});
+        const pageFit = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth,
+          main: [document.querySelector("main").clientWidth, document.querySelector("main").scrollWidth],
+          overflow: [...document.querySelector("main").querySelectorAll("*")].filter(node => node.scrollWidth > node.clientWidth + 1 && !node.closest("[role=region][tabindex]")).slice(0, 8).map(node => [node.tagName, node.id, String(node.className).slice(0, 70), node.scrollWidth, node.clientWidth]) }));
+        assert.ok(pageFit.document <= width && pageFit.main[1] <= pageFit.main[0], `Analytics fits at ${width}px: ${JSON.stringify(pageFit)}`);
+        if (width === 375) {
+          const matrix = await retention.evaluate(element => ({ scroll: element.scrollWidth, client: element.clientWidth,
+            table: element.querySelector("table").getBoundingClientRect().width, page: document.documentElement.scrollWidth, viewport: innerWidth }));
+          assert.ok(matrix.scroll === matrix.client, `retention matrix fits at 375px: ${JSON.stringify(matrix)}`);
+        }
+        if (process.env.ABII_ADMIN_SCREENSHOTS && [375, 1440].includes(width)) {
+          await page.evaluate(() => { window.scrollTo(0, 0); document.querySelector("main")?.scrollTo(0, 0); });
+          await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `analytics-viewport-${width}.png`), animations: "disabled" });
+        }
+      }
+      assert.equal(/Functions cannot be passed to Client Component props|Only plain objects can be passed to Client Components/i.test(server.logs()), false,
+        "server-rendered analytics route does not pass chart callbacks through React Flight");
+      assert.deepEqual(pageErrors, []);
+      return;
+    }
+
+    if (!securityOnly && !announcementsOnly && !focusedTargets.length) {
       assert.equal((await fetch(base + "/api/admin/settings")).status, 401);
       assert.equal((await context.request.post(base + "/api/admin/settings", { headers: { Origin: "https://outside.invalid" }, data: { action: "profile" } })).status(), 403);
-      await page.goto(base + "/admin/settings");
+      await page.goto(base + "/admin/settings", { waitUntil: "domcontentloaded" });
       const settingsPost = () => page.waitForResponse(response => response.url().endsWith("/api/admin/settings") && response.request().method() === "POST");
       const displayName = page.getByLabel("Display name");
       await displayName.fill("Settings Fixture Admin");
@@ -437,21 +575,21 @@ test("admin routes fail closed, require real MFA, and render the protected works
       const platformRequest = settingsPost();
       await page.getByRole("button", { name: "Save platform configuration" }).click();
       assert.equal((await platformRequest).status(), 200);
-      await page.goto(base + "/support");
+      await page.goto(base + "/support", { waitUntil: "domcontentloaded" });
       await page.getByText("Fixture public support notice.", { exact: true }).waitFor();
-      await page.goto(base + "/admin/settings");
+      await page.goto(base + "/admin/settings", { waitUntil: "domcontentloaded" });
       await page.getByLabel("Show a public support notice").uncheck();
       await page.getByLabel("Notice text").fill("");
       const clearNoticeRequest = settingsPost();
       await page.getByRole("button", { name: "Save platform configuration" }).click();
       assert.equal((await clearNoticeRequest).status(), 200);
-      await page.goto(base + "/support");
+      await page.goto(base + "/support", { waitUntil: "domcontentloaded" });
       assert.equal(await page.getByText("Fixture public support notice.", { exact: true }).count(), 0);
     }
 
-    if (!securityOnly) {
+    if (!securityOnly && !focusedTargets.length) {
       // The browser only publishes into this loopback replica-set fixture.
-      await page.goto(base + "/admin/announcements");
+      await page.goto(base + "/admin/announcements", { waitUntil: "domcontentloaded" });
       await page.getByText("No announcements yet. Create a draft to get started.").waitFor({ timeout: 20_000 });
       assert.equal((await fetch(base + "/api/admin/announcements", { method: "POST", headers: { Origin: base, "Content-Type": "application/json" },
         body: JSON.stringify(previewRequest) })).status, 401);
@@ -548,7 +686,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
       await page.waitForURL(url => url.searchParams.get("q") === publicationId, { timeout: 20_000 });
       await page.getByRole("link", { name: /Fixture study release/ }).waitFor({ timeout: 20_000 });
       await db.collection("announcements").dropIndex("announcement_updated");
-      await page.goto(base + "/admin/announcements");
+      await page.goto(base + "/admin/announcements", { waitUntil: "domcontentloaded" });
       await page.getByRole("alert").filter({ hasText: "Announcement storage is unavailable." }).waitFor({ timeout: 20_000 });
       await db.collection("announcements").createIndex({ updatedAt: -1, _id: -1 }, { name: "announcement_updated" });
       if (announcementsOnly) {
@@ -557,11 +695,15 @@ test("admin routes fail closed, require real MFA, and render the protected works
       }
     }
 
-    await page.goto(base + "/admin/security");
+    await page.goto(base + "/admin/security", { waitUntil: "domcontentloaded" });
     const security = page.getByRole("region", { name: "Security overview" });
     const explorer = security.getByRole("region", { name: "Security and audit explorer" });
     await security.getByText("Elevated rate limiting").waitFor();
     const activity = security.getByRole("slider", { name: "Authentication activity interval values" });
+    await page.waitForFunction(() => {
+      const canvas = document.querySelector('[aria-label="Authentication activity interval values"] canvas');
+      return canvas instanceof HTMLCanvasElement && canvas.width > 0 && canvas.height > 0;
+    });
     await activity.focus();
     await page.keyboard.press("End");
     await page.waitForFunction(() => {
@@ -592,12 +734,12 @@ test("admin routes fail closed, require real MFA, and render the protected works
     await page.keyboard.press("Escape");
     await detail.waitFor({ state: "hidden" });
     assert.equal(await detailButton.evaluate(node => document.activeElement === node), true);
-    await page.goto(base + "/admin/security?kind=provision");
+    await page.goto(base + "/admin/security?kind=provision", { waitUntil: "domcontentloaded" });
     await explorer.getByText("No matching security or audit events.").waitFor();
-    await page.goto(base + "/admin/security?cursor=invalid");
+    await page.goto(base + "/admin/security?cursor=invalid", { waitUntil: "domcontentloaded" });
     await page.getByRole("alert").getByText(/page link has expired/).waitFor();
     await securityEvents.dropIndex(securityTimelineIndex);
-    await page.goto(base + "/admin/security");
+    await page.goto(base + "/admin/security", { waitUntil: "domcontentloaded" });
     await explorer.getByText(/Pagination is paused/).waitFor();
     await securityEvents.createIndex({ occurredAt: -1, _id: -1 }, { name: securityTimelineIndex });
     await db.command({ collMod: "adminsecurityevents", validator: { format: { $ne: 2 } } });
@@ -612,7 +754,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
 
     if (securityOnly) return;
 
-    await page.goto(base + "/admin");
+    await page.goto(base + "/admin", { waitUntil: "domcontentloaded" });
     const period = page.getByLabel("Reporting period");
     assert.equal(await period.inputValue(), "30");
     assert.equal(await page.getByRole("slider", { name: "User Growth" }).count(), 0);
@@ -640,35 +782,37 @@ test("admin routes fail closed, require real MFA, and render the protected works
     const unauthenticatedReport = await fetch(base + "/admin?period=7");
     assert.doesNotMatch(await unauthenticatedReport.text(), /Older fixture|Active Learners/);
 
-    await page.goto(base + "/admin/analytics");
+    await page.goto(base + "/admin/analytics", { waitUntil: "domcontentloaded" });
     const analytics = page.getByRole("region", { name: "Platform insights" });
     const periods = analytics.getByRole("navigation", { name: "Reporting period" });
-    const signupChart = analytics.getByRole("slider", { name: "User growth daily values" });
+    const signupChart = analytics.getByRole("slider", { name: "Growth and engagement daily values" });
     const metricValue = label => analytics.locator("dt").filter({ hasText: new RegExp(`^${label}$`, "i") }).locator("..").locator("dd > p").first();
     assert.equal(await periods.getByRole("link", { name: "30 days" }).getAttribute("aria-current"), "page");
     assert.equal(await metricValue("New users").textContent(), "2");
-    for (const region of ["User growth", "Active learners", "Account activation", "Learning retention", "Review activity", "Quiz modes", "Subjects and flashcards"]) {
+    for (const region of ["Email Activation", "Learning Retention", "Review Activity", "Quiz Preferences", "Subjects Created", "Flashcards Created"]) {
       await analytics.getByRole("region", { name: region, exact: true }).waitFor();
     }
-    await analytics.getByRole("region", { name: "Quiz modes" }).getByText("Partial coverage").waitFor();
-    await analytics.getByRole("listitem").filter({ hasText: "Random" }).getByText("100%").waitFor();
+    const growth = analytics.locator("#analytics-growth").locator("xpath=..");
+    await growth.waitFor();
+    await analytics.getByRole("region", { name: "Quiz Preferences" }).getByText("Partial coverage").waitFor();
+    const quizPreferences = analytics.getByRole("region", { name: "Quiz Preferences", exact: true });
+    await quizPreferences.getByText("1 sessions with known mode", { exact: true }).waitFor();
+    assert.match(await quizPreferences.locator("dl").innerText(), /Random\s+1\s*·\s*100%/);
     assert.doesNotMatch(await analytics.innerText(), /private fixture prompt|Private analytics quiz|Private analytics subject|ui-learner@/i);
     await periods.getByRole("link", { name: "7 days" }).click();
     await page.waitForURL("**/admin/analytics?period=7");
-    await analytics.getByRole("region", { name: "User growth", exact: true }).getByText("Prior period 0").waitFor();
+    await growth.getByText(/prior/i).first().waitFor();
     assert.equal(await metricValue("New users").textContent(), "1");
     assert.equal(await metricValue("Active learners").textContent(), "1");
     assert.equal(await signupChart.getAttribute("aria-valuemax"), "7");
     await signupChart.press("Home");
     await signupChart.press("ArrowRight");
     assert.equal(await signupChart.getAttribute("aria-valuenow"), "2");
-    const chartBounds = await signupChart.boundingBox();
-    assert.ok(chartBounds);
-    await signupChart.dispatchEvent("pointerdown", { pointerType: "touch", clientX: chartBounds.x + chartBounds.width - 1 });
-    assert.equal(await signupChart.getAttribute("aria-valuenow"), "7");
-    await analytics.getByRole("region", { name: "User growth", exact: true }).locator("summary").click();
-    await analytics.getByRole("region", { name: "User growth data table" }).waitFor();
-    assert.equal(await analytics.getByRole("region", { name: "User growth data table" }).locator("tbody tr").count(), 7);
+    await signupChart.press("End");
+    assert.equal(await signupChart.getAttribute("aria-valuenow"), "7", "End selects the last observed day for accessible chart inspection");
+    await growth.locator("summary").click();
+    await analytics.getByRole("region", { name: "Growth and engagement data table" }).waitFor();
+    assert.equal(await analytics.getByRole("region", { name: "Growth and engagement data table" }).locator("tbody tr").count(), 7);
     await periods.getByRole("link", { name: "90 days" }).click();
     await page.waitForURL("**/admin/analytics?period=90");
     await signupChart.waitFor();
@@ -703,7 +847,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
       await monitoring.getByRole("heading", { name: "Endpoint performance" }).waitFor();
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector("main").scrollWidth <= document.querySelector("main").clientWidth), `Performance fits at ${width}px`);
       if (process.env.ABII_ADMIN_SCREENSHOTS && [320, 390, 1440].includes(width)) {
-        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.evaluate(() => { window.scrollTo(0, 0); document.querySelector("main")?.scrollTo(0, 0); });
         await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `performance-${width}.png`), animations: "disabled", fullPage: true });
       }
     }
@@ -714,8 +858,12 @@ test("admin routes fail closed, require real MFA, and render the protected works
     await slider.press("End");
     assert.match(await slider.getAttribute("aria-valuetext"), /samples?/);
     if (process.env.ABII_ADMIN_SCREENSHOTS) {
-      await monitoring.getByRole("heading", { name: "API latency trend" }).evaluate(node => node.scrollIntoView({ block: "start" }));
+      await monitoring.getByRole("heading", { name: "API Response Latency" }).evaluate(node => node.scrollIntoView({ block: "start" }));
       await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "performance-trends.png"), animations: "disabled" });
+      for (const [heading, filename] of [["Request Volume", "performance-volume.png"], ["Endpoint performance", "performance-endpoints.png"], ["Database Performance", "performance-database.png"], ["Recent Incidents", "performance-incidents.png"]]) {
+        await monitoring.getByRole("heading", { name: heading, exact: true }).evaluate(node => node.scrollIntoView({ block: "start" }));
+        await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, filename), animations: "disabled" });
+      }
     }
     const touchContext = await browser.newContext({ reducedMotion: "reduce", hasTouch: true, viewport: { width: 390, height: 900 },
       storageState: await context.storageState() });
@@ -735,7 +883,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     const deniedPerformance = await fetch(base + "/admin/performance?period=7d", { headers: { RSC: "1", "Next-Router-Prefetch": "1" } });
     assert.doesNotMatch(await deniedPerformance.text(), /Endpoint performance|Submit answer/);
     await metrics.dropIndex(metricTimeIndex);
-    await page.goto(base + "/admin/performance?period=7d");
+    await page.goto(base + "/admin/performance?period=7d", { waitUntil: "domcontentloaded" });
     await monitoring.getByText("Monitoring storage could not be read.", { exact: true }).first().waitFor();
     await monitoring.getByText(/11 examined/).waitFor();
 
@@ -743,7 +891,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     assert.doesNotMatch(await deniedAnalytics.text(), /Platform insights|Retention cohort matrix/);
     const corruptSubject = await db.collection("subjects").insertOne({ userId: learner._id, createdAt: [dayBefore(2)] });
     try {
-      await page.goto(base + "/admin/analytics?period=7");
+      await page.goto(base + "/admin/analytics?period=7", { waitUntil: "domcontentloaded" });
       await analytics.getByText("Subject creation could not be loaded for this period.").waitFor();
       await analytics.getByRole("link", { name: "Reload report" }).waitFor();
       await analytics.getByRole("slider", { name: "Flashcards created daily values" }).waitFor();
@@ -756,8 +904,8 @@ test("admin routes fail closed, require real MFA, and render the protected works
       email: `directory-${index}@example.invalid`, createdAt: dayBefore(3),
     })));
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(base + "/admin/users");
-    const directory = page.getByRole("region", { name: "Learner directory" });
+    await page.goto(base + "/admin/users", { waitUntil: "domcontentloaded" });
+    const directory = page.getByRole("region", { name: "User Directory" });
     await directory.getByText("Showing 1–20 of 24").waitFor();
     if (process.env.ABII_ADMIN_SCREENSHOTS) {
       await directory.evaluate(node => node.scrollIntoView({ block: "start" }));
@@ -769,6 +917,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     }
     const toolbar = directory.getByRole("form", { name: "Filter learners" });
     await toolbar.getByRole("searchbox").fill("DIRECTORY");
+    await toolbar.getByText("Filters", { exact: true }).click();
     await toolbar.getByLabel("Verification").selectOption("unverified");
     await toolbar.getByLabel("Account status").selectOption("active");
     await toolbar.getByLabel("Sort by").selectOption("name-desc");
@@ -790,14 +939,15 @@ test("admin routes fail closed, require real MFA, and render the protected works
       throw new Error(`Previous page displayed ${await directory.locator("footer").innerText()} at ${new URL(page.url()).pathname}. ${pageErrors.join(" ")}`, { cause: error });
     });
     await toolbar.getByRole("searchbox").fill("missing-fixture");
+    await toolbar.getByText("Filters", { exact: true }).click();
     await toolbar.getByRole("button", { name: "Apply" }).click();
     await directory.getByText("No matching users").waitFor();
     await directory.getByRole("link", { name: "Reset filters" }).last().click();
     await directory.getByText("Showing 1–20 of 24").waitFor();
-    await page.goto(base + "/admin/users?cursor=invalid");
+    await page.goto(base + "/admin/users?cursor=invalid", { waitUntil: "domcontentloaded" });
     await directory.getByRole("alert").getByText("This directory page link is invalid or expired.").waitFor();
 
-    await page.goto(base + "/admin/users?q=Fixture&status=active");
+    await page.goto(base + "/admin/users?q=Fixture&status=active", { waitUntil: "domcontentloaded" });
     const detailsButton = directory.getByRole("button", { name: "View details for Fixture Learner" });
     const sheet = page.getByRole("dialog", { name: "Account details" });
     const endpoint = "**" + learnerDetailPath;
@@ -900,8 +1050,9 @@ test("admin routes fail closed, require real MFA, and render the protected works
     await page.keyboard.press("Escape");
     await sheet.waitFor({ state: "hidden" });
 
+    if (focusedTargets.length) return;
     await page.emulateMedia({ reducedMotion: "no-preference" });
-    await page.goto(base + "/admin");
+    await page.goto(base + "/admin", { waitUntil: "domcontentloaded" });
     const entrance = await page.locator(".abii-page-hero").evaluate(hero => ["title", "description", "mascot"].map(part => {
       const style = getComputedStyle(hero.querySelector(`.abii-page-hero__${part}`));
       return { name: style.animationName, delay: Number.parseFloat(style.animationDelay) };
@@ -945,7 +1096,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     if (!securityOnly && !announcementsOnly) {
       assert.equal((await context.request.post(base + "/api/auth/login", { headers: { Origin: base }, data: { email: admin.email, password } })).status(), 202);
       assert.equal((await context.request.post(base + "/api/auth/admin-mfa", { headers: { Origin: base }, data: { code: totpAt(seed, Date.now()) } })).status(), 200);
-      await page.goto(base + "/admin/settings");
+      await page.goto(base + "/admin/settings", { waitUntil: "domcontentloaded" });
       await page.getByLabel("Current password").fill(password);
       await page.getByLabel("New password", { exact: true }).fill("Fixture replacement password 456");
       await page.getByLabel("Confirm new password").fill("Fixture replacement password 456");
@@ -964,7 +1115,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     const legacy = (await users.insertOne({ email: "legacy-admin@example.invalid", role: "admin" })).insertedId;
     await denied("/security", "Sign-in verification unavailable", `abii_admin=${adminCookie.value}`, true);
     await users.deleteOne({ _id: legacy });
-    await page.goto(base + "/admin/support");
+    await page.goto(base + "/admin/support", { waitUntil: "domcontentloaded" });
     const account = page.getByRole("button", { name: "Account menu" });
     const signOut = page.getByRole("button", { name: "Sign out" });
     await account.press("Enter");

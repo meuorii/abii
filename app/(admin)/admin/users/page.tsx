@@ -27,7 +27,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   if (cursor && page?.rows.length === 0) redirect(usersHref(query));
 
   return (
-    <div className="grid min-w-0 gap-5 sm:gap-6">
+    <div className="admin-overview-workspace admin-refined grid min-w-0 gap-5 bg-[#FFF9FC] sm:gap-6">
       <AdminPageHero page="users" />
       <AccountOverview counts={counts.status === "fulfilled" ? counts.value : null} />
       <LearnerDirectory query={query} cursor={cursor} page={page} error={error} />

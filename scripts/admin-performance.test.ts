@@ -83,6 +83,8 @@ test("indexed storage merges independent writes, protects duplicate IDs, bounds 
     const at = Date.now() - 15_000;
     const database = emptyDatabase();
     recordLatency(database.queries, 21);
+    recordLatency(database.writes, 31);
+    recordLatency(database.connections, 11);
     const observations = ([200, 400, 500, null] as const).map(status => ({ route: "quiz.answer" as const, status, at, ms: 25, database }));
     const workerA = buildMetricBatches(observations.slice(0, 2));
     const workerB = buildMetricBatches(observations.slice(2));
@@ -100,6 +102,12 @@ test("indexed storage merges independent writes, protects duplicate IDs, bounds 
     assert.equal(report.totals.serverErrors, 2);
     assert.equal(report.totals.thrown, 1);
     assert.equal(report.database.queries.count, 4);
+    assert.equal(report.database.writes.count, 4);
+    assert.equal(report.database.connections.count, 4);
+    const operationInterval = report.chart.find(point => point.queries.count > 0);
+    assert.equal(operationInterval?.queries.count, 4);
+    assert.equal(operationInterval?.writes.count, 4);
+    assert.equal(operationInterval?.connections.count, 4);
     assert.equal(report.jobCount, 1);
     assert.equal(report.jobs[0].state, "completed");
     for (const [collection, key, name] of [[metrics, "bucket", metricTimeIndex], [jobs, "startedAt", reminderTimeIndex]] as const) {

@@ -14,7 +14,7 @@ export type UsersQuery = {
 };
 
 export type AccountCounts = { total: number; verified: number; unverified: number; suspended: number };
-export type DirectoryUser = { id: string; name: string; email: string; joinedAt: string | null; verifiedAt: string | null; suspendedAt: string | null };
+export type DirectoryUser = { id: string; name: string; email: string; profileImage: string | null; joinedAt: string | null; verifiedAt: string | null; suspendedAt: string | null };
 export type UsersPage = { rows: DirectoryUser[]; total: number | null; start: number | null; previous: string | null; next: string | null };
 export type LearningCounts = Record<"subjects" | "topics" | "flashcards" | "reviews" | "quizzes", number | null>;
 export type UserDetail = DirectoryUser & { learning: LearningCounts; revision: string };

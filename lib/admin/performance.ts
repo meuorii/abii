@@ -73,7 +73,7 @@ export function summarizePerformance(window: MonitoringWindow, apiSource: Source
   const chart = Array.from({ length: Math.ceil((end - +window.start) / window.resolution) }, (_, index) => ({
     start: +window.start + index * window.resolution,
     end: Math.min(end, +window.start + (index + 1) * window.resolution),
-    requests: emptyRequests(), operations: emptyLatency(),
+    requests: emptyRequests(), operations: emptyLatency(), queries: emptyLatency(), writes: emptyLatency(), connections: emptyLatency(),
   }));
   const incidentResolution = 5 * minute;
   const incidentBuckets = new Map<number, ReturnType<typeof emptyRequests>>();
@@ -97,6 +97,9 @@ export function summarizePerformance(window: MonitoringWindow, apiSource: Source
       mergeRequests(point.requests, row.requests);
       mergeLatency(point.operations, row.database.queries);
       mergeLatency(point.operations, row.database.writes);
+      mergeLatency(point.queries, row.database.queries);
+      mergeLatency(point.writes, row.database.writes);
+      mergeLatency(point.connections, row.database.connections);
     }
   }
 

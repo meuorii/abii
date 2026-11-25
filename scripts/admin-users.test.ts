@@ -31,12 +31,13 @@ test("account directory keeps ordinary roles, deterministic page boundaries, and
     const suspendedAt = new Date("2026-05-01T00:00:00Z");
     const id = () => new mongoose.Types.ObjectId();
     const selectedId = id();
-    const privateFields = { passwordHash: "private-hash", settings: { studyTimezone: "private-settings" }, profileImage: "https://private.invalid/" };
+    const privateFields = { passwordHash: "private-hash", settings: { studyTimezone: "private-settings" }, profileImage: "https://res.cloudinary.com/demo/image/upload/profile.jpg", profileImagePublicId: "private-asset-id" };
     const learnerRows = Array.from({ length: 44 }, (_, index) => ({
       _id: index === 0 ? selectedId : id(), name: index === 0 ? "Al.*ice" : index % 2 ? "Aria" : "aria",
       email: `learner${index}@example.invalid`, role: "user", createdAt: joined,
       emailVerifiedAt: index % 2 === 0 ? joined : null, suspendedAt: index % 4 === 0 ? suspendedAt : null, ...privateFields,
     }));
+    learnerRows[1].profileImage = "https://images.example.invalid/untrusted.jpg";
     await users.insertMany([
       ...learnerRows,
       { _id: id(), name: "A legacy learner", email: "legacy@example.invalid", emailVerifiedAt: "not a date" },
@@ -65,11 +66,13 @@ test("account directory keeps ordinary roles, deterministic page boundaries, and
       assert.equal(new Set(all.map(row => row.id)).size, 45);
       assert.ok(all.every(row => row.name !== "Excluded"));
       assert.equal(all.findIndex(row => row.name === "A legacy learner"), sort === "newest" ? 44 : sort === "name-desc" ? 44 : 0);
-      assert.deepEqual(Object.keys(first.rows[0]).sort(), ["email", "id", "joinedAt", "name", "suspendedAt", "verifiedAt"]);
+      assert.deepEqual(Object.keys(first.rows[0]).sort(), ["email", "id", "joinedAt", "name", "profileImage", "suspendedAt", "verifiedAt"]);
       await assert.rejects(readUsersPage(query, first.next + "a"), UsersQueryError);
       await assert.rejects(readUsersPage({ ...query, q: "new filter" }, first.next), UsersQueryError);
     }
     const { query } = parseUsersQuery({ q: " AL.* ", verification: "verified", status: "suspended" });
+    assert.equal((await readUsersPage(parseUsersQuery({ q: "Al.*" }).query)).rows[0]?.profileImage, "https://res.cloudinary.com/demo/image/upload/profile.jpg");
+    assert.equal((await readUsersPage(parseUsersQuery({ q: "learner1@" }).query)).rows[0]?.profileImage, null);
     assert.deepEqual((await readUsersPage(query)).rows.map(row => row.id), [selectedId.toHexString()]);
     assert.equal((await readUsersPage({ ...query, q: "LEARNER0@" })).total, 1);
     assert.equal((await readUsersPage({ ...query, status: "active" })).total, 0);
@@ -89,8 +92,9 @@ test("account directory keeps ordinary roles, deterministic page boundaries, and
     ]);
     const detail = await readUserDetail(selectedId.toHexString());
     assert.deepEqual(detail?.learning, { subjects: 1, topics: 1, flashcards: 1, reviews: 1, quizzes: 1 });
+    assert.equal(detail?.profileImage, "https://res.cloudinary.com/demo/image/upload/profile.jpg");
     assert.match(detail?.revision ?? "", /^[A-Za-z0-9_-]+$/);
-    assert.doesNotMatch(JSON.stringify(detail), /private|passwordHash|sessionVersion/);
+    assert.doesNotMatch(JSON.stringify(detail), /private|passwordHash|sessionVersion|profileImagePublicId/);
     assert.equal(await readUserDetail("primary"), null);
 
     for (let batch = 0; batch < 10; batch++) {
