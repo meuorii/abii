@@ -15,7 +15,7 @@ export function SkeletonCircle({ className = "", style }: SkeletonBlockProps) {
 }
 
 export function SkeletonCard({ className = "", children }: { className?: string; children?: ReactNode }) {
-  return <div aria-hidden="true" className={`rounded-2xl border border-[#F0E5E9] bg-white p-4 sm:p-5 ${className}`}>{children}</div>;
+  return <div aria-hidden="true" className={`rounded-2xl border border-border bg-white p-4 sm:p-5 ${className}`}>{children}</div>;
 }
 
 export function SkeletonRegion({ label, className = "", children }: { label: string; className?: string; children: ReactNode }) {

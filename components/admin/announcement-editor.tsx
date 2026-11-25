@@ -9,11 +9,11 @@ import {
 } from "@/lib/admin/announcement-contract";
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F8769C]";
-const field = `mt-1.5 block w-full min-w-0 rounded-xl border border-[#FFDBED] bg-[#FFF9FC] px-3 py-2.5 text-base sm:text-sm ${focus}`;
-const primary = `inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F8769C] px-4 text-sm font-semibold text-[#30252D] hover:bg-[#FFDBED] disabled:opacity-50 ${focus}`;
-const secondary = `inline-flex min-h-11 items-center justify-center rounded-xl border border-[#FFDBED] bg-[#FFF9FC] px-3.5 text-sm font-semibold hover:bg-[#FFDBED] disabled:opacity-50 ${focus}`;
-const link = `inline-flex min-h-11 items-center rounded text-sm font-semibold text-[#30252D] hover:underline ${focus}`;
-const panel = "min-w-0 rounded-2xl border border-[#FFDBED] bg-[#FFF9FC] p-4 sm:p-5";
+const field = `mt-1.5 block w-full min-w-0 rounded-xl border border-border bg-[#FFFFFF] px-3 py-2.5 text-base sm:text-sm ${focus}`;
+const primary = `inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F8769C] px-4 text-sm font-semibold text-white hover:bg-[#EC658D] active:bg-[#D9547D] disabled:opacity-50 ${focus}`;
+const secondary = `inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-[#FFFFFF] px-3.5 text-sm font-semibold hover:bg-[#FFF1F5] disabled:opacity-50 ${focus}`;
+const link = `inline-flex min-h-11 items-center rounded text-sm font-semibold text-[#30262B] hover:underline ${focus}`;
+const panel = "min-w-0 rounded-2xl border border-border bg-[#FFFFFF] p-4 sm:p-5";
 const dateTime = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 const numeric = new Intl.NumberFormat("en");
 
@@ -30,16 +30,16 @@ async function request(body: object) {
 }
 
 function Message({ message }: { message: string }) {
-  return message ? <p role="alert" className="rounded-lg border border-[#FFDBED] bg-[#FFDBED] px-3 py-2 text-sm leading-6 text-[#30252D]">{message}</p> : null;
+  return message ? <p role="alert" className="rounded-lg border border-error/30 bg-error-bg px-3 py-2 text-sm leading-6 text-error-text">{message}</p> : null;
 }
 
 function NotificationPreview({ title, message, target }: AnnouncementContent) {
-  return <div className="notification-item--unread flex min-w-0 items-start gap-3 rounded-xl border border-[#FFDBED] bg-[#FFDBED] p-3.5">
-    <span className="grid size-9 shrink-0 place-items-center rounded-[12px] bg-[#F8769C] text-[#30252D]"><Sparkles size={17} aria-hidden="true" /></span>
+  return <div className="notification-item--unread flex min-w-0 items-start gap-3 rounded-xl border border-border bg-[#FFE8EF] p-3.5">
+    <span className="grid size-9 shrink-0 place-items-center rounded-[12px] bg-[#F8769C] text-white"><Sparkles size={17} aria-hidden="true" /></span>
     <div className="min-w-0 flex-1">
-      <p className="truncate text-[13px] font-semibold text-[#30252D]">{title || "Your notification title"}</p>
-      <p className="mt-1 line-clamp-3 break-words text-xs leading-[1.45] text-[#66565F]">{message || "Your announcement message will appear here."}</p>
-      <p className="mt-2 text-xs font-medium text-[#66565F]">{target ? `Opens ${announcementDestinations[target]}` : "Notification Center"}</p>
+      <p className="truncate text-[13px] font-semibold text-[#30262B]">{title || "Your notification title"}</p>
+      <p className="mt-1 line-clamp-3 break-words text-xs leading-[1.45] text-[#6F5964]">{message || "Your announcement message will appear here."}</p>
+      <p className="mt-2 text-xs font-medium text-[#6F5964]">{target ? `Opens ${announcementDestinations[target]}` : "Notification Center"}</p>
     </div>
   </div>;
 }
@@ -53,7 +53,7 @@ function Confirmation({ heading, label, busy, onDismiss, onConfirm, children }: 
     if (!dialog.current?.open) dialog.current?.showModal();
   }, []);
   return <dialog ref={dialog} aria-labelledby={titleId} onClose={onDismiss} onCancel={event => { if (busy) event.preventDefault(); }}
-    className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-[#FFDBED] bg-[#FFF9FC] p-4 text-foreground shadow-xl backdrop:bg-[#30252D]/40 sm:p-6">
+    className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-border bg-[#FFFFFF] p-4 text-foreground shadow-xl backdrop:bg-[#30262B]/40 sm:p-6">
     <h2 id={titleId} className="text-xl font-semibold tracking-tight">{heading}</h2>
     <div className="my-4 grid gap-3 text-sm leading-6 text-muted">{children}</div>
     <div className="flex flex-wrap justify-end gap-2">
@@ -193,7 +193,7 @@ export function AnnouncementEditor({ initial, deliveryEnabled, back }: { initial
               aria-invalid={Boolean(errors.title)} aria-describedby={errors.title ? "announcement-title-error" : "announcement-title-count"}
               onChange={event => { setTitle(event.target.value); setPreview(null); }} className={field} />
             <div className="mt-1 flex flex-wrap justify-between gap-x-2 text-xs text-muted">
-              {errors.title ? <p id="announcement-title-error" className="text-[#30252D]">{errors.title}</p> : <p>Use a short, specific headline.</p>}
+              {errors.title ? <p id="announcement-title-error" className="text-error-text">{errors.title}</p> : <p>Use a short, specific headline.</p>}
               <span id="announcement-title-count" className="tabular-nums">{title.length}/120</span>
             </div>
           </div>
@@ -203,7 +203,7 @@ export function AnnouncementEditor({ initial, deliveryEnabled, back }: { initial
               aria-invalid={Boolean(errors.message)} aria-describedby={errors.message ? "announcement-message-error" : "announcement-message-count"}
               onChange={event => { setMessage(event.target.value); setPreview(null); }} className={`${field} resize-y`} />
             <div className="mt-1 flex flex-wrap justify-between gap-x-2 text-xs text-muted">
-              {errors.message ? <p id="announcement-message-error" className="text-[#30252D]">{errors.message}</p> : <p>Tell learners what changed and what they can do.</p>}
+              {errors.message ? <p id="announcement-message-error" className="text-error-text">{errors.message}</p> : <p>Tell learners what changed and what they can do.</p>}
               <span id="announcement-message-count" className="tabular-nums">{message.length}/500</span>
             </div>
           </div>
@@ -223,7 +223,7 @@ export function AnnouncementEditor({ initial, deliveryEnabled, back }: { initial
               <label className="min-w-0 text-xs font-medium text-muted">Time<input type="time" value={hour} disabled={working}
                 aria-invalid={Boolean(errors.schedule)} aria-describedby="announcement-schedule-help" onChange={event => setHour(event.target.value)} className={field} /></label>
             </div>
-            <p id="announcement-schedule-help" className={`mt-2 text-xs leading-5 ${errors.schedule ? "text-[#30252D]" : "text-muted"}`}>
+            <p id="announcement-schedule-help" className={`mt-2 text-xs leading-5 ${errors.schedule ? "text-error-text" : "text-muted"}`}>
               {errors.schedule ?? "Delivery starts at or after this time. The scheduler checks every 15 minutes."}</p>
           </fieldset>
         </div>
@@ -236,12 +236,12 @@ export function AnnouncementEditor({ initial, deliveryEnabled, back }: { initial
             <h3 className="text-base font-semibold">Audience Preview</h3>
             <p className="text-sm font-medium">Verified learners</p>
             <p className="text-xs leading-5 text-muted">Learners must have an active account and allow What’s New notifications. The administrator is excluded.</p>
-        <div className="rounded-lg border border-[#FFDBED] bg-[#FFDBED] px-3 py-3"><AudiencePreview preview={preview} /></div>
+        <div className="rounded-lg border border-border bg-[#FFE8EF] px-3 py-3"><AudiencePreview preview={preview} /></div>
             <button type="button" className={`${secondary} justify-self-start`} disabled={working} onClick={() => void loadPreview()}>{preview ? "Refresh estimate" : "Estimate audience"}</button>
           </div>
         </aside>
       </div>
-      <div className="flex flex-wrap justify-between gap-3 rounded-xl border border-[#FFDBED] bg-[#FFF9FC] px-3.5 py-3">
+      <div className="flex flex-wrap justify-between gap-3 rounded-xl border border-border bg-[#FFFFFF] px-3.5 py-3">
         <p role="status" className="self-center text-xs leading-5 text-muted">{working ? "Working…" : !deliveryEnabled ? "Delivery is disabled for this deployment." : dirty ? "Unsaved changes" : scheduled ? "Schedule saved" : initial ? "Draft saved" : "New draft"}</p>
         <div className="flex flex-wrap gap-2">
           {!scheduled && <button type="submit" disabled={working} className={secondary}>Save draft</button>}
@@ -298,7 +298,7 @@ export function AnnouncementDeliveryActions({ row, enabled }: { row: Announcemen
       {(row.state === "failed" || row.state === "incomplete") && <button type="button" className={primary} disabled={!enabled} onClick={() => setAction("retry")}>Retry delivery</button>}
       <button type="button" className={secondary} onClick={() => { setFailure(""); router.refresh(); }}>Refresh status</button>
     </div>
-    {notice && <p role="status" className="text-xs font-semibold text-[#30252D]">{notice}</p>}
+    {notice && <p role="status" className="text-xs font-semibold text-[#30262B]">{notice}</p>}
     <Message message={failure} />
     {action && <Confirmation heading={action === "retry" ? "Retry delivery?" : "Cancel scheduled publication?"}
       label={action === "retry" ? "Confirm retry" : "Confirm cancellation"} busy={working} onDismiss={() => setAction(null)} onConfirm={() => void commit()}>

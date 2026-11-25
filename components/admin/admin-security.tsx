@@ -15,9 +15,9 @@ const clock = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-dig
 const count = new Intl.NumberFormat("en");
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F8769C]";
 const split = "grid min-w-0 items-stretch gap-4 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]";
-const inputStyle = `mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-[#FFDBED] bg-[#FFF9FC] px-2.5 text-base sm:text-sm ${focus}`;
+const inputStyle = `mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-border bg-[#FFFFFF] px-2.5 text-base sm:text-sm ${focus}`;
 const periods = [["24h", "24 hours", "24H"], ["7d", "7 days", "7D"], ["30d", "30 days", "30D"]] as const;
-const auditLink = `inline-flex min-h-11 items-center rounded text-xs font-semibold text-[#30252D] underline-offset-4 hover:underline ${focus}`;
+const auditLink = `inline-flex min-h-11 items-center rounded text-xs font-semibold text-[#30262B] underline-offset-4 hover:underline ${focus}`;
 
 function href(query: SecurityQuery, changes: Record<string, string | undefined> = {}, fragment = "") {
   const params = new URLSearchParams();
@@ -39,21 +39,21 @@ export function SecurityControls({ query }: { query: SecurityQuery }) {
     <nav aria-label="Security reporting period" className="inline-flex rounded-xl border border-border bg-white p-1">
       {periods.map(([key, label, display]) => <Link key={key} href={href(query, { period: key, from: "", to: "" })} prefetch={false}
         aria-current={!from && period === key ? "page" : undefined}
-        aria-label={label} className={`grid min-h-11 place-items-center whitespace-nowrap rounded-lg px-2.5 text-xs font-semibold ${focus} ${!from && period === key ? "bg-[#FFDBED] text-[#30252D]" : "text-muted hover:bg-[#FFDBED]"}`}>{display}</Link>)}
+        aria-label={label} className={`grid min-h-11 place-items-center whitespace-nowrap rounded-lg px-2.5 text-xs font-semibold ${focus} ${!from && period === key ? "bg-[#FFE8EF] text-[#30262B]" : "text-muted hover:bg-[#FFF1F5]"}`}>{display}</Link>)}
     </nav>
   </header>;
 }
 
 function Indicator({ label, value, children, icon: Icon }: { label: string; value: number | null; children: ReactNode; icon: typeof Activity }) {
-  return <div className={`min-h-[136px] min-w-0 rounded-xl border border-[#FFDBED] px-3 py-3.5 sm:px-5 sm:py-4 ${label === "Security Alerts" ? "bg-[#FFDBED]" : "bg-white"}`}>
-    <div className="flex flex-wrap items-center justify-between gap-2"><dt className="min-w-0 break-words text-sm font-semibold">{label}</dt><Icon aria-hidden="true" size={16} className="shrink-0 text-[#30252D]" /></div>
+  return <div className={`min-h-[136px] min-w-0 rounded-xl border border-border px-3 py-3.5 sm:px-5 sm:py-4 ${label === "Security Alerts" ? "bg-[#FFE8EF]" : "bg-white"}`}>
+    <div className="flex flex-wrap items-center justify-between gap-2"><dt className="min-w-0 break-words text-sm font-semibold">{label}</dt><Icon aria-hidden="true" size={16} className="shrink-0 text-[#30262B]" /></div>
     <dd className={`mt-1.5 font-semibold tracking-tight tabular-nums ${value === null ? "text-base text-muted" : "text-2xl"}`}>{value === null ? "Unavailable" : count.format(value)}</dd>
     <dd className="mt-1 text-xs leading-5 text-muted">{children}</dd>
   </div>;
 }
 
 function Feedback({ children, alert = false }: { children: ReactNode; alert?: boolean }) {
-  return <p role={alert ? "alert" : undefined} className="rounded-lg border border-dashed border-border bg-[#FFF9FC] px-3.5 py-3.5 text-sm leading-6 text-muted">{children}</p>;
+  return <p role={alert ? "alert" : undefined} className={`rounded-lg border border-dashed px-3.5 py-3.5 text-sm leading-6 ${alert ? "border-error/30 bg-error-bg text-error-text" : "border-border bg-surface text-muted"}`}>{children}</p>;
 }
 
 export function SecurityError({ message }: { message: string }) {
@@ -74,7 +74,7 @@ function EvidenceFilters({ query }: { query: SecurityQuery }) {
       <option value="all">All types</option><option value="authentication">Authentication</option><option value="rate">Rate limiting</option><option value="audit">Admin audit</option>
     </select></label>
     <details open={query.kind || query.outcome || query.actor ? true : undefined} className="col-span-full min-w-0">
-    <summary className={`min-h-11 cursor-pointer rounded py-3 text-xs font-semibold text-[#30252D] ${focus}`}>Filters</summary>
+    <summary className={`min-h-11 cursor-pointer rounded py-3 text-xs font-semibold text-[#30262B] ${focus}`}>Filters</summary>
     <div className="grid min-w-0 gap-3 sm:grid-cols-3">
     <label className="min-w-0 text-xs font-semibold">Event<select name="kind" defaultValue={query.kind} className={inputStyle}>
       <option value="">All events</option>
@@ -90,14 +90,14 @@ function EvidenceFilters({ query }: { query: SecurityQuery }) {
     </select></label>
     </div></details>
     <details open={query.from ? true : undefined} className="col-span-full min-w-0">
-      <summary className={`min-h-11 cursor-pointer rounded py-3 text-xs font-semibold text-[#30252D] ${focus}`}>Custom UTC dates</summary>
+      <summary className={`min-h-11 cursor-pointer rounded py-3 text-xs font-semibold text-[#30262B] ${focus}`}>Custom UTC dates</summary>
       <div className="grid min-w-0 gap-3 min-[390px]:grid-cols-2 sm:max-w-lg">
         <label className="min-w-0 text-xs font-semibold">From (UTC)<input type="date" name="from" defaultValue={query.from} className={inputStyle} /></label>
         <label className="min-w-0 text-xs font-semibold">Through (UTC)<input type="date" name="to" defaultValue={query.to} className={inputStyle} /></label>
       </div>
     </details>
     <div className="col-span-full flex flex-wrap items-center gap-3 border-b border-border pb-3">
-      <button type="submit" className={`min-h-11 rounded-lg bg-[#F8769C] px-4 text-sm font-semibold text-[#30252D] hover:bg-[#FFDBED] ${focus}`}>Apply filters</button>
+      <button type="submit" className={`min-h-11 rounded-lg bg-[#F8769C] px-4 text-sm font-semibold text-white hover:bg-[#EC658D] active:bg-[#D9547D] ${focus}`}>Apply filters</button>
       <Link href={`/admin/security?period=${query.period}#audit-history`} prefetch={false} className={auditLink}>Clear filters</Link>
     </div>
   </form>;
@@ -106,12 +106,12 @@ function EvidenceFilters({ query }: { query: SecurityQuery }) {
 export function AdminSecurity({ report, collecting }: { report: SecurityReport; collecting: boolean }) {
   const { query, summary } = report;
   const trend = [
-    { label: "Successful sign-ins", color: "#FFDBED", values: summary.chart.map(bin => bin.success > 0 ? bin.success : null) },
-    { label: "Password / MFA failures", color: "#F8769C", values: summary.chart.map(bin => bin.failure > 0 ? bin.failure : null) },
-    { label: "Rate limiting", color: "rgba(248,118,156,0.55)", values: summary.chart.map(bin => bin.rate > 0 ? bin.rate : null) },
+    { label: "Successful sign-ins", color: "#5C947A", values: summary.chart.map(bin => bin.success > 0 ? bin.success : null) },
+    { label: "Password / MFA failures", color: "#C76F7D", values: summary.chart.map(bin => bin.failure > 0 ? bin.failure : null) },
+    { label: "Rate limiting", color: "#B28A54", values: summary.chart.map(bin => bin.rate > 0 ? bin.rate : null) },
   ];
   return <div className="grid min-w-0 gap-4">
-    <div className="relative grid gap-1 rounded-lg border border-border bg-[#FFDBED] px-3.5 py-2.5 text-xs leading-5 text-[#66565F]">
+    <div className="relative grid gap-1 rounded-lg border border-border bg-[#FFE8EF] px-3.5 py-2.5 text-xs leading-5 text-[#6F5964]">
       <div className="flex flex-wrap justify-between gap-x-4">
         <p className="flex flex-wrap gap-x-1"><Stamp time={query.start} /> <span>to</span> <Stamp time={query.end} /></p>
         <p><strong>Last recorded</strong> {summary.last ? <Stamp time={summary.last} /> : "No usable evidence"}</p>
@@ -121,7 +121,7 @@ export function AdminSecurity({ report, collecting }: { report: SecurityReport; 
         {summary.legacy > 0 && <> {count.format(summary.legacy)} historical representative {summary.legacy === 1 ? "record is" : "records are"} excluded from attempt totals.</>}
         {summary.limited && " The reporting limit was reached. Counts cover the newest scanned records."}
       </p>
-      {(!report.auditAvailable || !report.eventsAvailable) && <p role="alert" className="font-semibold">Some evidence sources could not be read.</p>}
+      {(!report.auditAvailable || !report.eventsAvailable) && <p role="alert" className="font-semibold text-error-text">Some evidence sources could not be read.</p>}
     </div>
 
     <dl aria-label="Security indicators for the displayed UTC window" className="grid min-w-0 grid-cols-2 gap-2 xl:grid-cols-4">
@@ -141,7 +141,7 @@ export function AdminSecurity({ report, collecting }: { report: SecurityReport; 
       <AdminPanel title="Security Alerts" description="Verified threshold breaches in completed five-minute intervals." className="admin-evidence-panel" stretch bodyClassName="flex-1">
         {summary.alerts.length ? <ul className="-my-2 divide-y divide-border">
           {summary.alerts.map(alert => <li key={`${alert.kind}-${alert.first}`} className="py-2.5">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-2"><p className="text-sm font-semibold">{alert.title}</p><span className="text-xs font-semibold text-[#30252D]">{alert.severity}</span></div>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-2"><p className="text-sm font-semibold">{alert.title}</p><span className="text-xs font-semibold text-[#30262B]">{alert.severity}</span></div>
             <p className="mt-1 text-xs leading-5 text-muted">{count.format(alert.count)} observed. Rule requires {alert.rule}.</p>
             <p className="text-xs leading-5 text-muted">Window <Stamp time={alert.first} /> to <Stamp time={alert.end} />.<br />Last observed <Stamp time={alert.last} />.</p>
             <Link href={href(query, alert.title === "Sustained password failures" ? { kind: "", category: "authentication", outcome: "failure", actor: "", q: "" } :

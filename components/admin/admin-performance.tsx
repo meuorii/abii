@@ -14,7 +14,7 @@ const dateTime = new Intl.DateTimeFormat("en-GB", { month: "short", day: "numeri
 const preciseDate = new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "UTC" });
 const time = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 const date = new Intl.DateTimeFormat("en-GB", { month: "short", day: "numeric", timeZone: "UTC" });
-const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#993557]";
+const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-hover";
 const split = "grid min-w-0 grid-cols-1 items-stretch gap-4 min-[1100px]:col-span-12 min-[1100px]:grid-cols-12";
 const columns = ["Endpoint", "Requests", "p50", "p95", "p99", "Server errors", "Last seen"];
 const coverageText = {
@@ -25,11 +25,12 @@ const coverageText = {
   limited: "The read limit was reached. Only the newest complete sets of stored fragments are included.",
 };
 const stateIcon = { Healthy: CircleCheck, Degraded: TriangleAlert, Unavailable: CircleX, Unknown: CircleHelp, Stale: Clock3 } satisfies Record<HealthState, typeof CircleCheck>;
+const stateColor: Record<HealthState, string> = { Healthy: "text-success-text", Degraded: "text-warning-text", Unavailable: "text-error-text", Unknown: "text-warning-text", Stale: "text-warning-text" };
 const jobLabels = {
   completed: "Completed", partial: "Partial", partial_batch: "Partial batch", lease_busy: "Lease busy",
   started: "Start observed", overdue: "Overdue evidence", failed: "Failed",
 } as const;
-const colors = { median: "#F8769C", p95: "#F8769C", p99: "#F8769C", volume: "#FFDBED", error: "#F8769C", client: "#FFDBED" };
+const colors = { median: "#F8769C", p95: "#5C947A", p99: "#B28A54", volume: "#6F5964", error: "#C76F7D", client: "#E8DDE1" };
 
 function Stamped({ value, precise = false }: { value: Date | number | null; precise?: boolean }) {
   if (!value) return <span className="text-muted">No observation</span>;
@@ -63,13 +64,13 @@ export function PerformanceControls({ window }: { window: MonitoringWindow }) {
           <Stamped value={window.start} precise /> <span>to</span> <Stamped value={window.end} precise />
         </p>
       </div>
-      <nav aria-label="Monitoring period" className="inline-flex rounded-xl border border-border bg-[#FFF9FC] p-1">
+      <nav aria-label="Monitoring period" className="inline-flex rounded-xl border border-border bg-[#FFFFFF] p-1">
         {([["1h", "1H"], ["24h", "24H"], ["7d", "7D"]] as const).map(([period, label]) =>
           <Link key={period} href={`/admin/performance?period=${period}`} prefetch={false}
             aria-label={label === "1H" ? "1 hour" : label === "24H" ? "24 hours" : "7 days"}
             aria-current={window.period === period ? "page" : undefined}
             title={period === "1h" ? "1 hour" : period === "24h" ? "24 hours" : "7 days"}
-            className={`grid min-h-11 min-w-14 place-items-center whitespace-nowrap rounded-lg px-2.5 text-xs font-semibold ${focus} ${window.period === period ? "bg-[#FFDBED] text-[#30252D]" : "text-muted hover:bg-pink-soft"}`}>
+            className={`grid min-h-11 min-w-14 place-items-center whitespace-nowrap rounded-lg px-2.5 text-xs font-semibold ${focus} ${window.period === period ? "bg-[#FFE8EF] text-[#30262B]" : "text-muted hover:bg-pink-soft"}`}>
             {label}
           </Link>)}
       </nav>
@@ -79,9 +80,9 @@ export function PerformanceControls({ window }: { window: MonitoringWindow }) {
 
 function Kpi({ label, value, children, featured = false, sparkline }: { label: string; value: string; children: ReactNode; featured?: boolean; sparkline: ReactNode }) {
   return (
-    <div className={`min-h-[136px] min-w-0 rounded-xl border border-[#FFDBED] px-3 py-3.5 shadow-none sm:px-5 sm:py-4 ${featured ? "bg-[#FFDBED]" : "bg-white"}`}>
+    <div className={`min-h-[136px] min-w-0 rounded-xl border border-border px-3 py-3.5 shadow-none sm:px-5 sm:py-4 ${featured ? "bg-[#FFE8EF]" : "bg-white"}`}>
       <dt className="text-sm font-semibold">{label}</dt>
-      <dd className={`mt-1.5 tracking-tight tabular-nums ${value === "Unavailable" ? "text-base font-semibold text-[#685967] sm:text-lg" : "text-xl font-semibold sm:text-2xl"}`}>{value}</dd>
+      <dd className={`mt-1.5 tracking-tight tabular-nums ${value === "Unavailable" ? "text-base font-semibold text-[#6F5964] sm:text-lg" : "text-xl font-semibold sm:text-2xl"}`}>{value}</dd>
       <dd className="mt-1 text-xs leading-5 text-muted">{children}</dd>
       <div className="mt-2">{sparkline}</div>
     </div>
@@ -89,7 +90,7 @@ function Kpi({ label, value, children, featured = false, sparkline }: { label: s
 }
 
 function Empty({ children }: { children: ReactNode }) {
-  return <p className="rounded-lg border border-dashed border-border bg-[#FFF9FC] px-3.5 py-4 text-sm leading-6 text-muted">{children}</p>;
+  return <p className="rounded-lg border border-dashed border-border bg-[#FFFFFF] px-3.5 py-4 text-sm leading-6 text-muted">{children}</p>;
 }
 
 function VisualEmpty({ children }: { children: string }) {
@@ -102,7 +103,7 @@ function Endpoints({ report }: { report: PerformanceReport }) {
         <div role="region" tabIndex={0} aria-label="Endpoint performance data" className={`relative overflow-x-auto rounded-lg border border-border ${focus}`}>
           <table className="w-full min-w-[660px] text-left text-xs tabular-nums">
             <caption className="sr-only">Quiz endpoint requests, latency in milliseconds, server errors and last observation</caption>
-            <thead className="bg-[#FFF9FC] text-muted"><tr>{columns.map(label =>
+            <thead className="bg-[#FFFFFF] text-muted"><tr>{columns.map(label =>
               <th key={label} scope="col" className="whitespace-nowrap px-3 py-2.5 font-semibold">{label}</th>)}</tr></thead>
             <tbody>{report.endpoints.length ? report.endpoints.map(({ route, metrics }) => {
               const size = metrics.latency.count;
@@ -148,8 +149,8 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
   ];
   return (
     <div className="grid min-w-0 grid-cols-1 gap-4 min-[1100px]:grid-cols-12">
-      <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 rounded-lg border border-border bg-[#FFDBED] px-3.5 py-2.5 text-xs leading-5 text-[#30252D] min-[1100px]:col-span-12">
-        <p role={report.apiCoverage === "read-failed" ? "alert" : undefined}><span className="font-semibold">Coverage.</span> {coverageText[report.apiCoverage]}{report.first !== null && <> First bucket <Stamped value={report.first} />.</>}</p>
+      <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 rounded-lg border border-border bg-[#FFE8EF] px-3.5 py-2.5 text-xs leading-5 text-[#30262B] min-[1100px]:col-span-12">
+        <p role={report.apiCoverage === "read-failed" ? "alert" : undefined} className={report.apiCoverage === "read-failed" ? "text-error-text" : report.apiCoverage === "limited" ? "text-warning-text" : ""}><span className="font-semibold">Coverage.</span> {coverageText[report.apiCoverage]}{report.first !== null && <> First bucket <Stamped value={report.first} />.</>}</p>
         <p><span className="font-semibold">Last collected.</span> <Stamped value={report.lastCollected} precise /></p>
       </div>
 
@@ -171,7 +172,7 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
         </AdminPanel>
         <AdminPanel stretch bodyClassName="flex-1" className="min-[1100px]:col-span-4" title="Service Status" description="Latest observed signals; recent thresholds use 30 minutes.">
           <ul className="-my-2 divide-y divide-border">{report.status.map(item => { const Icon = stateIcon[item.state]; return <li key={item.component} className="py-2.5">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1"><h4 className="text-sm font-semibold">{item.component}</h4><span className="inline-flex items-center gap-1.5 text-xs font-semibold"><Icon size={14} aria-hidden="true" />{item.state}</span></div>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1"><h4 className="text-sm font-semibold">{item.component}</h4><span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${stateColor[item.state]}`}><Icon size={14} aria-hidden="true" />{item.state}</span></div>
             <p className="mt-0.5 text-xs leading-5 text-muted">{item.reason} {item.at && <Stamped value={item.at} />}</p>
           </li>;})}</ul>
         </AdminPanel>
@@ -212,7 +213,7 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
           {report.expected !== null && report.expected > 0 && <div className="mt-2 flex items-center gap-2.5">
             <div role="progressbar" aria-label="Reminder due-slot evidence coverage" aria-valuemin={0} aria-valuemax={report.expected}
               aria-valuenow={Math.min(report.completedDue, report.expected)} aria-valuetext={`${report.completedDue} completed of ${report.expected} due slots`}
-              className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[#FFDBED]">
+              className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[#FFE8EF]">
               <div className="h-full rounded-full bg-[#F8769C]" style={{ width: `${Math.min(100, report.completedDue / report.expected * 100)}%` }} />
             </div>
             <span className="text-xs tabular-nums">{number.format(report.completedDue)}/{number.format(report.expected)}</span>
@@ -223,7 +224,7 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
               {report.jobs.map(({ run, state }) => <li key={run._id} className="py-2.5">
                 <div className="flex flex-wrap justify-between gap-x-2 gap-y-0.5 text-xs font-semibold">
                   <span><Stamped value={run.startedAt} /></span>
-                  <span className="font-semibold text-[#30252D]">{jobLabels[state]}</span>
+                  <span className="font-semibold text-[#30262B]">{jobLabels[state]}</span>
                 </div>
                 <p className="mt-1 text-xs leading-5 text-muted">
                   {run.scheduledAt ? <>Slot <Stamped value={run.scheduledAt} /></> : "Private execution"}
@@ -241,7 +242,7 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
       <div className="min-[1100px]:col-span-12"><AdminPanel title="Recent Incidents" description="Evidence from recorded quiz requests and reminder executions in this reporting window.">
         {report.incidents.length ? <ol className="divide-y divide-border">
           {report.incidents.map(item => <li key={`${item.type}-${item.first}`} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-2.5">
-            <div><p className="text-sm font-semibold">{item.type} <span className="ml-1 text-xs font-semibold text-[#30252D]">{item.severity}</span></p>
+            <div><p className="text-sm font-semibold">{item.type} <span className="ml-1 text-xs font-semibold text-[#30262B]">{item.severity}</span></p>
               <p className="mt-0.5 text-xs leading-5 text-muted">{item.component} · {item.evidence}</p></div>
             <p className="text-xs leading-5 text-muted"><Stamped value={item.first} />{item.last !== item.first && <> to <Stamped value={item.last} /></>}</p>
           </li>)}

@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { type AccountChange, type AccountChangeResult, type DirectoryUser, type UserDetail,
   accountReason, reasonMax, reasonMin, usersPath } from "@/lib/admin/users-contract";
 
-export const control = "inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-border text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AF3860]";
+export const control = "inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-border text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#EC658D]";
 const datetime = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" });
 const number = new Intl.NumberFormat("en-US");
 const milliseconds = 25_000;
@@ -22,18 +22,18 @@ export function AccountAvatar({ name, profileImage, large }: { name: string; pro
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [profileImage]);
   const initials = name.trim().split(/\s+/u).slice(0, 2).map(word => Array.from(word)[0]).join("").toUpperCase();
-  return <span aria-hidden="true" className={`relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#FFDBED] font-bold text-[#30252D] ${large ? "size-[76px] text-xl" : "size-10 text-xs"}`}>
+  return <span aria-hidden="true" className={`relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#FFE8EF] font-bold text-[#30262B] ${large ? "size-[76px] text-xl" : "size-10 text-xs"}`}>
     {profileImage && !failed ? <Image src={profileImage} alt="" fill sizes={large ? "76px" : "40px"} unoptimized className="object-cover" onError={() => setFailed(true)} /> : initials || "?"}
   </span>;
 }
 
 export function AccountFlags({ user, kind }: { user: DirectoryUser; kind: "verification" | "status" }) {
   if (kind === "verification") return user.verifiedAt
-    ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#66565F]"><BadgeCheck aria-hidden="true" size={14} />Verified</span>
+    ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-success-text"><BadgeCheck aria-hidden="true" size={14} />Verified</span>
     : <span className="text-xs font-medium text-muted">Unverified</span>;
   return user.suspendedAt
-    ? <span className="inline-flex items-center gap-1 rounded-md bg-pink-soft px-1.5 py-1 text-xs font-semibold text-[#91314E]"><CircleSlash2 aria-hidden="true" size={13} />Suspended</span>
-    : <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#66565F]"><span aria-hidden="true" className="size-1.5 rounded-full bg-[#F8769C]" />Active</span>;
+    ? <span className="inline-flex items-center gap-1 rounded-md bg-error-bg px-1.5 py-1 text-xs font-semibold text-error-text"><CircleSlash2 aria-hidden="true" size={13} />Suspended</span>
+    : <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6F5964]"><span aria-hidden="true" className="size-1.5 rounded-full bg-[#F8769C]" />Active</span>;
 }
 
 const learning = [
@@ -191,7 +191,7 @@ export function UserDetailSheet({ user, onClose, onChanged, onRefresh, fallbackF
   const title = confirmation ? suspending ? "Suspend this account?" : "Reactivate this account?" : "Account details";
   return (
     <dialog ref={dialog} aria-labelledby="admin-user-detail-title" aria-describedby={confirmation && detail ? "admin-user-change-description" : undefined}
-      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-full overflow-y-auto overscroll-contain border-0 bg-white text-foreground shadow-2xl backdrop:bg-[#2E1722]/40 sm:max-w-[480px]"
+      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-full overflow-y-auto overscroll-contain border-0 bg-white text-foreground shadow-2xl backdrop:bg-[#30262B]/40 sm:max-w-[480px]"
       onCancel={event => {
         event.preventDefault();
         if (locked.current) return;
@@ -209,7 +209,7 @@ export function UserDetailSheet({ user, onClose, onChanged, onRefresh, fallbackF
           <p id="admin-user-change-description" className="text-sm leading-6 text-muted">{suspending
             ? "This user will lose access to Abii until reactivated. All of their current sign-ins will end."
             : "This user can sign in again. They will need to start a new session."}</p>
-          <div className="min-w-0 rounded-xl border border-border bg-[#FFFAFC] px-3 py-2.5 [overflow-wrap:anywhere]">
+          <div className="min-w-0 rounded-xl border border-border bg-[#FFFFFF] px-3 py-2.5 [overflow-wrap:anywhere]">
             <p className="font-semibold">{identity.name}</p><p className="text-sm text-muted">{identity.email}</p>
           </div>
           <div className="grid gap-1.5">
@@ -218,19 +218,19 @@ export function UserDetailSheet({ user, onClose, onChanged, onRefresh, fallbackF
               readOnly={pending} aria-invalid={reasonError || undefined} aria-describedby="admin-account-reason-hint"
               onChange={event => { setReason(event.target.value); setReasonError(false); }}
               placeholder={suspending ? "Explain why this account is being suspended." : "Explain why this account is being reactivated."}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AF3860]" />
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#EC658D]" />
             <div id="admin-account-reason-hint" className="flex flex-wrap justify-between gap-1 text-xs text-muted">
               <span>Saved in the administrator audit log.</span><span className="tabular-nums">{reason.length}/{reasonMax}</span>
             </div>
-            {reasonError && <p role="alert" className="text-sm text-[#91314E]">Enter at least {reasonMin} characters.</p>}
+            {reasonError && <p role="alert" className="text-sm text-error-text">Enter at least {reasonMin} characters.</p>}
           </div>
-          {error && <div role="alert" className="rounded-lg border border-[#F1CBD8] bg-pink-soft px-3 py-2 text-sm text-[#833146]">
+          {error && <div role="alert" className="rounded-lg border border-error/30 bg-error-bg px-3 py-2 text-sm text-error-text">
             <p>{error.message}</p>
             {error.code === "reauthenticate" && <Link className="mt-2 inline-flex min-h-11 items-center font-semibold underline" href={signIn} prefetch={false}>Sign in again</Link>}
           </div>}
           <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
             <button type="button" className={`${control} px-3 hover:bg-pink-soft`} disabled={pending} onClick={cancelConfirmation}>Cancel</button>
-            <button className={`${control} border-transparent bg-[#F8769C] px-3 font-semibold text-[#30252D] hover:bg-[#FFDBED] disabled:opacity-55`}
+            <button className={`${control} border-transparent bg-[#F8769C] px-3 font-semibold text-white hover:bg-[#EC658D] active:bg-[#D9547D] disabled:opacity-55`}
               disabled={pending || error?.code === "reauthenticate"}>{pending ? "Confirming…" : suspending ? "Confirm suspension" : "Confirm reactivation"}</button>
           </div>
         </form>
@@ -244,7 +244,7 @@ export function UserDetailSheet({ user, onClose, onChanged, onRefresh, fallbackF
         </div>
       ) : detail && (
         <div className="divide-y divide-border px-4 sm:px-6">
-          <section className="my-4 rounded-2xl bg-[#FFDBED] px-3 py-4 sm:px-4">
+          <section className="my-4 rounded-2xl bg-[#FFE8EF] px-3 py-4 sm:px-4">
             <div className="flex items-center gap-3">
               <AccountAvatar name={identity.name} profileImage={identity.profileImage} large />
               <div className="min-w-0 [overflow-wrap:anywhere]">
@@ -264,7 +264,7 @@ export function UserDetailSheet({ user, onClose, onChanged, onRefresh, fallbackF
             <h3 className="font-bold tracking-tight">Learning statistics</h3>
             <dl className="mt-3 grid grid-cols-2 gap-2">
               {learning.map(([key, label]) => (
-                <div key={key} className={`rounded-lg border border-border bg-[#FFFAFC] px-3 py-2 ${key === "quizzes" ? "col-span-2" : ""}`}>
+                <div key={key} className={`rounded-lg border border-border bg-[#FFFFFF] px-3 py-2 ${key === "quizzes" ? "col-span-2" : ""}`}>
                   <dt className="text-xs text-muted">{label}</dt><dd className="mt-1 font-bold tabular-nums">{detail.learning[key] === null ? <span className="text-sm font-medium text-muted">Unavailable</span> : number.format(detail.learning[key])}</dd>
                 </div>
               ))}
@@ -275,7 +275,7 @@ export function UserDetailSheet({ user, onClose, onChanged, onRefresh, fallbackF
             <h3 className="font-bold tracking-tight">Account access</h3>
             <p className="mt-1 text-sm leading-6 text-muted">{suspended ? "This learner’s sign-in is currently blocked." : "Suspending this account blocks sign-in and ends existing sessions."}</p>
             <button ref={actionButton} type="button" onClick={() => { setNotice(""); setReason(""); setConfirmation(suspended ? "reactivate" : "suspend"); }}
-              className={`${control} mt-3 border-[#FFDBED] px-3 font-semibold text-[#30252D] hover:bg-[#FFDBED]`}>
+              className={`${control} mt-3 border-border px-3 font-semibold text-[#30262B] hover:bg-[#FFF1F5]`}>
               {suspended ? "Reactivate account" : "Suspend account"}
             </button>
           </section>

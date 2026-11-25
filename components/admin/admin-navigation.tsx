@@ -1,7 +1,7 @@
 "use client";
 
 import { Activity, ChartNoAxesColumnIncreasing, Headset, LayoutDashboard, Megaphone, Settings, Shield, Users } from "lucide-react";
-import { workspaceNavActive, workspaceNavInactive, workspaceNavLink } from "@/components/ui/workspace-chrome";
+import { workspaceNavLink } from "@/components/ui/workspace-chrome";
 
 export const adminNavigation = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -20,7 +20,7 @@ export function AdminNavigation({ pathname, onNavigate }: { pathname: string; on
       {adminNavigation.map(({ href, label, icon: Icon }) => (
         // Document navigation checks authorization on every visit and avoids an RSC prefetch cache.
         <a key={href} href={href} onClick={onNavigate} aria-current={pathname === href ? "page" : undefined}
-          className={`${workspaceNavLink} ${pathname === href ? workspaceNavActive : workspaceNavInactive} max-lg:min-h-11`}>
+          className={`${workspaceNavLink} ${pathname === href ? "bg-surface-selected text-primary [&>svg]:text-primary" : "text-muted hover:bg-surface-hover hover:text-primary"} max-lg:min-h-11`}>
           <Icon className="size-5 shrink-0" aria-hidden="true" />
           {label}
         </a>

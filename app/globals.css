@@ -10,56 +10,71 @@
 
 .admin-shell {
   --admin-background: #FFF9FC;
+  --admin-frame: var(--dashboard-frame);
   --admin-surface: #FFFFFF;
-  --admin-secondary: #FFDBED;
+  --admin-secondary: #FFE8EF;
   --admin-accent: #F8769C;
-  --admin-border: #FFDBED;
-  --admin-foreground: #30252D;
-  --admin-muted: #66565F;
+  --admin-border: #E8DDE1;
+  --admin-foreground: #30262B;
+  --admin-muted: #6F5964;
   --background: var(--admin-background);
   --border: var(--admin-border);
   --muted: var(--admin-muted);
   --foreground: var(--admin-foreground);
-  --pink-soft: var(--admin-secondary);
+  --pink-soft: #FFF1F5;
   --pink-card: var(--admin-secondary);
-  --pink-active: var(--admin-accent);
+  --pink: var(--admin-secondary);
+  --pink-accent: #EC658D;
+  --pink-primary: var(--admin-accent);
+  --pink-active: #D9547D;
   --surface: var(--admin-surface);
-  --primary: #FF6F96;
-  --primary-hover: var(--admin-accent);
-  --primary-active: #E9577D;
-  --primary-foreground: #30252D;
+  --secondary-surface: var(--admin-secondary);
+  --primary: var(--admin-accent);
+  --primary-hover: #EC658D;
+  --primary-active: #D9547D;
+  --primary-foreground: #FFFFFF;
   --surface-hover: #FFF1F5;
   --surface-selected: var(--admin-secondary);
   --success: #5C947A;
-  --success-bg: #EAF8F0;
-  --success-text: #286C4A;
+  --success-bg: #EDF5EF;
+  --success-text: #3D7259;
   --warning: #B28A54;
-  --warning-bg: #FFF8EE;
+  --warning-bg: #FBF3E7;
   --warning-text: #8A683B;
   --error: #C76F7D;
-  --error-bg: #FFF1F1;
-  --error-text: #8B273F;
+  --error-bg: #FCECEF;
+  --error-text: #A94D61;
+  --skeleton-base: #E8DDE1;
+  --skeleton-highlight: rgb(255 255 255 / 48%);
+  --skeleton-surface: #FFF1F5;
+  --skeleton-border: #E8DDE1;
   --overview-base: var(--admin-background);
   --overview-pink: var(--admin-secondary);
   --overview-accent: var(--admin-accent);
-  background: var(--admin-background);
+  background: var(--admin-frame);
 }
 .admin-modal-theme {
   --background: #FFF9FC;
-  --foreground: #30252D;
-  --muted: #66565F;
-  --border: #FFDBED;
+  --foreground: #30262B;
+  --muted: #6F5964;
+  --border: #E8DDE1;
   --surface: #FFFFFF;
-  --secondary-surface: #FFDBED;
-  --primary: #FF6F96;
-  --primary-hover: #F8769C;
-  --primary-active: #E9577D;
-  --primary-foreground: #30252D;
-  --surface-hover: #FFF7F9;
-  --surface-selected: #FFDBED;
+  --secondary-surface: #FFE8EF;
+  --primary: #F8769C;
+  --primary-hover: #EC658D;
+  --primary-active: #D9547D;
+  --primary-foreground: #FFFFFF;
+  --surface-hover: #FFF1F5;
+  --surface-selected: #FFE8EF;
+  --success: #5C947A;
+  --success-bg: #EDF5EF;
+  --success-text: #3D7259;
+  --warning: #B28A54;
+  --warning-bg: #FBF3E7;
+  --warning-text: #8A683B;
   --error: #C76F7D;
-  --error-bg: #FFF1F1;
-  --error-text: #8B273F;
+  --error-bg: #FCECEF;
+  --error-text: #A94D61;
 }
 .admin-shell__frame,
 .admin-shell__sidebar,
@@ -68,17 +83,34 @@
 .admin-shell__workspace > div {
   background-color: var(--admin-background);
 }
-.admin-shell__frame { border-color: rgb(255 219 237 / 72%); }
-.admin-shell__sidebar { border-color: rgb(255 219 237 / 72%); }
-.admin-shell__header { border-color: rgb(255 219 237 / 72%); }
+.admin-shell__frame { border-color: rgb(232 221 225 / 72%); }
+.admin-shell__sidebar { border-color: rgb(232 221 225 / 72%); }
+.admin-shell__header { border-color: rgb(232 221 225 / 72%); background-color: var(--admin-background); }
 .admin-shell .admin-panel { border-color: var(--admin-border); background-color: var(--admin-surface); }
-.admin-shell .admin-overview-workspace { --overview-accent-ink: #4F1027; }
+.admin-shell .font-brand { color: var(--admin-accent); }
+.admin-shell .admin-brand-subtitle,
+.admin-shell .admin-account-chevron { color: var(--admin-muted); }
+.admin-shell .admin-account-name { color: var(--admin-foreground); }
+.admin-shell .admin-account-avatar { background-color: var(--admin-secondary); color: var(--admin-accent); }
+.admin-shell .admin-account-trigger:hover { background-color: var(--surface-hover); }
+.admin-shell .admin-account-panel { border-color: var(--admin-border); background-color: var(--admin-surface); }
+.admin-shell .admin-sidebar-footer > p { color: var(--admin-muted); }
+.admin-shell .admin-sidebar-footer > p > span { color: var(--admin-accent); }
+.admin-shell .admin-sidebar-footer > div { background-color: var(--surface-hover); }
+.admin-shell .admin-overview-workspace { --overview-accent-ink: var(--admin-foreground); }
 .admin-shell .admin-refined {
-  --overview-accent-ink: #30252D;
+  --overview-accent-ink: var(--admin-foreground);
 }
 .admin-shell .admin-refined :focus-visible { outline-color: var(--admin-accent); }
-.admin-loading-refined { --skeleton-base: #FFDBED; --skeleton-highlight: rgb(255 249 252 / 48%); --skeleton-surface: #FFF9FC; --skeleton-border: #FFDBED; }
+.admin-loading-refined { --skeleton-base: #E8DDE1; --skeleton-highlight: rgb(255 255 255 / 48%); --skeleton-surface: #FFF1F5; --skeleton-border: #E8DDE1; }
 .admin-shell .admin-overview-workspace [data-overview-feature] { background-color: var(--overview-pink); }
+.admin-shell .admin-page-hero { border-color: var(--admin-border); background-color: var(--admin-secondary); }
+.admin-shell .admin-settings-checkbox:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m3.5 8.5 3 3 6-7' stroke='%23F8769C' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 12px 12px;
+}
 @media (min-width: 640px) and (max-width: 1599.98px) {
   .admin-page-hero .abii-page-hero__layout { display: grid; grid-template-columns: minmax(0, 1fr) 32%; align-items: stretch; }
   .admin-page-hero .abii-page-hero__content { width: auto; max-width: none; }
@@ -251,7 +283,8 @@
 
 :root {
   color-scheme: light;
-  --background: #FAF9F7;
+  --background: #FFF9FC;
+  --dashboard-frame: #FFF4F8;
   --foreground: #30262B;
   --muted: #6F5964;
   --border: #E8DDE1;
@@ -479,6 +512,7 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-dashboard-frame: var(--dashboard-frame);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);

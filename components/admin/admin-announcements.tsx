@@ -8,18 +8,18 @@ import { announcementDestinations, announcementLabels, type AnnouncementState, t
 import type { AnnouncementDirectory, AnnouncementQuery } from "@/lib/admin/announcements";
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F8769C]";
-const primary = `inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-[#F8769C] px-3.5 text-sm font-semibold text-[#30252D] hover:bg-[#FFDBED] ${focus}`;
-const link = `inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-[#30252D] hover:bg-[#FFDBED] ${focus}`;
-const field = `min-h-11 min-w-0 rounded-xl border border-[#FFDBED] bg-[#FFF9FC] px-3 text-base sm:text-sm ${focus}`;
+const primary = `inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-[#F8769C] px-3.5 text-sm font-semibold text-white hover:bg-[#EC658D] active:bg-[#D9547D] ${focus}`;
+const link = `inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-[#30262B] hover:bg-[#FFF1F5] ${focus}`;
+const field = `min-h-11 min-w-0 rounded-xl border border-border bg-[#FFFFFF] px-3 text-base sm:text-sm ${focus}`;
 const statuses: Record<AnnouncementState, string> = {
-  draft: "text-[#66565F] before:border before:border-[#66565F]",
-  canceled: "text-[#66565F] before:border before:border-[#66565F]",
-  scheduled: "text-[#30252D] before:bg-[#FFDBED]",
-  queued: "text-[#30252D] before:border before:border-[#F8769C]",
-  publishing: "text-[#30252D] before:bg-[#F8769C]",
-  delivered: "text-[#30252D] before:bg-[#F8769C]",
-  incomplete: "text-[#30252D] before:border before:border-[#F8769C]",
-  failed: "text-[#30252D] before:border before:border-[#F8769C]",
+  draft: "text-muted before:border before:border-border",
+  canceled: "text-muted before:border before:border-border",
+  scheduled: "text-warning-text before:bg-warning",
+  queued: "text-primary-hover before:border before:border-primary",
+  publishing: "text-primary-hover before:bg-primary",
+  delivered: "text-success-text before:bg-success",
+  incomplete: "text-warning-text before:border before:border-warning",
+  failed: "text-error-text before:border before:border-error",
 };
 const tabs = [["all", "All"], ["draft", "Drafts"], ["scheduled", "Scheduled"], ["published", "Published"], ["issues", "Delivery issues"], ["canceled", "Canceled"]] as const;
 const dateTime = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
@@ -40,7 +40,7 @@ function Status({ state }: { state: AnnouncementState }) {
   return <span className={`inline-flex items-center gap-1.5 text-xs font-semibold before:size-1.5 before:shrink-0 before:rounded-full ${statuses[state]}`}>{announcementLabels[state]}</span>;
 }
 function Empty({ children, alert }: { children: React.ReactNode; alert?: boolean }) {
-  return <p role={alert ? "alert" : undefined} className="rounded-lg border border-dashed border-border bg-[#FFF9FC] px-3.5 py-4 text-sm leading-6 text-muted">{children}</p>;
+  return <p role={alert ? "alert" : undefined} className={`rounded-lg border border-dashed px-3.5 py-4 text-sm leading-6 ${alert ? "border-error/30 bg-error-bg text-error-text" : "border-border bg-surface text-muted"}`}>{children}</p>;
 }
 
 function Directory({ query, data }: { query: AnnouncementQuery; data: AnnouncementDirectory }) {
@@ -49,7 +49,7 @@ function Directory({ query, data }: { query: AnnouncementQuery; data: Announceme
       <nav aria-label="Announcement status" className="flex flex-wrap items-center gap-1 border-b border-border pb-2">
         {tabs.map(([status, label]) => <Link key={status} href={announcementHref(query, { status, page: "", id: "" }, "#announcement-list")}
           prefetch={false} aria-current={query.status === status ? "page" : undefined}
-          className={`inline-flex min-h-11 items-center rounded-lg px-2.5 text-xs font-semibold ${focus} ${query.status === status ? "bg-[#FFDBED] text-[#30252D]" : "text-muted hover:bg-pink-soft"}`}>{label}</Link>)}
+          className={`inline-flex min-h-11 items-center rounded-lg px-2.5 text-xs font-semibold ${focus} ${query.status === status ? "bg-[#FFE8EF] text-[#30262B]" : "text-muted hover:bg-pink-soft"}`}>{label}</Link>)}
       </nav>
       <form aria-label="Filter announcements" method="get" action="/admin/announcements#announcement-list"
         className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
@@ -72,7 +72,7 @@ function Directory({ query, data }: { query: AnnouncementQuery; data: Announceme
           return <li key={row.id}>
             <Link href={announcementHref(query, { id: row.id }, "#announcement-details")} prefetch={false}
               aria-current={query.id === row.id ? "true" : undefined}
-              className={`grid min-w-0 gap-2 px-3.5 py-3.5 hover:bg-[#FFF9FC] sm:grid-cols-[minmax(0,1.5fr)_minmax(7rem,0.75fr)_minmax(8rem,0.85fr)] sm:items-center ${focus} focus-visible:outline-offset-[-2px] ${query.id === row.id ? "bg-[#FFDBED]" : "bg-white"}`}>
+              className={`grid min-w-0 gap-2 px-3.5 py-3.5 hover:bg-[#FFF1F5] sm:grid-cols-[minmax(0,1.5fr)_minmax(7rem,0.75fr)_minmax(8rem,0.85fr)] sm:items-center ${focus} focus-visible:outline-offset-[-2px] ${query.id === row.id ? "bg-[#FFE8EF]" : "bg-white"}`}>
               <div className="min-w-0"><p className="break-words text-sm font-semibold">{row.title}</p>
                 <p className="mt-0.5 line-clamp-1 break-words text-xs text-muted">{row.message}</p></div>
               <Status state={row.state} />
@@ -95,7 +95,7 @@ function Details({ row, query, enabled }: { row: AnnouncementView; query: Announ
     <AdminPanel title="Announcement Details" className="admin-evidence-panel" stretch bodyClassName="flex-1" actions={<div className="flex gap-2"><a href={announcementHref(query, {}, "#announcement-details")} aria-label="Refresh announcement details" className={link}>Refresh</a>{editable && <Link href={announcementHref(query, { editor: "edit" })} prefetch={false} className={link}>Edit <ArrowUpRight size={14} aria-hidden="true" className="ml-1" /></Link>}</div>}>
       <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <div className="grid min-w-0 content-start gap-4">
-          <div className="rounded-xl border border-[#FFDBED] bg-[#FFDBED] p-3.5"><div aria-live="polite"><Status state={row.state} /></div><h3 className="mt-1 break-words text-xl font-semibold tracking-tight">{row.title}</h3>
+          <div className="rounded-xl border border-border bg-[#FFE8EF] p-3.5"><div aria-live="polite"><Status state={row.state} /></div><h3 className="mt-1 break-words text-xl font-semibold tracking-tight">{row.title}</h3>
             <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-muted">{row.message}</p></div>
           <h4 className="text-sm font-semibold">Publication Information</h4><dl className="grid min-w-0 grid-cols-2 gap-3 text-xs">
             <div><dt className="font-semibold">Audience</dt><dd className="mt-1 text-muted">Verified learners</dd></div>
@@ -111,7 +111,7 @@ function Details({ row, query, enabled }: { row: AnnouncementView; query: Announ
           </dl>
         </div>
         <div className="grid min-w-0 content-start gap-3">
-          <section aria-label="Delivery Overview" className="rounded-xl border border-[#FFDBED] bg-[#FFF9FC] p-3">
+          <section aria-label="Delivery Overview" className="rounded-xl border border-border bg-[#FFFFFF] p-3">
             <h4 className="text-sm font-semibold">Delivery Overview</h4>
             {row.estimate && <p className="mt-1 text-xs leading-5 text-muted">{numbers.format(row.estimate.count)} estimated eligible at <Stamp value={row.estimate.calculatedAt} />.</p>}
             {row.committedAt ? <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
@@ -121,7 +121,7 @@ function Details({ row, query, enabled }: { row: AnnouncementView; query: Announ
               ] as const).map(([label, value]) => <div key={label}><dt className="font-medium text-muted">{label}</dt>
                 <dd className="mt-0.5 text-lg font-semibold tabular-nums">{value === null ? "Unavailable" : numbers.format(value)}</dd></div>)}
             </dl> : <p className="mt-2 text-xs leading-5 text-muted">Delivery has not started.</p>}
-            {row.deliveryError && <p role="status" className="mt-3 border-t border-[#FFDBED] pt-2 text-xs leading-5 text-[#30252D]">
+            {row.deliveryError && <p role="status" className="mt-3 border-t border-border pt-2 text-xs leading-5 text-[#30262B]">
               {row.unresolved === null ? "The next batch could not be confirmed." : `${numbers.format(row.unresolved)} recipients in the unresolved batch.`} Retry resumes from the last committed batch.
             </p>}
             {row.committedAt && <p className="mt-3 text-xs leading-5 text-muted">Previously completed is included in Delivered. These totals track inbox creation.</p>}
@@ -158,14 +158,14 @@ export function AdminAnnouncements({ query, data, enabled }: { query: Announceme
       <div><h2 id="announcement-management" className="text-xl font-semibold tracking-tight sm:text-2xl">Announcement Management</h2><p className="mt-1 text-sm text-muted">Create, schedule and manage platform updates.</p></div>
       <Link href={announcementHref(query, { editor: "new", id: "" })} prefetch={false} className={primary}><Plus size={16} aria-hidden="true" /> New announcement</Link>
     </header>
-    {!enabled && <p className="rounded-lg border border-border bg-[#FFDBED] px-3.5 py-2.5 text-sm text-muted">Delivery is disabled for this deployment. Drafts can still be saved.</p>}
+    {!enabled && <p className="rounded-lg border border-border bg-[#FFE8EF] px-3.5 py-2.5 text-sm text-muted">Delivery is disabled for this deployment. Drafts can still be saved.</p>}
     <dl aria-label="Announcement totals" className="grid min-w-0 grid-cols-2 gap-2 lg:grid-cols-4">
       {([
         ["Drafts", data.counts.drafts, "Saved and editable"],
         ["Scheduled", data.counts.scheduled, "Waiting for publication time"],
         ["Published", data.counts.published, "Committed for publication"],
         ["Delivery issues", data.counts.issues, "Failed or incomplete"],
-      ] as const).map(([label, value, description]) => <div key={label} className={`min-h-[136px] min-w-0 rounded-xl border border-[#FFDBED] px-3.5 py-3.5 sm:px-5 ${label === "Published" ? "bg-[#FFDBED]" : "bg-white"}`}>
+      ] as const).map(([label, value, description]) => <div key={label} className={`min-h-[136px] min-w-0 rounded-xl border border-border px-3.5 py-3.5 sm:px-5 ${label === "Published" ? "bg-[#FFE8EF]" : "bg-white"}`}>
         <dt className="text-sm font-semibold">{label}</dt>
         <dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{numbers.format(value)}</dd>
         <dd className="mt-1 text-xs leading-5 text-muted">{description}</dd>

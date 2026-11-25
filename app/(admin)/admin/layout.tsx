@@ -21,11 +21,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (access.status !== 200) {
     const [title, message, href, action] = accessMessages[access.status];
     return (
-      <main className="grid min-h-dvh place-items-center bg-[#FFF7F9] p-4">
-        <section className="w-full max-w-md rounded-2xl border border-[#F0E5E9] bg-white p-6 sm:p-8">
+      <main className="grid min-h-dvh place-items-center bg-[#FAF9F7] p-4 text-[#30262B]">
+        <section className="w-full max-w-md rounded-2xl border border-[#E8DDE1] bg-white p-6 sm:p-8">
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="mt-3 text-sm leading-6 text-[#665C65]">{message}</p>
-          <Link prefetch={false} href={href} className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-[#FFE0E9] px-4 text-sm font-semibold text-[#91314E] focus-visible:outline-2 focus-visible:outline-offset-2">{action}</Link>
+          <p className="mt-3 text-sm leading-6 text-[#6F5964]">{message}</p>
+          <Link prefetch={false} href={href} className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-[#FFE8EF] px-4 text-sm font-semibold text-[#30262B] hover:bg-[#FFF1F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#EC658D]">{action}</Link>
         </section>
       </main>
     );

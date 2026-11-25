@@ -16,11 +16,12 @@ const decimal = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 const dayFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 const shortDate = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const timeFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC", hour12: false });
-const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9B3054]";
+const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-hover";
 const berry = "#F8769C";
-const navy = "#F8769C";
-const teal = "#F8769C";
-const muted = "#FFDBED";
+const navy = "#6F5964";
+const teal = "#5C947A";
+const muted = "#B28A54";
+const error = "#C76F7D";
 const percent = (value: number | null) => value === null ? "—" : `${decimal.format(value)}%`;
 const periodRange = (window: ReportingWindow) => dayFormat.formatRange(window.start, new Date(+window.end - dayMs));
 const unwrap = <T,>(result: MetricResult<T>) => result.status === "unavailable" ? null : result.value;
@@ -44,8 +45,8 @@ function rateComparison(value: Comparison<Fraction>) {
 }
 
 function Metric({ label, value, comparison, featured = false, sparkline, unit = "count" }: { label: string; value: string | null; comparison: string; featured?: boolean; sparkline?: { day: string; count: number | null }[] | null; unit?: SparklineUnit }) {
-  return <div className={`min-h-[136px] min-w-0 rounded-xl border border-[#FFDBED] p-3.5 shadow-none sm:px-5 sm:py-4 ${featured ? "bg-[#FFDBED]" : "bg-white"}`}>
-    <dt className="text-xs font-semibold text-[#574650] sm:text-sm">{label}</dt>
+  return <div className={`min-h-[136px] min-w-0 rounded-xl border border-border p-3.5 shadow-none sm:px-5 sm:py-4 ${featured ? "bg-[#FFE8EF]" : "bg-white"}`}>
+    <dt className="text-xs font-semibold text-[#6F5964] sm:text-sm">{label}</dt>
     <dd>
       <p className="mt-1 text-[1.7rem] leading-none font-bold tracking-[-0.03em] tabular-nums sm:text-[2rem]">{value ?? <span aria-label="Unavailable">—</span>}</p>
       <div className="mt-2 flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2"><p className="min-w-0 max-w-full break-words text-xs leading-5 text-muted">{comparison}</p>{sparkline?.length ? <div className="w-20 shrink-0"><AdminSparkline name={`${label} daily trend`} timestamps={sparkline.map(point => point.day)} values={sparkline.map(point => point.count)} unit={unit} /></div> : null}</div>
@@ -92,10 +93,10 @@ export function AnalyticsControls({ window, previous }: { window: ReportingWindo
       <p className="mt-1 text-sm leading-5 text-muted"><span className="font-semibold text-foreground">{periodRange(window)} UTC</span></p>
       <p className="text-xs leading-5 text-muted">Compared with {periodRange(previous)} UTC</p>
     </div>
-    <nav aria-label="Reporting period" className="inline-flex max-w-full rounded-xl border border-border bg-[#FFF9FC] p-1">
+    <nav aria-label="Reporting period" className="inline-flex max-w-full rounded-xl border border-border bg-[#FFFFFF] p-1">
       {reportingPeriods.map(days => <Link key={days} href={`/admin/analytics?period=${days}`} prefetch={false} scroll={false}
         aria-label={`${days} days`} aria-current={days === window.days ? "page" : undefined} className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-lg px-3 text-xs font-semibold sm:px-4 sm:text-sm ${focus} ${days === window.days
-          ? "bg-[#FFDBED] text-[#30252D]" : "text-muted hover:bg-white hover:text-foreground"}`}>{days}D</Link>)}
+          ? "bg-[#FFE8EF] text-[#30262B]" : "text-muted hover:bg-white hover:text-foreground"}`}>{days}D</Link>)}
     </nav>
   </header>;
 }
@@ -110,7 +111,7 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
   const subjects = unwrap(report.subjects);
   const flashcards = unwrap(report.flashcards);
   const reviewCounts = reviews && { current: reviews.current.attempts, previous: reviews.previous.attempts };
-  const tracks = [{ key: "correct", label: "Correct", color: teal }, { key: "wrong", label: "Incorrect", color: berry },
+  const tracks = [{ key: "correct", label: "Correct", color: teal }, { key: "wrong", label: "Incorrect", color: error },
     ...(reviews?.current.ungraded ? [{ key: "ungraded", label: "Unknown outcome", color: muted } as const] : [])] as const;
   const verification = activation && rate(activation.current);
   const quizTotal = quizzes ? Object.values(quizzes.modes).reduce((sum, count) => sum + count, 0) : 0;
@@ -126,7 +127,7 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
         <Metric label="Review attempts" value={reviewCounts && number.format(reviewCounts.current)} comparison={reviewCounts ? countComparison(reviewCounts) : "Unavailable"} sparkline={reviews?.daily.map(({ day, attempts }) => ({ day, count: attempts })) ?? null} />
         <Metric label="Review accuracy" value={reviews ? percent(rate(accuracy(reviews.current))) : null} comparison={reviews ? rateComparison({ current: accuracy(reviews.current), previous: accuracy(reviews.previous) }) : "Unavailable"} sparkline={reviews?.daily.map(point => ({ day: point.day, count: point.correct + point.wrong ? point.correct / (point.correct + point.wrong) * 100 : null })) ?? null} unit="percent" />
       </dl>
-      {hasUnavailable && <p role="status" className="mt-3 rounded-lg bg-pink-soft px-3 py-2 text-sm text-[#694453]">
+      {hasUnavailable && <p role="status" className="mt-3 rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-text">
         Some metrics could not be loaded. <a className="rounded font-semibold underline underline-offset-2" href={`/admin/analytics?period=${report.window.days}`}>Reload report</a>
       </p>}
     </div>
@@ -137,7 +138,7 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
         {growth && active ? <>
           <AnalyticsChart title="Growth and engagement" days={growth.daily.map(point => point.day)} kind="lines" empty="No learner activity or retained registrations in this period." series={[
             { label: "Active learners", color: berry, area: true, values: active.daily.map(point => point.count) },
-            { label: "New users", color: berry, dash: "6 4", values: growth.daily.map(point => point.count) },
+            { label: "New users", color: navy, dash: "6 4", values: growth.daily.map(point => point.count) },
           ]} />
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted"><span>{number.format(growth.current)} registrations · {countComparison(growth)}</span><span>{number.format(active.current)} period distinct active learners · {countComparison(active)}</span></div>
         </> : <>{!growth && <Unavailable result={report.growth} />}{!active && <Unavailable result={report.active} />}</>}
@@ -161,7 +162,7 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
         </Panel>
         <Panel id="analytics-retention" title="Learning Retention" description="Cohort analysis · exact-day learning returns, measured by UTC date." className="order-5 min-[1100px]:col-span-12">
           {retention ? <>
-            <dl className="mt-3.5 grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-[#FFF9FC]">
+            <dl className="mt-3.5 grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-[#FFFFFF]">
               {retentionHorizon.map(horizon => <div key={horizon} className="min-w-0 px-2 py-2.5 sm:px-3">
                 <dt className="text-xs font-semibold text-muted">Day {horizon}</dt>
                 <dd><p className="mt-1 text-lg font-bold tabular-nums">{percent(rate(retention.current[horizon]))}</p>
@@ -194,7 +195,7 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
         </Panel>
         <Panel id="analytics-quizzes" title="Quiz Preferences" description="Available completed-session sample." className="order-4 min-[1100px]:col-span-4">
           {quizzes ? <>
-            <div className="mt-3 rounded-lg bg-[#FFF9FC] px-3 py-2 text-xs leading-5 text-[#66565F]">
+            <div className="mt-3 rounded-lg bg-[#FFFFFF] px-3 py-2 text-xs leading-5 text-[#6F5964]">
               <p className="font-bold">Partial coverage</p>
               <p>{report.quizzes.status === "partial" && report.quizzes.coverage}</p>
             </div>

@@ -9,7 +9,7 @@ type Series = { label: string; color: string; values: (number | null)[]; dash?: 
 const dateFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const numbers = new Intl.NumberFormat("en-US");
 const axisNumbers = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
-const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9B3054]";
+const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-hover";
 
 export function AnalyticsChart({ title, days, series, kind, empty, intervals, unit, sampleCounts, categories, categoryName = "day", horizontal = false, stacked = kind === "bars" }: {
   title: string; days: string[]; series: Series[]; kind: "area" | "bars" | "lines"; empty: string;
@@ -35,9 +35,9 @@ export function AnalyticsChart({ title, days, series, kind, empty, intervals, un
     setSelected(Math.max(0, Math.min(last, values[event.key])));
   }
   const option: EChartsOption = {
-    color: ["#F8769C", "#FFDBED", "#F8769C"],
+    color: ["#F8769C", "#5C947A", "#B28A54"],
     grid: { left: 42, right: 10, top: series.length > 1 ? 30 : 12, bottom: 30, containLabel: false },
-    legend: series.length > 1 ? { top: 0, left: 0, textStyle: { color: "#66565F", fontSize: 11 } } : undefined,
+    legend: series.length > 1 ? { top: 0, left: 0, textStyle: { color: "#6F5964", fontSize: 11 } } : undefined,
     tooltip: { className: "abii-echart-tooltip", trigger: "axis", confine: true, axisPointer: { type: "line" },
       formatter: (params: unknown) => {
         const values = Array.isArray(params) ? params : [params];
@@ -45,15 +45,15 @@ export function AnalyticsChart({ title, days, series, kind, empty, intervals, un
         const index = Math.max(0, Math.min(last, first?.dataIndex ?? 0));
         return `${day(index)}${categories ? "" : " UTC"}<br/>${series.map(track => `${track.label}: ${formatValue(track.values[index])}`).join("<br/>")}${sampleCounts ? `<br/>${numbers.format(sampleCounts[index])} samples` : ""}`;
       } },
-    xAxis: horizontal ? { type: "value", min: 0, minInterval: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: "#66565F", fontSize: 10, formatter: (value: number) => `${axisNumbers.format(value)}${unit ? ` ${unit}` : ""}` }, splitLine: { lineStyle: { color: "#FFDBED" } } } :
-      { type: "category", data: days.map((value, index) => categories?.[index] ?? intervals?.[index]?.tick ?? dateFormat.format(new Date(value))), boundaryGap: kind === "bars", axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: "#66565F", fontSize: 10, hideOverlap: true, interval: "auto" } },
-    yAxis: horizontal ? { type: "category", data: days.map((value, index) => categories?.[index] ?? intervals?.[index]?.tick ?? dateFormat.format(new Date(value))), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: "#66565F", fontSize: 11 } } :
-      { type: "value", min: 0, minInterval: 1, splitNumber: 3, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: "#66565F", fontSize: 10, formatter: (value: number) => `${axisNumbers.format(value)}${unit ? ` ${unit}` : ""}` }, splitLine: { lineStyle: { color: "#FFDBED" } } },
+    xAxis: horizontal ? { type: "value", min: 0, minInterval: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: "#6F5964", fontSize: 10, formatter: (value: number) => `${axisNumbers.format(value)}${unit ? ` ${unit}` : ""}` }, splitLine: { lineStyle: { color: "#E8DDE1" } } } :
+      { type: "category", data: days.map((value, index) => categories?.[index] ?? intervals?.[index]?.tick ?? dateFormat.format(new Date(value))), boundaryGap: kind === "bars", axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: "#6F5964", fontSize: 10, hideOverlap: true, interval: "auto" } },
+    yAxis: horizontal ? { type: "category", data: days.map((value, index) => categories?.[index] ?? intervals?.[index]?.tick ?? dateFormat.format(new Date(value))), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: "#6F5964", fontSize: 11 } } :
+      { type: "value", min: 0, minInterval: 1, splitNumber: 3, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: "#6F5964", fontSize: 10, formatter: (value: number) => `${axisNumbers.format(value)}${unit ? ` ${unit}` : ""}` }, splitLine: { lineStyle: { color: "#E8DDE1" } } },
     series: series.map((track, index) => ({ name: track.label, type: kind === "bars" ? "bar" : "line", data: track.values,
       stack: kind === "bars" && stacked ? "outcomes" : undefined, showSymbol: false, connectNulls: false,
       lineStyle: { color: track.color, width: index === 0 ? 2.5 : 2, type: track.dash?.startsWith("1") ? "dotted" : track.dash ? "dashed" : "solid" },
       areaStyle: kind === "area" || track.area ? { color: track.color, opacity: 0.22 } : undefined,
-      itemStyle: track.label === "Unknown outcome" || track.label === "4xx" ? { color: "#FFF9FC", borderColor: "#F8769C", borderWidth: 1,
+      itemStyle: track.label === "Unknown outcome" || track.label === "4xx" ? { color: "#FAF9F7", borderColor: "#F8769C", borderWidth: 1,
         decal: { symbol: "rect", symbolSize: 1, dashArrayX: [1, 0], dashArrayY: [3, 3], color: "#F8769C" } } : { color: track.color },
       barMaxWidth: horizontal ? 18 : 24,
     })) as EChartsOption["series"],
@@ -61,7 +61,7 @@ export function AnalyticsChart({ title, days, series, kind, empty, intervals, un
 
   return (
     <div className="relative mt-3 flex min-h-[220px] min-w-0 flex-1 flex-col sm:min-h-[240px]">
-      <p aria-hidden="true" className="mb-2 min-h-6 text-xs leading-5 font-semibold text-[#853750]">
+      <p aria-hidden="true" className="mb-2 min-h-6 text-xs leading-5 font-semibold text-foreground">
         {selected === undefined ? <span className="font-medium text-muted">Select {intervals ? "an interval" : "a day"} to inspect values.</span> : `${timestamp(selected)} · ${getValue(selected)}`}
       </p>
       <p id={id} className="sr-only">{categories ? "" : intervals ? "" : `${day(0)} to ${day(last)} UTC. `}Inspect {categories ? categoryName : intervals ? "interval" : "daily"} values with the arrow keys. Home and End jump to the start and end.</p>

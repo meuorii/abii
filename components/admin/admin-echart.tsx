@@ -38,7 +38,7 @@ export function AdminEChart({ option, label, height = "h-44 sm:h-52" }: { option
 
 export function AdminDonut({ value, total, label }: { value: number; total: number; label: string }) {
   const option: EChartsOption = {
-    color: ["#F8769C", "#FFDBED"],
+    color: ["#F8769C", "#E8DDE1"],
     tooltip: { className: "abii-echart-tooltip", trigger: "item", confine: true, formatter: (item: unknown) => {
       const point = item as { name?: string; value?: number };
       return `${point.name ?? "Population"}: ${new Intl.NumberFormat("en-US").format(point.value ?? 0)}`;
@@ -76,7 +76,7 @@ export function AdminSparkline({ name, timestamps, values, unit }: {
     xAxis: { type: "category", data: timestamps, show: false },
     yAxis: { type: "value", min: 0, show: false },
     series: [{ type: "line", data: values, connectNulls: false, showSymbol: false,
-      lineStyle: { color: "#F8769C", width: 2 }, areaStyle: { color: "#FFDBED", opacity: 0.35 } }],
+      lineStyle: { color: "#F8769C", width: 2 }, areaStyle: { color: "#FFE8EF", opacity: 0.35 } }],
   };
   return <AdminEChart option={option} label={`${name} by observed interval`} height="h-10" />;
 }

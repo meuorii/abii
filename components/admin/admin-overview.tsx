@@ -59,7 +59,7 @@ export function AdminOverview({ report }: { report: OverviewReport }) {
             <select name="period" defaultValue={String(window.days)} className="min-h-11 max-w-full rounded-lg border border-border bg-white px-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-[var(--overview-accent-ink)]">
               {[7, 30, 90].map(days => <option key={days} value={days}>Last {days} complete days</option>)}
             </select>
-          </label><button type="submit" className="min-h-11 rounded-lg bg-[var(--overview-accent)] px-4 text-sm font-semibold text-[var(--overview-accent-ink)] hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--overview-accent-ink)]">Apply</button>
+          </label><button type="submit" className="min-h-11 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:bg-primary-active focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-hover">Apply</button>
         </form>
       </div>
       {error && <p role="status" className="rounded-lg border border-border bg-[var(--overview-pink)] px-4 py-3 text-sm text-muted">Some report sections could not be loaded. <a className="font-semibold text-[var(--overview-accent-ink)] underline underline-offset-2" href={`/admin?period=${window.days}`}>Reload report</a></p>}
@@ -97,7 +97,7 @@ export function AdminOverview({ report }: { report: OverviewReport }) {
             {row.profileImage ? <Image src={row.profileImage} alt="" fill sizes="36px" unoptimized className="object-cover" /> : Array.from((row.name || "").trim())[0]?.toUpperCase() ?? "?"}
           </span>
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{row.name || "Unnamed learner"}</p><time className="text-xs text-muted" dateTime={row.createdAt}>{date.format(new Date(row.createdAt))} UTC</time></div>
-          <span className={`shrink-0 text-xs font-medium ${row.status === "Suspended" ? "text-[#8B273F]" : "text-muted"}`}>{row.status}</span>
+          <span className={`shrink-0 text-xs font-medium ${row.status === "Suspended" ? "text-error-text" : "text-muted"}`}>{row.status}</span>
         </li>)}</ul> : <p className="mt-4 text-sm text-muted">{recent ? "There are no dated learner accounts to display." : "Recent users could not be loaded."}</p>}
       </Card>
 

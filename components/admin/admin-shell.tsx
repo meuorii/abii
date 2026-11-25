@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/workspace-chrome";
 import { AdminNavigation } from "./admin-navigation";
 
-const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pink-active";
+const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-hover";
 
 export function AdminShell({ name, children }: { name: string; children: ReactNode }) {
   const pathname = usePathname();
@@ -65,14 +65,14 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
   return (
     <div className="admin-shell h-dvh overflow-hidden text-foreground sm:p-3 lg:p-4">
       <a href="#admin-main" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-40 focus:rounded-lg focus:bg-white focus:p-3">Skip to main content</a>
-      <div className="admin-shell__frame mx-auto flex h-full max-w-[1600px] overflow-hidden sm:rounded-[20px] sm:border sm:shadow-[0_10px_40px_rgba(65,37,48,0.07)]">
+      <div className="admin-shell__frame mx-auto flex h-full max-w-[1600px] overflow-hidden sm:rounded-[20px] sm:border sm:shadow-[0_10px_40px_rgba(48,38,43,0.07)]">
         <aside className="admin-shell__sidebar hidden w-[220px] shrink-0 flex-col overflow-y-auto border-r lg:flex">
           <div className="grid shrink-0 justify-items-start gap-1 px-5 py-7">
             <WorkspaceBrandMark />
-            <p className={`min-h-8 ${workspaceBrandSubtitle}`}>Administration</p>
+            <p className={`min-h-8 admin-brand-subtitle ${workspaceBrandSubtitle}`}>Administration</p>
           </div>
           <AdminNavigation pathname={pathname} />
-          <WorkspaceSidebarFooter className="shrink-0" />
+          <WorkspaceSidebarFooter className="shrink-0 admin-sidebar-footer" />
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -89,19 +89,19 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
             <div ref={account} className="relative min-w-0" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setMenuOpen(false); }}
               onKeyDown={event => { if (event.key === "Escape" && menuOpen) { event.stopPropagation(); setMenuOpen(false); accountButton.current?.focus(); } }}>
               <button ref={accountButton} type="button" aria-label="Account menu" aria-expanded={menuOpen} aria-controls="admin-account"
-                onClick={() => setMenuOpen(open => !open)} className={`${workspaceAccountButton} max-sm:min-h-11`}>
-                <span aria-hidden="true" className={workspaceAvatar}>{initial}</span>
-                <span className={workspaceAccountName}>{name}</span>
-                <ChevronDown aria-hidden="true" className={workspaceChevron} />
+                onClick={() => setMenuOpen(open => !open)} className={`${workspaceAccountButton} admin-account-trigger max-sm:min-h-11`}>
+                <span aria-hidden="true" className={`${workspaceAvatar} admin-account-avatar`}>{initial}</span>
+                <span className={`${workspaceAccountName} admin-account-name`}>{name}</span>
+                <ChevronDown aria-hidden="true" className={`${workspaceChevron} admin-account-chevron`} />
               </button>
-              <div id="admin-account" hidden={!menuOpen} className={workspaceAccountPanel}>
-                <div className="border-b border-[#F0E5E9] px-3 py-2">
-                  <p className="break-words text-sm font-semibold">{name}</p><p className="text-xs text-[#665C65]">Administrator</p>
+              <div id="admin-account" hidden={!menuOpen} className={`${workspaceAccountPanel} admin-account-panel`}>
+                <div className="border-b border-[#E8DDE1] px-3 py-2">
+                  <p className="break-words text-sm font-semibold">{name}</p><p className="text-xs text-[#6F5964]">Administrator</p>
                 </div>
                 <Button ref={signOutButton} variant="ghost" className="mt-1 w-full justify-start" aria-disabled={busy} onClick={() => void signOut()}>
                   <LogOut size={16} aria-hidden="true" /> {busy ? "Signing out…" : "Sign out"}
                 </Button>
-                {error && <p role="alert" className="px-3 py-2 text-sm text-[#8B273F]">{error}</p>}
+                {error && <p role="alert" className="px-3 py-2 text-sm text-error-text">{error}</p>}
               </div>
             </div>
           </header>
@@ -115,12 +115,12 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
       <dialog ref={drawer} id="admin-drawer" aria-labelledby="admin-drawer-title"
         onClose={() => { setDrawerOpen(false); if (openDrawer.current?.offsetWidth) openDrawer.current.focus(); }}
         onClick={event => { if (event.target === event.currentTarget) drawer.current?.close(); }}
-        className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-[#30232B]/40">
+        className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-[#30262B]/40">
         <div className="admin-shell__sidebar h-full w-[min(290px,88vw)] overflow-y-auto overscroll-contain border-r pb-4 shadow-xl">
           <div className="flex items-center justify-between gap-2 px-4 py-4">
             <WorkspaceBrandMark />
             <button type="button" aria-label="Close admin navigation" onClick={() => drawer.current?.close()}
-              className={`grid size-11 place-items-center rounded-lg hover:bg-[#FFF0F5] ${focusRing}`}><X size={21} aria-hidden="true" /></button>
+              className={`grid size-11 place-items-center rounded-lg hover:bg-[#FFF1F5] ${focusRing}`}><X size={21} aria-hidden="true" /></button>
           </div>
           <h2 id="admin-drawer-title" className="px-5 pb-3 text-sm font-semibold">Administration</h2>
           <AdminNavigation pathname={pathname} onNavigate={() => drawer.current?.close()} />

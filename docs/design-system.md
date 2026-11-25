@@ -1,4 +1,4 @@
-# Abii Design System v1.0 — Official Visual Standards
+# Abii Design System v1.1 — Official Visual Standards
 
 This document is the implementation reference for Abii’s visual language. The `/design-system` route is the working component showcase. Use this specification for future UI work across the landing page, learner application, and admin dashboard while respecting any dashboard-specific scoped theme.
 
@@ -14,7 +14,8 @@ Use the 60–30–10 balance as a visual guideline. It describes relative visual
 
 | Token | Value | Intended use |
 | --- | --- | --- |
-| `--background` | `#FAF9F7` | Main page background (about 60%) |
+| `--background` | `#FFF9FC` | Main page background (about 60%) |
+| `--dashboard-frame` | `#FFF4F8` | Supporting structural color for the outer admin dashboard canvas; not an additional brand accent |
 | `--secondary-surface` | `#FFE8EF` | Hero and supporting blush surfaces (about 30%) |
 | `--primary` | `#F8769C` | Primary CTA and brand accent (about 10%) |
 | `--surface` | `#FFFFFF` | Cards, fields, and dialog surfaces |
@@ -58,7 +59,8 @@ Semantic color should always be paired with a clear label, icon, or explanatory 
 
 ## 4. Layout and surfaces
 
-- Keep page backgrounds warm and quiet (`#FAF9F7`). Standard hero sections use `#FFE8EF`.
+- Keep page backgrounds warm and quiet (`#FFF9FC`). Standard hero sections use `#FFE8EF`.
+- Use `--dashboard-frame` (`#FFF4F8`) only for the outer canvas surrounding the admin dashboard frame. Keep the inner workspace on `--background`; this supporting structural neutral is separate from the 60–30–10 brand balance.
 - Use white cards with subtle `#E8DDE1` borders. Shadows should stay faint and support elevation rather than decoration.
 - Use blush surfaces for selected navigation, small callouts, and secondary panels; leave generous whitespace between major groups.
 - Preserve a readable content width and adapt columns to available space. At narrow viewports, stack side-by-side content and keep controls usable without horizontal scrolling.
@@ -120,13 +122,17 @@ The tokens are defined in `app/globals.css` and exposed as Tailwind v4 color uti
 
 ```tsx
 <main className="min-h-screen bg-background text-foreground">
-  <section className="rounded-2xl bg-secondary-surface">
-    <div className="rounded-xl border border-border bg-surface p-5">
-      <button className="bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active">
-        Continue
-      </button>
+  <div className="bg-dashboard-frame p-4">
+    <div className="bg-background">
+      <section className="rounded-2xl bg-secondary-surface">
+        <div className="rounded-xl border border-border bg-surface p-5">
+          <button className="bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active">
+            Continue
+          </button>
+        </div>
+      </section>
     </div>
-  </section>
+  </div>
 </main>
 ```
 
@@ -142,9 +148,9 @@ Legacy aliases (`--pink-soft`, `--pink-card`, `--pink`, `--pink-accent`, `--pink
 
 ## 12. Rollout scope and admin theme
 
-The root token update changes the default colors anywhere existing components consume shared root tokens or their legacy aliases. It does not automatically recolor every hard-coded screen. This pass updates the design-system showcase and the directly used shared UI components (buttons, cards, fields, feedback, navigation, flashcards, progress, mascot fallback, toast, and modal) so the showcase represents actual components.
+The v1.1 palette refinement changes the shared main background to `#FFF9FC` and adds `#FFF4F8` as the admin dashboard's outer frame canvas. The frame color is a supporting structural neutral, not an extra brand accent. The admin shell keeps the workspace, content wrapper, sidebar, and header on the main background; hero sections remain `#FFE8EF`, cards remain white, and dialogs keep white content surfaces. All eight dashboard routes inherit these shared shell values.
 
-The admin dashboard retains its own `.admin-shell` scoped values and remains visually isolated from the new default token palette in this pass. Dialogs opened from inside the admin inherit an admin-scoped token set through the portal, so their controls keep the dashboard palette as well. The design-system route is the review surface for the approved palette; wider admin adoption should happen only after that review. When migrating another screen, replace local hard-coded colors with the semantic tokens and check its behavior in the screen’s own theme.
+The admin dashboard uses `.admin-shell` scoped values that match Design System v1.1, while the global `--background` updates screens that already consume the shared token. Dialogs opened from inside the admin inherit the matching background token through the portal and retain white modal content. This color refinement does not change page layouts, chart data or calculations, APIs, business logic, authentication, or database behavior. When migrating another screen, replace local hard-coded colors with semantic tokens and check its behavior in that screen’s own theme.
 
 ## 13. Reference page
 

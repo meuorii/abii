@@ -12,7 +12,7 @@ import { ToastShowcase } from "@/components/ui/toast-showcase";
 import { ModalShowcase } from "@/components/ui/modal-showcase";
 
 const colorGroups = [
-  { title: "Foundation · 60%", note: "Quiet, warm surfaces keep the learning space open.", colors: [["Main background", "#FAF9F7"], ["Card surface", "#FFFFFF"], ["Border / divider", "#E8DDE1"]] },
+  { title: "Foundation · 60%", note: "Warm page backgrounds lead; the frame color is a supporting structural neutral.", colors: [["Main background", "#FFF9FC"], ["Dashboard outer frame", "#FFF4F8"], ["Card surface", "#FFFFFF"], ["Border / divider", "#E8DDE1"]] },
   { title: "Support · 30%", note: "Blush surfaces add warmth and frame important content.", colors: [["Secondary surface", "#FFE8EF"], ["Subtle hover", "#FFF1F5"], ["Selected surface", "#FFE8EF"]] },
   { title: "Brand · 10%", note: "Use the original Abii pink for primary actions and brand moments.", colors: [["Primary", "#F8769C"], ["Hover", "#EC658D"], ["Pressed", "#D9547D"]] },
 ];
@@ -35,7 +35,7 @@ export default function DesignSystemPage() {
       <div className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-8 sm:pt-10">
         <section className="relative isolate overflow-hidden rounded-[2rem] bg-secondary-surface px-6 py-10 sm:px-10 sm:py-14 lg:px-14" aria-labelledby="hero-heading">
           <div className="relative z-10 max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-hover">Abii design system · v1.0</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-hover">Abii design system · v1.1</p>
             <h1 id="hero-heading" className="mt-4 max-w-[15ch] text-4xl font-extrabold leading-[1.06] tracking-[-0.045em] text-foreground sm:text-5xl lg:text-6xl">A little design. A lot of personality.</h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-muted sm:text-lg">A thoughtful visual language that makes every learning moment feel warm, simple, and unmistakably Abii.</p>
             <Link href="#palette" className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2">Explore the system <ArrowDown size={16} aria-hidden="true" /></Link>
@@ -55,7 +55,7 @@ export default function DesignSystemPage() {
 
           <div className="min-w-0 space-y-16">
             <section id="palette" className="scroll-mt-8" aria-labelledby="palette-heading">
-              <SectionHeading eyebrow="01 · Color" title="A palette with room to breathe" description="The 60–30–10 balance is a visual guide: warm neutrals lead, blush supports, and Abii pink draws the eye to action." id="palette-heading" />
+              <SectionHeading eyebrow="01 · Color" title="A palette with room to breathe" description="The 60–30–10 balance is a visual guide: warm neutrals lead, blush supports, and Abii pink draws the eye to action. The dashboard frame swatch is structural, not an additional brand accent." id="palette-heading" />
               <div className="mt-7 grid gap-4 md:grid-cols-3">
                 {colorGroups.map((group) => <article key={group.title} className="overflow-hidden rounded-2xl border border-border bg-surface">
                   <div className="flex h-24 items-end bg-background p-4"><div className="h-12 flex-1 rounded-lg bg-secondary-surface" /><div className="ml-2 h-12 w-16 rounded-lg bg-primary" /></div>
