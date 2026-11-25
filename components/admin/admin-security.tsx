@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { Activity, KeyRound, ShieldAlert, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
-import { AdminPanel } from "@/components/admin/admin-ui";
+import { AdminEmptyState, AdminPanel } from "@/components/admin/admin-ui";
 import { AnalyticsChart } from "@/components/admin/analytics-chart";
 import { SecurityEvidenceTable } from "@/components/admin/security-evidence-table";
+import { AdminPagination } from "@/components/admin/admin-pagination";
 import { SkeletonBlock, SkeletonRegion } from "@/components/ui/skeleton";
 import type { SecurityQuery, SecurityReport } from "@/lib/admin/security";
 import { auditLabels, eventLabels } from "@/lib/admin/security-contract";
@@ -11,11 +13,11 @@ const dateTime = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "shor
 const ticks = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 const clock = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 const count = new Intl.NumberFormat("en");
-const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#993557]";
-const split = "grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]";
-const inputStyle = `mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-border bg-white px-2.5 text-base sm:text-sm ${focus}`;
-const periods = [["24h", "24 hours"], ["7d", "7 days"], ["30d", "30 days"]] as const;
-const auditLink = `inline-flex min-h-11 items-center rounded text-xs font-semibold text-[#863652] underline-offset-4 hover:underline ${focus}`;
+const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F8769C]";
+const split = "grid min-w-0 items-stretch gap-4 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]";
+const inputStyle = `mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-[#FFDBED] bg-[#FFF9FC] px-2.5 text-base sm:text-sm ${focus}`;
+const periods = [["24h", "24 hours", "24H"], ["7d", "7 days", "7D"], ["30d", "30 days", "30D"]] as const;
+const auditLink = `inline-flex min-h-11 items-center rounded text-xs font-semibold text-[#30252D] underline-offset-4 hover:underline ${focus}`;
 
 function href(query: SecurityQuery, changes: Record<string, string | undefined> = {}, fragment = "") {
   const params = new URLSearchParams();
@@ -33,25 +35,25 @@ function Stamp({ time }: { time: number }) {
 export function SecurityControls({ query }: { query: SecurityQuery }) {
   const { period, from } = query;
   return <header className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-    <h2 id="security-overview" className="text-xl font-semibold tracking-tight sm:text-2xl">Security overview</h2>
+    <h2 id="security-overview" className="text-xl font-semibold tracking-tight sm:text-2xl">Security Overview</h2>
     <nav aria-label="Security reporting period" className="inline-flex rounded-xl border border-border bg-white p-1">
-      {periods.map(([key, label]) => <Link key={key} href={href(query, { period: key, from: "", to: "" })} prefetch={false}
+      {periods.map(([key, label, display]) => <Link key={key} href={href(query, { period: key, from: "", to: "" })} prefetch={false}
         aria-current={!from && period === key ? "page" : undefined}
-        className={`grid min-h-11 place-items-center whitespace-nowrap rounded-lg px-2.5 text-xs font-semibold ${focus} ${!from && period === key ? "bg-[#F9E4ED] text-[#83314F]" : "text-muted hover:bg-pink-soft"}`}>{label}</Link>)}
+        aria-label={label} className={`grid min-h-11 place-items-center whitespace-nowrap rounded-lg px-2.5 text-xs font-semibold ${focus} ${!from && period === key ? "bg-[#FFDBED] text-[#30252D]" : "text-muted hover:bg-[#FFDBED]"}`}>{display}</Link>)}
     </nav>
   </header>;
 }
 
-function Indicator({ label, value, children }: { label: string; value: number | null; children: ReactNode }) {
-  return <div className="min-w-0 bg-white px-3 py-3.5 sm:px-5 sm:py-4">
-    <dt className="text-sm font-semibold">{label}</dt>
+function Indicator({ label, value, children, icon: Icon }: { label: string; value: number | null; children: ReactNode; icon: typeof Activity }) {
+  return <div className={`min-h-[136px] min-w-0 rounded-xl border border-[#FFDBED] px-3 py-3.5 sm:px-5 sm:py-4 ${label === "Security Alerts" ? "bg-[#FFDBED]" : "bg-white"}`}>
+    <div className="flex flex-wrap items-center justify-between gap-2"><dt className="min-w-0 break-words text-sm font-semibold">{label}</dt><Icon aria-hidden="true" size={16} className="shrink-0 text-[#30252D]" /></div>
     <dd className={`mt-1.5 font-semibold tracking-tight tabular-nums ${value === null ? "text-base text-muted" : "text-2xl"}`}>{value === null ? "Unavailable" : count.format(value)}</dd>
     <dd className="mt-1 text-xs leading-5 text-muted">{children}</dd>
   </div>;
 }
 
 function Feedback({ children, alert = false }: { children: ReactNode; alert?: boolean }) {
-  return <p role={alert ? "alert" : undefined} className="rounded-lg border border-dashed border-border bg-[#FFFBFD] px-3.5 py-3.5 text-sm leading-6 text-muted">{children}</p>;
+  return <p role={alert ? "alert" : undefined} className="rounded-lg border border-dashed border-border bg-[#FFF9FC] px-3.5 py-3.5 text-sm leading-6 text-muted">{children}</p>;
 }
 
 export function SecurityError({ message }: { message: string }) {
@@ -71,6 +73,9 @@ function EvidenceFilters({ query }: { query: SecurityQuery }) {
     <label className="min-w-0 text-xs font-semibold">Evidence type<select name="category" defaultValue={query.category} className={inputStyle}>
       <option value="all">All types</option><option value="authentication">Authentication</option><option value="rate">Rate limiting</option><option value="audit">Admin audit</option>
     </select></label>
+    <details open={query.kind || query.outcome || query.actor ? true : undefined} className="col-span-full min-w-0">
+    <summary className={`min-h-11 cursor-pointer rounded py-3 text-xs font-semibold text-[#30252D] ${focus}`}>Filters</summary>
+    <div className="grid min-w-0 gap-3 sm:grid-cols-3">
     <label className="min-w-0 text-xs font-semibold">Event<select name="kind" defaultValue={query.kind} className={inputStyle}>
       <option value="">All events</option>
       <optgroup label="Administrator audit">{Object.entries(auditLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</optgroup>
@@ -83,15 +88,16 @@ function EvidenceFilters({ query }: { query: SecurityQuery }) {
     <label className="min-w-0 text-xs font-semibold">Actor<select name="actor" defaultValue={query.actor} className={inputStyle}>
       <option value="">All actors</option><option value="admin">Administrator</option><option value="learner">Learner</option><option value="unknown">Unverified</option>
     </select></label>
+    </div></details>
     <details open={query.from ? true : undefined} className="col-span-full min-w-0">
-      <summary className={`min-h-11 cursor-pointer rounded py-3 text-xs font-semibold text-[#863652] ${focus}`}>Custom UTC dates</summary>
+      <summary className={`min-h-11 cursor-pointer rounded py-3 text-xs font-semibold text-[#30252D] ${focus}`}>Custom UTC dates</summary>
       <div className="grid min-w-0 gap-3 min-[390px]:grid-cols-2 sm:max-w-lg">
         <label className="min-w-0 text-xs font-semibold">From (UTC)<input type="date" name="from" defaultValue={query.from} className={inputStyle} /></label>
         <label className="min-w-0 text-xs font-semibold">Through (UTC)<input type="date" name="to" defaultValue={query.to} className={inputStyle} /></label>
       </div>
     </details>
     <div className="col-span-full flex flex-wrap items-center gap-3 border-b border-border pb-3">
-      <button type="submit" className={`min-h-11 rounded-lg bg-[#F8E2EC] px-4 text-sm font-semibold text-[#83314F] hover:bg-[#F4D5E3] ${focus}`}>Apply filters</button>
+      <button type="submit" className={`min-h-11 rounded-lg bg-[#F8769C] px-4 text-sm font-semibold text-[#30252D] hover:bg-[#FFDBED] ${focus}`}>Apply filters</button>
       <Link href={`/admin/security?period=${query.period}#audit-history`} prefetch={false} className={auditLink}>Clear filters</Link>
     </div>
   </form>;
@@ -100,12 +106,12 @@ function EvidenceFilters({ query }: { query: SecurityQuery }) {
 export function AdminSecurity({ report, collecting }: { report: SecurityReport; collecting: boolean }) {
   const { query, summary } = report;
   const trend = [
-    { label: "Successful sign-ins", color: "#7A9AA9", values: summary.chart.map(bin => bin.success > 0 ? bin.success : null) },
-    { label: "Password and MFA failures", color: "#A73F65", values: summary.chart.map(bin => bin.failure > 0 ? bin.failure : null) },
-    { label: "Rate limiter rejections", color: "#8E769E", values: summary.chart.map(bin => bin.rate > 0 ? bin.rate : null) },
+    { label: "Successful sign-ins", color: "#FFDBED", values: summary.chart.map(bin => bin.success > 0 ? bin.success : null) },
+    { label: "Password / MFA failures", color: "#F8769C", values: summary.chart.map(bin => bin.failure > 0 ? bin.failure : null) },
+    { label: "Rate limiting", color: "rgba(248,118,156,0.55)", values: summary.chart.map(bin => bin.rate > 0 ? bin.rate : null) },
   ];
   return <div className="grid min-w-0 gap-4">
-    <div className="relative grid gap-1 rounded-lg border border-border bg-[#FCF3F7] px-3.5 py-2.5 text-xs leading-5 text-[#5E4E5A]">
+    <div className="relative grid gap-1 rounded-lg border border-border bg-[#FFDBED] px-3.5 py-2.5 text-xs leading-5 text-[#66565F]">
       <div className="flex flex-wrap justify-between gap-x-4">
         <p className="flex flex-wrap gap-x-1"><Stamp time={query.start} /> <span>to</span> <Stamp time={query.end} /></p>
         <p><strong>Last recorded</strong> {summary.last ? <Stamp time={summary.last} /> : "No usable evidence"}</p>
@@ -118,37 +124,37 @@ export function AdminSecurity({ report, collecting }: { report: SecurityReport; 
       {(!report.auditAvailable || !report.eventsAvailable) && <p role="alert" className="font-semibold">Some evidence sources could not be read.</p>}
     </div>
 
-    <dl aria-label="Security indicators for the displayed UTC window" className="grid min-w-0 grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border xl:grid-cols-4">
-      <Indicator label="Failed logins" value={summary.failedLogins}>Recorded password rejections. MFA failures appear in activity.</Indicator>
-      <Indicator label="Rate-limited requests" value={summary.rateLimited}>Observed limiter rejections in the selected window.</Indicator>
-      <Indicator label="Security alerts" value={summary.first ? summary.alertCount : null}>Threshold breaches backed by count-bearing evidence.</Indicator>
-      <Indicator label="Administrative actions" value={report.auditAvailable ? summary.actions : null}>Committed privileged changes in the selected window.</Indicator>
+    <dl aria-label="Security indicators for the displayed UTC window" className="grid min-w-0 grid-cols-2 gap-2 xl:grid-cols-4">
+      <Indicator icon={KeyRound} label="Failed Logins" value={summary.failedLogins}>Recorded password rejections. MFA failures appear in activity.</Indicator>
+      <Indicator icon={Activity} label="Rate-limited Requests" value={summary.rateLimited}>Observed limiter rejections in the selected window.</Indicator>
+      <Indicator icon={ShieldAlert} label="Security Alerts" value={summary.first ? summary.alertCount : null}>Threshold breaches backed by count-bearing evidence.</Indicator>
+      <Indicator icon={ShieldCheck} label="Admin Actions" value={report.auditAvailable ? summary.actions : null}>Committed privileged changes in the selected window.</Indicator>
     </dl>
 
     <div className={split}>
-      <AdminPanel title="Authentication activity" description="Recorded sign-ins, failed challenges and limiter rejections. Gaps indicate intervals with no usable observations.">
-        <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">{trend.map(item =>
-          <li key={item.label} className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="size-2 rounded-sm" style={{ background: item.color }} />{item.label}</li>)}</ul>
+      <AdminPanel title="Authentication Activity" description="Recorded sign-ins, failed challenges and limiter rejections. Gaps indicate intervals with no usable observations." className="admin-evidence-panel" stretch bodyClassName="flex-1">
         <AnalyticsChart title="Authentication activity" days={summary.chart.map(bin => new Date(bin.from).toISOString())}
           intervals={summary.chart.map(bin => ({ label: `${dateTime.format(bin.from)} to ${dateTime.format(bin.to)} UTC`,
             tick: query.end - query.start <= 86_400_000 ? clock.format(bin.from) : ticks.format(bin.from) }))}
-          kind="bars" series={trend} empty="No chartable authentication observations in this period." />
+          kind="bars" stacked={false} series={trend} empty="No chartable authentication observations in this period." />
       </AdminPanel>
-      <AdminPanel title="Security alerts" description="Verified threshold breaches in completed five-minute intervals.">
+      <AdminPanel title="Security Alerts" description="Verified threshold breaches in completed five-minute intervals." className="admin-evidence-panel" stretch bodyClassName="flex-1">
         {summary.alerts.length ? <ul className="-my-2 divide-y divide-border">
           {summary.alerts.map(alert => <li key={`${alert.kind}-${alert.first}`} className="py-2.5">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-2"><p className="text-sm font-semibold">{alert.title}</p><span className="text-xs font-semibold text-[#815020]">{alert.severity}</span></div>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-2"><p className="text-sm font-semibold">{alert.title}</p><span className="text-xs font-semibold text-[#30252D]">{alert.severity}</span></div>
             <p className="mt-1 text-xs leading-5 text-muted">{count.format(alert.count)} observed. Rule requires {alert.rule}.</p>
             <p className="text-xs leading-5 text-muted">Window <Stamp time={alert.first} /> to <Stamp time={alert.end} />.<br />Last observed <Stamp time={alert.last} />.</p>
             <Link href={href(query, alert.title === "Sustained password failures" ? { kind: "", category: "authentication", outcome: "failure", actor: "", q: "" } :
               { kind: alert.kind, category: "all", outcome: "", actor: alert.kind === "access-denied" ? "admin" : "", q: "" }, "#audit-history")}
               prefetch={false} className={auditLink}>Inspect evidence</Link>
           </li>)}
-        </ul> : <Feedback>{summary.first ? "No verified alert conditions met the displayed thresholds." : "Counted evidence is required to evaluate alerts."}</Feedback>}
+        </ul> : <AdminEmptyState icon={summary.first ? "inbox" : "alert"} title={summary.first ? "No verified alerts" : "Alert evaluation unavailable"}
+          description={summary.first ? "No verified alert conditions met the displayed thresholds." : "Counted evidence is required to evaluate alerts."} size="visualization" />}
       </AdminPanel>
     </div>
 
-    <AdminPanel title="Recent administrative actions" description="Committed privileged changes from the administrator audit trail.">
+    <AdminPanel title="Recent Administrative Actions" description="Committed privileged changes from the administrator audit trail." className="admin-evidence-panel"
+      actions={<Link href={href(query, {}, "#audit-history")} prefetch={false} className={auditLink}>View audit history</Link>}>
       {summary.recentActions.length ? <ul className="-my-2 divide-y divide-border">
         {summary.recentActions.map(row => <li key={row.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
           <div className="min-w-0"><p className="text-sm font-semibold">{row.label}</p>
@@ -158,8 +164,8 @@ export function AdminSecurity({ report, collecting }: { report: SecurityReport; 
       </ul> : <Feedback alert={!report.auditAvailable}>{report.auditAvailable ? "No committed privileged changes in this period." : "Administrator audit evidence could not be read."}</Feedback>}
     </AdminPanel>
 
-    <section id="audit-history" aria-label="Security and audit explorer" className="min-w-0 scroll-mt-3">
-      <AdminPanel title="Security & audit explorer" description="Newest first. Select an event to inspect its recorded evidence.">
+    <section id="audit-history" aria-label="Security & Audit Explorer" className="min-w-0 scroll-mt-3">
+      <AdminPanel title="Security & Audit Explorer" description="Newest first. Select an event to inspect its recorded evidence." className="admin-evidence-panel">
         <div className="grid min-w-0 gap-3">
           <EvidenceFilters query={query} />
           {report.explorerPartial && <Feedback alert>{report.explorerAvailable ? "Only one evidence source could be read. Pagination is paused." : "Security and audit history could not be read. Reload to try again."}</Feedback>}
@@ -167,10 +173,10 @@ export function AdminSecurity({ report, collecting }: { report: SecurityReport; 
           {report.rows.length ? <SecurityEvidenceTable rows={report.rows} /> : report.explorerAvailable && <Feedback>
             {report.next ? "No matches in this part of the retained history. Continue to check older evidence." : "No matching security or audit events."}
           </Feedback>}
-          {(query.token || report.next) && <nav aria-label="Audit pagination" className="flex flex-wrap justify-end gap-4 border-t border-border">
+          {(query.token || report.next) && <AdminPagination label="Audit pagination" result={`Showing ${count.format(report.rows.length)} evidence records`}>
             {query.token && <Link href={href(query, {}, "#audit-history")} prefetch={false} className={auditLink}>First page</Link>}
             {report.next && <Link href={href(query, { cursor: report.next }, "#audit-history")} prefetch={false} className={auditLink}>Older evidence</Link>}
-          </nav>}
+          </AdminPagination>}
         </div>
       </AdminPanel>
     </section>

@@ -1,4 +1,4 @@
-import { AdminPageHero } from "@/components/admin/admin-page";
+import { AdminPageHero } from "@/components/admin/admin-page-hero";
 import { AdminSupport } from "@/components/admin/admin-support";
 import { parseSupportQuery, readSupportTickets } from "@/lib/admin/support";
 import { getAdminPageAccess } from "@/lib/auth/admin-page-access";

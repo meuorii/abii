@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { AdminPageHero } from "@/components/admin/admin-page";
+import { AdminPageHero } from "@/components/admin/admin-page-hero";
 import { AdminOverview, OverviewSkeleton } from "@/components/admin/admin-overview";
 import { getAdminPageAccess } from "@/lib/auth/admin-page-access";
 import { readOverview } from "@/lib/admin/overview";

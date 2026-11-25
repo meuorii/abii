@@ -1,4 +1,4 @@
-import { AdminPageHero } from "@/components/admin/admin-page";
+import { AdminPageHero } from "@/components/admin/admin-page-hero";
 import { AdminSettings } from "@/components/admin/admin-settings";
 import { getAdminPageAccess } from "@/lib/auth/admin-page-access";
 

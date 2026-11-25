@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import { AdminPageHero } from "@/components/admin/admin-page";
-import { AdminAnnouncements, AnnouncementsSkeleton, AnnouncementsUnavailable } from "@/components/admin/admin-announcements";
+import { AdminPageHero } from "@/components/admin/admin-page-hero";
+import { AdminAnnouncements, AnnouncementEditorSkeleton, AnnouncementsSkeleton, AnnouncementsUnavailable } from "@/components/admin/admin-announcements";
 import { AnnouncementInputError } from "@/lib/admin/announcement-contract";
 import { parseAnnouncementQuery, readAnnouncements } from "@/lib/admin/announcements";
 import { getAdminPageAccess } from "@/lib/auth/admin-page-access";
@@ -18,8 +18,9 @@ async function AnnouncementData({ params }: { params: Record<string, string | st
 export default async function AnnouncementsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   if ((await getAdminPageAccess()).status !== 200) return null;
   const params = await searchParams;
-  return <div className="grid min-w-0 gap-5 sm:gap-6">
-    <AdminPageHero page="announcements" />
-    <Suspense key={JSON.stringify(params)} fallback={<AnnouncementsSkeleton />}><AnnouncementData params={params} /></Suspense>
+  const editing = params.editor === "new" || params.editor === "edit";
+  return <div className="admin-refined grid min-w-0 gap-5 sm:gap-6">
+    {!editing && <AdminPageHero page="announcements" />}
+    <Suspense key={JSON.stringify(params)} fallback={editing ? <AnnouncementEditorSkeleton /> : <AnnouncementsSkeleton />}><AnnouncementData params={params} /></Suspense>
   </div>;
 }

@@ -3,6 +3,7 @@
 import { useId, useState, type KeyboardEvent } from "react";
 import type { EChartsOption } from "echarts";
 import { AdminEChart } from "./admin-echart";
+import { AdminEmptyState } from "./admin-ui";
 
 type Series = { label: string; color: string; values: (number | null)[]; dash?: string; area?: boolean };
 const dateFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -18,11 +19,10 @@ export function AnalyticsChart({ title, days, series, kind, empty, intervals, un
   const id = useId();
   const totals = days.map((_, index) => series.reduce((sum, track) => sum + (track.values[index] ?? 0), 0));
   const highest = Math.max(0, ...(kind === "lines" ? series.flatMap(track => track.values.map(value => value ?? 0)) : totals));
-  if (highest === 0) return <p className="mt-4 grid min-h-32 place-items-center rounded-xl border border-dashed border-border px-4 text-center text-sm text-muted">{empty}</p>;
+  if (highest === 0) return <div className="mt-3 flex min-h-[220px] flex-1 flex-col sm:min-h-[240px]"><AdminEmptyState title={empty} size="visualization" /></div>;
   const last = days.length - 1;
   const day = (index: number) => categories?.[index] ?? intervals?.[index]?.label ?? dateFormat.format(new Date(days[index]));
   const tickLabel = (index: number) => intervals?.[index]?.tick ?? categories?.[index] ?? day(index);
-  const item = categories ? categoryName : intervals ? "interval" : "day";
   const timestamp = (index: number) => categories ? day(index) : intervals ? day(index) : `${day(index)} UTC`;
   const formatValue = (value: number | null) => value === null ? "unavailable" : numbers.format(value) + (unit ? ` ${unit}` : "");
   const getValue = (index: number) => series.map(track => `${track.label} ${formatValue(track.values[index])}`).join(", ") + (sampleCounts ? `, ${numbers.format(sampleCounts[index])} ${sampleCounts[index] === 1 ? "sample" : "samples"}` : "");
@@ -60,36 +60,22 @@ export function AnalyticsChart({ title, days, series, kind, empty, intervals, un
   };
 
   return (
-    <div className="relative mt-3 min-w-0">
+    <div className="relative mt-3 flex min-h-[220px] min-w-0 flex-1 flex-col sm:min-h-[240px]">
       <p aria-hidden="true" className="mb-2 min-h-6 text-xs leading-5 font-semibold text-[#853750]">
         {selected === undefined ? <span className="font-medium text-muted">Select {intervals ? "an interval" : "a day"} to inspect values.</span> : `${timestamp(selected)} · ${getValue(selected)}`}
       </p>
       <p id={id} className="sr-only">{categories ? "" : intervals ? "" : `${day(0)} to ${day(last)} UTC. `}Inspect {categories ? categoryName : intervals ? "interval" : "daily"} values with the arrow keys. Home and End jump to the start and end.</p>
-      <div className="grid min-w-0">
+      <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_auto]">
         <div role="slider" aria-label={`${title} ${intervals ? "interval" : "daily"} values`} aria-describedby={id} aria-valuemin={1} aria-valuemax={days.length}
           aria-valuenow={(selected ?? 0) + 1} aria-valuetext={`${timestamp(selected ?? 0)}, ${getValue(selected ?? 0)}`}
           tabIndex={0} onFocus={() => setSelected(index => index ?? 0)} onBlur={() => setSelected(undefined)} onKeyDown={inspect}
-          className={`block h-36 min-w-0 cursor-crosshair rounded-sm sm:h-44 ${focus}`}>
+          className={`block h-full min-h-36 min-w-0 cursor-crosshair rounded-sm sm:min-h-44 ${focus}`}>
           <AdminEChart option={option} label={`${title}, ${days.length} ${intervals ? "intervals" : "days"}; use arrow keys to inspect values`} height="h-full" />
         </div>
         <div aria-hidden="true" className="mt-2 flex justify-between gap-2 text-xs text-muted">
           {[...new Set([0, Math.floor(last / 2), last])].map(index => <span key={index}>{tickLabel(index)}</span>)}
         </div>
       </div>
-      <details className="mt-3 border-t border-border">
-        <summary className={`min-h-11 cursor-pointer rounded py-3 text-xs font-semibold text-[#744455] ${focus}`}>View {intervals ? "interval" : "daily"} data</summary>
-        <div role="region" tabIndex={0} aria-label={`${title} data table`} className={`relative max-h-52 overflow-auto rounded border border-border ${focus}`}>
-          <table className="w-full text-left text-xs tabular-nums">
-            <caption className="sr-only">{title} by {item}{intervals ? " (UTC)" : ""}</caption>
-            <thead className="bg-pink-soft"><tr><th scope="col" className="p-2.5">{categories ? item : `UTC ${item}`}</th>{series.map(track =>
-              <th key={track.label} scope="col" className="p-2.5 text-right">{track.label}</th>)}</tr></thead>
-            <tbody>{days.map((date, index) => <tr key={date} className="border-t border-border">
-              <th scope="row" className="p-2.5 font-medium whitespace-nowrap">{day(index)}</th>
-              {series.map(track => <td key={track.label} className="p-2.5 text-right">{formatValue(track.values[index])}</td>)}{sampleCounts && <td className="p-2.5 text-right">{numbers.format(sampleCounts[index])}</td>}
-            </tr>)}</tbody>
-          </table>
-        </div>
-      </details>
     </div>
   );
 }

@@ -1,20 +1,10 @@
 import "server-only";
-import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { getAdminPageAccess } from "@/lib/auth/admin-page-access";
 import { AdminFeedback, AdminPanel, AdminTable, MetricCard } from "./admin-ui";
+import { AdminPageHero, type AdminPageKey } from "./admin-page-hero";
+export { AdminPageHero } from "./admin-page-hero";
 
-const pages = {
-  overview: ["Everything in one view.", "Your platform, people, and activity."],
-  users: ["Every learner matters.", "Manage accounts and keep Abii welcoming."],
-  analytics: ["See how learning grows.", "Understand the activity behind every study session."],
-  performance: ["Keep things running smoothly.", "Monitor Abii’s speed, stability, and reliability."],
-  security: ["A safer place to learn.", "Keep track of access and the actions that protect Abii."],
-  announcements: ["Share what’s new.", "Make every update clear, thoughtful, and timely."],
-  support: ["Here to help, always.", "Keep conversations organized and support within reach."],
-  settings: ["Make every detail count.", "Manage the essentials that keep Abii running your way."],
-} as const;
-
-type Page = Exclude<keyof typeof pages, "overview" | "users" | "analytics" | "performance" | "security" | "announcements">;
+type Page = Exclude<AdminPageKey, "overview" | "users" | "analytics" | "performance" | "security" | "announcements">;
 const unavailable = (message: string) => ({ kind: "unavailable", message }) as const;
 const stack = "grid min-w-0 gap-4";
 const split = `${stack} min-[880px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]`;
@@ -57,17 +47,6 @@ function PageContent({ page }: { page: Page }) {
         <Pending title="Account security" description="Administrator credentials and sign-in" message="Account security controls are unavailable in this workspace." />
       </div>;
   }
-}
-
-export function AdminPageHero({ page }: { page: keyof typeof pages }) {
-  const [title, description] = pages[page];
-  return (
-      <AbiiPageHero variant={page === "overview" || page === "users" || page === "analytics" || page === "performance" ? "admin-overview" : "admin"} headingId="admin-page-title" priority
-        eyebrow={page === "overview" ? <span className="text-xs font-semibold tracking-[0.08em] text-[#812544]">ADMIN OVERVIEW</span> : page === "users" ? "USER MANAGEMENT" : page === "analytics" ? "PLATFORM ANALYTICS" : page === "performance" ? "SYSTEM PERFORMANCE" : undefined}
-        title={<h1 className="text-[clamp(1.25rem,3.3vw,2.8rem)] leading-[1.08] font-bold tracking-[-0.04em] text-[#30252D]">{title}</h1>}
-        description={<p className="mt-3 max-w-[42ch] text-xs leading-5 text-[#66565F] sm:text-sm sm:leading-6">{description}</p>}
-        mascotSrc={`/dashboard-hero/admin/admin-${page}.png`} mascotAlt="" />
-  );
 }
 
 export async function AdminPage({ page }: { page: Page }) {

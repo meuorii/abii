@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { AdminPageHero } from "@/components/admin/admin-page";
+import { AdminPageHero } from "@/components/admin/admin-page-hero";
 import { AdminSecurity, SecurityControls, SecurityError, SecuritySkeleton } from "@/components/admin/admin-security";
 import { parseSecurityQuery, readSecurity, SecurityQueryError, type SecurityQuery } from "@/lib/admin/security";
 import { getAdminPageAccess } from "@/lib/auth/admin-page-access";
@@ -21,7 +21,7 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
   catch (error) {
     return <div className="grid min-w-0 gap-5"><AdminPageHero page="security" /><SecurityError message={error instanceof SecurityQueryError ? error.message : "Invalid security filters."} /></div>;
   }
-  return <div className="grid min-w-0 gap-5 sm:gap-6">
+  return <div className="admin-refined grid min-w-0 gap-5 sm:gap-6">
     <AdminPageHero page="security" />
     <section aria-labelledby="security-overview" className="grid min-w-0 gap-4">
       <SecurityControls query={query} />

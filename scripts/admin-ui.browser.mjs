@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -28,12 +28,20 @@ const destinations = [
   ["/users", "Users", "Every learner matters.", "User Directory", "users"],
   ["/analytics", "Analytics", "See how learning grows.", "Platform insights", "analytics"],
   ["/performance", "Performance", "Keep things running smoothly.", "System monitoring", "performance"],
-  ["/security", "Security", "A safer place to learn.", "Security overview", "security"],
-  ["/announcements", "Announcements", "Share what’s new.", "Announcement list", "announcements"],
-  ["/support", "Support", "Here to help, always.", "Conversation", "support"],
-  ["/settings", "Settings", "Make every detail count.", "Administrator profile & security", "settings"],
+  ["/security", "Security", "Safety in every step.", "Security Overview", "security"],
+  ["/announcements", "Announcements", "Keep everyone in the loop.", "Announcement Library", "announcements"],
+  ["/support", "Support", "Here to help, always.", "Ticket Conversation", "support"],
+  ["/settings", "Settings", "Make every detail count.", "Administrator Settings", "settings"],
 ];
 const widths = [320, 375, 390, 768, 1024, 1280, 1440, 1920];
+
+async function screenshotScrollable(page, path) {
+  const width = page.viewportSize().width;
+  await page.evaluate(() => { document.querySelector("main").scrollTo(0, 0); window.scrollTo(0, 0); });
+  const height = await page.evaluate(() => Math.min(5000, Math.max(innerHeight, document.querySelector("main").scrollHeight + 48)));
+  await page.setViewportSize({ width, height });
+  await page.screenshot({ path, fullPage: true, animations: "disabled", caret: "initial" });
+}
 
 function workspaceGeometry() {
   const main = document.querySelector("main");
@@ -57,6 +65,7 @@ function adminHeroGeometry() {
   const image = hero.querySelector("img");
   const art = image.getBoundingClientRect();
   const box = hero.getBoundingClientRect();
+  const copy = [...hero.querySelectorAll(".abii-page-hero__title h1, .abii-page-hero__description p")].map(element => element.getBoundingClientRect());
   const panels = Array.from(hero.parentElement.children).slice(1);
   const scale = Math.min(art.width / image.naturalWidth, art.height / image.naturalHeight);
   const visibleHeight = image.naturalHeight * scale;
@@ -70,6 +79,10 @@ function adminHeroGeometry() {
     bottomGap: box.bottom - art.bottom,
     preservesFullArtwork: visibleHeight <= art.height + 1 && art.top >= box.top && getComputedStyle(image).objectFit === "contain",
     bottomAligned: getComputedStyle(image).objectPosition.endsWith("100%"),
+    height: box.height,
+    copyFits: copy.every(rect => rect.top >= box.top && rect.bottom <= box.bottom),
+    variant: hero.dataset.variant,
+    background: getComputedStyle(hero).backgroundColor,
     still: motion.every(style => style.animationName === "none" && style.transform === "none" && style.opacity === "1"),
   };
 }
@@ -115,8 +128,9 @@ async function startServer(env, production = false) {
 test("admin routes fail closed, require real MFA, and render the protected workspace", { timeout: 480_000 }, async () => {
   const securityOnly = process.env.ABII_TEST_SECURITY_LOGS_ONLY === "1";
   const announcementsOnly = process.env.ABII_TEST_ANNOUNCEMENTS_ONLY === "1";
-  const focusedTargets = process.env.ABII_TEST_ADMIN_TARGETS?.split(",").filter(asset => ["overview", "users", "analytics", "performance"].includes(asset)) ?? [];
+  const focusedTargets = process.env.ABII_TEST_ADMIN_TARGETS?.split(",").filter(asset => ["overview", "users", "analytics", "performance", "security", "announcements", "support", "settings"].includes(asset)) ?? [];
   const targetWidths = process.env.ABII_TEST_ADMIN_VIEWPORTS?.split(",").map(Number).filter(Number.isFinite) ?? widths;
+  const routeWidths = securityOnly || announcementsOnly || focusedTargets.length ? targetWidths : widths;
   const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const secret = randomBytes(32).toString("hex");
   const uri = replica.getUri("abii_admin_ui_fixture");
@@ -223,6 +237,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
       assert.equal(closed.status, 404);
       assert.match(closed.headers.get("cache-control"), /private.*no-store/);
     }
+    if (!focusedTargets.length) {
     const learnerToken = await new SignJWT({ sv: 0 }).setProtectedHeader({ alg: "HS256" }).setSubject(String(quizLearner))
       .setIssuedAt().setExpirationTime("10m").setIssuer("abii").setAudience("abii-web").sign(new TextEncoder().encode(secret));
     const quizPost = (path, body) => fetch(server.base + path, {
@@ -249,11 +264,12 @@ test("admin routes fail closed, require real MFA, and render the protected works
     assert.equal(outageReminder.status, 200);
     for (let attempt = 0; attempt < 32 && !server.telemetryDropped(); attempt++) await delay(250);
     assert.equal(server.telemetryDropped(), true);
+    }
 
     const learnerDetailPath = `/api/admin/users/${learner._id}`;
     assert.equal((await fetch(server.base + learnerDetailPath)).status, 404);
     await server.stop();
-    server = await startServer({ ...env, ABII_ADMIN_UI_ENABLED: "true" });
+    server = await startServer({ ...env, ABII_ADMIN_UI_ENABLED: "true" }, process.env.ABII_TEST_ADMIN_PRODUCTION === "1");
     const base = server.base;
     const denied = async (suffix, message, cookie, rsc = false) => {
       const response = await fetch(base + "/admin" + suffix, { headers: { ...(cookie ? { Cookie: cookie } : {}), ...(rsc ? { RSC: "1", "Next-Router-Prefetch": "1" } : {}) } });
@@ -279,8 +295,11 @@ test("admin routes fail closed, require real MFA, and render the protected works
     const context = await browser.newContext({ reducedMotion: "reduce" });
     const page = await context.newPage();
     const pageErrors = [];
+    const networkErrors = [];
     page.on("pageerror", error => pageErrors.push(`${error.message} at ${new URL(page.url()).pathname}: ${error.stack ?? "no stack"}`));
     page.on("console", message => { if (message.type() === "error") pageErrors.push(`${message.text()} at ${new URL(page.url()).pathname}`); });
+    page.on("requestfailed", request => networkErrors.push(`${request.method()} ${new URL(request.url()).pathname}: ${request.failure()?.errorText ?? "failed"}`));
+    page.on("response", response => { if (response.status() >= 400 && /_next|admin\/announcements|api\/admin/.test(response.url())) networkErrors.push(`${response.status()} ${new URL(response.url()).pathname}`); });
     const post = (path, data) => context.request.post(base + path, { data, headers: { Origin: base } });
 
     const wrong = "fixture wrong password";
@@ -359,7 +378,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
     const renderDestinations = focusedTargets.length ? destinations.filter(item => focusedTargets.includes(item[4])) :
       securityOnly || announcementsOnly ? destinations.filter(item => item[4] === (securityOnly ? "security" : "announcements")) : destinations;
     for (const [suffix, label, headline, region, asset] of renderDestinations) {
-      await page.setViewportSize({ width: 1920, height: 951 });
+      await page.setViewportSize({ width: focusedTargets.length && targetWidths.includes(1440) ? 1440 : 1920, height: 951 });
       const response = await page.goto(base + "/admin" + suffix, { waitUntil: "domcontentloaded", timeout: 90_000 });
       assert.equal(response.status(), 200, `${label} route response`);
       assert.match(response.headers()["cache-control"], /\bno-store\b/);
@@ -376,6 +395,30 @@ test("admin routes fail closed, require real MFA, and render the protected works
         throw new Error(`${label} route shell missing expected heading; response=${response.status()}, headings=${JSON.stringify(headings)}, state=${JSON.stringify(headingState)}, browserErrors=${pageErrors.slice(-6).join(" | ") || "none"}, serverDiagnostics=${serverDiagnostics.join(" | ") || "none"}`, { cause: error });
       }
       await page.getByRole("heading", { name: region, exact: true }).waitFor();
+      const shellSurfaces = await page.evaluate(() => [".admin-shell", ".admin-shell__frame", ".admin-shell__sidebar", ".admin-shell__header", ".admin-shell__workspace"]
+        .map(selector => getComputedStyle(document.querySelector(selector)).backgroundColor));
+      assert.deepEqual(shellSurfaces, Array(5).fill("rgb(255, 249, 252)"), `${label} shell surfaces use the dominant admin background`);
+      if (asset === "announcements") {
+        await page.getByRole("heading", { name: "No announcement selected", exact: true }).waitFor();
+        const panels = await page.evaluate(() => ["Announcement Library", "Announcement Details"].map(title => {
+          const panel = [...document.querySelectorAll('[data-admin-panel="true"]')].find(node => [...node.querySelectorAll("h2, h3")].some(heading => heading.textContent?.trim() === title));
+          if (!panel) return null;
+          const rect = panel.getBoundingClientRect(); return [rect.top, rect.bottom];
+        }));
+        assert.ok(panels.every(Boolean) && Math.abs(panels[0][0] - panels[1][0]) < 2 && Math.abs(panels[0][1] - panels[1][1]) < 2,
+          `Announcement panels align with no selection: ${JSON.stringify(panels)}`);
+      }
+      if (asset === "support") await page.getByRole("heading", { name: "No ticket selected", exact: true }).waitFor();
+      if (asset === "performance") {
+        const pairedPanels = await page.evaluate(() => [["API Response Latency", "Service Status"], ["Request Volume", "Latency Distribution"], ["Database Performance", "Reminder Jobs"]].map(pair => pair.map(title => {
+          const panel = [...document.querySelectorAll('[data-admin-panel="true"]')].find(node => [...node.querySelectorAll("h2, h3")].some(heading => heading.textContent?.trim() === title));
+          if (!panel) return null;
+          const rect = panel.getBoundingClientRect(); return [rect.top, rect.bottom];
+        })));
+        assert.ok(pairedPanels.flat().every(Boolean) && pairedPanels.every(([left, right]) => Math.abs(left[0] - right[0]) < 2 && Math.abs(left[1] - right[1]) < 2),
+          `Performance panels stretch to row height: ${JSON.stringify(pairedPanels)}`);
+      }
+      assert.equal(await page.locator("main summary").filter({ hasText: /view .* data/i }).count(), 0, `${label} has no chart-data disclosure`);
       if (asset === "users") assert.ok(await page.locator("main [role=img]").count() > 0, "the account verification ECharts donut is present");
       if (asset === "analytics") {
         try { await page.locator("#analytics-growth").waitFor(); }
@@ -385,6 +428,57 @@ test("admin routes fail closed, require real MFA, and render the protected works
         }
         const charts = await page.locator("main [role=img]").count();
         assert.ok(charts >= 8, `analytics ECharts include KPI trends and statistical panels (found ${charts})`);
+        if (page.viewportSize().width >= 1100) {
+          const before = await page.evaluate(() => {
+            const main = document.querySelector("main"), header = document.querySelector(".admin-shell__header"), sidebar = document.querySelector(".admin-shell__sidebar");
+            const box = element => { const rect = element.getBoundingClientRect(); return [rect.left, rect.top, rect.right, rect.bottom]; };
+            return { document: [document.documentElement.scrollHeight, document.documentElement.clientHeight], main: [main.clientHeight, main.scrollHeight], header: box(header), sidebar: box(sidebar), maxScroll: main.scrollHeight - main.clientHeight };
+          });
+          assert.ok(before.document[0] <= before.document[1] + 1, `Analytics document stays within the viewport: ${JSON.stringify(before)}`);
+          assert.ok(before.main[1] > before.main[0], "Analytics content uses the internal workspace scroll area");
+          const mainBox = await page.locator("main").boundingBox();
+          await page.mouse.move(mainBox.x + mainBox.width / 2, mainBox.y + mainBox.height / 2);
+          await page.mouse.wheel(0, 650);
+          await page.waitForFunction(() => document.querySelector("main").scrollTop > 0, undefined, { timeout: 3_000 });
+          const after = await page.evaluate(() => {
+            const main = document.querySelector("main"), box = element => { const rect = element.getBoundingClientRect(); return [rect.left, rect.top, rect.right, rect.bottom]; };
+            return { scrollTop: main.scrollTop, windowScrollY: window.scrollY, header: box(document.querySelector(".admin-shell__header")), sidebar: box(document.querySelector(".admin-shell__sidebar")) };
+          });
+          assert.ok(after.scrollTop > 0 && after.windowScrollY === 0, `Workspace alone scrolls: ${JSON.stringify(after)}`);
+          assert.deepEqual(after.header, before.header, "Analytics header stays stationary while workspace scrolls");
+          assert.deepEqual(after.sidebar, before.sidebar, "Analytics sidebar stays stationary while workspace scrolls");
+          if (process.env.ABII_ADMIN_SCREENSHOTS) await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "analytics-workspace-scrolled-1440.png"), animations: "disabled" });
+          await page.evaluate(() => { const main = document.querySelector("main"); main.scrollTop = main.scrollHeight; });
+          await page.mouse.wheel(0, 900);
+          await page.waitForTimeout(100);
+          assert.equal(await page.evaluate(() => window.scrollY), 0, "Reaching the end of Analytics does not scroll the document");
+        }
+      }
+      if (asset === "overview") {
+        await page.waitForTimeout(250);
+        const charts = await page.evaluate(() => ["user-growth", "learning-activity"].map(id => {
+          const heading = document.getElementById(id), card = heading.parentElement, host = card.querySelector('[role="img"]'), canvas = host?.querySelector("canvas");
+          if (!host || !canvas) return { id, host: host && [host.clientWidth, host.clientHeight], canvas: null, pinkMarks: 0, card: null };
+          const context = canvas.getContext("2d");
+          const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+          let pinkMarks = 0;
+          for (let index = 0; index < pixels.length; index += 4) if (pixels[index + 3] > 20 && pixels[index] > 190 && pixels[index + 1] > 70 && pixels[index + 1] < pixels[index] && pixels[index + 2] > 120) pinkMarks++;
+          const rect = card.getBoundingClientRect();
+          return { id, host: [host.clientWidth, host.clientHeight], canvas: [canvas.width, canvas.height], pinkMarks, card: [rect.top, rect.bottom] };
+        }));
+        for (const chart of charts) {
+          assert.ok(chart.host[0] > 0 && chart.host[1] >= 220, `${chart.id} visualization has stable dimensions: ${JSON.stringify(chart)}`);
+          assert.ok(chart.canvas[0] > 0 && chart.canvas[1] > 0 && chart.pinkMarks > 10, `${chart.id} canvas renders chart marks: ${JSON.stringify(chart)}`);
+        }
+        assert.ok(Math.abs(charts[0].card[0] - charts[1].card[0]) < 2 && Math.abs(charts[0].card[1] - charts[1].card[1]) < 2,
+          `Overview charts align in the desktop grid: ${JSON.stringify(charts.map(chart => chart.card))}`);
+        if (process.env.ABII_ADMIN_SCREENSHOTS && page.viewportSize().width >= 1100) {
+          await page.evaluate(() => {
+            const main = document.querySelector("main"), card = document.getElementById("user-growth").parentElement;
+            main.scrollTop += card.getBoundingClientRect().top - main.getBoundingClientRect().top - 70;
+          });
+          await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "overview-charts-1440.png"), animations: "disabled" });
+        }
       }
       if (["analytics", "performance"].includes(asset)) {
         await page.waitForFunction(() => [...document.querySelectorAll("main [role=img] canvas")].some(canvas => canvas.width > 0 && canvas.height > 0));
@@ -393,20 +487,24 @@ test("admin routes fail closed, require real MFA, and render the protected works
       assert.equal(await page.getByRole("navigation", { name: "Admin navigation" }).locator('[aria-current="page"]').innerText(), label);
       const image = page.locator(`main img[src*="admin-${asset}.png"]`);
       await image.evaluate(element => element.decode());
+      const desktopHero = await page.evaluate(adminHeroGeometry);
+      assert.equal(desktopHero.variant, "admin-overview", `${label} desktop hero uses the shared component variant`);
+      assert.equal(desktopHero.background, "rgb(255, 219, 237)", `${label} hero uses the secondary admin surface`);
+      assert.ok(desktopHero.height >= 204 && desktopHero.height < 304, `${label} desktop hero height: ${desktopHero.height}`);
       const geometry = await page.evaluate(workspaceGeometry);
       shellGeometry ??= geometry;
       if (asset === "overview") assert.equal(geometry.left, 24, "admin Overview keeps the established workspace inset");
       assert.deepEqual(geometry, shellGeometry, `${label} desktop shell geometry`);
-      if (asset === "security") await page.getByRole("heading", { name: "Security & audit explorer" }).waitFor();
+      if (asset === "security") await page.getByRole("heading", { name: "Security & Audit Explorer" }).waitFor();
       if (asset === "performance") await page.getByRole("heading", { name: "Endpoint performance" }).waitFor();
-      if (process.env.ABII_ADMIN_SCREENSHOTS) {
-        await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `admin-${asset}-1920.png`), animations: "disabled" });
+      if (process.env.ABII_ADMIN_SCREENSHOTS && process.env.ABII_TEST_ADMIN_LAYOUT_ONLY !== "1") {
+        await screenshotScrollable(page, join(process.env.ABII_ADMIN_SCREENSHOTS, `admin-${asset}-full-1440.png`));
       }
       assert.equal(await image.getAttribute("alt"), "");
 
       if (!["overview", "users", "analytics", "performance", "security", "announcements", "support", "settings"].includes(asset)) assert.equal(await page.locator("main table, main input, main select").count(), 0);
       assert.ok(!(await page.locator("main").innerText()).includes(admin.email));
-      for (const width of focusedTargets.length ? targetWidths : widths) {
+      for (const width of routeWidths) {
         await page.setViewportSize({ width, height: 880 });
         if (["overview", "users", "analytics", "performance"].includes(asset)) {
           try {
@@ -443,8 +541,35 @@ test("admin routes fail closed, require real MFA, and render the protected works
               }) };
           });
         }
-        assert.ok(Object.entries(geometry).every(([key, value]) => key === "bottomGap" ? value >= 0 && value <= 4 : key === "overflow" ? true : value), `${label} at ${width}px: ${JSON.stringify(geometry)}`);
+        const expectedHeroHeight = width < 640 ? 168 : width < 1024 ? 188 : 204;
+        assert.equal(geometry.variant, "admin-overview", `${label} uses the shared admin hero variant`);
+        assert.ok(geometry.height >= expectedHeroHeight, `${label} hero height at ${width}px: ${geometry.height}`);
+        assert.ok(Object.entries(geometry).every(([key, value]) => key === "bottomGap" ? value >= 0 && value <= 4 : ["height", "variant", "background"].includes(key) || key === "overflow" ? true : value), `${label} at ${width}px: ${JSON.stringify(geometry)}; browserErrors=${pageErrors.slice(-6).join(" | ") || "none"}`);
       }
+    }
+
+    if (process.env.ABII_TEST_ADMIN_LAYOUT_ONLY === "1" && focusedTargets.includes("performance")) {
+      await metrics.deleteMany({});
+      await jobs.deleteMany({});
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(base + "/admin/performance?period=1h", { waitUntil: "domcontentloaded", timeout: 30_000 });
+      const monitoring = page.getByRole("region", { name: "System monitoring" });
+      await monitoring.getByRole("heading", { name: "API Response Latency", exact: true }).waitFor();
+      await monitoring.getByRole("heading", { name: "No telemetry collected for this period.", exact: true }).first().waitFor();
+      const pairedPanels = await page.evaluate(() => [["API Response Latency", "Service Status"], ["Request Volume", "Latency Distribution"], ["Database Performance", "Reminder Jobs"]].map(pair => pair.map(title => {
+        const panel = [...document.querySelectorAll('[data-admin-panel="true"]')].find(node => [...node.querySelectorAll("h2, h3")].some(heading => heading.textContent?.trim() === title));
+        if (!panel) return null;
+        const rect = panel.getBoundingClientRect(); return [rect.top, rect.bottom];
+      })));
+      assert.ok(pairedPanels.flat().every(Boolean) && pairedPanels.every(([left, right]) => Math.abs(left[0] - right[0]) < 2 && Math.abs(left[1] - right[1]) < 2),
+        `Empty Performance panels stretch to row height: ${JSON.stringify(pairedPanels)}`);
+      if (process.env.ABII_ADMIN_SCREENSHOTS) await screenshotScrollable(page, join(process.env.ABII_ADMIN_SCREENSHOTS, "performance-empty-full-1440.png"));
+      assert.deepEqual(pageErrors, []);
+      return;
+    }
+    if (process.env.ABII_TEST_ADMIN_LAYOUT_ONLY === "1") {
+      assert.deepEqual(pageErrors, []);
+      return;
     }
 
     if (focusedTargets.length === 1 && focusedTargets[0] === "performance") {
@@ -496,6 +621,10 @@ test("admin routes fail closed, require real MFA, and render the protected works
       await page.waitForURL("**/admin/analytics?period=7");
       assert.equal(await metricValue("New users").textContent(), "1");
       assert.equal(await signupChart.getAttribute("aria-valuemax"), "7");
+      await users.insertMany(Array.from({ length: 11 }, (_, index) => {
+        const createdAt = dayBefore(8 + index * 7);
+        return { _id: new mongoose.Types.ObjectId(), role: "user", email: `retention-${index}@example.invalid`, createdAt, emailVerifiedAt: createdAt };
+      }));
       const growth = analytics.getByRole("region", { name: "Growth & Engagement", exact: true });
       const chartCanvas = growth.locator("canvas").first();
       await chartCanvas.scrollIntoViewIfNeeded();
@@ -505,16 +634,13 @@ test("admin routes fail closed, require real MFA, and render the protected works
       const tooltip = growth.locator(".abii-echart-tooltip").first();
       await tooltip.waitFor({ state: "visible", timeout: 5_000 });
       assert.match(await tooltip.innerText(), /UTC/);
-      const dataDetails = analytics.getByRole("region", { name: "Growth & Engagement", exact: true }).locator("details");
-      const dataSummary = dataDetails.locator("summary");
-      await dataSummary.focus();
-      await page.keyboard.press("Enter");
-      assert.equal(await dataDetails.evaluate(element => element.open), true, "daily data table opens with the keyboard");
-      assert.equal(await analytics.getByRole("region", { name: "Growth and engagement data table" }).locator("tbody tr").count(), 7);
+      assert.equal(await analytics.locator("summary").filter({ hasText: /view .* data/i }).count(), 0, "chart data disclosure controls are removed");
       await signupChart.focus();
       await signupChart.press("Home");
       await signupChart.press("ArrowRight");
       assert.equal(await signupChart.getAttribute("aria-valuenow"), "2");
+      assert.match(await signupChart.getAttribute("aria-valuetext"), /Active learners .* New users/,
+        "keyboard inspection continues to expose chart series values");
       await periods.getByRole("link", { name: "90 days" }).click();
       await page.waitForURL("**/admin/analytics?period=90");
       assert.equal(await periods.getByRole("link", { name: "90 days" }).getAttribute("aria-current"), "page");
@@ -540,6 +666,11 @@ test("admin routes fail closed, require real MFA, and render the protected works
       }
       assert.equal(/Functions cannot be passed to Client Component props|Only plain objects can be passed to Client Components/i.test(server.logs()), false,
         "server-rendered analytics route does not pass chart callbacks through React Flight");
+      assert.deepEqual(pageErrors, []);
+      return;
+    }
+
+    if (focusedTargets.length === destinations.length) {
       assert.deepEqual(pageErrors, []);
       return;
     }
@@ -591,22 +722,33 @@ test("admin routes fail closed, require real MFA, and render the protected works
       // The browser only publishes into this loopback replica-set fixture.
       await page.goto(base + "/admin/announcements", { waitUntil: "domcontentloaded" });
       await page.getByText("No announcements yet. Create a draft to get started.").waitFor({ timeout: 20_000 });
+      await page.waitForLoadState("load", { timeout: 10_000 });
       assert.equal((await fetch(base + "/api/admin/announcements", { method: "POST", headers: { Origin: base, "Content-Type": "application/json" },
         body: JSON.stringify(previewRequest) })).status, 401);
       assert.equal((await context.request.post(base + "/api/admin/announcements", { headers: { Origin: "https://outside.invalid" }, data: previewRequest })).status(), 403);
-      await page.getByRole("link", { name: "Create new" }).click();
-      const editor = page.getByRole("region", { name: "Create announcement" });
+      await page.getByRole("link", { name: "New announcement" }).click();
+      const editor = page.getByRole("region", { name: "Create Announcement" });
+      try { await editor.locator('[data-editor-ready="true"]').waitFor({ timeout: 30_000 }); }
+      catch (error) { throw new Error(`Announcement editor did not hydrate; editor=${(await editor.innerText()).slice(-500)}; browserErrors=${pageErrors.slice(-5).join(" | ") || "none"}; network=${networkErrors.slice(-10).join(" | ") || "none"}; server=${server.logs().slice(-1200)}`, { cause: error }); }
       await editor.getByRole("textbox", { name: "Announcement title" }).fill("Fixture study release");
       await editor.getByRole("textbox", { name: "Message" }).fill("A new way to work through the review queue.");
+      const previewCard = editor.locator(".notification-item--unread");
+      await previewCard.getByText("Fixture study release", { exact: true }).waitFor({ timeout: 10_000 });
+      await previewCard.getByText("A new way to work through the review queue.", { exact: true }).waitFor({ timeout: 10_000 });
       await editor.getByLabel("Destination").selectOption("/review");
+      const estimateReply = page.waitForResponse(response => response.url().endsWith("/api/admin/announcements") && response.request().method() === "POST", { timeout: 15_000 });
       await editor.getByRole("button", { name: "Estimate audience" }).click();
+      let estimateResponse;
+      try { estimateResponse = await estimateReply; }
+      catch (error) { throw new Error(`Audience preview did not respond; editor=${(await editor.innerText()).slice(-500)}; browserErrors=${pageErrors.slice(-5).join(" | ") || "none"}; server=${server.logs().slice(-800)}`, { cause: error }); }
+      assert.equal(estimateResponse.status(), 200, `Audience preview returned ${estimateResponse.status()}: ${(await estimateResponse.text()).slice(0, 300)}; editor=${(await editor.innerText()).slice(-500)}`);
       await editor.getByText(/estimated recipient/).waitFor({ timeout: 15_000 });
-      for (const width of widths) {
+      for (const width of routeWidths) {
         await page.setViewportSize({ width, height: 900 });
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector("main").scrollWidth <= innerWidth), `Announcement editor fits at ${width}px`);
-        if (process.env.ABII_ADMIN_SCREENSHOTS && [320, 390, 1440].includes(width)) {
-          await editor.getByRole("heading", { name: "Create announcement" }).evaluate(el => el.scrollIntoView({ block: "start" }));
-          await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `announcement-editor-${width}.png`), animations: "disabled" });
+        if (process.env.ABII_ADMIN_SCREENSHOTS && [320, 375, 390, 1440].includes(width)) {
+          await editor.getByRole("heading", { name: "Create Announcement" }).evaluate(el => el.scrollIntoView({ block: "start" }));
+          await screenshotScrollable(page, join(process.env.ABII_ADMIN_SCREENSHOTS, `announcement-editor-${width}.png`));
         }
       }
       await editor.getByRole("link", { name: "Back to announcements" }).click();
@@ -621,8 +763,11 @@ test("admin routes fail closed, require real MFA, and render the protected works
       const savedDraftBody = await savedDraft.json();
       assert.equal(savedDraft.status(), 200, `Draft save failed: ${savedDraft.status()} ${JSON.stringify(savedDraftBody)}`);
       assert.equal(savedDraftBody.announcement?.lastAction, "Draft created");
+      await page.waitForURL(url => !url.searchParams.has("editor") && url.searchParams.get("id") === savedDraftBody.announcement.id, { timeout: 15_000 });
+      if (process.env.ABII_ADMIN_SCREENSHOTS) await screenshotScrollable(page, join(process.env.ABII_ADMIN_SCREENSHOTS, "announcement-details-1440.png"));
       const details = page.getByRole("region", { name: "Selected announcement" });
-      await details.getByText("Draft created", { exact: true }).waitFor({ timeout: 20_000 });
+      try { await details.getByText("Draft created", { exact: true }).waitFor({ timeout: 20_000 }); }
+      catch (error) { throw new Error(`Saved draft did not render at ${new URL(page.url()).pathname}${new URL(page.url()).search}; main=${(await page.locator("main").innerText()).slice(-1400)}`, { cause: error }); }
       const publicationId = await details.getByText(/^admin\.[0-9a-f]{24}$/).textContent();
       await details.getByRole("link", { name: "Edit", exact: true }).click();
       const edit = page.getByRole("region", { name: "Edit announcement" });
@@ -642,7 +787,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
       await edit.getByRole("button", { name: "Publish now" }).click();
       const confirm = page.getByRole("dialog", { name: "Publish this announcement?" });
       await confirm.getByText(/cannot be recalled/).waitFor({ timeout: 20_000 });
-      for (const width of widths) {
+      for (const width of routeWidths) {
         await page.setViewportSize({ width, height: 900 });
         assert.ok(await confirm.evaluate(dialog => {
           const box = dialog.getBoundingClientRect();
@@ -671,14 +816,14 @@ test("admin routes fail closed, require real MFA, and render the protected works
       await page.getByRole("dialog", { name: "Retry delivery?" }).getByRole("button", { name: "Confirm retry" }).click();
       await details.getByText("Delivered", { exact: true }).waitFor({ timeout: 35_000 });
       assert.equal(await db.collection("notifications").countDocuments({ dedupeKey: `whats-new:${publicationId}`, userId: learner._id }), 1);
-      for (const width of widths) {
+      for (const width of routeWidths) {
         await page.setViewportSize({ width, height: 900 });
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector("main").scrollWidth <= innerWidth), `Delivery detail fits at ${width}px`);
       }
       if (process.env.ABII_ADMIN_SCREENSHOTS) {
         await page.setViewportSize({ width: 1440, height: 900 });
         await details.evaluate(el => el.scrollIntoView({ block: "start" }));
-        await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, "announcement-delivery-1440.png"), animations: "disabled" });
+        await screenshotScrollable(page, join(process.env.ABII_ADMIN_SCREENSHOTS, "announcement-delivery-1440.png"));
       }
       const filter = page.getByRole("form", { name: "Filter announcements" });
       await filter.getByRole("searchbox").fill(publicationId);
@@ -696,8 +841,8 @@ test("admin routes fail closed, require real MFA, and render the protected works
     }
 
     await page.goto(base + "/admin/security", { waitUntil: "domcontentloaded" });
-    const security = page.getByRole("region", { name: "Security overview" });
-    const explorer = security.getByRole("region", { name: "Security and audit explorer" });
+    const security = page.getByRole("region", { name: "Security Overview" });
+    const explorer = security.getByRole("region", { name: "Security & Audit Explorer" });
     await security.getByText("Elevated rate limiting").waitFor();
     const activity = security.getByRole("slider", { name: "Authentication activity interval values" });
     await page.waitForFunction(() => {
@@ -711,11 +856,14 @@ test("admin routes fail closed, require real MFA, and render the protected works
       return slider && slider.getAttribute("aria-valuenow") === slider.getAttribute("aria-valuemax");
     }, undefined, { timeout: 15_000 });
     assert.doesNotMatch(await page.locator("main").innerText(), /restricted fixture reason/);
-    for (const width of [320, 390, 1440]) {
+    for (const width of [320, 375, 390, 1440]) {
       await page.setViewportSize({ width, height: 900 });
+      await page.waitForFunction(() => [...document.querySelectorAll("main [role=img] canvas")]
+        .every(canvas => Math.abs(canvas.getBoundingClientRect().width - canvas.parentElement.getBoundingClientRect().width) < 2), undefined, { timeout: 5_000 });
       await explorer.getByRole("heading").evaluate(el => el.scrollIntoView({ block: "start" }));
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector("main").scrollWidth <= innerWidth));
       if (process.env.ABII_ADMIN_SCREENSHOTS) await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `security-explorer-${width}.png`), animations: "disabled" });
+      if (process.env.ABII_ADMIN_SCREENSHOTS && [375, 1440].includes(width)) await screenshotScrollable(page, join(process.env.ABII_ADMIN_SCREENSHOTS, `security-full-${width}.png`));
     }
     await explorer.getByRole("link", { name: "Older evidence" }).click();
     await page.waitForURL(url => url.searchParams.has("cursor"), { timeout: 20_000 });
@@ -753,6 +901,79 @@ test("admin routes fail closed, require real MFA, and render the protected works
     }
 
     if (securityOnly) return;
+
+    if (focusedTargets.length === 1 && focusedTargets[0] === "settings") {
+      mkdirSync(process.env.ABII_ADMIN_SCREENSHOTS || ".tmp-admin-grid-stability", { recursive: true });
+      const screenshotDir = process.env.ABII_ADMIN_SCREENSHOTS || ".tmp-admin-grid-stability";
+      let delayedSettingsRead = true;
+      await page.route("**/api/admin/settings", async route => {
+        if (route.request().method() === "GET" && delayedSettingsRead) {
+          delayedSettingsRead = false;
+          await delay(1200);
+        }
+        await route.continue();
+      });
+      await page.goto(base + "/admin/settings", { waitUntil: "domcontentloaded" });
+      await page.getByRole("status", { name: "Loading administrator settings" }).waitFor();
+      await page.screenshot({ path: join(screenshotDir, "admin-settings-skeleton-1440.png"), animations: "disabled" });
+      await page.getByRole("heading", { name: "Administrator Settings" }).waitFor();
+      await page.unrouteAll({ behavior: "wait" });
+
+      let failSettingsRead = true;
+      await page.route("**/api/admin/settings", async route => {
+        if (route.request().method() === "GET" && failSettingsRead) {
+          failSettingsRead = false;
+          await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Settings fixture unavailable." }) });
+          return;
+        }
+        await route.continue();
+      });
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.getByText("Settings fixture unavailable.").waitFor();
+      await page.getByRole("button", { name: "Retry loading settings" }).click();
+      await page.getByRole("heading", { name: "Administrator Settings" }).waitFor();
+      await page.unrouteAll({ behavior: "wait" });
+
+      const settingsPost = () => page.waitForResponse(response => response.url().endsWith("/api/admin/settings") && response.request().method() === "POST");
+      await page.getByLabel("Display name").fill("Focused Settings Admin");
+      const profileRequest = settingsPost();
+      await page.getByRole("button", { name: "Save profile" }).click();
+      assert.equal((await profileRequest).status(), 200);
+      const warning = page.getByLabel("Warn before this session expires");
+      await warning.setChecked(!(await warning.isChecked()));
+      const preferenceRequest = settingsPost();
+      await page.getByRole("button", { name: "Save preferences" }).click();
+      assert.equal((await preferenceRequest).status(), 200);
+      await page.getByLabel("Server-error threshold").selectOption("10");
+      const monitoringRequest = settingsPost();
+      await page.getByRole("button", { name: "Save monitoring alerts" }).click();
+      assert.equal((await monitoringRequest).status(), 200);
+      await page.getByLabel("Show a public support notice").check();
+      await page.getByLabel("Notice text").fill("Fixture notice for focused Settings browser check.");
+      const platformRequest = settingsPost();
+      await page.getByRole("button", { name: "Save platform configuration" }).click();
+      assert.equal((await platformRequest).status(), 200);
+      await page.goto(base + "/support", { waitUntil: "domcontentloaded" });
+      await page.getByText("Fixture notice for focused Settings browser check.", { exact: true }).waitFor();
+      await page.goto(base + "/admin/settings", { waitUntil: "domcontentloaded" });
+      await page.getByRole("heading", { name: "Administrator Settings" }).waitFor();
+      await page.getByRole("button", { name: /Change password/ }).click();
+      const passwordDialog = page.getByRole("dialog", { name: "Change administrator password" });
+      await passwordDialog.getByLabel("Current password").fill(password);
+      await passwordDialog.getByLabel("New password", { exact: true }).fill("Fixture replacement password 456");
+      await passwordDialog.getByLabel("Confirm new password").fill("Fixture password mismatch 789");
+      await passwordDialog.getByLabel("I understand this signs out every administrator session.").check();
+      let passwordMutationCount = 0;
+      const countPasswordMutations = request => { if (request.url().endsWith("/api/admin/settings") && request.method() === "POST") passwordMutationCount++; };
+      page.on("request", countPasswordMutations);
+      await passwordDialog.getByRole("button", { name: "Change password and sign out" }).click();
+      await passwordDialog.getByRole("alert").getByText("New passwords must match.").waitFor();
+      assert.equal(passwordMutationCount, 0);
+      page.off("request", countPasswordMutations);
+      await passwordDialog.getByRole("button", { name: "Cancel" }).click();
+      assert.deepEqual(pageErrors, []);
+      return;
+    }
 
     await page.goto(base + "/admin", { waitUntil: "domcontentloaded" });
     const period = page.getByLabel("Reporting period");
@@ -810,15 +1031,36 @@ test("admin routes fail closed, require real MFA, and render the protected works
     assert.equal(await signupChart.getAttribute("aria-valuenow"), "2");
     await signupChart.press("End");
     assert.equal(await signupChart.getAttribute("aria-valuenow"), "7", "End selects the last observed day for accessible chart inspection");
-    await growth.locator("summary").click();
-    await analytics.getByRole("region", { name: "Growth and engagement data table" }).waitFor();
-    assert.equal(await analytics.getByRole("region", { name: "Growth and engagement data table" }).locator("tbody tr").count(), 7);
+    assert.equal(await growth.locator("summary").filter({ hasText: /view .* data/i }).count(), 0, "chart data disclosure is absent");
+    await signupChart.focus();
+    await signupChart.press("Home");
+    await signupChart.press("ArrowRight");
+    assert.match(await signupChart.getAttribute("aria-valuetext"), /Active learners .* New users/);
     await periods.getByRole("link", { name: "90 days" }).click();
     await page.waitForURL("**/admin/analytics?period=90");
     await signupChart.waitFor();
     assert.equal(await signupChart.getAttribute("aria-valuemax"), "90");
     assert.equal(await periods.getByRole("link", { name: "90 days" }).getAttribute("aria-current"), "page");
     const cohort = analytics.getByRole("region", { name: "Retention cohort matrix" });
+    const cohortRows = cohort.locator("tbody tr");
+    const cohortCount = await cohortRows.count();
+    if (cohortCount > 10) {
+      assert.equal(cohortCount, 10, "retention matrix is paged at ten rows");
+      const paging = analytics.getByRole("navigation", { name: "Retention cohort pages" });
+      assert.match(await paging.innerText(), /Showing 1–10 of \d+ cohorts · Page 1 of 2/);
+      await paging.getByRole("button", { name: "Next" }).click();
+      assert.ok(await cohortRows.count() <= 10 && await cohortRows.count() > 0, "next cohort page renders a bounded set");
+      assert.match(await paging.innerText(), /Showing 11–\d+ of \d+ cohorts · Page 2 of 2/);
+      assert.equal(await paging.getByRole("button", { name: "Next" }).isDisabled(), true);
+      await paging.getByRole("button", { name: "Previous" }).click();
+      assert.equal(await cohortRows.count(), 10, "previous returns to the first cohort page");
+      await paging.getByRole("button", { name: "Next" }).click();
+      await periods.getByRole("link", { name: "7 days" }).click();
+      await page.waitForURL("**/admin/analytics?period=7");
+      await periods.getByRole("link", { name: "90 days" }).click();
+      await page.waitForURL("**/admin/analytics?period=90");
+      assert.equal(await cohortRows.count(), 10, "changing the reporting window resets the local table to its first page");
+    }
     for (const width of widths) {
       await page.setViewportSize({ width, height: 900 });
       assert.ok(await cohort.evaluate(element => {
@@ -1097,6 +1339,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
       assert.equal((await context.request.post(base + "/api/auth/login", { headers: { Origin: base }, data: { email: admin.email, password } })).status(), 202);
       assert.equal((await context.request.post(base + "/api/auth/admin-mfa", { headers: { Origin: base }, data: { code: totpAt(seed, Date.now()) } })).status(), 200);
       await page.goto(base + "/admin/settings", { waitUntil: "domcontentloaded" });
+      await page.getByRole("button", { name: /Change password/ }).click();
       await page.getByLabel("Current password").fill(password);
       await page.getByLabel("New password", { exact: true }).fill("Fixture replacement password 456");
       await page.getByLabel("Confirm new password").fill("Fixture replacement password 456");

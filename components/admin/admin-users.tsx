@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { Card } from "@/components/ui/card";
+import { AdminEmptyState } from "@/components/admin/admin-ui";
+import { AdminPagination } from "@/components/admin/admin-pagination";
 import { OverviewDonut } from "@/components/admin/overview-chart";
 import { type AccountCounts, type DirectoryUser, type UsersPage, type UsersQuery, userSearchLimit, usersHref, usersPath } from "@/lib/admin/users-contract";
 import { AccountAvatar, AccountFlags, UserDetailSheet, accountDate, control } from "./admin-user-detail";
@@ -116,14 +118,24 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
           {error ? <div role="alert" className="px-4 py-8 sm:px-5">
             <p className="text-sm font-semibold">{error}</p>
             {!page && <button type="button" className={`${control} mt-3 px-3`} onClick={refresh}>Try again</button>}
-          </div> : page?.rows.length === 0 ? <div className="px-4 py-10 sm:px-5">
-            <p className="font-semibold">{filtered ? "No matching users" : "No users yet"}</p>
-            <p className="mt-1 text-sm text-muted">{filtered ? "Search from the start of a name or email, or reset the filters." : "Learner accounts will appear here after registration."}</p>
-            {filtered && <Link href={usersPath} prefetch={false} className={`${control} mt-3 px-3`}>Reset filters</Link>}
+          </div> : page?.rows.length === 0 ? <div className="px-4 sm:px-5">
+            <div className="py-3 md:hidden"><AdminEmptyState size="compact" title={filtered ? "No matching users" : "No users yet"}
+              description={filtered ? "Search from the start of a name or email, or reset the filters." : "Learner accounts will appear here after registration."}
+              action={filtered ? <Link href={usersPath} prefetch={false} className={`${control} mt-1 px-3`}>Reset filters</Link> : undefined} /></div>
+            <table className="hidden w-full table-fixed text-left text-sm md:table">
+              <caption className="sr-only">Learner accounts</caption>
+              <thead className="border-b border-border bg-[#FFF9FC] text-xs text-[#66565F]"><tr>
+                <th scope="col" className="w-[34%] px-5 py-3 font-semibold">User</th><th scope="col" className="px-2 py-3 font-semibold">Verification</th>
+                <th scope="col" className="px-2 py-3 font-semibold">Status</th><th scope="col" className="px-2 py-3 font-semibold">Joined (UTC)</th>
+                <th scope="col" className="w-28 px-5 py-3 text-right font-semibold">Actions</th>
+              </tr></thead>
+              <tbody><tr><td colSpan={5} className="h-40 px-5 text-center"><AdminEmptyState size="compact" title={filtered ? "No matching users" : "No users yet"}
+                description={filtered ? "Search from the start of a name or email, or reset the filters." : "Learner accounts will appear here after registration."} /></td></tr></tbody>
+            </table>
           </div> : page && <>
             <table className="hidden w-full table-fixed text-left text-sm md:table">
               <caption className="sr-only">Learner accounts</caption>
-              <thead className="border-b border-border bg-[#FFDBED]/35 text-xs text-[#66565F]">
+              <thead className="border-b border-border bg-[#FFF9FC] text-xs text-[#66565F]">
                 <tr>
                   <th scope="col" className="w-[34%] px-5 py-3 font-semibold">User</th>
                   <th scope="col" className="px-2 py-3 font-semibold">Verification</th>
@@ -152,13 +164,10 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
                 </div>
               </li>)}
             </ul>
-            <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3 sm:px-5">
-              <p className="text-sm text-muted tabular-nums" aria-live="polite">
-                {page.start !== null && page.total !== null && page.start + page.rows.length - 1 <= page.total
-                  ? `Showing ${number.format(page.start)}–${number.format(page.start + page.rows.length - 1)} of ${number.format(page.total)}`
-                  : `Showing ${page.rows.length} users on this page`}
-              </p>
-              <nav aria-label="Directory pagination" className="flex flex-wrap gap-2">
+            <footer className="px-4 py-3 sm:px-5">
+              <AdminPagination label="Directory pagination" result={page.start !== null && page.total !== null && page.start + page.rows.length - 1 <= page.total
+                ? `Showing ${number.format(page.start)}–${number.format(page.start + page.rows.length - 1)} of ${number.format(page.total)}`
+                : `Showing ${page.rows.length} users on this page`}>
                 {([["Previous", page.previous, ChevronLeft], ["Next", page.next, ChevronRight]] as const).map(([label, token, Icon]) => {
                   const content = <>{label === "Previous" && <Icon size={15} aria-hidden="true" />}{label}{label === "Next" && <Icon size={15} aria-hidden="true" />}</>;
                   const href = usersHref(query, token);
@@ -167,7 +176,7 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
                       onNavigate={event => { event.preventDefault(); navigate(href); }}>{content}</Link>
                     : <button key={label} type="button" disabled className={`${control} px-2.5 opacity-45`}>{content}</button>;
                 })}
-              </nav>
+              </AdminPagination>
             </footer>
           </>}
         </div>

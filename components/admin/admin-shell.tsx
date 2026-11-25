@@ -63,10 +63,10 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
   }
 
   return (
-    <div className="h-dvh overflow-hidden bg-pink-soft text-foreground sm:p-3 lg:p-4">
+    <div className="admin-shell h-dvh overflow-hidden text-foreground sm:p-3 lg:p-4">
       <a href="#admin-main" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-40 focus:rounded-lg focus:bg-white focus:p-3">Skip to main content</a>
-      <div className="mx-auto flex h-full max-w-[1600px] overflow-hidden bg-white sm:rounded-[20px] sm:border sm:border-[#F0E5E9] sm:shadow-[0_10px_40px_rgba(65,37,48,0.07)]">
-        <aside className="hidden w-[220px] shrink-0 flex-col overflow-y-auto border-r border-[#F0E8EC] bg-[#FFFCFD] lg:flex">
+      <div className="admin-shell__frame mx-auto flex h-full max-w-[1600px] overflow-hidden sm:rounded-[20px] sm:border sm:shadow-[0_10px_40px_rgba(65,37,48,0.07)]">
+        <aside className="admin-shell__sidebar hidden w-[220px] shrink-0 flex-col overflow-y-auto border-r lg:flex">
           <div className="grid shrink-0 justify-items-start gap-1 px-5 py-7">
             <WorkspaceBrandMark />
             <p className={`min-h-8 ${workspaceBrandSubtitle}`}>Administration</p>
@@ -76,7 +76,7 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className={workspaceHeader}>
+          <header className={`${workspaceHeader} admin-shell__header`}>
             <div className="flex min-w-0 items-center gap-2 lg:hidden">
               <button ref={openDrawer} type="button" aria-label="Open admin navigation" aria-expanded={drawerOpen} aria-controls="admin-drawer"
                 className={`grid size-11 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-pink-soft ${focusRing}`}
@@ -106,8 +106,8 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
             </div>
           </header>
 
-          <main id="admin-main" tabIndex={-1} data-authenticated-motion className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-white outline-offset-[-2px]">
-            <div className="px-4 py-4 sm:px-6 sm:py-6 lg:pt-5 lg:pb-8">{children}</div>
+          <main id="admin-main" tabIndex={-1} data-authenticated-motion className="admin-shell__workspace min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain outline-offset-[-2px]">
+            <div className="mx-auto w-full max-w-[1536px] px-4 py-4 sm:px-6 sm:py-6 lg:pt-5 lg:pb-8">{children}</div>
           </main>
         </div>
       </div>
@@ -116,7 +116,7 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
         onClose={() => { setDrawerOpen(false); if (openDrawer.current?.offsetWidth) openDrawer.current.focus(); }}
         onClick={event => { if (event.target === event.currentTarget) drawer.current?.close(); }}
         className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-[#30232B]/40">
-        <div className="h-full w-[min(290px,88vw)] overflow-y-auto overscroll-contain bg-[#FFFCFD] pb-4 shadow-xl">
+        <div className="admin-shell__sidebar h-full w-[min(290px,88vw)] overflow-y-auto overscroll-contain border-r pb-4 shadow-xl">
           <div className="flex items-center justify-between gap-2 px-4 py-4">
             <WorkspaceBrandMark />
             <button type="button" aria-label="Close admin navigation" onClick={() => drawer.current?.close()}

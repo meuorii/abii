@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { AdminEmptyState } from "@/components/admin/admin-ui";
 import { AnalyticsChart } from "./analytics-chart";
 import { AdminDonut, AdminSparkline, type SparklineUnit } from "./admin-echart";
+import { AdminRetentionTable } from "./admin-retention-table";
 import {
   type AnalyticsReport, type Comparison, type Fraction, type MetricResult, type ReviewTotals, type Trend,
   countChange, quizModes, rate, retentionHorizon,
@@ -42,7 +44,7 @@ function rateComparison(value: Comparison<Fraction>) {
 }
 
 function Metric({ label, value, comparison, featured = false, sparkline, unit = "count" }: { label: string; value: string | null; comparison: string; featured?: boolean; sparkline?: { day: string; count: number | null }[] | null; unit?: SparklineUnit }) {
-  return <div className={`min-w-0 rounded-xl border border-[#FFDBED] p-3.5 shadow-none sm:px-5 sm:py-4 ${featured ? "bg-[#FFDBED]" : "bg-[#FFF9FC]"}`}>
+  return <div className={`min-h-[136px] min-w-0 rounded-xl border border-[#FFDBED] p-3.5 shadow-none sm:px-5 sm:py-4 ${featured ? "bg-[#FFDBED]" : "bg-white"}`}>
     <dt className="text-xs font-semibold text-[#574650] sm:text-sm">{label}</dt>
     <dd>
       <p className="mt-1 text-[1.7rem] leading-none font-bold tracking-[-0.03em] tabular-nums sm:text-[2rem]">{value ?? <span aria-label="Unavailable">—</span>}</p>
@@ -54,8 +56,8 @@ function Metric({ label, value, comparison, featured = false, sparkline, unit = 
 function Panel({ id, title, description, alignChart = false, className = "", children }: {
   id: string; title: string; description: string; alignChart?: boolean; className?: string; children: ReactNode;
 }) {
-  return <Card padding="none" className={`min-w-0 p-4 shadow-none sm:p-5 ${className}`}>
-    <section aria-labelledby={id}>
+  return <Card padding="none" className={`flex min-h-0 min-w-0 flex-col p-4 shadow-none sm:p-5 ${className}`}>
+    <section aria-labelledby={id} className="flex min-h-0 flex-1 flex-col">
       <h3 id={id} className="text-lg font-bold tracking-tight">{title}</h3>
       <p className={`mt-0.5 max-w-[68ch] text-sm leading-5 text-muted ${alignChart ? "min-[980px]:min-h-10" : ""}`}>{description}</p>
       {children}
@@ -65,7 +67,7 @@ function Panel({ id, title, description, alignChart = false, className = "", chi
 
 function Unavailable({ result }: { result: MetricResult<unknown> }) {
   if (result.status !== "unavailable") return null;
-  return <p className="mt-4 rounded-lg bg-pink-soft px-3.5 py-3 text-sm leading-5 text-[#694453]">{result.reason}</p>;
+  return <div className="mt-4 flex min-h-[220px] flex-1 flex-col sm:min-h-[240px]"><AdminEmptyState icon="alert" title="Data unavailable" description={result.reason} size="visualization" /></div>;
 }
 
 function TrendBody({ title, label, trend, kind, color, empty }: {
@@ -79,17 +81,6 @@ function TrendBody({ title, label, trend, kind, color, empty }: {
     <AnalyticsChart title={title} days={trend.daily.map(point => point.day)} kind={kind}
       series={[{ label, color, values: trend.daily.map(point => point.count) }]} empty={empty} />
   </>;
-}
-
-function RetentionCell({ value }: { value: Fraction }) {
-  const measured = rate(value);
-  const opacity = measured === null ? 0 : 22 + Math.round(measured * 0.58);
-  return <div style={{ backgroundColor: measured === null ? "#FFF9FC" : `color-mix(in srgb, #F8769C ${opacity}%, #FFDBED)` }} className="rounded-md px-1 py-1.5 leading-4 tabular-nums text-[#30252D] [overflow-wrap:anywhere] sm:px-2">
-    {measured === null ? <span className="text-xs" aria-label="Return day has yet to end">—</span> : <>
-      <span className="block font-bold">{percent(measured)}</span>
-      <span className="block text-[11px]">{number.format(value.counted)}/{number.format(value.eligible)}</span>
-    </>}
-  </div>;
 }
 
 const accuracy = (totals: ReviewTotals): Fraction => ({ counted: totals.correct, eligible: totals.correct + totals.wrong });
@@ -170,7 +161,7 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
         </Panel>
         <Panel id="analytics-retention" title="Learning Retention" description="Cohort analysis · exact-day learning returns, measured by UTC date." className="order-5 min-[1100px]:col-span-12">
           {retention ? <>
-            <dl className="mt-3.5 grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-[#FFFAFC]">
+            <dl className="mt-3.5 grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-[#FFF9FC]">
               {retentionHorizon.map(horizon => <div key={horizon} className="min-w-0 px-2 py-2.5 sm:px-3">
                 <dt className="text-xs font-semibold text-muted">Day {horizon}</dt>
                 <dd><p className="mt-1 text-lg font-bold tabular-nums">{percent(rate(retention.current[horizon]))}</p>
@@ -178,20 +169,8 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
                 </dd>
               </div>)}
             </dl>
-            {cohorts.length ? <div role="region" aria-label="Retention cohort matrix" tabIndex={0} className={`mt-3 max-h-72 overflow-auto rounded-lg border border-border ${focus}`}>
-              <table className="w-full min-w-[220px] table-fixed text-left text-xs">
-                <caption className="sr-only">Weekly signup cohorts with returned and eligible counts for days 1, 7 and 30</caption>
-                <thead className="sticky top-0 bg-white text-muted"><tr>
-                  <th scope="col" className="px-2 py-2 max-sm:w-[27%]">Signup dates</th><th scope="col" className="px-1.5 py-2 max-sm:w-[18%]">Signups</th>
-                  {retentionHorizon.map(horizon => <th key={horizon} scope="col" className="px-2 py-2">D{horizon}</th>)}
-                </tr></thead>
-                <tbody>{cohorts.map(cohort => <tr key={cohort.start} className="border-t border-border">
-                  <th scope="row" className="px-2 py-1.5 font-semibold sm:whitespace-nowrap">{shortDate.formatRange(new Date(cohort.start), new Date(cohort.end))}</th>
-                  <td className="px-1.5 py-1.5 tabular-nums">{number.format(cohort.size)}</td>
-                  {retentionHorizon.map(horizon => <td key={horizon} className="px-1 py-1.5"><RetentionCell value={cohort.rates[horizon]} /></td>)}
-                </tr>)}</tbody>
-              </table>
-            </div> : <p className="mt-3 text-sm text-muted">No signup cohorts in this period.</p>}
+            {cohorts.length ? <AdminRetentionTable key={`${report.window.days}-${report.window.start.toISOString()}`} cohorts={cohorts}
+              cohortDateLabels={cohorts.map(cohort => shortDate.formatRange(new Date(cohort.start), new Date(cohort.end)))} /> : <p className="mt-3 text-sm text-muted">No signup cohorts in this period.</p>}
             <p className="mt-3 text-xs leading-5 text-muted">Cells show returns / eligible signups. A dash marks a return day that had yet to end. Overall rates pool mature observations. Erased or unrecorded activity is absent.</p>
           </> : <Unavailable result={report.retention} />}
         </Panel>
@@ -215,7 +194,7 @@ export function AdminAnalytics({ report }: { report: AnalyticsReport }) {
         </Panel>
         <Panel id="analytics-quizzes" title="Quiz Preferences" description="Available completed-session sample." className="order-4 min-[1100px]:col-span-4">
           {quizzes ? <>
-            <div className="mt-3 rounded-lg bg-[#FFF2F7] px-3 py-2 text-xs leading-5 text-[#66384A]">
+            <div className="mt-3 rounded-lg bg-[#FFF9FC] px-3 py-2 text-xs leading-5 text-[#66565F]">
               <p className="font-bold">Partial coverage</p>
               <p>{report.quizzes.status === "partial" && report.quizzes.coverage}</p>
             </div>

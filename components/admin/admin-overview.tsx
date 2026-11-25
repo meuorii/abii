@@ -8,7 +8,7 @@ import { OverviewChart, OverviewSparkline } from "./overview-chart";
 const numbers = new Intl.NumberFormat("en");
 const date = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 const timestamp = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
-const panelGrid = "grid min-w-0 items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]";
+const panelGrid = "grid min-w-0 items-stretch gap-4 min-[1100px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]";
 
 type Trend = OverviewReport["trends"]["registrations"];
 function TrendText({ trend, label, zeroLabel = "change" }: { trend: Trend; label: string; zeroLabel?: string }) {

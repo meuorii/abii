@@ -1,57 +1,53 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { SkeletonBlock, SkeletonRegion } from "@/components/ui/skeleton";
 import { OverviewSkeleton } from "@/components/admin/admin-overview";
 import { UsersSkeleton } from "@/components/admin/admin-users-skeleton";
 import { AnalyticsSkeleton } from "@/components/admin/admin-analytics-skeleton";
 
-import { AnnouncementsSkeleton } from "@/components/admin/admin-announcements";
+import { AnnouncementEditorSkeleton, AnnouncementsSkeleton } from "@/components/admin/admin-announcements";
 import { SecuritySkeleton } from "@/components/admin/admin-security";
 import { PerformanceSkeleton } from "@/components/admin/admin-performance";
+import { AdminPageHeroSkeleton } from "@/components/admin/admin-page-hero";
+import { SupportSkeleton } from "@/components/admin/admin-support";
+import { SettingsSkeleton } from "@/components/admin/admin-settings";
 
 export default function LoadingAdminPage() {
   const pathname = usePathname();
-  const hero = <SkeletonBlock className="h-[170px] rounded-[20px] sm:h-[250px] lg:h-[282px] xl:h-[312px]" />;
-  const compactHero = <SkeletonBlock className="h-[164px] rounded-[18px] sm:h-[188px] lg:h-[204px]" />;
+  const searchParams = useSearchParams();
+  const adminHero = <AdminPageHeroSkeleton />;
   if (pathname === "/admin") {
-    return <div className="grid gap-5 sm:gap-6"><SkeletonBlock className="h-[164px] rounded-[18px] sm:h-[188px] lg:h-[204px]" /><OverviewSkeleton /></div>;
+    return <div className="admin-overview-workspace grid gap-5 sm:gap-6">{adminHero}<OverviewSkeleton /></div>;
   }
   if (pathname === "/admin/users") {
-    return <div className="admin-loading-refined grid gap-5 bg-[#FFF9FC] sm:gap-6">{compactHero}<UsersSkeleton /></div>;
+    return <div className="admin-loading-refined grid gap-5 sm:gap-6">{adminHero}<UsersSkeleton /></div>;
   }
   if (pathname === "/admin/analytics") {
-    return <div className="admin-loading-refined grid gap-5 bg-[#FFF9FC] sm:gap-6">{compactHero}<AnalyticsSkeleton controls /></div>;
+    return <div className="admin-loading-refined grid gap-5 sm:gap-6">{adminHero}<AnalyticsSkeleton controls /></div>;
   }
   if (pathname === "/admin/performance") {
-    return <div className="admin-loading-refined grid gap-5 bg-[#FFF9FC] sm:gap-6">{compactHero}<PerformanceSkeleton controls /></div>;
+    return <div className="admin-loading-refined grid gap-5 sm:gap-6">{adminHero}<PerformanceSkeleton controls /></div>;
   }
   if (pathname === "/admin/security") {
-    return <div className="grid gap-5 sm:gap-6">{hero}<SecuritySkeleton controls /></div>;
+    return <div className="admin-refined grid gap-5 sm:gap-6">{adminHero}<SecuritySkeleton controls /></div>;
   }
   if (pathname === "/admin/announcements") {
-    return <div className="grid gap-5 sm:gap-6">{hero}<AnnouncementsSkeleton /></div>;
+    if (searchParams.get("editor") === "new" || searchParams.get("editor") === "edit") {
+      return <div className="admin-refined grid gap-5 sm:gap-6"><AnnouncementEditorSkeleton /></div>;
+    }
+    return <div className="admin-refined grid gap-5 sm:gap-6">{adminHero}<AnnouncementsSkeleton /></div>;
   }
   if (pathname === "/admin/support") {
-    return <SkeletonRegion label="Loading support workspace" className="grid gap-5 sm:gap-6">
-      {hero}
-      <div className="grid grid-cols-3 gap-3">{[0, 1, 2].map(item => <SkeletonBlock key={item} className="h-20 rounded-xl" />)}</div>
-      <div className="grid gap-4 min-[880px]:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]"><SkeletonBlock className="h-72 rounded-xl" /><SkeletonBlock className="h-96 rounded-xl" /></div>
-    </SkeletonRegion>;
+    return <div className="grid gap-5 sm:gap-6">{adminHero}<SupportSkeleton /></div>;
   }
   if (pathname === "/admin/settings") {
-    return <SkeletonRegion label="Loading administrator settings" className="grid gap-5 sm:gap-6">
-      {hero}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.9fr)]">
-        <div className="grid gap-4"><SkeletonBlock className="h-64 rounded-xl" /><SkeletonBlock className="h-72 rounded-xl" /><SkeletonBlock className="h-64 rounded-xl" /></div>
-        <div className="grid content-start gap-4"><SkeletonBlock className="h-72 rounded-xl" /><SkeletonBlock className="h-80 rounded-xl" /></div>
-      </div>
-    </SkeletonRegion>;
+    return <div className="grid gap-5 sm:gap-6">{adminHero}<SettingsSkeleton /></div>;
   }
   const hasSummary = pathname !== "/admin/settings";
   return (
-    <SkeletonRegion label="Loading workspace" className="grid gap-5 sm:gap-6">
-      {hero}
+    <SkeletonRegion label="Loading administrator workspace" className="grid gap-5 sm:gap-6">
+      {adminHero}
       {hasSummary && <div className="grid gap-3 sm:grid-cols-3">
         {Array.from({ length: 3 }, (_, index) => <SkeletonBlock key={index} className="h-20 rounded-2xl" />)}
       </div>}

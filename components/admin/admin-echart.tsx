@@ -57,6 +57,9 @@ export function AdminSparkline({ name, timestamps, values, unit }: {
   values: (number | null)[];
   unit: SparklineUnit;
 }) {
+  if (!values.length || values.every(value => value === null)) {
+    return <span role="img" aria-label={`${name}: no observations`} className="text-[11px] text-muted">No observations</span>;
+  }
   const dateTime = new Intl.DateTimeFormat("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
   const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: unit === "count" ? 0 : 1 });
   const valueText = (value: number | null) => value === null ? "No observations" :

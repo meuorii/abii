@@ -3,7 +3,7 @@ import { CircleCheck, CircleHelp, CircleX, Clock3, TriangleAlert } from "lucide-
 import type { ReactNode } from "react";
 import { AnalyticsChart } from "@/components/admin/analytics-chart";
 import { AdminSparkline } from "@/components/admin/admin-echart";
-import { AdminPanel } from "@/components/admin/admin-ui";
+import { AdminEmptyState, AdminPanel } from "@/components/admin/admin-ui";
 import { SkeletonBlock, SkeletonRegion } from "@/components/ui/skeleton";
 import type { PerformanceReport } from "@/lib/admin/performance";
 import { emptyLatency, latencyBounds, mergeLatency, percentiles, routeLabels, type HealthState, type Latency, type MonitoringWindow } from "@/lib/performance/monitoring";
@@ -15,7 +15,7 @@ const preciseDate = new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "
 const time = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 const date = new Intl.DateTimeFormat("en-GB", { month: "short", day: "numeric", timeZone: "UTC" });
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#993557]";
-const split = "grid min-w-0 grid-cols-1 items-start gap-4 min-[1100px]:col-span-12 min-[1100px]:grid-cols-12";
+const split = "grid min-w-0 grid-cols-1 items-stretch gap-4 min-[1100px]:col-span-12 min-[1100px]:grid-cols-12";
 const columns = ["Endpoint", "Requests", "p50", "p95", "p99", "Server errors", "Last seen"];
 const coverageText = {
   observed: "Recorded observations. Delivery gaps are possible.",
@@ -79,7 +79,7 @@ export function PerformanceControls({ window }: { window: MonitoringWindow }) {
 
 function Kpi({ label, value, children, featured = false, sparkline }: { label: string; value: string; children: ReactNode; featured?: boolean; sparkline: ReactNode }) {
   return (
-    <div className={`min-w-0 rounded-xl border border-[#FFDBED] px-3 py-3.5 shadow-none sm:px-5 sm:py-4 ${featured ? "bg-[#FFDBED]" : "bg-[#FFF9FC]"}`}>
+    <div className={`min-h-[136px] min-w-0 rounded-xl border border-[#FFDBED] px-3 py-3.5 shadow-none sm:px-5 sm:py-4 ${featured ? "bg-[#FFDBED]" : "bg-white"}`}>
       <dt className="text-sm font-semibold">{label}</dt>
       <dd className={`mt-1.5 tracking-tight tabular-nums ${value === "Unavailable" ? "text-base font-semibold text-[#685967] sm:text-lg" : "text-xl font-semibold sm:text-2xl"}`}>{value}</dd>
       <dd className="mt-1 text-xs leading-5 text-muted">{children}</dd>
@@ -89,19 +89,22 @@ function Kpi({ label, value, children, featured = false, sparkline }: { label: s
 }
 
 function Empty({ children }: { children: ReactNode }) {
-  return <p className="rounded-lg border border-dashed border-border bg-[#FFFBFD] px-3.5 py-4 text-sm leading-6 text-muted">{children}</p>;
+  return <p className="rounded-lg border border-dashed border-border bg-[#FFF9FC] px-3.5 py-4 text-sm leading-6 text-muted">{children}</p>;
+}
+
+function VisualEmpty({ children }: { children: string }) {
+  return <div className="mt-3 flex min-h-[220px] flex-1 flex-col sm:min-h-[240px]"><AdminEmptyState icon="alert" title={children} size="visualization" /></div>;
 }
 
 function Endpoints({ report }: { report: PerformanceReport }) {
   return (
     <AdminPanel title="Endpoint performance" description="Quiz handlers, ordered by observed request volume. Client errors are tracked separately.">
-      {!report.totals.latency.count ? <Empty>{coverageText[report.apiCoverage]}</Empty> :
         <div role="region" tabIndex={0} aria-label="Endpoint performance data" className={`relative overflow-x-auto rounded-lg border border-border ${focus}`}>
           <table className="w-full min-w-[660px] text-left text-xs tabular-nums">
             <caption className="sr-only">Quiz endpoint requests, latency in milliseconds, server errors and last observation</caption>
-            <thead className="bg-[#FBF2F6] text-muted"><tr>{columns.map(label =>
+            <thead className="bg-[#FFF9FC] text-muted"><tr>{columns.map(label =>
               <th key={label} scope="col" className="whitespace-nowrap px-3 py-2.5 font-semibold">{label}</th>)}</tr></thead>
-            <tbody>{report.endpoints.map(({ route, metrics }) => {
+            <tbody>{report.endpoints.length ? report.endpoints.map(({ route, metrics }) => {
               const size = metrics.latency.count;
               const { p50, p95, p99 } = percentiles(metrics.latency);
               return <tr key={route} className="border-t border-border">
@@ -111,9 +114,9 @@ function Endpoints({ report }: { report: PerformanceReport }) {
                 <td className="whitespace-nowrap px-3">{size ? `${percentage.format(metrics.serverErrors / size)} (${metrics.serverErrors})` : "—"}</td>
                 <td className="whitespace-nowrap px-3"><Stamped value={metrics.lastAt} /></td>
               </tr>;
-            })}</tbody>
+            }) : <tr><td colSpan={columns.length} className="h-44 px-3 text-center"><AdminEmptyState size="compact" title="No endpoint observations" description={coverageText[report.apiCoverage]} icon="alert" /></td></tr>}</tbody>
           </table>
-        </div>}
+        </div>
     </AdminPanel>
   );
 }
@@ -160,13 +163,13 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
       </dl>
 
       <div className={split}>
-        <AdminPanel className="min-[1100px]:col-span-8" title="API Response Latency" description={`Observed p50, p95 and p99 in ${report.window.resolution / 60_000}-minute UTC intervals. The current interval may still be filling.`}>
+        <AdminPanel stretch bodyClassName="flex-1" className="min-[1100px]:col-span-8" title="API Response Latency" description={`Observed p50, p95 and p99 in ${report.window.resolution / 60_000}-minute UTC intervals. The current interval may still be filling.`}>
           {requests > 0 ? <>
             <AnalyticsChart title="API latency" days={days} intervals={intervals} kind="lines" series={trend} unit="ms" sampleCounts={sampleCounts}
               empty="No interval has enough observations for a percentile." />
-          </> : <Empty>{coverageText[report.apiCoverage]}</Empty>}
+          </> : <VisualEmpty>{coverageText[report.apiCoverage]}</VisualEmpty>}
         </AdminPanel>
-        <AdminPanel className="min-[1100px]:col-span-4" title="Service Status" description="Latest observed signals; recent thresholds use 30 minutes.">
+        <AdminPanel stretch bodyClassName="flex-1" className="min-[1100px]:col-span-4" title="Service Status" description="Latest observed signals; recent thresholds use 30 minutes.">
           <ul className="-my-2 divide-y divide-border">{report.status.map(item => { const Icon = stateIcon[item.state]; return <li key={item.component} className="py-2.5">
             <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1"><h4 className="text-sm font-semibold">{item.component}</h4><span className="inline-flex items-center gap-1.5 text-xs font-semibold"><Icon size={14} aria-hidden="true" />{item.state}</span></div>
             <p className="mt-0.5 text-xs leading-5 text-muted">{item.reason} {item.at && <Stamped value={item.at} />}</p>
@@ -175,13 +178,13 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
       </div>
 
       <div className={split}>
-        <AdminPanel className="min-[1100px]:col-span-8" title="Request Volume" description={requests ? `${count(requests, "request")} observed; client and server errors remain separate.` : "Observed response outcomes."}>
+        <AdminPanel stretch bodyClassName="flex-1" className="min-[1100px]:col-span-8" title="Request Volume" description={requests ? `${count(requests, "request")} observed; client and server errors remain separate.` : "Observed response outcomes."}>
           {requests > 0 ? <>
             <AnalyticsChart title="Request volume" days={days} intervals={intervals} kind="bars" series={volume} sampleCounts={sampleCounts} empty={coverageText[report.apiCoverage]} />
-          </> : <Empty>{coverageText[report.apiCoverage]}</Empty>}
+          </> : <VisualEmpty>{coverageText[report.apiCoverage]}</VisualEmpty>}
         </AdminPanel>
-        <AdminPanel className="min-[1100px]:col-span-4" title="Latency Distribution" description={`${count(totals.latency.count, "handler sample")} in the selected window; histogram bucket boundaries.`}>
-          {totals.latency.count ? <AnalyticsChart title="Observed latency distribution" days={totals.latency.bins.map((_, index) => `bucket-${index}`)} categories={totals.latency.bins.map((_, index) => index < latencyBounds.length ? `≤ ${number.format(latencyBounds[index])} ms` : `> ${number.format(latencyBounds.at(-1)!)} ms`)} categoryName="duration bucket" kind="bars" stacked={false} unit="requests" empty="No latency samples." series={[{ label: "Observed handlers", color: colors.p95, values: totals.latency.bins }]} /> : <Empty>{coverageText[report.apiCoverage]}</Empty>}
+        <AdminPanel stretch bodyClassName="flex-1" className="min-[1100px]:col-span-4" title="Latency Distribution" description={`${count(totals.latency.count, "handler sample")} in the selected window; histogram bucket boundaries.`}>
+          {totals.latency.count ? <AnalyticsChart title="Observed latency distribution" days={totals.latency.bins.map((_, index) => `bucket-${index}`)} categories={totals.latency.bins.map((_, index) => index < latencyBounds.length ? `≤ ${number.format(latencyBounds[index])} ms` : `> ${number.format(latencyBounds.at(-1)!)} ms`)} categoryName="duration bucket" kind="bars" stacked={false} unit="requests" empty="No latency samples." series={[{ label: "Observed handlers", color: colors.p95, values: totals.latency.bins }]} /> : <VisualEmpty>{coverageText[report.apiCoverage]}</VisualEmpty>}
           <dl className="mt-2 grid grid-cols-2 gap-x-3 border-t border-border pt-2 text-xs">{([["p50", p50, 5], ["p95", p95, 20], ["p99", p99, 100]] as const).map(([label, value, minimum]) => <div key={label} className="flex justify-between gap-1 py-1"><dt>{label}</dt><dd className="tabular-nums">{value === null ? requests < minimum ? `min ${minimum}` : "Unavailable" : ms(value)}</dd></div>)}</dl>
         </AdminPanel>
       </div>
@@ -189,7 +192,7 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
       <div className="min-[1100px]:col-span-12"><Endpoints report={report} /></div>
 
       <div className={split}>
-        <AdminPanel className="min-[1100px]:col-span-7" title="Database Performance" description="Selected MongoDB operation timings; not an independent health check.">
+        <AdminPanel stretch bodyClassName="flex-1" className="min-[1100px]:col-span-7" title="Database Performance" description="Selected MongoDB operation timings; not an independent health check.">
           <dl className="divide-y divide-border">
             {([["Queries", database.queries], ["Writes", database.writes], ["Connection acquisition", database.connections]] as const).map(([label, latency]) =>
               <div key={label} className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-2.5 text-sm">
@@ -197,13 +200,13 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
               </div>)}
           </dl>
           {report.databaseAt > 0 && <p className="mt-2 text-xs text-muted">Last timed request <Stamped value={report.databaseAt} />.</p>}
-          {operations.count > 0 && <AnalyticsChart title="MongoDB operation duration by type" days={days} intervals={intervals} kind="lines" unit="ms"
+          {operations.count > 0 ? <AnalyticsChart title="MongoDB operation duration by type" days={days} intervals={intervals} kind="lines" unit="ms"
             series={[{ label: "Queries", color: colors.p95, values: report.chart.map(point => average(point.queries)) },
               { label: "Writes", color: colors.median, dash: "6 3", values: report.chart.map(point => average(point.writes)) },
               { label: "Connection acquisition", color: colors.p99, dash: "1 4", values: report.chart.map(point => average(point.connections)) }]}
-            sampleCounts={report.chart.map(point => point.operations.count)} empty="No operation samples in this period." />}
+            sampleCounts={report.chart.map(point => point.operations.count)} empty="No operation samples in this period." /> : <VisualEmpty>No timed database operation observations for this period.</VisualEmpty>}
         </AdminPanel>
-        <AdminPanel className="min-[1100px]:col-span-5" title="Reminder Jobs" description="Scheduled execution coverage and recent evidence.">
+        <AdminPanel stretch bodyClassName="flex-1" className="min-[1100px]:col-span-5" title="Reminder Jobs" description="Scheduled execution coverage and recent evidence.">
           <p className="text-xs leading-5 text-muted">{report.expected === null ? "Expected slot coverage is unknown." :
             `${report.completedDue} completed across ${report.expected} due slots since the first observed slot. ${report.missing} without dispatch evidence.`}</p>
           {report.expected !== null && report.expected > 0 && <div className="mt-2 flex items-center gap-2.5">

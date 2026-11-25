@@ -8,6 +8,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsOption } from "echarts";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import type { DailyCount } from "@/lib/admin/overview";
+import { AdminEmptyState } from "./admin-ui";
 
 echarts.use([LineChart, BarChart, PieChart, GridComponent, TooltipComponent, CanvasRenderer]);
 const dayFormat = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -69,8 +70,15 @@ function Chart({ series, variant, unit = "", compact = false, label }: ChartProp
       }],
     };
     chart.setOption(option);
-    const observer = new ResizeObserver(() => chart.resize());
+    const resize = () => {
+      const node = element.current;
+      if (node && !chart.isDisposed() && node.clientWidth > 0 && node.clientHeight > 0) {
+        chart.resize({ width: node.clientWidth, height: node.clientHeight });
+      }
+    };
+    const observer = new ResizeObserver(resize);
     observer.observe(element.current);
+    resize();
     return () => { observer.disconnect(); chart.dispose(); if (instance.current === chart) instance.current = null; };
   }, [series, variant, compact, unit]);
 
@@ -78,7 +86,7 @@ function Chart({ series, variant, unit = "", compact = false, label }: ChartProp
   if (series.every(point => point.count === 0 || point.count === null)) return compact
     ? <span className="text-xs text-muted">No activity</span>
     : <div className="mt-4 flex min-h-48 items-center justify-center rounded-lg border border-dashed border-border px-4 text-center text-sm text-muted">No {unit} were recorded in this period.</div>;
-  return <div ref={element} role="img" aria-label={label} className={compact ? "h-12 w-full min-w-0" : "mt-2 h-52 w-full min-w-0 sm:h-60"} />;
+  return <div ref={element} role="img" aria-label={label} className={compact ? "h-12 w-full min-w-0" : "mt-2 h-[220px] min-h-[220px] w-full min-w-0 sm:h-[240px] sm:min-h-[240px]"} />;
 }
 
 export function OverviewChart({ id, title, description, series, variant, empty, unit }: {
@@ -86,10 +94,10 @@ export function OverviewChart({ id, title, description, series, variant, empty, 
   variant: "area" | "bars"; empty: string; unit: "registrations" | "reviews";
 }) {
   const total = series?.reduce((sum, point) => sum + (point.count ?? 0), 0) ?? 0;
-  return <Card padding="sm" className="min-w-0 sm:p-5">
+  return <Card padding="sm" className="flex min-h-0 min-w-0 flex-col sm:p-5">
     <CardTitle id={id}>{title}</CardTitle><CardDescription>{description}</CardDescription>
-    {!series ? <div className="mt-4 flex min-h-48 items-center justify-center rounded-lg border border-dashed border-border px-4 text-center text-sm text-muted">This chart could not be loaded.</div>
-      : total === 0 ? <div className="mt-4 flex min-h-48 items-center justify-center rounded-lg border border-dashed border-border px-4 text-center text-sm text-muted">{empty}</div>
+    {!series ? <div className="mt-4 flex min-h-[220px] flex-1 flex-col sm:min-h-[240px]"><AdminEmptyState title="Chart unavailable" description="This chart could not be loaded." icon="alert" size="visualization" /></div>
+      : total === 0 ? <div className="mt-4 flex min-h-[220px] flex-1 flex-col sm:min-h-[240px]"><AdminEmptyState title={empty} description={`No ${unit} were recorded in this period.`} size="visualization" /></div>
         : <>
           <p className="my-3 text-sm text-muted"><strong className="mr-1 text-xl font-semibold tabular-nums text-foreground">{numbers.format(total)}</strong>{unit} in period</p>
           <Chart series={series} variant={variant} unit={unit} label={`${title}: ${numbers.format(total)} ${unit} across ${series.length} UTC days`} />

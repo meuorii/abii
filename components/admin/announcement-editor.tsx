@@ -8,12 +8,12 @@ import {
   type AnnouncementView, type AudienceEstimate,
 } from "@/lib/admin/announcement-contract";
 
-const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#993557]";
-const field = `mt-1.5 block w-full min-w-0 rounded-xl border border-border bg-white px-3 py-2.5 text-base sm:text-sm ${focus}`;
-const primary = `inline-flex min-h-11 items-center justify-center rounded-xl bg-[#913652] px-4 text-sm font-semibold text-white hover:bg-[#7F2946] disabled:opacity-50 ${focus}`;
-const secondary = `inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-white px-3.5 text-sm font-semibold hover:bg-pink-soft disabled:opacity-50 ${focus}`;
-const link = `inline-flex min-h-11 items-center rounded text-sm font-semibold text-[#863652] hover:underline ${focus}`;
-const panel = "min-w-0 rounded-2xl border border-border bg-white p-4 sm:p-5";
+const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F8769C]";
+const field = `mt-1.5 block w-full min-w-0 rounded-xl border border-[#FFDBED] bg-[#FFF9FC] px-3 py-2.5 text-base sm:text-sm ${focus}`;
+const primary = `inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F8769C] px-4 text-sm font-semibold text-[#30252D] hover:bg-[#FFDBED] disabled:opacity-50 ${focus}`;
+const secondary = `inline-flex min-h-11 items-center justify-center rounded-xl border border-[#FFDBED] bg-[#FFF9FC] px-3.5 text-sm font-semibold hover:bg-[#FFDBED] disabled:opacity-50 ${focus}`;
+const link = `inline-flex min-h-11 items-center rounded text-sm font-semibold text-[#30252D] hover:underline ${focus}`;
+const panel = "min-w-0 rounded-2xl border border-[#FFDBED] bg-[#FFF9FC] p-4 sm:p-5";
 const dateTime = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 const numeric = new Intl.NumberFormat("en");
 
@@ -30,16 +30,16 @@ async function request(body: object) {
 }
 
 function Message({ message }: { message: string }) {
-  return message ? <p role="alert" className="rounded-lg border border-[#F0D3DE] bg-[#FFF7FA] px-3 py-2 text-sm leading-6 text-[#853450]">{message}</p> : null;
+  return message ? <p role="alert" className="rounded-lg border border-[#FFDBED] bg-[#FFDBED] px-3 py-2 text-sm leading-6 text-[#30252D]">{message}</p> : null;
 }
 
 function NotificationPreview({ title, message, target }: AnnouncementContent) {
-  return <div className="notification-item--unread flex min-w-0 items-start gap-3 rounded-xl border border-[#F0E2E8] p-3.5">
-    <span className="grid size-9 shrink-0 place-items-center rounded-[12px] bg-[#FFF0F4] text-[#C94B76]"><Sparkles size={17} aria-hidden="true" /></span>
+  return <div className="notification-item--unread flex min-w-0 items-start gap-3 rounded-xl border border-[#FFDBED] bg-[#FFDBED] p-3.5">
+    <span className="grid size-9 shrink-0 place-items-center rounded-[12px] bg-[#F8769C] text-[#30252D]"><Sparkles size={17} aria-hidden="true" /></span>
     <div className="min-w-0 flex-1">
-      <p className="truncate text-[13px] font-semibold text-[#18384D]">{title || "Your notification title"}</p>
-      <p className="mt-1 line-clamp-3 break-words text-xs leading-[1.45] text-[#5D7181]">{message || "Your announcement message will appear here."}</p>
-      <p className="mt-2 text-xs font-medium text-[#6F5666]">{target ? `Opens ${announcementDestinations[target]}` : "Notification Center"}</p>
+      <p className="truncate text-[13px] font-semibold text-[#30252D]">{title || "Your notification title"}</p>
+      <p className="mt-1 line-clamp-3 break-words text-xs leading-[1.45] text-[#66565F]">{message || "Your announcement message will appear here."}</p>
+      <p className="mt-2 text-xs font-medium text-[#66565F]">{target ? `Opens ${announcementDestinations[target]}` : "Notification Center"}</p>
     </div>
   </div>;
 }
@@ -53,7 +53,7 @@ function Confirmation({ heading, label, busy, onDismiss, onConfirm, children }: 
     if (!dialog.current?.open) dialog.current?.showModal();
   }, []);
   return <dialog ref={dialog} aria-labelledby={titleId} onClose={onDismiss} onCancel={event => { if (busy) event.preventDefault(); }}
-    className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-border bg-white p-4 text-foreground shadow-xl backdrop:bg-[#30232B]/40 sm:p-6">
+    className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-[#FFDBED] bg-[#FFF9FC] p-4 text-foreground shadow-xl backdrop:bg-[#30252D]/40 sm:p-6">
     <h2 id={titleId} className="text-xl font-semibold tracking-tight">{heading}</h2>
     <div className="my-4 grid gap-3 text-sm leading-6 text-muted">{children}</div>
     <div className="flex flex-wrap justify-end gap-2">
@@ -81,6 +81,7 @@ export function AnnouncementEditor({ initial, deliveryEnabled, back }: { initial
   const [failure, setFailure] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [working, setWorking] = useState(false);
+  const [editorReady, setEditorReady] = useState(false);
   const [confirmation, setConfirmation] = useState<"schedule" | "publish" | null>(null);
   const [leave, setLeave] = useState("");
   const requestId = useRef(initial?.id ?? "");
@@ -92,6 +93,8 @@ export function AnnouncementEditor({ initial, deliveryEnabled, back }: { initial
   const dateInput = useRef<HTMLInputElement>(null);
   const dirty = title !== (initial?.title ?? "") || message !== (initial?.message ?? "") || target !== (initial?.target ?? null) ||
     day !== (initial?.scheduledAt?.slice(0, 10) ?? "") || hour !== (initial?.scheduledAt?.slice(11, 16) ?? "");
+
+  useEffect(() => setEditorReady(true), []);
 
   useEffect(() => {
     if (!dirty) return;
@@ -165,8 +168,7 @@ export function AnnouncementEditor({ initial, deliveryEnabled, back }: { initial
       setConfirmation(null);
       const params = new URLSearchParams(back.split("?")[1]?.split("#")[0]);
       params.set("id", result.announcement.id);
-      router.replace(`/admin/announcements?${params}#announcement-details`);
-      router.refresh();
+      window.location.replace(`/admin/announcements?${params}#announcement-details`);
     } catch (error) {
       setFailure(error instanceof Error ? error.message : "Abii could not save this announcement.");
       setConfirmation(null);
@@ -176,9 +178,9 @@ export function AnnouncementEditor({ initial, deliveryEnabled, back }: { initial
   const scheduled = initial?.state === "scheduled";
   const submit = (event: FormEvent) => { event.preventDefault(); if (!scheduled) void commit("save"); };
 
-  return <section aria-labelledby="announcement-editor" className="grid min-w-0 gap-4">
-    <div className="flex flex-wrap items-center justify-between gap-x-4">
-      <h2 id="announcement-editor" className="text-xl font-semibold tracking-tight sm:text-2xl">{initial ? "Edit announcement" : "Create announcement"}</h2>
+  return <section aria-labelledby="announcement-editor" data-editor-ready={editorReady ? "true" : undefined} className="grid min-w-0 gap-4">
+    <div className="flex flex-wrap flex-col-reverse items-start justify-between gap-x-4">
+      <h2 id="announcement-editor" className="text-xl font-semibold tracking-tight sm:text-2xl">{initial ? "Edit Announcement" : "Create Announcement"}</h2>
       <a href={back} onClick={event => { if (!dirty) { event.preventDefault(); router.push(back); } }} className={link}>Back to announcements</a>
     </div>
     <Message message={failure} />
@@ -191,7 +193,7 @@ export function AnnouncementEditor({ initial, deliveryEnabled, back }: { initial
               aria-invalid={Boolean(errors.title)} aria-describedby={errors.title ? "announcement-title-error" : "announcement-title-count"}
               onChange={event => { setTitle(event.target.value); setPreview(null); }} className={field} />
             <div className="mt-1 flex flex-wrap justify-between gap-x-2 text-xs text-muted">
-              {errors.title ? <p id="announcement-title-error" className="text-[#87324E]">{errors.title}</p> : <p>Use a short, specific headline.</p>}
+              {errors.title ? <p id="announcement-title-error" className="text-[#30252D]">{errors.title}</p> : <p>Use a short, specific headline.</p>}
               <span id="announcement-title-count" className="tabular-nums">{title.length}/120</span>
             </div>
           </div>
@@ -201,7 +203,7 @@ export function AnnouncementEditor({ initial, deliveryEnabled, back }: { initial
               aria-invalid={Boolean(errors.message)} aria-describedby={errors.message ? "announcement-message-error" : "announcement-message-count"}
               onChange={event => { setMessage(event.target.value); setPreview(null); }} className={`${field} resize-y`} />
             <div className="mt-1 flex flex-wrap justify-between gap-x-2 text-xs text-muted">
-              {errors.message ? <p id="announcement-message-error" className="text-[#87324E]">{errors.message}</p> : <p>Tell learners what changed and what they can do.</p>}
+              {errors.message ? <p id="announcement-message-error" className="text-[#30252D]">{errors.message}</p> : <p>Tell learners what changed and what they can do.</p>}
               <span id="announcement-message-count" className="tabular-nums">{message.length}/500</span>
             </div>
           </div>
@@ -221,25 +223,25 @@ export function AnnouncementEditor({ initial, deliveryEnabled, back }: { initial
               <label className="min-w-0 text-xs font-medium text-muted">Time<input type="time" value={hour} disabled={working}
                 aria-invalid={Boolean(errors.schedule)} aria-describedby="announcement-schedule-help" onChange={event => setHour(event.target.value)} className={field} /></label>
             </div>
-            <p id="announcement-schedule-help" className={`mt-2 text-xs leading-5 ${errors.schedule ? "text-[#87324E]" : "text-muted"}`}>
+            <p id="announcement-schedule-help" className={`mt-2 text-xs leading-5 ${errors.schedule ? "text-[#30252D]" : "text-muted"}`}>
               {errors.schedule ?? "Delivery starts at or after this time. The scheduler checks every 15 minutes."}</p>
           </fieldset>
         </div>
         <aside className="grid min-w-0 gap-4">
-          <div className={`${panel} bg-[#FFFCFD]`}>
-            <h3 className="mb-3 text-base font-semibold">Notification preview</h3>
+        <div className={panel}>
+          <h3 className="mb-3 text-base font-semibold">Notification Preview</h3>
             <NotificationPreview title={title} message={message} target={target} />
           </div>
           <div className={`${panel} grid gap-3`}>
-            <h3 className="text-base font-semibold">Audience preview</h3>
+            <h3 className="text-base font-semibold">Audience Preview</h3>
             <p className="text-sm font-medium">Verified learners</p>
             <p className="text-xs leading-5 text-muted">Learners must have an active account and allow What’s New notifications. The administrator is excluded.</p>
-            <div className="border-t border-border pt-3"><AudiencePreview preview={preview} /></div>
+        <div className="rounded-lg border border-[#FFDBED] bg-[#FFDBED] px-3 py-3"><AudiencePreview preview={preview} /></div>
             <button type="button" className={`${secondary} justify-self-start`} disabled={working} onClick={() => void loadPreview()}>{preview ? "Refresh estimate" : "Estimate audience"}</button>
           </div>
         </aside>
       </div>
-      <div className="flex flex-wrap justify-between gap-3 rounded-xl border border-border bg-[#FFFBFD] px-3.5 py-3">
+      <div className="flex flex-wrap justify-between gap-3 rounded-xl border border-[#FFDBED] bg-[#FFF9FC] px-3.5 py-3">
         <p role="status" className="self-center text-xs leading-5 text-muted">{working ? "Working…" : !deliveryEnabled ? "Delivery is disabled for this deployment." : dirty ? "Unsaved changes" : scheduled ? "Schedule saved" : initial ? "Draft saved" : "New draft"}</p>
         <div className="flex flex-wrap gap-2">
           {!scheduled && <button type="submit" disabled={working} className={secondary}>Save draft</button>}
@@ -296,7 +298,7 @@ export function AnnouncementDeliveryActions({ row, enabled }: { row: Announcemen
       {(row.state === "failed" || row.state === "incomplete") && <button type="button" className={primary} disabled={!enabled} onClick={() => setAction("retry")}>Retry delivery</button>}
       <button type="button" className={secondary} onClick={() => { setFailure(""); router.refresh(); }}>Refresh status</button>
     </div>
-    {notice && <p role="status" className="text-xs font-semibold text-[#32654E]">{notice}</p>}
+    {notice && <p role="status" className="text-xs font-semibold text-[#30252D]">{notice}</p>}
     <Message message={failure} />
     {action && <Confirmation heading={action === "retry" ? "Retry delivery?" : "Cancel scheduled publication?"}
       label={action === "retry" ? "Confirm retry" : "Confirm cancellation"} busy={working} onDismiss={() => setAction(null)} onConfirm={() => void commit()}>
