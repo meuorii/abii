@@ -23,7 +23,7 @@ export function AccountAvatar({ name, profileImage, large }: { name: string; pro
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [profileImage]);
   const initials = name.trim().split(/\s+/u).slice(0, 2).map(word => Array.from(word)[0]).join("").toUpperCase();
-  return <span aria-hidden="true" className={`relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#FFE8EF] font-bold text-foreground ${large ? "size-[76px] text-xl" : "size-10 text-xs"}`}>
+  return <span aria-hidden="true" className={`relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#FFE8EF] font-bold text-primary ${large ? "size-[76px] text-xl" : "size-10 text-xs"}`}>
     {profileImage && !failed ? <Image src={profileImage} alt="" fill sizes={large ? "76px" : "40px"} unoptimized className="object-cover" onError={() => setFailed(true)} /> : initials || "?"}
   </span>;
 }

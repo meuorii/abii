@@ -94,7 +94,7 @@ export function AdminOverview({ report }: { report: OverviewReport }) {
         <div className="flex items-baseline justify-between gap-3"><CardTitle>Recent Users</CardTitle><a href="/admin/users" className="min-h-11 content-center text-sm font-semibold text-[var(--overview-accent-ink)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-[var(--overview-accent-ink)]">View all</a></div>
         <CardDescription>The latest learner accounts on Abii.</CardDescription>
         {recent?.length ? <ul className="mt-2 divide-y divide-border">{recent.map(row => <li key={row.id} className="flex min-w-0 items-center gap-3 py-2.5">
-          <span aria-hidden="true" className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--overview-pink)] text-sm font-semibold text-[var(--overview-accent-ink)]">
+          <span aria-hidden="true" className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--overview-pink)] text-sm font-semibold text-primary">
             {row.profileImage ? <Image src={row.profileImage} alt="" fill sizes="36px" unoptimized className="object-cover" /> : Array.from((row.name || "").trim())[0]?.toUpperCase() ?? "?"}
           </span>
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{row.name || "Unnamed learner"}</p><time className="text-xs text-muted" dateTime={row.createdAt}>{date.format(new Date(row.createdAt))} UTC</time></div>
