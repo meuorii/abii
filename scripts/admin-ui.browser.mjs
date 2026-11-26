@@ -397,7 +397,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
       await page.getByRole("heading", { name: region, exact: true }).waitFor();
       const shellSurfaces = await page.evaluate(() => [".admin-shell", ".admin-shell__frame", ".admin-shell__sidebar", ".admin-shell__header", ".admin-shell__workspace"]
         .map(selector => getComputedStyle(document.querySelector(selector)).backgroundColor));
-      assert.deepEqual(shellSurfaces, Array(5).fill("rgb(255, 249, 252)"), `${label} shell surfaces use the dominant admin background`);
+      assert.deepEqual(shellSurfaces, ["rgb(255, 244, 248)", ...Array(4).fill("rgb(255, 249, 252)")], `${label} shell surfaces use the admin frame and workspace backgrounds`);
       if (asset === "announcements") {
         await page.getByRole("heading", { name: "No announcement selected", exact: true }).waitFor();
         const panels = await page.evaluate(() => ["Announcement Library", "Announcement Details"].map(title => {
@@ -489,7 +489,7 @@ test("admin routes fail closed, require real MFA, and render the protected works
       await image.evaluate(element => element.decode());
       const desktopHero = await page.evaluate(adminHeroGeometry);
       assert.equal(desktopHero.variant, "admin-overview", `${label} desktop hero uses the shared component variant`);
-      assert.equal(desktopHero.background, "rgb(255, 219, 237)", `${label} hero uses the secondary admin surface`);
+      assert.equal(desktopHero.background, "rgb(255, 232, 239)", `${label} hero uses the approved secondary admin surface`);
       assert.ok(desktopHero.height >= 204 && desktopHero.height < 304, `${label} desktop hero height: ${desktopHero.height}`);
       const geometry = await page.evaluate(workspaceGeometry);
       shellGeometry ??= geometry;
@@ -842,7 +842,13 @@ test("admin routes fail closed, require real MFA, and render the protected works
 
     await page.goto(base + "/admin/security", { waitUntil: "domcontentloaded" });
     const security = page.getByRole("region", { name: "Security Overview" });
+    const sessionSecurity = page.getByRole("region", { name: "Session Security" });
     const explorer = security.getByRole("region", { name: "Security & Audit Explorer" });
+    await sessionSecurity.getByText("Session lifetime").waitFor();
+    await sessionSecurity.getByText("Password + Google Authenticator · MFA verified").waitFor();
+    assert.match(await sessionSecurity.locator("article").first().locator("p.tabular-nums").innerText(), /^\d{2}:\d{2}:\d{2}$/);
+    assert.equal(await sessionSecurity.getByRole("progressbar").count(), 3);
+    await sessionSecurity.getByRole("link", { name: "Reauthenticate" }).waitFor();
     await security.getByText("Elevated rate limiting").waitFor();
     const activity = security.getByRole("slider", { name: "Authentication activity interval values" });
     await page.waitForFunction(() => {
@@ -856,12 +862,16 @@ test("admin routes fail closed, require real MFA, and render the protected works
       return slider && slider.getAttribute("aria-valuenow") === slider.getAttribute("aria-valuemax");
     }, undefined, { timeout: 15_000 });
     assert.doesNotMatch(await page.locator("main").innerText(), /restricted fixture reason/);
-    for (const width of [320, 375, 390, 1440]) {
+    for (const width of [320, 375, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.waitForFunction(() => [...document.querySelectorAll("main [role=img] canvas")]
         .every(canvas => Math.abs(canvas.getBoundingClientRect().width - canvas.parentElement.getBoundingClientRect().width) < 2), undefined, { timeout: 5_000 });
       await explorer.getByRole("heading").evaluate(el => el.scrollIntoView({ block: "start" }));
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector("main").scrollWidth <= innerWidth));
+      if (width === 1440) {
+        const widths = await sessionSecurity.locator("article").evaluateAll(cards => cards.map(card => card.getBoundingClientRect().width));
+        assert.ok(widths.every(width => Math.abs(width - widths[0]) < 1), `Session timer cards have equal widths: ${widths}`);
+      }
       if (process.env.ABII_ADMIN_SCREENSHOTS) await page.screenshot({ path: join(process.env.ABII_ADMIN_SCREENSHOTS, `security-explorer-${width}.png`), animations: "disabled" });
       if (process.env.ABII_ADMIN_SCREENSHOTS && [375, 1440].includes(width)) await screenshotScrollable(page, join(process.env.ABII_ADMIN_SCREENSHOTS, `security-full-${width}.png`));
     }

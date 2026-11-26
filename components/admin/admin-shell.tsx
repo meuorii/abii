@@ -11,6 +11,13 @@ import {
 import { AdminNavigation } from "./admin-navigation";
 
 const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-hover";
+function announceSession(signal: "refresh" | "invalidate") {
+  window.dispatchEvent(new CustomEvent("admin-session-sync", { detail: signal }));
+  if (typeof BroadcastChannel === "undefined") return;
+  const channel = new BroadcastChannel("abii-admin-session");
+  channel.postMessage(signal);
+  channel.close();
+}
 
 export function AdminShell({ name, children }: { name: string; children: ReactNode }) {
   const pathname = usePathname();
@@ -22,6 +29,7 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
   const [menuOpen, setMenuOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sessionChecking, setSessionChecking] = useState(false);
   const [error, setError] = useState("");
   const initial = Array.from(name.trim())[0]?.toLocaleUpperCase() || "A";
 
@@ -36,6 +44,50 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
       window.removeEventListener("pageshow", restore);
     };
   }, []);
+
+  useEffect(() => {
+    const check = (event: Event) => setSessionChecking((event as CustomEvent<boolean>).detail === true);
+    window.addEventListener("admin-session-check", check);
+    return () => window.removeEventListener("admin-session-check", check);
+  }, []);
+
+  useEffect(() => {
+    let lastActivityRequest = 0;
+    let expired = false;
+    const recordActivity = () => {
+      if (expired || document.visibilityState !== "visible" || Date.now() - lastActivityRequest < 120_000) return;
+      lastActivityRequest = Date.now();
+      void fetch("/api/auth/admin-activity", { method: "POST", cache: "no-store", credentials: "same-origin" })
+        .then(response => {
+          if (response.status === 401) {
+            expired = true;
+            announceSession("invalidate");
+            const next = `${window.location.pathname}${window.location.search}`;
+            window.location.replace(`/login?sessionExpired=1&next=${encodeURIComponent(next)}`);
+          } else if (response.ok) announceSession("refresh");
+        }).catch(() => undefined);
+    };
+    document.addEventListener("pointerdown", recordActivity, { passive: true });
+    document.addEventListener("keydown", recordActivity);
+    window.addEventListener("focus", recordActivity);
+    return () => {
+      document.removeEventListener("pointerdown", recordActivity);
+      document.removeEventListener("keydown", recordActivity);
+      window.removeEventListener("focus", recordActivity);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (document.visibilityState !== "visible") return;
+    void fetch("/api/auth/admin-activity", { method: "POST", cache: "no-store", credentials: "same-origin" })
+      .then(response => {
+        if (response.status === 401) {
+          announceSession("invalidate");
+          const next = `${window.location.pathname}${window.location.search}`;
+          window.location.replace(`/login?sessionExpired=1&next=${encodeURIComponent(next)}`);
+        } else if (response.ok) announceSession("refresh");
+      }).catch(() => undefined);
+  }, [pathname]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -54,6 +106,7 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
     try {
       const response = await fetch("/api/auth/logout", { method: "POST", cache: "no-store" });
       if (!response.ok) throw new Error();
+      announceSession("invalidate");
       window.location.replace("/login");
     } catch {
       setError("Sign-out could not be confirmed. Try again.");
@@ -63,7 +116,8 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
   }
 
   return (
-    <div className="admin-shell h-dvh overflow-hidden text-foreground sm:p-3 lg:p-4">
+    <>
+    <div inert={sessionChecking} className="admin-shell h-dvh overflow-hidden text-foreground sm:p-3 lg:p-4">
       <a href="#admin-main" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-40 focus:rounded-lg focus:bg-white focus:p-3">Skip to main content</a>
       <div className="admin-shell__frame mx-auto flex h-full max-w-[1600px] overflow-hidden sm:rounded-[20px] sm:border sm:shadow-[0_10px_40px_rgba(48,38,43,0.07)]">
         <aside className="admin-shell__sidebar hidden w-[220px] shrink-0 flex-col overflow-y-auto border-r lg:flex">
@@ -101,6 +155,7 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
                 <Button ref={signOutButton} variant="ghost" className="mt-1 w-full justify-start" aria-disabled={busy} onClick={() => void signOut()}>
                   <LogOut size={16} aria-hidden="true" /> {busy ? "Signing out…" : "Sign out"}
                 </Button>
+                <a href={`/login?adminReauth=1&next=${encodeURIComponent(pathname)}`} className="mt-1 block rounded-lg px-3 py-2 text-sm font-medium hover:bg-pink-soft">Reauthenticate</a>
                 {error && <p role="alert" className="px-3 py-2 text-sm text-error-text">{error}</p>}
               </div>
             </div>
@@ -127,5 +182,9 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
         </div>
       </dialog>
     </div>
+    {sessionChecking && <div role="status" aria-live="polite" className="fixed inset-0 z-[100] grid place-items-center bg-[#30262B]/20 p-4">
+      <p className="rounded-xl border border-border bg-white px-5 py-4 text-sm font-semibold text-foreground shadow-sm">Confirming administrator session…</p>
+    </div>}
+    </>
   );
 }

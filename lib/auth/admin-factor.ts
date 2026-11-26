@@ -13,7 +13,7 @@ const id = { _id: ADMIN_ID };
 const active = { ...id, status: "active" as const };
 const pending = { ...id, status: "pending" as const };
 const clearChallenge = { "mfa.challengeHash": "", "mfa.challengeVersion": "", "mfa.challengeExpiresAt": "" };
-export const ADMIN_LIFETIME = 1800;
+export const ADMIN_LIFETIME = 8 * 60 * 60;
 export const ADMIN_CHALLENGE_LIFETIME = 300;
 
 export class AdminFactorRateLimitError extends Error {
@@ -131,22 +131,30 @@ export async function verifyAdminChallenge(token: string, code: string) {
     const step = acceptedStep(ADMIN_SUBJECT, row.mfa.encryptedSeed, code, row.mfa.lastStep);
     if (step === null) return null;
     const authenticatedAt = Math.floor(Date.now() / 1000);
+    const authenticatedAtDate = new Date(authenticatedAt * 1000);
     const version = row.sessionVersion;
+    const sessionId = randomBytes(24).toString("base64url");
+    const absoluteExpiresAt = new Date((authenticatedAt + ADMIN_LIFETIME) * 1000);
+    const environment = process.env.NODE_ENV === "production" ? "production" : "development";
     const completedChallenges = row.mfa.completedChallenges
       .filter(item => item.version === version && item.expiresAt.getTime() > authenticatedAt * 1000)
       .map(({ hash, version, expiresAt }) => ({ hash, version, expiresAt }));
     // Keep the digest through the JWT lifetime to revoke a response racing logout.
-    completedChallenges.push({ hash: challengeHash, version, expiresAt: new Date((authenticatedAt + ADMIN_LIFETIME) * 1000) });
+    completedChallenges.push({ hash: challengeHash, version, expiresAt: absoluteExpiresAt });
     const changed = await Admin.updateOne({
       ...filter, sessionVersion: version, "mfa.lastStep": { $lt: step },
       "mfa.challengeExpiresAt": { $gt: new Date() },
     }, {
-      $set: { "mfa.lastStep": step, "mfa.completedChallenges": completedChallenges, lastLoginAt: new Date(authenticatedAt * 1000) },
+      $set: {
+        "mfa.lastStep": step, "mfa.completedChallenges": completedChallenges,
+        lastLoginAt: authenticatedAtDate,
+        activeSession: { sessionId, version, authenticatedAt: authenticatedAtDate, absoluteExpiresAt, lastActivityAt: authenticatedAtDate, environment },
+      },
       $unset: clearChallenge,
     }, { session, runValidators: true });
     if (!changed.modifiedCount) return null;
     await auditAdmin("login", ADMIN_SUBJECT, ADMIN_SUBJECT, session);
-    return { version, authenticatedAt };
+    return { version, authenticatedAt, sessionId, environment };
   });
   if (!result) await recordAdminDenial("mfa-denied");
   return result;

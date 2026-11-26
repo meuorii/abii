@@ -35,18 +35,17 @@
 
 ## 5. Active handoff
 
-**Status:** Admin Overview redesign and analytics implementation complete; no deployment performed.
+**Status:** Complete — Session Security implementation and focused validation passed. No deployment performed.
 
-**Verified now:** Overview tests 2/2, admin security tests 14/14, admin browser regression 1/1, TypeScript, lint (three established warnings), production build (43/43 static pages), protected Overview API checks, profile-photo fallback/projection, accent button color, and viewport checks from 320px through 1920px. The Overview charts use hover tooltips without sliders or daily-count dropdowns.
+**Verified now:** `npm run test:admin-security` passed 14/14; `npm run test:admin-security-logs` passed 3/3; focused Security browser run passed 1/1 at 320, 375, 768, 1024, and 1440px. Typecheck, focused ESLint, `git diff --check`, and production build passed; build reported three existing warnings. The broader admin browser suite timed out at 480 seconds.
 
-**Files changed:** Overview report/API, Overview page and chart components, hero variant, scoped styles, loading state, focused tests, and implementation docs.
+**Files changed:** `components/admin/admin-session-security.tsx`; `components/admin/admin-security.tsx`; `components/admin/admin-shell.tsx`; `app/api/admin/session/route.ts`; `app/(admin)/admin/security/page.tsx`; `lib/auth/admin-session-state.ts`; focused tests and this handoff.
 
-**Remaining:** Formal WCAG conformance has not been audited.
+**Remaining:** Browser screenshots and session persistence across an application-server restart were not verified.
 
-**Blockers / deployment gates:** None for code completion. Production deployment, database writes/index changes, and operator actions were not performed.
+**Blockers / deployment gates:** Full browser test timed out after 480 seconds; latest focused run did not return after its execution connection dropped. No production records or deployment settings were changed.
 
-**Next task:** Operator review before any production deployment; no database/index action is included in this change.
-
+**Next task:** None for this feature; keep deployment as a separate release action.
 ## 6. Update this compact handoff at the end of each task
 
 Replace the **Active handoff** section above with a concise factual update (aim for **under 20 lines**):

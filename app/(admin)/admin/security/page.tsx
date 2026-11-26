@@ -25,7 +25,7 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
     <AdminPageHero page="security" />
     <section aria-labelledby="security-overview" className="grid min-w-0 gap-4">
       <SecurityControls query={query} />
-      <Suspense key={JSON.stringify(params)} fallback={<SecuritySkeleton />}><SecurityData query={query} /></Suspense>
+      <Suspense fallback={<SecuritySkeleton />}><SecurityData query={query} /></Suspense>
     </section>
   </div>;
 }

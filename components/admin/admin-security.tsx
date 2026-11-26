@@ -10,6 +10,7 @@ import { SkeletonBlock, SkeletonRegion } from "@/components/ui/skeleton";
 import type { SecurityQuery, SecurityReport } from "@/lib/admin/security";
 import { auditLabels, eventLabels } from "@/lib/admin/security-contract";
 import { adminChartColors as chart } from "@/components/admin/chart-colors";
+import { AdminSessionSecurity, SessionSecuritySkeleton } from "@/components/admin/admin-session-security";
 
 const dateTime = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 const ticks = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
@@ -62,6 +63,7 @@ export function SecurityError({ message }: { message: string }) {
   return <div className="grid gap-2">
     <Feedback alert>{message}</Feedback>
     <Link href="/admin/security" className={auditLink}>Open the default view</Link>
+    <AdminSessionSecurity />
   </div>;
 }
 
@@ -133,6 +135,8 @@ export function AdminSecurity({ report, collecting }: { report: SecurityReport; 
       <Indicator icon={ShieldCheck} label="Admin Actions" value={report.auditAvailable ? summary.actions : null}>Committed privileged changes in the selected window.</Indicator>
     </dl>
 
+    <AdminSessionSecurity />
+
     <div className={split}>
       <AdminPanel title="Authentication Activity" description="Recorded sign-ins, failed challenges and limiter rejections. Gaps indicate intervals with no usable observations." className="admin-evidence-panel" stretch bodyClassName="flex-1">
         <AnalyticsChart title="Authentication activity" days={summary.chart.map(bin => new Date(bin.from).toISOString())}
@@ -190,6 +194,7 @@ export function SecuritySkeleton({ controls = false }: { controls?: boolean }) {
     {controls && <SkeletonBlock className="h-12 rounded-lg" />}
     <SkeletonBlock className="h-12 rounded-lg" />
     <div className="grid grid-cols-2 gap-1 xl:grid-cols-4">{[0, 1, 2, 3].map(index => <SkeletonBlock key={index} className="h-28 rounded-xl" />)}</div>
+    <SessionSecuritySkeleton />
     <div className={split}><SkeletonBlock className="h-56 rounded-2xl" /><SkeletonBlock className="h-32 rounded-2xl" /></div>
     <SkeletonBlock className="h-32 rounded-2xl" />
     <SkeletonBlock className="h-64 rounded-2xl" />

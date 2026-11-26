@@ -308,7 +308,7 @@ test("existing account login routes unverified users through OTP and preserves v
     assert.match(authenticated.headers.get("cache-control"), /private.*no-store/);
     const adminJwt = cookie(authenticated, "abii_admin");
     assert.ok(adminJwt);
-    assert.ok(authenticated.headers.getSetCookie().some(row => row.startsWith("abii_admin=") && /max-age=1800/i.test(row) && /httponly/i.test(row) && /samesite=strict/i.test(row)));
+    assert.ok(authenticated.headers.getSetCookie().some(row => row.startsWith("abii_admin=") && /max-age=(?:287\d{2}|28800)/i.test(row) && /expires=/i.test(row) && /httponly/i.test(row) && /samesite=strict/i.test(row)));
     assert.ok((await adminPost("/api/auth/admin-mfa", secondFactor, challengeCookie)).status >= 400);
     assert.equal((await get("/api/data/export", "abii_session=" + adminJwt)).response.status, 401);
     assert.equal((await get("/api/data/export", "abii_admin=" + adminJwt)).response.status, 401);

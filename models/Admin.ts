@@ -25,6 +25,15 @@ const factor = new Schema({
   completedChallenges: { type: [completed], default: [] },
 }, { _id: false, strict: "throw" });
 
+const activeAdminSession = new Schema({
+  sessionId: { type: String, required: true, match: /^[A-Za-z0-9_-]{32}$/ },
+  version,
+  authenticatedAt: { type: Date, required: true },
+  absoluteExpiresAt: { type: Date, required: true },
+  lastActivityAt: { type: Date, required: true },
+  environment: { type: String, required: true, enum: ["development", "production"] },
+}, { _id: false, strict: "throw" });
+
 const schema = new Schema({
   _id: { type: String, required: true, enum: [ADMIN_ID] },
   name: { type: String, required: true, trim: true, maxlength: 80 },
@@ -34,6 +43,7 @@ const schema = new Schema({
   mfa: { type: factor, required: true, select: false },
   recoveryCodes: { type: [{ type: String, match: SHA256_HEX }], default: [], select: false },
   sessionVersion: version,
+  activeSession: { type: activeAdminSession, select: false },
   mutationVersion: { type: Number, min: 0, default: 0, select: false },
   lastLoginAt: Date,
 }, { collection: "admins", autoCreate: false, autoIndex: false, strict: "throw", timestamps: true, versionKey: false });

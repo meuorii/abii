@@ -29,7 +29,7 @@ export async function assertNoLegacyAdmin(session?: ClientSession) {
 
 export async function readAdmin(session?: ClientSession, options: { allowUnreadableFactor?: boolean } = {}): Promise<AdminRecord | null> {
   const rows = await Admin.find().read("primary").session(session ?? null).limit(2)
-    .select("+passwordHash +mfa +recoveryCodes").lean();
+    .select("+passwordHash +mfa +recoveryCodes +activeSession").lean();
   if (!rows.length) return null;
   const [account] = rows;
   const { mfa, recoveryCodes, status } = account;

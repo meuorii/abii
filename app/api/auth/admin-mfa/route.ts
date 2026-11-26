@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
+import { decodeJwt } from "jose";
 import { ADMIN_COOKIE, CHALLENGE_COOKIE } from "@/lib/auth/admin-session";
-import { ADMIN_LIFETIME, finishAdminLogin } from "@/lib/auth/admin-session-state";
+import { finishAdminLogin } from "@/lib/auth/admin-session-state";
 import { AdminFactorRateLimitError } from "@/lib/auth/admin-factor";
 import { privateJson, trustedAdminOrigin } from "@/lib/auth/admin-http";
 import { SESSION_COOKIE_OPTIONS } from "@/lib/auth/constants";
@@ -27,7 +28,10 @@ export async function POST(request: Request) {
     await destroySession();
     await clearAuthFlowCookies();
     jar.set(CHALLENGE_COOKIE, "", { ...SESSION_COOKIE_OPTIONS, maxAge: 0 });
-    jar.set(ADMIN_COOKIE, token, { ...SESSION_COOKIE_OPTIONS, maxAge: ADMIN_LIFETIME });
+    const expiration = decodeJwt(token).exp;
+    if (typeof expiration !== "number") return privateJson({ message: "Verification is unavailable. Please retry." }, 503);
+    const expires = new Date(expiration * 1000);
+    jar.set(ADMIN_COOKIE, token, { ...SESSION_COOKIE_OPTIONS, maxAge: Math.max(0, Math.floor((expires.getTime() - Date.now()) / 1000)), expires });
     return privateJson({ redirectTo: safeAdminPath(body.next) });
   } catch (error) {
     if (error instanceof AdminFactorRateLimitError) return privateJson({ message: "Too many attempts. Wait a few minutes before signing in again." }, 429);

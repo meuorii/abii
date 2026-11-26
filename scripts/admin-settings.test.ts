@@ -55,12 +55,15 @@ test("settings mutations are transactional, audited, revision-fenced, and passwo
     await mongoose.connect(process.env.MONGODB_URI);
     await Promise.all([AdminAuditLog.createCollection(), AdminSecurityEvent.createCollection()]);
     const { encryptedSeed } = prepareEnrollment(ADMIN_SUBJECT);
+    const now = Math.floor(Date.now() / 1000);
+    const sessionId = randomBytes(24).toString("base64url");
+    const environment = process.env.NODE_ENV === "production" ? "production" : "development";
+    const authenticatedAt = new Date(now * 1000);
     await Admin.create({ _id: ADMIN_ID, name: "Original Admin", email: "admin@example.invalid", status: "active", sessionVersion: 0,
       passwordHash: await bcrypt.hash("Current password 123", 12), mfa: { encryptedSeed, lastStep: Math.floor(Date.now() / 30_000) - 2 },
-      recoveryCodes: Array.from({ length: 8 }, (_, index) => digest(String(index))), });
-    const now = Math.floor(Date.now() / 1000);
-    const token = await new SignJWT({ sv: 0, amr: ["pwd", "otp"] }).setProtectedHeader({ alg: "HS256", typ: "abii-admin+jwt" })
-      .setIssuer("abii").setAudience("abii-admin").setSubject(ADMIN_SUBJECT).setIssuedAt(now).setExpirationTime(now + 1800).sign(new TextEncoder().encode(process.env.AUTH_SECRET));
+      recoveryCodes: Array.from({ length: 8 }, (_, index) => digest(String(index))), activeSession: { sessionId, version: 0, authenticatedAt, absoluteExpiresAt: new Date((now + 28_800) * 1000), lastActivityAt: authenticatedAt, environment }, });
+    const token = await new SignJWT({ sv: 0, sid: sessionId, env: environment, amr: ["pwd", "otp"] }).setProtectedHeader({ alg: "HS256", typ: "abii-admin+jwt" })
+      .setIssuer("abii").setAudience("abii-admin").setSubject(ADMIN_SUBJECT).setIssuedAt(now).setExpirationTime(now + 28_800).sign(new TextEncoder().encode(process.env.AUTH_SECRET));
     const preferences = await saveSettings(token, { section: "preferences", revision: 0, values: { sessionWarningEnabled: false, sessionWarningLeadMinutes: 5, operationalWarnings: true } });
     assert.equal(preferences.settings.revision, 1);
     assert.equal((await AdminSettings.findById("primary").lean())?.platform?.publicSupportNoticeText, "");

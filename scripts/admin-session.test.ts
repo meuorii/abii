@@ -10,7 +10,7 @@ import { Admin, ADMIN_ID, ADMIN_SUBJECT } from "@/models/Admin";
 import { AdminAuditLog, AdminSecurityEvent } from "@/models/AdminAuditLog";
 import { digest, prepareEnrollment, totpAt } from "@/lib/auth/admin-factor-crypto";
 import { revokeAdminChallenge, startAdminChallenge } from "@/lib/auth/admin-factor";
-import { AdminAccessError, finishAdminLogin, revokeAdminSession, validateAdminSession } from "@/lib/auth/admin-session-state";
+import { AdminAccessError, finishAdminLogin, getAdminSessionSnapshot, recordAdminActivity, revokeAdminSession, validateAdminSession } from "@/lib/auth/admin-session-state";
 import { safeAdminPath, safeNextPath } from "@/lib/auth/redirect";
 
 test("admin redirects accept only exact destinations; ordinary redirects preserve learning navigation", () => {
@@ -48,8 +48,24 @@ test("admin sessions require the MFA audience, live factor, current scalar accou
     const token = await finishAdminLogin(pending, totpAt(seed, Date.now()));
     assert.ok(token);
     const claims = decodeJwt(token);
-    assert.equal(claims.exp! - claims.iat!, 1800);
+    assert.equal(claims.exp! - claims.iat!, 28_800);
     assert.equal((await validateAdminSession(token, true)).adminId, ADMIN_SUBJECT);
+    const snapshot = await getAdminSessionSnapshot(token);
+    assert.equal(snapshot.authenticatedAt, claims.iat! * 1000);
+    assert.equal(snapshot.absoluteExpiresAt, claims.exp! * 1000);
+    assert.equal(snapshot.sessionLifetimeSeconds, 28_800);
+    assert.equal(snapshot.inactivityTimeoutSeconds, 1_800);
+    assert.equal(snapshot.freshAuthenticationSeconds, 300);
+    assert.equal(snapshot.mfaVerified, true);
+    const activityBefore = (await Admin.findById(ADMIN_ID).select("+activeSession").lean())!.activeSession!.lastActivityAt;
+    await recordAdminActivity(token);
+    const activityAfter = (await Admin.findById(ADMIN_ID).select("+activeSession").lean())!.activeSession!.lastActivityAt;
+    assert.ok(activityAfter >= activityBefore);
+    await Admin.updateOne({ _id: ADMIN_ID }, { $set: { "activeSession.lastActivityAt": new Date(Date.now() - 31 * 60_000) } });
+    await assert.rejects(validateAdminSession(token), rejected(401));
+    await assert.rejects(recordAdminActivity(token), rejected(401));
+    await Admin.updateOne({ _id: ADMIN_ID }, { $set: { "activeSession.lastActivityAt": new Date() } });
+    assert.equal((await validateAdminSession(token)).adminId, ADMIN_SUBJECT);
     const users = mongoose.connection.db!.collection("users");
     const ordinary = await User.create({ email: "ordinary@example.invalid", name: "Test", passwordHash: "fixture", emailVerifiedAt: new Date() });
     await assert.rejects(setUserSuspended(ordinary.id, true, "  ", token));
@@ -89,7 +105,12 @@ test("admin sessions require the MFA audience, live factor, current scalar accou
     }
     const invalidSignature = await new SignJWT(claims).setProtectedHeader({ alg: "HS256", typ: "abii-admin+jwt" }).sign(randomBytes(32));
     await assert.rejects(validateAdminSession(invalidSignature), rejected(401));
-    await assert.rejects(validateAdminSession(await issue({ iat: now - 301, exp: now + 300 }), true), rejected(403));
+    const currentSession = (await Admin.findById(ADMIN_ID).select("+activeSession").lean())!.activeSession!;
+    const oldSessionId = randomBytes(24).toString("base64url");
+    const oldAuthenticatedAt = new Date((now - 301) * 1000);
+    await Admin.updateOne({ _id: ADMIN_ID }, { $set: { activeSession: { sessionId: oldSessionId, version: 0, authenticatedAt: oldAuthenticatedAt, absoluteExpiresAt: new Date((now - 301 + 28_800) * 1000), lastActivityAt: new Date(), environment: currentSession.environment } } });
+    await assert.rejects(validateAdminSession(await issue({ sid: oldSessionId, iat: now - 301, exp: now - 301 + 28_800 }), true), rejected(403));
+    await Admin.updateOne({ _id: ADMIN_ID }, { $set: { activeSession: currentSession } });
     const ordinaryJWT = await new SignJWT({ sv: 0 }).setProtectedHeader({ alg: "HS256" }).setSubject(ordinary.id)
       .setIssuer("abii").setAudience("abii-web").setIssuedAt().setExpirationTime("5m").sign(key);
     await assert.rejects(setUserSuspended(ordinary.id, true, "Account review", ordinaryJWT), rejected(401));

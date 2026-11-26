@@ -42,16 +42,22 @@ test("durable announcement management commits and recovers in an isolated replic
     await Promise.all([AdminAuditLog.createCollection(), AdminSecurityEvent.createCollection(),
       Announcement.syncIndexes(), AnnouncementReceipt.syncIndexes(), Notification.syncIndexes(), User.syncIndexes()]);
     const { encryptedSeed } = prepareEnrollment(ADMIN_SUBJECT);
+    const environment = process.env.NODE_ENV === "production" ? "production" : "development";
     await Admin.create({ _id: "primary", name: "Fixture Admin", email: "phase9-admin@example.invalid",
       passwordHash: "$2b$12$HUdxSbGT.hyi71fJSD2hr.uO9XngNUp.lzcO4cJUDKgl/Zzw8KCVu",
       status: "active", sessionVersion: 0, mfa: { encryptedSeed, lastStep: 1 },
       recoveryCodes: Array.from({ length: 8 }, (_, index) => digest(String(index))) });
-    const token = (issued: number) => new SignJWT({ sv: 0, amr: ["pwd", "otp"] })
-      .setProtectedHeader({ alg: "HS256", typ: "abii-admin+jwt" }).setIssuer("abii").setAudience("abii-admin")
-      .setSubject(ADMIN_SUBJECT).setIssuedAt(issued).setExpirationTime(issued + 1800)
-      .sign(new TextEncoder().encode(process.env.AUTH_SECRET));
+    const token = async (issued: number) => {
+      const sessionId = randomBytes(24).toString("base64url");
+      const authenticatedAt = new Date(issued * 1000);
+      await Admin.updateOne({ _id: "primary" }, { $set: { activeSession: { sessionId, version: 0, authenticatedAt, absoluteExpiresAt: new Date((issued + 28_800) * 1000), lastActivityAt: new Date(), environment } } });
+      return new SignJWT({ sv: 0, sid: sessionId, env: environment, amr: ["pwd", "otp"] })
+        .setProtectedHeader({ alg: "HS256", typ: "abii-admin+jwt" }).setIssuer("abii").setAudience("abii-admin")
+        .setSubject(ADMIN_SUBJECT).setIssuedAt(issued).setExpirationTime(issued + 28_800)
+        .sign(new TextEncoder().encode(process.env.AUTH_SECRET));
+    };
     const epoch = Math.floor(Date.now() / 1000);
-    const cookie = await token(epoch);
+    let cookie = await token(epoch);
     const stale = await token(epoch - 301);
     const addLearner = (name: string, options?: { suspendedAt?: Date; optOut?: boolean; verify?: boolean }) => User.create({
       name, passwordHash: "fixture", email: `${name}@example.invalid`, emailVerifiedAt: options?.verify === false ? null : new Date(),
@@ -74,6 +80,7 @@ test("durable announcement management commits and recovers in an isolated replic
     const draft = await write({ ...content, action: "save", id, revision: null }, stale);
     assert.equal(draft.state, "draft");
     assert.equal(await Notification.countDocuments(), 0);
+    cookie = await token(epoch);
     const edited = await write({ ...content, title: "New review tools", action: "save", id, revision: draft.revision });
     await assert.rejects(write({ ...content, action: "save", id, revision: draft.revision }), AnnouncementConflict);
     const editedBody = announcementContent(edited);
@@ -81,7 +88,7 @@ test("durable announcement management commits and recovers in an isolated replic
     const now = new Date();
     const future = new Date(+now + 120_000).toISOString().slice(0, 16);
     const schedule = { ...editedBody, action: "schedule", id, revision: edited.revision, confirmed: true, confirmation: proof.confirmation, scheduledAt: future };
-    await assert.rejects(write(schedule, stale), { status: 403 });
+    await assert.rejects(write(schedule, stale), { status: 401 });
     const scheduled = await write(schedule);
     assert.equal(await runDueAnnouncements({ now: new Date(future + ":00Z") > now ? now : new Date(+now - 1), id }), "idle");
     const rescheduled = await write({ ...schedule, revision: scheduled.revision, scheduledAt: new Date(+now + 240_000).toISOString().slice(0, 16) });

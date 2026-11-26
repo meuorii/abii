@@ -63,7 +63,11 @@ test("authenticated support response operations remain safe under contention and
     let sequence = 0;
     const sign = async (ageSeconds = 0) => {
       const issuedAt = Math.floor(Date.now() / 1000) - ageSeconds;
-      return new SignJWT({ sv: 0, amr: ["pwd", "otp"] }).setProtectedHeader({ alg: "HS256", typ: "abii-admin+jwt" }).setAudience("abii-admin").setIssuer(SESSION_ISSUER).setSubject(ADMIN_SUBJECT).setIssuedAt(issuedAt).setExpirationTime(issuedAt + ADMIN_LIFETIME).sign(new TextEncoder().encode(secret));
+      const sessionId = randomBytes(24).toString("base64url");
+      const environment = process.env.NODE_ENV === "production" ? "production" : "development";
+      const authenticatedAt = new Date(issuedAt * 1000);
+      await Admin.updateOne({ _id: ADMIN_ID }, { $set: { activeSession: { sessionId, version: 0, authenticatedAt, absoluteExpiresAt: new Date((issuedAt + ADMIN_LIFETIME) * 1000), lastActivityAt: new Date(), environment } } });
+      return new SignJWT({ sv: 0, sid: sessionId, env: environment, amr: ["pwd", "otp"] }).setProtectedHeader({ alg: "HS256", typ: "abii-admin+jwt" }).setAudience("abii-admin").setIssuer(SESSION_ISSUER).setSubject(ADMIN_SUBJECT).setIssuedAt(issuedAt).setExpirationTime(issuedAt + ADMIN_LIFETIME).sign(new TextEncoder().encode(secret));
     };
     const reset = async () => {
       await Promise.all([AdminAuditLog.deleteMany({}), AdminSecurityEvent.deleteMany({}), SupportResponseOperation.deleteMany({}), SupportTicketActivity.deleteMany({}), SupportTicket.deleteMany({}), Admin.deleteMany({})]);

@@ -15,14 +15,14 @@ function EyeIcon({ visible }: { visible: boolean }) {
   return <Icon aria-hidden="true" className="h-5 w-5" />;
 }
 
-export function AuthForm({ mode }: { mode: Mode }) {
+export function AuthForm({ mode, initialMessage = "" }: { mode: Mode; initialMessage?: string }) {
   const router = useRouter();
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initialMessage);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
   const isRegister = mode === "register";
