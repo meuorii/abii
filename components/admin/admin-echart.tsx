@@ -6,6 +6,7 @@ import { BarChart, HeatmapChart, LineChart, PieChart } from "echarts/charts";
 import { GridComponent, LegendComponent, TooltipComponent, VisualMapComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsOption } from "echarts";
+import { adminChartColors as chart, adminChartTooltip } from "./chart-colors";
 
 echarts.use([BarChart, HeatmapChart, LineChart, PieChart, GridComponent, LegendComponent, TooltipComponent, VisualMapComponent, CanvasRenderer]);
 
@@ -38,8 +39,8 @@ export function AdminEChart({ option, label, height = "h-44 sm:h-52" }: { option
 
 export function AdminDonut({ value, total, label }: { value: number; total: number; label: string }) {
   const option: EChartsOption = {
-    color: ["#F8769C", "#E8DDE1"],
-    tooltip: { className: "abii-echart-tooltip", trigger: "item", confine: true, formatter: (item: unknown) => {
+    color: [chart.primary, chart.fill],
+    tooltip: { ...adminChartTooltip, className: "abii-echart-tooltip", trigger: "item", confine: true, formatter: (item: unknown) => {
       const point = item as { name?: string; value?: number };
       return `${point.name ?? "Population"}: ${new Intl.NumberFormat("en-US").format(point.value ?? 0)}`;
     } },
@@ -65,9 +66,9 @@ export function AdminSparkline({ name, timestamps, values, unit }: {
   const valueText = (value: number | null) => value === null ? "No observations" :
     `${number.format(value)}${unit === "milliseconds" ? " ms" : unit === "percent" ? "%" : ""}`;
   const option: EChartsOption = {
-    color: ["#F8769C"],
+    color: [chart.primary],
     grid: { left: 1, right: 1, top: 3, bottom: 2 },
-    tooltip: { className: "abii-echart-tooltip", trigger: "axis", confine: true, formatter: (items: unknown) => {
+    tooltip: { ...adminChartTooltip, className: "abii-echart-tooltip", trigger: "axis", confine: true, formatter: (items: unknown) => {
       const first = (Array.isArray(items) ? items[0] : items) as { dataIndex?: number; value?: number | null } | undefined;
       const index = first?.dataIndex ?? 0;
       const timestamp = timestamps[index];
@@ -76,7 +77,7 @@ export function AdminSparkline({ name, timestamps, values, unit }: {
     xAxis: { type: "category", data: timestamps, show: false },
     yAxis: { type: "value", min: 0, show: false },
     series: [{ type: "line", data: values, connectNulls: false, showSymbol: false,
-      lineStyle: { color: "#F8769C", width: 2 }, areaStyle: { color: "#FFE8EF", opacity: 0.35 } }],
+      lineStyle: { color: chart.primary, width: 2 }, areaStyle: { color: chart.fill, opacity: 0.55 } }],
   };
   return <AdminEChart option={option} label={`${name} by observed interval`} height="h-10" />;
 }

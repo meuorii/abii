@@ -96,7 +96,7 @@ export function AdminShell({ name, children }: { name: string; children: ReactNo
               </button>
               <div id="admin-account" hidden={!menuOpen} className={`${workspaceAccountPanel} admin-account-panel`}>
                 <div className="border-b border-[#E8DDE1] px-3 py-2">
-                  <p className="break-words text-sm font-semibold">{name}</p><p className="text-xs text-[#6F5964]">Administrator</p>
+                  <p className="break-words text-sm font-semibold">{name}</p><p className="text-xs text-muted">Administrator</p>
                 </div>
                 <Button ref={signOutButton} variant="ghost" className="mt-1 w-full justify-start" aria-disabled={busy} onClick={() => void signOut()}>
                   <LogOut size={16} aria-hidden="true" /> {busy ? "Signing out…" : "Sign out"}

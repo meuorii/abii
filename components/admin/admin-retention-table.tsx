@@ -3,12 +3,13 @@
 import { useState } from "react";
 import type { RetentionCohort } from "@/lib/admin/analytics-contract";
 import { AdminPagination } from "./admin-pagination";
+import { adminChartColors as chart } from "./chart-colors";
 
 const pageSize = 10;
 const number = new Intl.NumberFormat("en-US");
 const percent = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 1 });
 const horizons = [1, 7, 30] as const;
-const button = "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-[#FFFFFF] px-3 text-xs font-semibold text-[#30262B] hover:bg-[#FFF1F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F8769C] disabled:cursor-not-allowed disabled:opacity-45";
+const button = "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-[#FFFFFF] px-3 text-xs font-semibold text-foreground hover:bg-[#FFF1F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F8769C] disabled:cursor-not-allowed disabled:opacity-45";
 
 export function AdminRetentionTable({ cohorts, cohortDateLabels }: { cohorts: RetentionCohort[]; cohortDateLabels: string[] }) {
   const [page, setPage] = useState(0);
@@ -31,7 +32,7 @@ export function AdminRetentionTable({ cohorts, cohortDateLabels }: { cohorts: Re
             const value = cohort.rates[horizon];
             const measured = value.eligible ? value.counted / value.eligible : null;
             const opacity = measured === null ? 0 : 22 + Math.round(measured * 0.58);
-            return <td key={horizon} className="px-1 py-1.5"><div style={{ backgroundColor: measured === null ? "#FFFFFF" : `color-mix(in srgb, #F8769C ${opacity}%, #FFE8EF)` }} className="rounded-md px-1 py-1.5 leading-4 tabular-nums text-[#30262B] [overflow-wrap:anywhere] sm:px-2">
+            return <td key={horizon} className="px-1 py-1.5"><div style={{ backgroundColor: measured === null ? chart.surface : `color-mix(in srgb, ${chart.primary} ${opacity}%, ${chart.fill})` }} className="rounded-md px-1 py-1.5 leading-4 tabular-nums text-foreground [overflow-wrap:anywhere] sm:px-2">
               {measured === null ? <span aria-label="Return day has yet to end">—</span> : <><span className="block font-bold">{percent.format(measured)}</span><span className="block text-[11px]">{number.format(value.counted)}/{number.format(value.eligible)}</span></>}
             </div></td>;
           })}

@@ -82,7 +82,7 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
           {([ ["All users", "all", "all"], ["Verified", "verified", "all"], ["Unverified", "unverified", "all"], ["Suspended", "all", "suspended"] ] as const).map(([label, verification, status]) => {
             const href = usersHref({ ...query, verification, status });
             const selectedFilter = query.verification === verification && query.status === status;
-            return <Link key={label} href={href} prefetch={false} scroll={false} aria-current={selectedFilter ? "page" : undefined} className={`${control} border-transparent px-3 text-xs font-semibold ${selectedFilter ? "bg-[#FFE8EF] text-[#30262B]" : "text-muted hover:bg-[#FFF1F5]"}`}>{label}</Link>;
+            return <Link key={label} href={href} prefetch={false} scroll={false} aria-current={selectedFilter ? "page" : undefined} className={`${control} border-transparent px-3 text-xs font-semibold ${selectedFilter ? "bg-[#FFE8EF] text-primary" : "text-muted hover:bg-[#FFF1F5]"}`}>{label}</Link>;
           })}
         </nav>
         <form key={usersHref(query)} method="get" action={usersPath} aria-label="Filter learners" onSubmit={onFilter}
@@ -124,7 +124,7 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
               action={filtered ? <Link href={usersPath} prefetch={false} className={`${control} mt-1 px-3`}>Reset filters</Link> : undefined} /></div>
             <table className="hidden w-full table-fixed text-left text-sm md:table">
               <caption className="sr-only">Learner accounts</caption>
-              <thead className="border-b border-border bg-[#FFFFFF] text-xs text-[#6F5964]"><tr>
+              <thead className="border-b border-border bg-[#FFFFFF] text-xs text-muted"><tr>
                 <th scope="col" className="w-[34%] px-5 py-3 font-semibold">User</th><th scope="col" className="px-2 py-3 font-semibold">Verification</th>
                 <th scope="col" className="px-2 py-3 font-semibold">Status</th><th scope="col" className="px-2 py-3 font-semibold">Joined (UTC)</th>
                 <th scope="col" className="w-28 px-5 py-3 text-right font-semibold">Actions</th>
@@ -135,7 +135,7 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
           </div> : page && <>
             <table className="hidden w-full table-fixed text-left text-sm md:table">
               <caption className="sr-only">Learner accounts</caption>
-              <thead className="border-b border-border bg-[#FFFFFF] text-xs text-[#6F5964]">
+              <thead className="border-b border-border bg-[#FFFFFF] text-xs text-muted">
                 <tr>
                   <th scope="col" className="w-[34%] px-5 py-3 font-semibold">User</th>
                   <th scope="col" className="px-2 py-3 font-semibold">Verification</th>

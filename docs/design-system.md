@@ -146,12 +146,30 @@ For status feedback, use the matching background and text tokens, and include an
 
 Legacy aliases (`--pink-soft`, `--pink-card`, `--pink`, `--pink-accent`, `--pink-primary`, and `--pink-active`) remain temporarily available because existing screens still consume them. New or touched UI should use the semantic tokens above; migrate aliases only as part of a deliberate screen update.
 
-## 12. Rollout scope and admin theme
+## 12. Admin Data Visualization Color Standards
+
+Admin charts use one pink visualization family. These colors identify datasets; they do not communicate success, warning, or failure:
+
+| Chart role | Value | Use |
+| --- | --- | --- |
+| Primary series | `#F8769C` | First or primary dataset; solid line |
+| Secondary series | `#EC658D` | Second dataset; dashed line or patterned bars |
+| Tertiary series | `#D9547D` | Third dataset; dotted line or differently patterned bars |
+| Area fill | `#FFE8EF` | Line-chart area and donut remainder |
+| Soft highlight | `#FFF1F5` | Patterned bar base |
+| Chart labels | `#6F5964` | Axes and legends |
+| Tooltip values | `#30262B` | Important values and tooltip text |
+| Grid lines | `#E8DDE1` | Chart guides and separators |
+| Chart surface | `#FFFFFF` | Tooltip and chart surface |
+
+Keep series distinguishable with solid, dashed, and dotted line styles, line widths, and bar patterns alongside clear legends and tooltips. For more than three datasets, reuse the pink shades with additional patterns or markers; do not add new hues or make datasets visually identical. Donut charts use primary pink for the measured portion and pale blush for the remainder. Retention matrices use a pink intensity scale. Chart colors never replace explicit event labels or descriptions, and semantic status badges, alerts, and form feedback retain their success, warning, and error colors. Keep accessible chart names and keyboard inspection, and do not rely on color alone to convey meaning.
+
+## 13. Rollout scope and admin theme
 
 The v1.1 palette refinement changes the shared main background to `#FFF9FC` and adds `#FFF4F8` as the admin dashboard's outer frame canvas. The frame color is a supporting structural neutral, not an extra brand accent. The admin shell keeps the workspace, content wrapper, sidebar, and header on the main background; hero sections remain `#FFE8EF`, cards remain white, and dialogs keep white content surfaces. All eight dashboard routes inherit these shared shell values.
 
 The admin dashboard uses `.admin-shell` scoped values that match Design System v1.1, while the global `--background` updates screens that already consume the shared token. Dialogs opened from inside the admin inherit the matching background token through the portal and retain white modal content. This color refinement does not change page layouts, chart data or calculations, APIs, business logic, authentication, or database behavior. When migrating another screen, replace local hard-coded colors with semantic tokens and check its behavior in that screen’s own theme.
 
-## 13. Reference page
+## 14. Reference page
 
 Visit `/design-system` to inspect the final palette, typography, button states, cards, form validation, semantic feedback, mascot states, flashcards, progress, loading and empty states, toasts, and dialogs. Interactive examples are functional and safe to explore; they do not submit data.

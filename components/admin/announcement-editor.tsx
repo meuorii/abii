@@ -12,7 +12,7 @@ const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 const field = `mt-1.5 block w-full min-w-0 rounded-xl border border-border bg-[#FFFFFF] px-3 py-2.5 text-base sm:text-sm ${focus}`;
 const primary = `inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F8769C] px-4 text-sm font-semibold text-white hover:bg-[#EC658D] active:bg-[#D9547D] disabled:opacity-50 ${focus}`;
 const secondary = `inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-[#FFFFFF] px-3.5 text-sm font-semibold hover:bg-[#FFF1F5] disabled:opacity-50 ${focus}`;
-const link = `inline-flex min-h-11 items-center rounded text-sm font-semibold text-[#30262B] hover:underline ${focus}`;
+const link = `inline-flex min-h-11 items-center rounded text-sm font-semibold text-foreground hover:underline ${focus}`;
 const panel = "min-w-0 rounded-2xl border border-border bg-[#FFFFFF] p-4 sm:p-5";
 const dateTime = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 const numeric = new Intl.NumberFormat("en");
@@ -37,9 +37,9 @@ function NotificationPreview({ title, message, target }: AnnouncementContent) {
   return <div className="notification-item--unread flex min-w-0 items-start gap-3 rounded-xl border border-border bg-[#FFE8EF] p-3.5">
     <span className="grid size-9 shrink-0 place-items-center rounded-[12px] bg-[#F8769C] text-white"><Sparkles size={17} aria-hidden="true" /></span>
     <div className="min-w-0 flex-1">
-      <p className="truncate text-[13px] font-semibold text-[#30262B]">{title || "Your notification title"}</p>
-      <p className="mt-1 line-clamp-3 break-words text-xs leading-[1.45] text-[#6F5964]">{message || "Your announcement message will appear here."}</p>
-      <p className="mt-2 text-xs font-medium text-[#6F5964]">{target ? `Opens ${announcementDestinations[target]}` : "Notification Center"}</p>
+      <p className="truncate text-[13px] font-semibold text-foreground">{title || "Your notification title"}</p>
+      <p className="mt-1 line-clamp-3 break-words text-xs leading-[1.45] text-muted">{message || "Your announcement message will appear here."}</p>
+      <p className="mt-2 text-xs font-medium text-muted">{target ? `Opens ${announcementDestinations[target]}` : "Notification Center"}</p>
     </div>
   </div>;
 }
@@ -298,7 +298,7 @@ export function AnnouncementDeliveryActions({ row, enabled }: { row: Announcemen
       {(row.state === "failed" || row.state === "incomplete") && <button type="button" className={primary} disabled={!enabled} onClick={() => setAction("retry")}>Retry delivery</button>}
       <button type="button" className={secondary} onClick={() => { setFailure(""); router.refresh(); }}>Refresh status</button>
     </div>
-    {notice && <p role="status" className="text-xs font-semibold text-[#30262B]">{notice}</p>}
+    {notice && <p role="status" className="text-xs font-semibold text-foreground">{notice}</p>}
     <Message message={failure} />
     {action && <Confirmation heading={action === "retry" ? "Retry delivery?" : "Cancel scheduled publication?"}
       label={action === "retry" ? "Confirm retry" : "Confirm cancellation"} busy={working} onDismiss={() => setAction(null)} onConfirm={() => void commit()}>

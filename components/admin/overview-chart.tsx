@@ -9,6 +9,7 @@ import type { EChartsOption } from "echarts";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import type { DailyCount } from "@/lib/admin/overview";
 import { AdminEmptyState } from "./admin-ui";
+import { adminChartColors as chartColors, adminChartTooltip } from "./chart-colors";
 
 echarts.use([LineChart, BarChart, PieChart, GridComponent, TooltipComponent, CanvasRenderer]);
 const dayFormat = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -24,13 +25,12 @@ export function OverviewDonut({ value, total, label }: { value: number; total: n
   const element = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!element.current || total <= 0) return;
-    const styles = getComputedStyle(element.current);
     const chart = echarts.init(element.current, undefined, { renderer: "canvas" });
     chart.setOption({ animation: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-      tooltip: { trigger: "item", confine: true, formatter: (item: { name?: string; value?: number }) => `${item.name ?? "Account"}: ${numbers.format(item.value ?? 0)}` },
+      tooltip: { ...adminChartTooltip, trigger: "item", confine: true, formatter: (item: { name?: string; value?: number }) => `${item.name ?? "Account"}: ${numbers.format(item.value ?? 0)}` },
       series: [{ type: "pie", radius: ["72%", "92%"], avoidLabelOverlap: true, label: { show: false },
-        data: [{ name: "Verified", value, itemStyle: { color: styles.getPropertyValue("--overview-accent").trim() } },
-          { name: "Unverified", value: Math.max(total - value, 0), itemStyle: { color: styles.getPropertyValue("--overview-pink").trim() } }] }] });
+        data: [{ name: "Verified", value, itemStyle: { color: chartColors.primary } },
+          { name: "Unverified", value: Math.max(total - value, 0), itemStyle: { color: chartColors.fill } }] }] });
     const observer = new ResizeObserver(() => chart.resize());
     observer.observe(element.current);
     return () => { observer.disconnect(); chart.dispose(); };
@@ -46,16 +46,15 @@ function Chart({ series, variant, unit = "", compact = false, label }: ChartProp
     const chart = echarts.init(element.current, undefined, { renderer: "canvas" });
     instance.current = chart;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const styles = getComputedStyle(element.current);
-    const accent = styles.getPropertyValue("--overview-accent").trim();
-    const fill = styles.getPropertyValue("--overview-pink").trim();
-    const muted = styles.getPropertyValue("--muted").trim();
-    const border = styles.getPropertyValue("--border").trim();
+    const accent = chartColors.primary;
+    const fill = chartColors.fill;
+    const muted = chartColors.labels;
+    const border = chartColors.grid;
     const option: EChartsOption = {
       animation: !reducedMotion,
       animationDuration: 180,
       grid: compact ? { left: 2, right: 2, top: 5, bottom: 3 } : { left: 38, right: 10, top: 14, bottom: 28 },
-      tooltip: compact ? undefined : { trigger: "axis", confine: true, formatter: (items) => {
+      tooltip: compact ? undefined : { ...adminChartTooltip, trigger: "axis", confine: true, formatter: (items) => {
         const point = Array.isArray(items) ? items[0] : items;
         const index = typeof point?.dataIndex === "number" ? point.dataIndex : 0;
         return `${formatDay(series[index].day)} UTC<br/><strong>${series[index].count === null ? "Unavailable" : `${numbers.format(series[index].count)} ${unit}`}</strong>`;

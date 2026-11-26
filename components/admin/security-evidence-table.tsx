@@ -46,10 +46,10 @@ export function SecurityEvidenceTable({ rows }: { rows: SecurityRow[] }) {
             <td className="whitespace-nowrap px-3 py-1 text-xs tabular-nums text-muted"><time dateTime={new Date(row.at).toISOString()}>{timestamp.format(row.at)}</time></td>
             <th scope="row" className="px-3 py-1">
               <button type="button" onClick={event => show(row, event)} aria-haspopup="dialog"
-                className={`inline-flex min-h-11 items-center gap-1 rounded text-left text-sm font-semibold hover:text-[#30262B] ${focus}`}>
+                className={`inline-flex min-h-11 items-center gap-1 rounded text-left text-sm font-semibold hover:text-foreground ${focus}`}>
                 <span>{row.label}{row.count !== null && row.count > 1 && <span className="ml-1.5 text-xs font-medium tabular-nums text-muted">×{row.count}</span>}
                   <span aria-hidden="true" className={`block pt-0.5 text-xs font-medium sm:hidden ${outcomeColors[row.outcome]}`}>{outcomeLabels[row.outcome]}</span></span>
-                <ChevronRight aria-hidden="true" size={14} className="shrink-0 text-[#6F5964]" />
+                <ChevronRight aria-hidden="true" size={14} className="shrink-0 text-muted" />
               </button>
             </th>
             <td className="px-3 py-1 text-xs text-muted">{actorLabel(row)}</td>

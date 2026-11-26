@@ -4,6 +4,7 @@ import { useId, useState, type KeyboardEvent } from "react";
 import type { EChartsOption } from "echarts";
 import { AdminEChart } from "./admin-echart";
 import { AdminEmptyState } from "./admin-ui";
+import { adminChartColors as chart, adminChartTooltip } from "./chart-colors";
 
 type Series = { label: string; color: string; values: (number | null)[]; dash?: string; area?: boolean };
 const dateFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -35,26 +36,26 @@ export function AnalyticsChart({ title, days, series, kind, empty, intervals, un
     setSelected(Math.max(0, Math.min(last, values[event.key])));
   }
   const option: EChartsOption = {
-    color: ["#F8769C", "#5C947A", "#B28A54"],
+    color: [chart.primary, chart.secondary, chart.tertiary],
     grid: { left: 42, right: 10, top: series.length > 1 ? 30 : 12, bottom: 30, containLabel: false },
-    legend: series.length > 1 ? { top: 0, left: 0, textStyle: { color: "#6F5964", fontSize: 11 } } : undefined,
-    tooltip: { className: "abii-echart-tooltip", trigger: "axis", confine: true, axisPointer: { type: "line" },
+    legend: series.length > 1 ? { top: 0, left: 0, textStyle: { color: chart.labels, fontSize: 11 } } : undefined,
+    tooltip: { ...adminChartTooltip, className: "abii-echart-tooltip", trigger: "axis", confine: true, axisPointer: { type: "line" },
       formatter: (params: unknown) => {
         const values = Array.isArray(params) ? params : [params];
         const first = values[0] as { dataIndex?: number } | undefined;
         const index = Math.max(0, Math.min(last, first?.dataIndex ?? 0));
         return `${day(index)}${categories ? "" : " UTC"}<br/>${series.map(track => `${track.label}: ${formatValue(track.values[index])}`).join("<br/>")}${sampleCounts ? `<br/>${numbers.format(sampleCounts[index])} samples` : ""}`;
       } },
-    xAxis: horizontal ? { type: "value", min: 0, minInterval: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: "#6F5964", fontSize: 10, formatter: (value: number) => `${axisNumbers.format(value)}${unit ? ` ${unit}` : ""}` }, splitLine: { lineStyle: { color: "#E8DDE1" } } } :
-      { type: "category", data: days.map((value, index) => categories?.[index] ?? intervals?.[index]?.tick ?? dateFormat.format(new Date(value))), boundaryGap: kind === "bars", axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: "#6F5964", fontSize: 10, hideOverlap: true, interval: "auto" } },
-    yAxis: horizontal ? { type: "category", data: days.map((value, index) => categories?.[index] ?? intervals?.[index]?.tick ?? dateFormat.format(new Date(value))), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: "#6F5964", fontSize: 11 } } :
-      { type: "value", min: 0, minInterval: 1, splitNumber: 3, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: "#6F5964", fontSize: 10, formatter: (value: number) => `${axisNumbers.format(value)}${unit ? ` ${unit}` : ""}` }, splitLine: { lineStyle: { color: "#E8DDE1" } } },
+    xAxis: horizontal ? { type: "value", min: 0, minInterval: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: chart.labels, fontSize: 10, formatter: (value: number) => `${axisNumbers.format(value)}${unit ? ` ${unit}` : ""}` }, splitLine: { lineStyle: { color: chart.grid } } } :
+      { type: "category", data: days.map((value, index) => categories?.[index] ?? intervals?.[index]?.tick ?? dateFormat.format(new Date(value))), boundaryGap: kind === "bars", axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: chart.labels, fontSize: 10, hideOverlap: true, interval: "auto" } },
+    yAxis: horizontal ? { type: "category", data: days.map((value, index) => categories?.[index] ?? intervals?.[index]?.tick ?? dateFormat.format(new Date(value))), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: chart.labels, fontSize: 11 } } :
+      { type: "value", min: 0, minInterval: 1, splitNumber: 3, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: chart.labels, fontSize: 10, formatter: (value: number) => `${axisNumbers.format(value)}${unit ? ` ${unit}` : ""}` }, splitLine: { lineStyle: { color: chart.grid } } },
     series: series.map((track, index) => ({ name: track.label, type: kind === "bars" ? "bar" : "line", data: track.values,
       stack: kind === "bars" && stacked ? "outcomes" : undefined, showSymbol: false, connectNulls: false,
       lineStyle: { color: track.color, width: index === 0 ? 2.5 : 2, type: track.dash?.startsWith("1") ? "dotted" : track.dash ? "dashed" : "solid" },
-      areaStyle: kind === "area" || track.area ? { color: track.color, opacity: 0.22 } : undefined,
-      itemStyle: track.label === "Unknown outcome" || track.label === "4xx" ? { color: "#FAF9F7", borderColor: "#F8769C", borderWidth: 1,
-        decal: { symbol: "rect", symbolSize: 1, dashArrayX: [1, 0], dashArrayY: [3, 3], color: "#F8769C" } } : { color: track.color },
+      areaStyle: kind === "area" || track.area ? { color: chart.fill, opacity: 0.55 } : undefined,
+      itemStyle: kind === "bars" && track.dash ? { color: chart.soft, borderColor: track.color, borderWidth: 1,
+        decal: { symbol: "rect", symbolSize: 1, dashArrayX: [1, 0], dashArrayY: track.dash.startsWith("1") ? [1, 2] : [3, 3], color: track.color } } : { color: track.color },
       barMaxWidth: horizontal ? 18 : 24,
     })) as EChartsOption["series"],
   };

@@ -22,7 +22,7 @@ export function AccountAvatar({ name, profileImage, large }: { name: string; pro
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [profileImage]);
   const initials = name.trim().split(/\s+/u).slice(0, 2).map(word => Array.from(word)[0]).join("").toUpperCase();
-  return <span aria-hidden="true" className={`relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#FFE8EF] font-bold text-[#30262B] ${large ? "size-[76px] text-xl" : "size-10 text-xs"}`}>
+  return <span aria-hidden="true" className={`relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#FFE8EF] font-bold text-foreground ${large ? "size-[76px] text-xl" : "size-10 text-xs"}`}>
     {profileImage && !failed ? <Image src={profileImage} alt="" fill sizes={large ? "76px" : "40px"} unoptimized className="object-cover" onError={() => setFailed(true)} /> : initials || "?"}
   </span>;
 }
@@ -33,7 +33,7 @@ export function AccountFlags({ user, kind }: { user: DirectoryUser; kind: "verif
     : <span className="text-xs font-medium text-muted">Unverified</span>;
   return user.suspendedAt
     ? <span className="inline-flex items-center gap-1 rounded-md bg-error-bg px-1.5 py-1 text-xs font-semibold text-error-text"><CircleSlash2 aria-hidden="true" size={13} />Suspended</span>
-    : <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6F5964]"><span aria-hidden="true" className="size-1.5 rounded-full bg-[#F8769C]" />Active</span>;
+    : <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted"><span aria-hidden="true" className="size-1.5 rounded-full bg-[#F8769C]" />Active</span>;
 }
 
 const learning = [
@@ -275,7 +275,7 @@ export function UserDetailSheet({ user, onClose, onChanged, onRefresh, fallbackF
             <h3 className="font-bold tracking-tight">Account access</h3>
             <p className="mt-1 text-sm leading-6 text-muted">{suspended ? "This learner’s sign-in is currently blocked." : "Suspending this account blocks sign-in and ends existing sessions."}</p>
             <button ref={actionButton} type="button" onClick={() => { setNotice(""); setReason(""); setConfirmation(suspended ? "reactivate" : "suspend"); }}
-              className={`${control} mt-3 border-border px-3 font-semibold text-[#30262B] hover:bg-[#FFF1F5]`}>
+              className={`${control} mt-3 border-border px-3 font-semibold text-foreground hover:bg-[#FFF1F5]`}>
               {suspended ? "Reactivate account" : "Suspend account"}
             </button>
           </section>

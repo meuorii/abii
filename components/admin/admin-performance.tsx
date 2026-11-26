@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CircleCheck, CircleHelp, CircleX, Clock3, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { AnalyticsChart } from "@/components/admin/analytics-chart";
+import { adminChartColors as chart } from "@/components/admin/chart-colors";
 import { AdminSparkline } from "@/components/admin/admin-echart";
 import { AdminEmptyState, AdminPanel } from "@/components/admin/admin-ui";
 import { SkeletonBlock, SkeletonRegion } from "@/components/ui/skeleton";
@@ -30,7 +31,7 @@ const jobLabels = {
   completed: "Completed", partial: "Partial", partial_batch: "Partial batch", lease_busy: "Lease busy",
   started: "Start observed", overdue: "Overdue evidence", failed: "Failed",
 } as const;
-const colors = { median: "#F8769C", p95: "#5C947A", p99: "#B28A54", volume: "#6F5964", error: "#C76F7D", client: "#E8DDE1" };
+const colors = { median: chart.primary, p95: chart.secondary, p99: chart.tertiary, volume: chart.primary, error: chart.tertiary, client: chart.secondary };
 
 function Stamped({ value, precise = false }: { value: Date | number | null; precise?: boolean }) {
   if (!value) return <span className="text-muted">No observation</span>;
@@ -70,7 +71,7 @@ export function PerformanceControls({ window }: { window: MonitoringWindow }) {
             aria-label={label === "1H" ? "1 hour" : label === "24H" ? "24 hours" : "7 days"}
             aria-current={window.period === period ? "page" : undefined}
             title={period === "1h" ? "1 hour" : period === "24h" ? "24 hours" : "7 days"}
-            className={`grid min-h-11 min-w-14 place-items-center whitespace-nowrap rounded-lg px-2.5 text-xs font-semibold ${focus} ${window.period === period ? "bg-[#FFE8EF] text-[#30262B]" : "text-muted hover:bg-pink-soft"}`}>
+            className={`grid min-h-11 min-w-14 place-items-center whitespace-nowrap rounded-lg px-2.5 text-xs font-semibold ${focus} ${window.period === period ? "bg-[#FFE8EF] text-primary" : "text-muted hover:bg-pink-soft"}`}>
             {label}
           </Link>)}
       </nav>
@@ -82,7 +83,7 @@ function Kpi({ label, value, children, featured = false, sparkline }: { label: s
   return (
     <div className={`min-h-[136px] min-w-0 rounded-xl border border-border px-3 py-3.5 shadow-none sm:px-5 sm:py-4 ${featured ? "bg-[#FFE8EF]" : "bg-white"}`}>
       <dt className="text-sm font-semibold">{label}</dt>
-      <dd className={`mt-1.5 tracking-tight tabular-nums ${value === "Unavailable" ? "text-base font-semibold text-[#6F5964] sm:text-lg" : "text-xl font-semibold sm:text-2xl"}`}>{value}</dd>
+      <dd className={`mt-1.5 tracking-tight tabular-nums ${value === "Unavailable" ? "text-base font-semibold text-muted sm:text-lg" : "text-xl font-semibold sm:text-2xl"}`}>{value}</dd>
       <dd className="mt-1 text-xs leading-5 text-muted">{children}</dd>
       <div className="mt-2">{sparkline}</div>
     </div>
@@ -144,12 +145,12 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
   ];
   const volume = [
     { label: "Other responses", color: colors.volume, values: report.chart.map(({ requests }) => requests.latency.count ? requests.latency.count - requests.serverErrors - requests.clientErrors : null) },
-    { label: "4xx", color: colors.client, values: report.chart.map(({ requests }) => requests.latency.count ? requests.clientErrors : null) },
-    { label: "Server errors", color: colors.error, values: report.chart.map(({ requests }) => requests.latency.count ? requests.serverErrors : null) },
+    { label: "4xx", color: colors.client, dash: "6 4", values: report.chart.map(({ requests }) => requests.latency.count ? requests.clientErrors : null) },
+    { label: "Server errors", color: colors.error, dash: "1 4", values: report.chart.map(({ requests }) => requests.latency.count ? requests.serverErrors : null) },
   ];
   return (
     <div className="grid min-w-0 grid-cols-1 gap-4 min-[1100px]:grid-cols-12">
-      <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 rounded-lg border border-border bg-[#FFE8EF] px-3.5 py-2.5 text-xs leading-5 text-[#30262B] min-[1100px]:col-span-12">
+      <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 rounded-lg border border-border bg-[#FFE8EF] px-3.5 py-2.5 text-xs leading-5 text-foreground min-[1100px]:col-span-12">
         <p role={report.apiCoverage === "read-failed" ? "alert" : undefined} className={report.apiCoverage === "read-failed" ? "text-error-text" : report.apiCoverage === "limited" ? "text-warning-text" : ""}><span className="font-semibold">Coverage.</span> {coverageText[report.apiCoverage]}{report.first !== null && <> First bucket <Stamped value={report.first} />.</>}</p>
         <p><span className="font-semibold">Last collected.</span> <Stamped value={report.lastCollected} precise /></p>
       </div>
@@ -185,7 +186,7 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
           </> : <VisualEmpty>{coverageText[report.apiCoverage]}</VisualEmpty>}
         </AdminPanel>
         <AdminPanel stretch bodyClassName="flex-1" className="min-[1100px]:col-span-4" title="Latency Distribution" description={`${count(totals.latency.count, "handler sample")} in the selected window; histogram bucket boundaries.`}>
-          {totals.latency.count ? <AnalyticsChart title="Observed latency distribution" days={totals.latency.bins.map((_, index) => `bucket-${index}`)} categories={totals.latency.bins.map((_, index) => index < latencyBounds.length ? `≤ ${number.format(latencyBounds[index])} ms` : `> ${number.format(latencyBounds.at(-1)!)} ms`)} categoryName="duration bucket" kind="bars" stacked={false} unit="requests" empty="No latency samples." series={[{ label: "Observed handlers", color: colors.p95, values: totals.latency.bins }]} /> : <VisualEmpty>{coverageText[report.apiCoverage]}</VisualEmpty>}
+          {totals.latency.count ? <AnalyticsChart title="Observed latency distribution" days={totals.latency.bins.map((_, index) => `bucket-${index}`)} categories={totals.latency.bins.map((_, index) => index < latencyBounds.length ? `≤ ${number.format(latencyBounds[index])} ms` : `> ${number.format(latencyBounds.at(-1)!)} ms`)} categoryName="duration bucket" kind="bars" stacked={false} unit="requests" empty="No latency samples." series={[{ label: "Observed handlers", color: colors.median, values: totals.latency.bins }]} /> : <VisualEmpty>{coverageText[report.apiCoverage]}</VisualEmpty>}
           <dl className="mt-2 grid grid-cols-2 gap-x-3 border-t border-border pt-2 text-xs">{([["p50", p50, 5], ["p95", p95, 20], ["p99", p99, 100]] as const).map(([label, value, minimum]) => <div key={label} className="flex justify-between gap-1 py-1"><dt>{label}</dt><dd className="tabular-nums">{value === null ? requests < minimum ? `min ${minimum}` : "Unavailable" : ms(value)}</dd></div>)}</dl>
         </AdminPanel>
       </div>
@@ -202,8 +203,8 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
           </dl>
           {report.databaseAt > 0 && <p className="mt-2 text-xs text-muted">Last timed request <Stamped value={report.databaseAt} />.</p>}
           {operations.count > 0 ? <AnalyticsChart title="MongoDB operation duration by type" days={days} intervals={intervals} kind="lines" unit="ms"
-            series={[{ label: "Queries", color: colors.p95, values: report.chart.map(point => average(point.queries)) },
-              { label: "Writes", color: colors.median, dash: "6 3", values: report.chart.map(point => average(point.writes)) },
+            series={[{ label: "Queries", color: colors.median, values: report.chart.map(point => average(point.queries)) },
+              { label: "Writes", color: colors.p95, dash: "6 3", values: report.chart.map(point => average(point.writes)) },
               { label: "Connection acquisition", color: colors.p99, dash: "1 4", values: report.chart.map(point => average(point.connections)) }]}
             sampleCounts={report.chart.map(point => point.operations.count)} empty="No operation samples in this period." /> : <VisualEmpty>No timed database operation observations for this period.</VisualEmpty>}
         </AdminPanel>
@@ -224,7 +225,7 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
               {report.jobs.map(({ run, state }) => <li key={run._id} className="py-2.5">
                 <div className="flex flex-wrap justify-between gap-x-2 gap-y-0.5 text-xs font-semibold">
                   <span><Stamped value={run.startedAt} /></span>
-                  <span className="font-semibold text-[#30262B]">{jobLabels[state]}</span>
+                  <span className="font-semibold text-foreground">{jobLabels[state]}</span>
                 </div>
                 <p className="mt-1 text-xs leading-5 text-muted">
                   {run.scheduledAt ? <>Slot <Stamped value={run.scheduledAt} /></> : "Private execution"}
@@ -242,7 +243,7 @@ export function AdminPerformance({ report }: { report: PerformanceReport }) {
       <div className="min-[1100px]:col-span-12"><AdminPanel title="Recent Incidents" description="Evidence from recorded quiz requests and reminder executions in this reporting window.">
         {report.incidents.length ? <ol className="divide-y divide-border">
           {report.incidents.map(item => <li key={`${item.type}-${item.first}`} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-2.5">
-            <div><p className="text-sm font-semibold">{item.type} <span className="ml-1 text-xs font-semibold text-[#30262B]">{item.severity}</span></p>
+            <div><p className="text-sm font-semibold">{item.type} <span className="ml-1 text-xs font-semibold text-foreground">{item.severity}</span></p>
               <p className="mt-0.5 text-xs leading-5 text-muted">{item.component} · {item.evidence}</p></div>
             <p className="text-xs leading-5 text-muted"><Stamped value={item.first} />{item.last !== item.first && <> to <Stamped value={item.last} /></>}</p>
           </li>)}

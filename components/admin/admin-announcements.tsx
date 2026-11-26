@@ -9,7 +9,7 @@ import type { AnnouncementDirectory, AnnouncementQuery } from "@/lib/admin/annou
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F8769C]";
 const primary = `inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-[#F8769C] px-3.5 text-sm font-semibold text-white hover:bg-[#EC658D] active:bg-[#D9547D] ${focus}`;
-const link = `inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-[#30262B] hover:bg-[#FFF1F5] ${focus}`;
+const link = `inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-foreground hover:bg-[#FFF1F5] ${focus}`;
 const field = `min-h-11 min-w-0 rounded-xl border border-border bg-[#FFFFFF] px-3 text-base sm:text-sm ${focus}`;
 const statuses: Record<AnnouncementState, string> = {
   draft: "text-muted before:border before:border-border",
@@ -49,7 +49,7 @@ function Directory({ query, data }: { query: AnnouncementQuery; data: Announceme
       <nav aria-label="Announcement status" className="flex flex-wrap items-center gap-1 border-b border-border pb-2">
         {tabs.map(([status, label]) => <Link key={status} href={announcementHref(query, { status, page: "", id: "" }, "#announcement-list")}
           prefetch={false} aria-current={query.status === status ? "page" : undefined}
-          className={`inline-flex min-h-11 items-center rounded-lg px-2.5 text-xs font-semibold ${focus} ${query.status === status ? "bg-[#FFE8EF] text-[#30262B]" : "text-muted hover:bg-pink-soft"}`}>{label}</Link>)}
+          className={`inline-flex min-h-11 items-center rounded-lg px-2.5 text-xs font-semibold ${focus} ${query.status === status ? "bg-[#FFE8EF] text-primary" : "text-muted hover:bg-pink-soft"}`}>{label}</Link>)}
       </nav>
       <form aria-label="Filter announcements" method="get" action="/admin/announcements#announcement-list"
         className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
@@ -121,7 +121,7 @@ function Details({ row, query, enabled }: { row: AnnouncementView; query: Announ
               ] as const).map(([label, value]) => <div key={label}><dt className="font-medium text-muted">{label}</dt>
                 <dd className="mt-0.5 text-lg font-semibold tabular-nums">{value === null ? "Unavailable" : numbers.format(value)}</dd></div>)}
             </dl> : <p className="mt-2 text-xs leading-5 text-muted">Delivery has not started.</p>}
-            {row.deliveryError && <p role="status" className="mt-3 border-t border-border pt-2 text-xs leading-5 text-[#30262B]">
+            {row.deliveryError && <p role="status" className="mt-3 border-t border-border pt-2 text-xs leading-5 text-foreground">
               {row.unresolved === null ? "The next batch could not be confirmed." : `${numbers.format(row.unresolved)} recipients in the unresolved batch.`} Retry resumes from the last committed batch.
             </p>}
             {row.committedAt && <p className="mt-3 text-xs leading-5 text-muted">Previously completed is included in Delivered. These totals track inbox creation.</p>}
