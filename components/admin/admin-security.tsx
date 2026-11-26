@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Activity, KeyRound, ShieldAlert, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
+import { Button, buttonClassNames } from "@/components/ui/button";
 import { AdminEmptyState, AdminPanel } from "@/components/admin/admin-ui";
 import { AnalyticsChart } from "@/components/admin/analytics-chart";
 import { SecurityEvidenceTable } from "@/components/admin/security-evidence-table";
@@ -18,7 +19,7 @@ const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 const split = "grid min-w-0 items-stretch gap-4 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]";
 const inputStyle = `mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-border bg-[#FFFFFF] px-2.5 text-base sm:text-sm ${focus}`;
 const periods = [["24h", "24 hours", "24H"], ["7d", "7 days", "7D"], ["30d", "30 days", "30D"]] as const;
-const auditLink = `inline-flex min-h-11 items-center rounded text-xs font-semibold text-foreground underline-offset-4 hover:underline ${focus}`;
+const auditLink = buttonClassNames({ variant: "ghost", className: "px-2 text-xs underline underline-offset-4" });
 
 function href(query: SecurityQuery, changes: Record<string, string | undefined> = {}, fragment = "") {
   const params = new URLSearchParams();
@@ -98,7 +99,7 @@ function EvidenceFilters({ query }: { query: SecurityQuery }) {
       </div>
     </details>
     <div className="col-span-full flex flex-wrap items-center gap-3 border-b border-border pb-3">
-      <button type="submit" className={`min-h-11 rounded-lg bg-[#F8769C] px-4 text-sm font-semibold text-white hover:bg-[#EC658D] active:bg-[#D9547D] ${focus}`}>Apply filters</button>
+      <Button type="submit">Apply filters</Button>
       <Link href={`/admin/security?period=${query.period}#audit-history`} prefetch={false} className={auditLink}>Clear filters</Link>
     </div>
   </form>;

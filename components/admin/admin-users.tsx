@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { Card } from "@/components/ui/card";
+import { Button, buttonClassNames } from "@/components/ui/button";
 import { AdminEmptyState } from "@/components/admin/admin-ui";
 import { AdminPagination } from "@/components/admin/admin-pagination";
 import { OverviewDonut } from "@/components/admin/overview-chart";
@@ -66,10 +67,10 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
     navigate(usersHref(next));
   }
   function action(user: DirectoryUser) {
-    return <button type="button" disabled={!interactive || pending} className={`${control} shrink-0 border-transparent px-2.5 font-semibold text-foreground hover:bg-surface-hover disabled:opacity-55`}
+    return <Button type="button" variant="ghost" size="sm" disabled={!interactive || pending} className="min-h-11 shrink-0 px-2.5"
       aria-label={`View details for ${user.name}`} onClick={() => setSelected(user)}>
       Details <ChevronRight size={15} aria-hidden="true" />
-    </button>;
+    </Button>;
   }
   return (
     <section aria-labelledby="learner-directory" className="min-w-0">
@@ -102,8 +103,8 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
                 <select className={`${control} w-full px-2 font-medium`} name={name} defaultValue={query[name]}>{options.map(([key, value]) => <option key={key} value={key}>{value}</option>)}</select>
               </label>)}
               <div className="flex items-center gap-2 sm:col-span-2">
-                <button className={`${control} border-border bg-[#FFE8EF] px-3.5 font-semibold`} disabled={pending}>Apply</button>
-                <button type="reset" onClick={() => navigate(usersPath)} className={`${control} border-transparent px-2 text-muted hover:bg-[#FFF1F5]`}>Reset<span className="sr-only"> filters</span></button>
+                <Button type="submit" variant="secondary" className="px-3.5" disabled={pending}>Apply</Button>
+                <Button type="reset" variant="ghost" size="sm" className="min-h-11 px-2 text-xs" onClick={() => navigate(usersPath)}>Reset<span className="sr-only"> filters</span></Button>
               </div>
             </div>
           </details>
@@ -117,11 +118,11 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
           {pending && <p role="status" className="border-b border-border bg-surface-hover px-4 py-2 text-xs text-muted sm:px-5">Updating directory…</p>}
           {error ? <div role="alert" className="px-4 py-8 text-error-text sm:px-5">
             <p className="text-sm font-semibold">{error}</p>
-            {!page && <button type="button" className={`${control} mt-3 px-3`} onClick={refresh}>Try again</button>}
+            {!page && <Button type="button" variant="outline" className="mt-3 px-3" onClick={refresh}>Try again</Button>}
           </div> : page?.rows.length === 0 ? <div className="px-4 sm:px-5">
             <div className="py-3 md:hidden"><AdminEmptyState size="compact" title={filtered ? "No matching users" : "No users yet"}
               description={filtered ? "Search from the start of a name or email, or reset the filters." : "Learner accounts will appear here after registration."}
-              action={filtered ? <Link href={usersPath} prefetch={false} className={`${control} mt-1 px-3`}>Reset filters</Link> : undefined} /></div>
+              action={filtered ? <Link href={usersPath} prefetch={false} className={buttonClassNames({ variant: "ghost", className: "mt-1 px-3" })}>Reset filters</Link> : undefined} /></div>
             <table className="hidden w-full table-fixed text-left text-sm md:table">
               <caption className="sr-only">Learner accounts</caption>
               <thead className="border-b border-border bg-[#FFFFFF] text-xs text-muted"><tr>
@@ -172,9 +173,9 @@ export function LearnerDirectory({ query, cursor, page, error }: { query: UsersQ
                   const content = <>{label === "Previous" && <Icon size={15} aria-hidden="true" />}{label}{label === "Next" && <Icon size={15} aria-hidden="true" />}</>;
                   const href = usersHref(query, token);
                   return token && !pending
-                    ? <Link key={label} href={href} prefetch={false} scroll={false} className={`${control} px-2.5 hover:bg-pink-soft`}
+                    ? <Link key={label} href={href} prefetch={false} scroll={false} className={buttonClassNames({ variant: "outline", size: "sm", className: "min-h-11 px-2.5" })}
                       onNavigate={event => { event.preventDefault(); navigate(href); }}>{content}</Link>
-                    : <button key={label} type="button" disabled className={`${control} px-2.5 opacity-45`}>{content}</button>;
+                    : <Button key={label} type="button" variant="outline" size="sm" disabled className="min-h-11 px-2.5">{content}</Button>;
                 })}
               </AdminPagination>
             </footer>

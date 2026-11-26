@@ -11,12 +11,30 @@ type ButtonProps = ComponentPropsWithRef<"button"> & {
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
     "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover active:bg-primary-active",
-  secondary: "bg-secondary-surface text-foreground hover:bg-surface-hover",
+  secondary:
+    "bg-secondary-surface text-primary hover:bg-surface-hover hover:text-primary-hover active:bg-secondary-surface active:text-primary-active",
   outline:
-    "border border-border bg-surface text-foreground hover:border-primary hover:bg-surface-hover",
-  ghost: "bg-transparent text-muted hover:bg-surface-hover hover:text-foreground",
+    "border border-border bg-surface text-primary hover:border-primary hover:bg-surface-hover hover:text-primary-hover active:bg-secondary-surface active:text-primary-active",
+  ghost:
+    "bg-transparent text-primary hover:bg-surface-hover hover:text-primary-hover active:bg-secondary-surface active:text-primary-active",
   danger: "border border-error/30 bg-error-bg text-error-text hover:bg-error/15",
 };
+
+export function buttonClassNames({ variant = "primary", size = "md", className = "" }: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+} = {}) {
+  return [
+    "inline-flex items-center justify-center gap-2 rounded-xl font-semibold",
+    "transition-colors duration-150",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2",
+    "disabled:pointer-events-none disabled:opacity-50",
+    variantClasses[variant],
+    sizeClasses[size],
+    className,
+  ].join(" ");
+}
 
 const sizeClasses: Record<ButtonSize, string> = {
   sm: "min-h-9 px-3 text-sm",
@@ -34,15 +52,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={[
-        "inline-flex items-center justify-center gap-2 rounded-xl font-semibold",
-        "transition-colors duration-150",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2",
-        "disabled:pointer-events-none disabled:opacity-50",
-        variantClasses[variant],
-        sizeClasses[size],
-        className,
-      ].join(" ")}
+      className={buttonClassNames({ variant, size, className })}
       {...props}
     />
   );

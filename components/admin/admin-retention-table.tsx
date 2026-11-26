@@ -4,12 +4,12 @@ import { useState } from "react";
 import type { RetentionCohort } from "@/lib/admin/analytics-contract";
 import { AdminPagination } from "./admin-pagination";
 import { adminChartColors as chart } from "./chart-colors";
+import { Button } from "@/components/ui/button";
 
 const pageSize = 10;
 const number = new Intl.NumberFormat("en-US");
 const percent = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 1 });
 const horizons = [1, 7, 30] as const;
-const button = "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-[#FFFFFF] px-3 text-xs font-semibold text-foreground hover:bg-[#FFF1F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F8769C] disabled:cursor-not-allowed disabled:opacity-45";
 
 export function AdminRetentionTable({ cohorts, cohortDateLabels }: { cohorts: RetentionCohort[]; cohortDateLabels: string[] }) {
   const [page, setPage] = useState(0);
@@ -40,8 +40,8 @@ export function AdminRetentionTable({ cohorts, cohortDateLabels }: { cohorts: Re
       </table>
     </div>
     {pageCount > 1 && <AdminPagination label="Retention cohort pages" result={`Showing ${first + 1}–${last} of ${number.format(cohorts.length)} cohorts · Page ${page + 1} of ${pageCount}`}>
-      <button type="button" className={button} disabled={page === 0} onClick={() => setPage(current => Math.max(0, current - 1))}>Previous</button>
-      <button type="button" className={button} disabled={page + 1 === pageCount} onClick={() => setPage(current => Math.min(pageCount - 1, current + 1))}>Next</button>
+      <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" disabled={page === 0} onClick={() => setPage(current => Math.max(0, current - 1))}>Previous</Button>
+      <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" disabled={page + 1 === pageCount} onClick={() => setPage(current => Math.min(pageCount - 1, current + 1))}>Next</Button>
     </AdminPagination>}
   </>;
 }

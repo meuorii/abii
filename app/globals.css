@@ -105,12 +105,24 @@
 .admin-loading-refined { --skeleton-base: #E8DDE1; --skeleton-highlight: rgb(255 255 255 / 48%); --skeleton-surface: #FFF1F5; --skeleton-border: #E8DDE1; }
 .admin-shell .admin-overview-workspace [data-overview-feature] { background-color: var(--overview-pink); }
 .admin-shell .admin-page-hero { border-color: var(--admin-border); background-color: var(--admin-secondary); }
-.admin-shell .admin-settings-checkbox:checked {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m3.5 8.5 3 3 6-7' stroke='%23F8769C' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+.abii-checkbox {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background-color: var(--surface);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.abii-checkbox:hover { border-color: var(--primary); }
+.abii-checkbox:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m3.5 8.5 3 3 6-7' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-position: center;
   background-repeat: no-repeat;
   background-size: 12px 12px;
 }
+.abii-checkbox:focus-visible { outline: 2px solid var(--primary-hover); outline-offset: 2px; }
+.abii-checkbox:disabled { cursor: not-allowed; opacity: 0.55; }
 @media (min-width: 640px) and (max-width: 1599.98px) {
   .admin-page-hero .abii-page-hero__layout { display: grid; grid-template-columns: minmax(0, 1fr) 32%; align-items: stretch; }
   .admin-page-hero .abii-page-hero__content { width: auto; max-width: none; }

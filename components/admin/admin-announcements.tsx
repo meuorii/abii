@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, Plus } from "lucide-react";
+import { Button, buttonClassNames } from "@/components/ui/button";
 import { AdminEmptyState, AdminPanel } from "@/components/admin/admin-ui";
 import { AdminPagination } from "@/components/admin/admin-pagination";
 import { SkeletonBlock, SkeletonRegion } from "@/components/ui/skeleton";
@@ -8,8 +9,8 @@ import { announcementDestinations, announcementLabels, type AnnouncementState, t
 import type { AnnouncementDirectory, AnnouncementQuery } from "@/lib/admin/announcements";
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F8769C]";
-const primary = `inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-[#F8769C] px-3.5 text-sm font-semibold text-white hover:bg-[#EC658D] active:bg-[#D9547D] ${focus}`;
-const link = `inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-foreground hover:bg-[#FFF1F5] ${focus}`;
+const primary = buttonClassNames({ variant: "primary", className: "px-3.5" });
+const link = buttonClassNames({ variant: "ghost", className: "px-2" });
 const field = `min-h-11 min-w-0 rounded-xl border border-border bg-[#FFFFFF] px-3 text-base sm:text-sm ${focus}`;
 const statuses: Record<AnnouncementState, string> = {
   draft: "text-muted before:border before:border-border",
@@ -60,7 +61,7 @@ function Directory({ query, data }: { query: AnnouncementQuery; data: Announceme
         <label className="grid min-w-0 gap-1.5 text-xs font-semibold">Sort by
           <select name="sort" defaultValue={query.sort} className={field}><option value="updated">Last updated</option><option value="created">Newest created</option></select>
         </label>
-        <button type="submit" className={`min-h-11 self-end rounded-xl border border-border bg-white px-3 text-sm font-semibold hover:bg-pink-soft ${focus}`}>Apply</button>
+        <Button type="submit" variant="outline" className="self-end px-3">Apply</Button>
       </form>
       {!data.rows.length && <div className="grid min-h-[144px] place-items-center"><AdminEmptyState size="compact" title={query.q || query.status !== "all" ? "No matching announcements" : "No announcements yet"}
         description={query.q || query.status !== "all" ? "No announcements match these filters." : "Create a draft to get started."} /></div>}

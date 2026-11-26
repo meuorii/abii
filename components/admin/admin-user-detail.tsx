@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { SkeletonBlock, SkeletonRegion } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast-provider";
+import { Button, buttonClassNames } from "@/components/ui/button";
 import { type AccountChange, type AccountChangeResult, type DirectoryUser, type UserDetail,
   accountReason, reasonMax, reasonMin, usersPath } from "@/lib/admin/users-contract";
 
@@ -226,21 +227,21 @@ export function UserDetailSheet({ user, onClose, onChanged, onRefresh, fallbackF
           </div>
           {error && <div role="alert" className="rounded-lg border border-error/30 bg-error-bg px-3 py-2 text-sm text-error-text">
             <p>{error.message}</p>
-            {error.code === "reauthenticate" && <Link className="mt-2 inline-flex min-h-11 items-center font-semibold underline" href={signIn} prefetch={false}>Sign in again</Link>}
+            {error.code === "reauthenticate" && <Link className={buttonClassNames({ variant: "ghost", className: "mt-2 underline underline-offset-2" })} href={signIn} prefetch={false}>Sign in again</Link>}
           </div>}
           <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
-            <button type="button" className={`${control} px-3 hover:bg-pink-soft`} disabled={pending} onClick={cancelConfirmation}>Cancel</button>
-            <button className={`${control} border-transparent bg-[#F8769C] px-3 font-semibold text-white hover:bg-[#EC658D] active:bg-[#D9547D] disabled:opacity-55`}
-              disabled={pending || error?.code === "reauthenticate"}>{pending ? "Confirming…" : suspending ? "Confirm suspension" : "Confirm reactivation"}</button>
+            <Button type="button" variant="outline" className="px-3" disabled={pending} onClick={cancelConfirmation}>Cancel</Button>
+            <Button type="submit" variant={suspending ? "danger" : "primary"} className="px-3"
+              disabled={pending || error?.code === "reauthenticate"}>{pending ? "Confirming…" : suspending ? "Confirm suspension" : "Confirm reactivation"}</Button>
           </div>
         </form>
       ) : loading ? <DetailSkeleton /> : readError ? (
         <div className="px-4 py-5 sm:px-6" role="alert">
           <p className="text-sm">{readError.message}</p>
           {readError.code === "reauthenticate"
-            ? <Link href={signIn} prefetch={false} className={`${control} mt-3 px-3`}>Sign in again</Link>
-            : <button type="button" onClick={() => confirmation ? void reconcile(confirmation, notice) : void load(endpoint)}
-              className={`${control} mt-3 px-3`}>Try again</button>}
+            ? <Link href={signIn} prefetch={false} className={buttonClassNames({ variant: "outline", className: "mt-3 px-3" })}>Sign in again</Link>
+            : <Button type="button" variant="outline" onClick={() => confirmation ? void reconcile(confirmation, notice) : void load(endpoint)}
+              className="mt-3 px-3">Try again</Button>}
         </div>
       ) : detail && (
         <div className="divide-y divide-border px-4 sm:px-6">
@@ -274,10 +275,10 @@ export function UserDetailSheet({ user, onClose, onChanged, onRefresh, fallbackF
           <section className="py-5">
             <h3 className="font-bold tracking-tight">Account access</h3>
             <p className="mt-1 text-sm leading-6 text-muted">{suspended ? "This learner’s sign-in is currently blocked." : "Suspending this account blocks sign-in and ends existing sessions."}</p>
-            <button ref={actionButton} type="button" onClick={() => { setNotice(""); setReason(""); setConfirmation(suspended ? "reactivate" : "suspend"); }}
-              className={`${control} mt-3 border-border px-3 font-semibold text-foreground hover:bg-[#FFF1F5]`}>
+            <Button ref={actionButton} type="button" variant="outline" onClick={() => { setNotice(""); setReason(""); setConfirmation(suspended ? "reactivate" : "suspend"); }}
+              className="mt-3 px-3">
               {suspended ? "Reactivate account" : "Suspend account"}
-            </button>
+            </Button>
           </section>
         </div>
       )}

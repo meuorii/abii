@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { ArrowDownRight, ArrowUpRight, Clock3, ShieldAlert } from "lucide-react";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { SkeletonBlock, SkeletonCard, SkeletonRegion } from "@/components/ui/skeleton";
 import type { OverviewReport } from "@/lib/admin/overview";
 import { OverviewChart, OverviewSparkline } from "./overview-chart";
@@ -59,7 +60,7 @@ export function AdminOverview({ report }: { report: OverviewReport }) {
             <select name="period" defaultValue={String(window.days)} className="min-h-11 max-w-full rounded-lg border border-border bg-white px-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-[var(--overview-accent-ink)]">
               {[7, 30, 90].map(days => <option key={days} value={days}>Last {days} complete days</option>)}
             </select>
-          </label><button type="submit" className="min-h-11 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:bg-primary-active focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-hover">Apply</button>
+          </label><Button type="submit">Apply</Button>
         </form>
       </div>
       {error && <p role="status" className="rounded-lg border border-border bg-[var(--overview-pink)] px-4 py-3 text-sm text-muted">Some report sections could not be loaded. <a className="font-semibold text-[var(--overview-accent-ink)] underline underline-offset-2" href={`/admin?period=${window.days}`}>Reload report</a></p>}

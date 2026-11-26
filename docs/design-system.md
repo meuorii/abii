@@ -68,16 +68,18 @@ Semantic color should always be paired with a clear label, icon, or explanatory 
 
 ## 5. Buttons and interaction states
 
+- Use the shared `Button` component and its `primary`, `secondary`, `outline`, `ghost`, and `danger` variants for standard actions; do not duplicate action-button classes in individual screens. Use `buttonClassNames` for links that need button styling while preserving link semantics.
 - Primary CTA: `#F8769C`, white foreground, `#EC658D` on hover, and `#D9547D` while pressed.
-- Secondary actions use the pale blush surface with primary text.
-- Outline actions use the neutral border and white surface. Ghost actions have no resting fill.
-- Destructive actions use the error background and error text; do not make destructive actions look like the primary brand CTA.
-- Disabled controls should be visibly inactive and should not respond to pointer input.
-- All interactive controls need a visible keyboard focus state. Preserve a useful hit area and clear accessible name.
+- Secondary: `#FFE8EF` surface and `#F8769C` text/icons; hover uses `#FFF1F5` with `#EC658D` text; pressed uses `#FFE8EF` with `#D9547D` text.
+- Outline: white surface, `#E8DDE1` border, and `#F8769C` text/icons; hover uses `#FFF1F5`, pink border, and `#EC658D` text; pressed uses `#FFE8EF` and `#D9547D` text.
+- Ghost: transparent at rest with `#F8769C` text/icons; hover uses `#FFF1F5` with `#EC658D` text; pressed uses `#FFE8EF` with `#D9547D` text.
+- Danger actions retain semantic error background and text; do not make destructive actions look like brand actions.
+- Checkboxes use a white unchecked surface with a neutral border. Checked state uses a solid `#F8769C` fill and a white checkmark. Keep hover border, visible focus ring, and a distinct disabled state.
+- Disabled controls should be visibly inactive and should not respond to pointer input. All interactive controls need a visible keyboard focus state, useful hit area, and clear accessible name.
 
 ### Contrast limitation
 
-White text on `#F8769C` is the approved visual treatment, but it does **not** meet WCAG AA contrast for normal-sized text. This is a known limitation in the finalized palette, not a claim of compliance. Keep the chosen palette for brand buttons as approved, and do not extend this pairing to long copy or small labels. The rest of the interface should continue to use readable foreground/background combinations.
+White text on `#F8769C` and `#F8769C` text on white or pale blush surfaces are approved visual treatments, but do **not** meet WCAG AA contrast for normal-sized text. This is a known limitation in the finalized palette, not a claim of compliance. Keep the chosen palette as approved, avoid extending it to long copy, and retain visible focus rings and clear labels/icons. Do not silently substitute another brand color.
 
 ## 6. Forms and validation
 
@@ -121,19 +123,28 @@ White text on `#F8769C` is the approved visual treatment, but it does **not** me
 The tokens are defined in `app/globals.css` and exposed as Tailwind v4 color utilities. Prefer semantic utilities in components rather than raw hex values:
 
 ```tsx
+import { Button, buttonClassNames } from "@/components/ui/button";
+
 <main className="min-h-screen bg-background text-foreground">
   <div className="bg-dashboard-frame p-4">
     <div className="bg-background">
       <section className="rounded-2xl bg-secondary-surface">
         <div className="rounded-xl border border-border bg-surface p-5">
-          <button className="bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active">
-            Continue
-          </button>
+          <Button>Continue</Button>
+          <Button variant="secondary">Secondary action</Button>
+          <Button variant="outline">Cancel</Button>
+          <Button variant="ghost">View details</Button>
         </div>
       </section>
     </div>
   </div>
 </main>
+```
+
+For a navigational action that must remain an anchor, keep the link and share the button variant styles:
+
+```tsx
+<Link href="/admin/users" className={buttonClassNames({ variant: "outline" })}>View users</Link>
 ```
 
 For status feedback, use the matching background and text tokens, and include an icon or label:

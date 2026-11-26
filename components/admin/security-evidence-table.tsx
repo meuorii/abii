@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
 import { ChevronRight, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { AdminEmptyState } from "@/components/admin/admin-ui";
 import { auditRetentionDays, eventRetentionDays, type SecurityRow } from "@/lib/admin/security-contract";
 
@@ -45,12 +46,12 @@ export function SecurityEvidenceTable({ rows }: { rows: SecurityRow[] }) {
           {rows.length ? rows.map(row => <tr key={`${row.source}-${row.id}`} className="hover:bg-[#FFF1F5]">
             <td className="whitespace-nowrap px-3 py-1 text-xs tabular-nums text-muted"><time dateTime={new Date(row.at).toISOString()}>{timestamp.format(row.at)}</time></td>
             <th scope="row" className="px-3 py-1">
-              <button type="button" onClick={event => show(row, event)} aria-haspopup="dialog"
-                className={`inline-flex min-h-11 items-center gap-1 rounded text-left text-sm font-semibold hover:text-foreground ${focus}`}>
+              <Button type="button" variant="ghost" size="sm" onClick={event => show(row, event)} aria-haspopup="dialog"
+                className="min-h-11 justify-start rounded-lg px-0 text-left">
                 <span>{row.label}{row.count !== null && row.count > 1 && <span className="ml-1.5 text-xs font-medium tabular-nums text-muted">×{row.count}</span>}
                   <span aria-hidden="true" className={`block pt-0.5 text-xs font-medium sm:hidden ${outcomeColors[row.outcome]}`}>{outcomeLabels[row.outcome]}</span></span>
-                <ChevronRight aria-hidden="true" size={14} className="shrink-0 text-muted" />
-              </button>
+                <ChevronRight aria-hidden="true" size={14} className="shrink-0" />
+              </Button>
             </th>
             <td className="px-3 py-1 text-xs text-muted">{actorLabel(row)}</td>
             <td className="px-3 py-1 text-xs text-muted">{row.target?.kind ?? "—"}</td>

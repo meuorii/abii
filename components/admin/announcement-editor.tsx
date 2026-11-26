@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
+import { Button, buttonClassNames } from "@/components/ui/button";
 import {
   announcementContent, announcementDestinations, publicationTime, type AnnouncementContent, type AnnouncementTarget,
   type AnnouncementView, type AudienceEstimate,
@@ -10,9 +11,7 @@ import {
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F8769C]";
 const field = `mt-1.5 block w-full min-w-0 rounded-xl border border-border bg-[#FFFFFF] px-3 py-2.5 text-base sm:text-sm ${focus}`;
-const primary = `inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F8769C] px-4 text-sm font-semibold text-white hover:bg-[#EC658D] active:bg-[#D9547D] disabled:opacity-50 ${focus}`;
-const secondary = `inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-[#FFFFFF] px-3.5 text-sm font-semibold hover:bg-[#FFF1F5] disabled:opacity-50 ${focus}`;
-const link = `inline-flex min-h-11 items-center rounded text-sm font-semibold text-foreground hover:underline ${focus}`;
+const link = buttonClassNames({ variant: "ghost", className: "underline underline-offset-2" });
 const panel = "min-w-0 rounded-2xl border border-border bg-[#FFFFFF] p-4 sm:p-5";
 const dateTime = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 const numeric = new Intl.NumberFormat("en");
@@ -57,8 +56,8 @@ function Confirmation({ heading, label, busy, onDismiss, onConfirm, children }: 
     <h2 id={titleId} className="text-xl font-semibold tracking-tight">{heading}</h2>
     <div className="my-4 grid gap-3 text-sm leading-6 text-muted">{children}</div>
     <div className="flex flex-wrap justify-end gap-2">
-      <button type="button" disabled={busy} onClick={() => dialog.current?.close()} className={secondary}>Back</button>
-      <button type="button" disabled={busy} onClick={onConfirm} className={primary}>{busy ? "Working…" : label}</button>
+      <Button type="button" variant="outline" disabled={busy} onClick={() => dialog.current?.close()} className="px-3.5">Back</Button>
+      <Button type="button" disabled={busy} onClick={onConfirm}>{busy ? "Working…" : label}</Button>
     </div>
   </dialog>;
 }
@@ -237,16 +236,16 @@ export function AnnouncementEditor({ initial, deliveryEnabled, back }: { initial
             <p className="text-sm font-medium">Verified learners</p>
             <p className="text-xs leading-5 text-muted">Learners must have an active account and allow What’s New notifications. The administrator is excluded.</p>
         <div className="rounded-lg border border-border bg-[#FFE8EF] px-3 py-3"><AudiencePreview preview={preview} /></div>
-            <button type="button" className={`${secondary} justify-self-start`} disabled={working} onClick={() => void loadPreview()}>{preview ? "Refresh estimate" : "Estimate audience"}</button>
+            <Button type="button" variant="outline" className="justify-self-start px-3.5" disabled={working} onClick={() => void loadPreview()}>{preview ? "Refresh estimate" : "Estimate audience"}</Button>
           </div>
         </aside>
       </div>
       <div className="flex flex-wrap justify-between gap-3 rounded-xl border border-border bg-[#FFFFFF] px-3.5 py-3">
         <p role="status" className="self-center text-xs leading-5 text-muted">{working ? "Working…" : !deliveryEnabled ? "Delivery is disabled for this deployment." : dirty ? "Unsaved changes" : scheduled ? "Schedule saved" : initial ? "Draft saved" : "New draft"}</p>
         <div className="flex flex-wrap gap-2">
-          {!scheduled && <button type="submit" disabled={working} className={secondary}>Save draft</button>}
-          <button type="button" disabled={working || !deliveryEnabled} className={secondary} onClick={event => { confirmTrigger.current = event.currentTarget; void loadPreview("schedule"); }}>{scheduled ? "Update schedule" : "Schedule"}</button>
-          <button type="button" disabled={working || !deliveryEnabled} className={primary} onClick={event => { confirmTrigger.current = event.currentTarget; void loadPreview("publish"); }}>Publish now</button>
+          {!scheduled && <Button type="submit" variant="outline" className="px-3.5" disabled={working}>Save draft</Button>}
+          <Button type="button" variant="outline" className="px-3.5" disabled={working || !deliveryEnabled} onClick={event => { confirmTrigger.current = event.currentTarget; void loadPreview("schedule"); }}>{scheduled ? "Update schedule" : "Schedule"}</Button>
+          <Button type="button" disabled={working || !deliveryEnabled} onClick={event => { confirmTrigger.current = event.currentTarget; void loadPreview("publish"); }}>Publish now</Button>
         </div>
       </div>
     </form>
@@ -294,9 +293,9 @@ export function AnnouncementDeliveryActions({ row, enabled }: { row: Announcemen
 
   return <div className="grid min-w-0 gap-2">
     <div className="flex flex-wrap gap-2">
-      {row.state === "scheduled" && <button type="button" className={secondary} onClick={() => setAction("cancel")}>Cancel schedule</button>}
-      {(row.state === "failed" || row.state === "incomplete") && <button type="button" className={primary} disabled={!enabled} onClick={() => setAction("retry")}>Retry delivery</button>}
-      <button type="button" className={secondary} onClick={() => { setFailure(""); router.refresh(); }}>Refresh status</button>
+      {row.state === "scheduled" && <Button type="button" variant="outline" className="px-3.5" onClick={() => setAction("cancel")}>Cancel schedule</Button>}
+      {(row.state === "failed" || row.state === "incomplete") && <Button type="button" disabled={!enabled} onClick={() => setAction("retry")}>Retry delivery</Button>}
+      <Button type="button" variant="outline" className="px-3.5" onClick={() => { setFailure(""); router.refresh(); }}>Refresh status</Button>
     </div>
     {notice && <p role="status" className="text-xs font-semibold text-foreground">{notice}</p>}
     <Message message={failure} />

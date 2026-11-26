@@ -86,6 +86,10 @@ export default function DesignSystemPage() {
               <Card className="mt-6">
                 <div className="flex flex-wrap items-center gap-3"><Button>Continue</Button><Button variant="secondary">Secondary</Button><Button variant="outline">Outline</Button><Button variant="ghost">Ghost</Button><Button variant="danger">Remove</Button><Button disabled>Disabled</Button></div>
                 <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-border pt-5"><Button size="sm">Small</Button><Button>Default</Button><Button size="lg">Large action</Button><p className="text-xs text-muted">Hover and press the primary button to see its interaction colors.</p></div>
+                <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 border-t border-border pt-5 text-sm">
+                  <label className="flex min-h-11 items-center gap-3"><input type="checkbox" defaultChecked className="abii-checkbox size-4 shrink-0" />Checked · pink fill, white check</label>
+                  <label className="flex min-h-11 items-center gap-3"><input type="checkbox" className="abii-checkbox size-4 shrink-0" />Unchecked · white fill, neutral border</label>
+                </div>
               </Card>
               <p className="mt-3 text-sm leading-6 text-muted">White text on #F8769C is the approved visual treatment. It does not meet WCAG AA contrast for normal-sized text; this is a documented palette limitation.</p>
             </section>
