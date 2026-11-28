@@ -3,14 +3,13 @@ import Link from "next/link";
 import { isValidObjectId } from "mongoose";
 import { notFound, redirect } from "next/navigation";
 import { TopicsSection } from "@/components/subjects/topics-section";
-import { FolderAddTopicButton } from "@/components/subjects/folder-add-topic-button";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Subject } from "@/models/Subject";
 import { Folder } from "@/models/Folder";
 import { Topic } from "@/models/Topic";
 import { Flashcard } from "@/models/Flashcard";
-import { ChevronRight, FolderOpen } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,9 +36,8 @@ export default async function FolderDetailPage({ params }: PageProps) {
     <AbiiPageHero
       variant="topic-folder"
       headingId="topic-folder-hero-title"
-      title={<><div className="flex min-w-0 items-center gap-3"><span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#FFE0E9] text-[#E9577D] sm:h-12 sm:w-12"><FolderOpen className="h-5 w-5" /></span><div className="min-w-0"><h1 className="break-words text-xl font-bold tracking-[-0.04em] text-[#2F2930] sm:text-2xl">{title}</h1><p className="mt-1 text-[11px] text-[#6E8497] sm:text-xs">{topicCount} {topicCount === 1 ? "topic" : "topics"} <span className="mx-1.5">&middot;</span> {flashcardCount} {flashcardCount === 1 ? "flashcard" : "flashcards"}</p></div></div><h2 className="mt-5 max-w-[420px] text-[clamp(1.45rem,2.5vw,2rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#173B52]">Your lessons,<br /><span className="text-[#E9577D]">perfectly organized.</span></h2></>}
-      description={<p className="mt-2 max-w-sm text-xs leading-5 text-[#526F83] sm:text-sm sm:leading-6">Keep your topics organized and ready for your next study session.</p>}
-      actions={<FolderAddTopicButton className="mt-4" />}
+      title={<><h1 className="abii-hero-heading break-words">{title}</h1><p className="mt-2 text-sm text-[#6F5964]">{topicCount} {topicCount === 1 ? "topic" : "topics"} · {flashcardCount} {flashcardCount === 1 ? "flashcard" : "flashcards"}</p></>}
+      description={<p className="mt-2 max-w-sm text-sm leading-6 text-[#6F5964]">{subject.name} · Keep your topics organized and ready for your next study session.</p>}
       mascotSrc="/dashboard-hero/my-subjects.png"
       mascotAlt=""
       priority

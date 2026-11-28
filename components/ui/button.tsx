@@ -17,7 +17,7 @@ const variantClasses: Record<ButtonVariant, string> = {
     "border border-border bg-surface text-primary hover:border-primary hover:bg-surface-hover hover:text-primary-hover active:bg-secondary-surface active:text-primary-active",
   ghost:
     "bg-transparent text-primary hover:bg-surface-hover hover:text-primary-hover active:bg-secondary-surface active:text-primary-active",
-  danger: "border border-error/30 bg-error-bg text-error-text hover:bg-error/15",
+  danger: "learner-danger-action border border-error/30 bg-error-bg text-error-text hover:bg-error/15",
 };
 
 export function buttonClassNames({ variant = "primary", size = "md", className = "" }: {
@@ -52,6 +52,7 @@ export function Button({
   return (
     <button
       type={type}
+      data-button-variant={variant}
       className={buttonClassNames({ variant, size, className })}
       {...props}
     />

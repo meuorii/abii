@@ -53,7 +53,7 @@ function Brand({ compact = false }: { compact?: boolean }) {
     <Link
       href="/dashboard"
       aria-label="Abii dashboard"
-      className={`flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${
+      className={`flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] focus-visible:ring-offset-2 ${
         compact ? "gap-2" : "flex-col items-start gap-1"
       }`}
     >
@@ -114,15 +114,15 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
 
   return (
     <NotificationProvider userId={userId} studyTimezone={studyTimezone}>
-    <div className="relative min-h-dvh overflow-hidden bg-[#FFF7F9] p-0 text-[#2F2930] sm:p-3 lg:p-4">
+    <div className="learner-theme relative min-h-dvh overflow-hidden bg-[#FFF4F8] p-0 text-[#30262B] sm:p-3 lg:p-4">
       <a
         href="#authenticated-main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[110] focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-[#B84369] focus:shadow-md focus:outline-none focus:ring-2 focus:ring-[#E9577D] focus:ring-offset-2"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[110] focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-[#F8769C] focus:shadow-md focus:outline-none focus:ring-2 focus:ring-[#EC658D] focus:ring-offset-2"
       >
         Skip to main content
       </a>
-      <div className="mx-auto flex h-dvh min-h-0 max-w-[1600px] overflow-hidden bg-white sm:h-[calc(100dvh-24px)] sm:rounded-[20px] sm:border sm:border-[#F0E5E9] sm:shadow-[0_10px_40px_rgba(65,37,48,0.07)] lg:h-[calc(100dvh-32px)]">
-        <aside className="relative hidden w-[220px] shrink-0 flex-col border-r border-[#F0E8EC] bg-[#FFFCFD] lg:flex">
+      <div className="mx-auto flex h-dvh min-h-0 max-w-[1600px] overflow-hidden bg-[#FFF9FC] sm:h-[calc(100dvh-24px)] sm:rounded-[20px] sm:border sm:border-[#E8DDE1] sm:shadow-[0_10px_40px_rgba(65,37,48,0.07)] lg:h-[calc(100dvh-32px)]">
+        <aside className="relative hidden w-[220px] shrink-0 flex-col border-r border-[#E8DDE1] bg-[#FFF9FC] lg:flex">
           <div className="px-5 pb-7 pt-7">
             <Brand />
           </div>
@@ -199,7 +199,7 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
                       href="/profile"
                       aria-current={pathname === "/profile" ? "page" : undefined}
                       onClick={() => setProfileMenuOpen(false)}
-                      className={`block rounded-lg px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] ${pathname === "/profile" ? "bg-[#FFF0F4] font-semibold text-[#B84369]" : "text-[#756B72] hover:bg-[#FFF7F9]"}`}
+                      className={`block rounded-lg px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] ${pathname === "/profile" ? "bg-[#FFE8EF] font-semibold text-[#F8769C]" : "text-[#756B72] hover:bg-[#FFF9FC]"}`}
                     >
                       Profile
                     </Link>
@@ -219,7 +219,7 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
             tabIndex={-1}
             data-authenticated-motion
             aria-label="Application content"
-            className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-white pb-20 lg:pb-0"
+            className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-background pb-20 lg:pb-0"
           >
             <ScrollRootProvider rootRef={mainRef}>
               <PageTransition>{children}</PageTransition>
@@ -228,7 +228,7 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
 
           <nav
             aria-label="Mobile bottom navigation"
-            className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-[#E8E2E5] bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),4px)] pt-1 backdrop-blur lg:hidden"
+            className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-[#E8E2E5] bg-[#FFF9FC]/95 px-1 pb-[max(env(safe-area-inset-bottom),4px)] pt-1 backdrop-blur lg:hidden"
           >
             {mobileNavigation.map((item) => {
               const active = isActive(pathname, item.href);
@@ -238,10 +238,10 @@ export function AppShell({ children, userId, userName: initialUserName, profileI
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E9577D] ${
+                  className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#EC658D] ${
                     active
-                      ? "text-[#E9577D]"
-                      : "text-[#7F91A1] hover:bg-[#FFF7F9]"
+                      ? "text-[#EC658D]"
+                      : "text-[#6F5964] hover:bg-[#FFF9FC]"
                   }`}
                 >
                   <item.icon aria-hidden="true" className="h-5 w-5" />

@@ -34,6 +34,11 @@
     "test:quiz-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/quiz-due-review.browser.mjs",
     "test:dashboard-greeting-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/dashboard-greeting.browser.mjs",
     "test:responsive-browser": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/authenticated-ux.browser.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:phase1": "playwright test --grep @phase1",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
     "test:landing-demo": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/landing-demo-grading.test.ts",
     "test:demo": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/demo-seed.test.ts",
     "test:auth-email": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/auth-email.test.ts",
@@ -67,6 +72,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.0",
     "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^22.18.6",
     "@types/react": "^19.1.13",

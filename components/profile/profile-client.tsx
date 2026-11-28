@@ -13,10 +13,10 @@ import { useToast } from "@/components/ui/toast-provider";
 
 type InitialUser = { name: string; email: string; profileImage: string; memberSince: string | null };
 
-const fieldClass = "mt-1.5 min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-2.5 text-sm text-[#2F2930] outline-none transition-colors placeholder:text-[#8A7D84] focus:border-[#E9577D] focus:ring-2 focus:ring-[#FFE8EF]";
-const primaryButton = "inline-flex min-h-11 items-center justify-center rounded-xl bg-[#E9577D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#C94369] active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryButton = "inline-flex min-h-10 items-center justify-center rounded-xl border border-[#E8E2E5] bg-white px-3.5 py-2 text-sm font-semibold text-[#18384D] transition-colors hover:bg-[#FFF7F9] active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
-const dangerButton = "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#E7B7C3] bg-white px-3.5 py-2 text-sm font-semibold text-[#B8435D] transition-colors hover:bg-[#FFF1F1] active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+const fieldClass = "mt-1.5 min-h-11 w-full rounded-xl border border-[#E8DDE1] bg-white px-3.5 py-2.5 text-sm text-[#30262B] outline-none transition-colors placeholder:text-[#6F5964] focus:border-[#F8769C] focus:ring-2 focus:ring-[#FFE8EF]";
+const primaryButton = "inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F8769C] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#EC658D] active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+const secondaryButton = "inline-flex min-h-10 items-center justify-center rounded-xl border border-[#E8DDE1] bg-white px-3.5 py-2 text-sm font-semibold text-[#30262B] transition-colors hover:bg-[#FFF9FC] active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+const dangerButton = "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#E8DDE1] bg-white px-3.5 py-2 text-sm font-semibold text-[#F8769C] transition-colors hover:bg-[#FFF1F5] active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
 async function request(url: string, method: string, body?: unknown) {
   const response = await fetch(url, {
@@ -203,22 +203,22 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
   const initial = name.trim().charAt(0).toUpperCase() || "A";
 
   return <div className="mx-auto w-full min-w-0 max-w-[1500px] space-y-7 px-4 py-7 sm:space-y-9 sm:px-6 sm:py-9 xl:px-6">
-    <AbiiPageHero variant="profile" title={<h1 className="text-[clamp(1.65rem,3vw,2.3rem)] font-bold leading-[1.08] tracking-[-0.035em] text-[#18384D] [text-wrap:balance]">Your Profile, Your Space.</h1>} description={<p className="mt-2 max-w-[48ch] text-sm leading-6 text-[#557187] sm:text-[0.9375rem]">Manage your personal details, update your profile photo, and keep your Abii account secure.</p>} mascotSrc="/dashboard-hero/profile-hero.png" mascotAlt="Abii the pink otter smiling and waving" />
+    <AbiiPageHero variant="profile" title={<h1 className="abii-hero-heading">Your Profile, Your Space.</h1>} description={<p className="mt-2 max-w-[48ch]">Manage your personal details, update your profile photo, and keep your Abii account secure.</p>} mascotSrc="/dashboard-hero/profile-hero.png" mascotAlt="Abii the pink otter smiling and waving" />
 
     <ScrollReveal preset="card" delay={0.12}>
-    <section aria-label="Account overview" className="flex min-w-0 flex-col gap-5 rounded-2xl border border-[#F0E5E9] bg-[#FFF7F9] p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-6">
-      <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-[#FFE8EF] text-2xl font-bold text-[#B83F68] shadow-[0_2px_10px_rgba(47,41,48,0.08)]">
+    <section aria-label="Account overview" className="flex min-w-0 flex-col gap-5 rounded-2xl border border-[#E8DDE1] bg-[#FFF9FC] p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-6">
+      <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-[#FFE8EF] text-2xl font-bold text-[#F8769C] shadow-[0_2px_10px_rgba(47,41,48,0.08)]">
         {profileImage ? <Image key={profileImage} src={profileImage} alt={`${name || "Account"} profile photo`} fill sizes="72px" unoptimized className="object-cover" /> : initial}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="break-words text-xl font-semibold tracking-[-0.025em] text-[#18384D]">{name || "Abii learner"}</p>
-        <p className="mt-1 break-all text-sm text-[#557187]">{email}</p>
+        <p className="break-words text-xl font-semibold tracking-[-0.025em] text-[#30262B]">{name || "Abii learner"}</p>
+        <p className="mt-1 break-all text-sm text-[#6F5964]">{email}</p>
       </div>
       <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#276944]">
           <ShieldCheck aria-hidden="true" className="h-4 w-4" /> Verified account
         </span>
-        {initialUser.memberSince && <p className="text-xs text-[#6E879A]">Member since {initialUser.memberSince}</p>}
+        {initialUser.memberSince && <p className="text-xs text-[#6F5964]">Member since {initialUser.memberSince}</p>}
       </div>
     </section>
     </ScrollReveal>
@@ -226,21 +226,21 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
     <div className="grid min-w-0 items-start gap-7 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,.9fr)] lg:gap-10">
       <ScrollReveal preset="card" className="min-w-0">
       <section aria-labelledby="personal-info-heading" className="min-w-0">
-        <div className="border-b border-[#F0E5E9] pb-4">
-          <h2 id="personal-info-heading" className="text-lg font-semibold tracking-[-0.02em] text-[#18384D]">Personal information</h2>
-          <p className="mt-1 text-sm leading-5 text-[#6E879A]">Keep your account details up to date.</p>
+        <div className="border-b border-[#E8DDE1] pb-4">
+          <h2 id="personal-info-heading" className="text-lg font-semibold tracking-[-0.02em] text-[#30262B]">Personal information</h2>
+          <p className="mt-1 text-sm leading-5 text-[#6F5964]">Keep your account details up to date.</p>
         </div>
 
-        <div className="border-b border-[#F0E5E9] py-5">
+        <div className="border-b border-[#E8DDE1] py-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#F4DCE4] bg-[#FFE8EF] text-xl font-semibold text-[#B83F68]">
+            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#E8DDE1] bg-[#FFE8EF] text-xl font-semibold text-[#8A1F36]">
               {profileImage ? <Image key={`edit-${profileImage}`} src={profileImage} alt={`${name || "Account"} profile photo`} fill sizes="64px" unoptimized className="object-cover" /> : initial}
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-[#18384D]">Profile photo</h3>
-              <p className="mt-1 text-xs leading-5 text-[#6E879A]">JPG, PNG, or WebP. Up to 15 MB and 20 megapixels.</p>
+              <h3 className="text-sm font-semibold text-[#30262B]">Profile photo</h3>
+              <p className="mt-1 text-xs leading-5 text-[#6F5964]">JPG, PNG, or WebP. Up to 15 MB and 20 megapixels.</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <label className={`${secondaryButton} relative cursor-pointer focus-within:ring-2 focus-within:ring-[#E9577D] focus-within:ring-offset-2 ${saving ? "pointer-events-none opacity-60" : ""}`}>
+                <label className={`${secondaryButton} relative cursor-pointer focus-within:ring-2 focus-within:ring-[#F8769C] focus-within:ring-offset-2 ${saving ? "pointer-events-none opacity-60" : ""}`}>
                   <Camera aria-hidden="true" className="mr-2 h-4 w-4" />{saving === "photo" ? "Updating…" : "Choose photo"}
                   <input name="profilePhoto" aria-label="Choose profile photo" type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(saving)} onChange={selectPhoto} />
                 </label>
@@ -251,19 +251,19 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
           </div>
         </div>
 
-        <form onSubmit={saveName} className="space-y-4 border-b border-[#F0E5E9] py-5">
+        <form onSubmit={saveName} className="space-y-4 border-b border-[#E8DDE1] py-5">
           <div>
-            <label htmlFor="profileName" className="text-sm font-semibold text-[#18384D]">Full name</label>
+            <label htmlFor="profileName" className="text-sm font-semibold text-[#30262B]">Full name</label>
             <input id="profileName" name="name" autoComplete="name" maxLength={80} required value={name} aria-invalid={Boolean(nameError)} aria-describedby={nameError ? "profileNameError" : undefined} onChange={(event) => { setName(event.target.value); setNameError(""); }} className={fieldClass} />
-            {nameError && <p id="profileNameError" role="alert" className="mt-1.5 text-sm text-[#A63D4C]">{nameError}</p>}
+            {nameError && <p id="profileNameError" role="alert" className="mt-1.5 text-sm text-[#8A1F36]">{nameError}</p>}
           </div>
           <div>
-            <label htmlFor="profileEmail" className="text-sm font-semibold text-[#18384D]">Email address</label>
+            <label htmlFor="profileEmail" className="text-sm font-semibold text-[#30262B]">Email address</label>
             <div className="relative">
               <input id="profileEmail" name="email" type="email" autoComplete="email" value={email} readOnly aria-readonly="true" className={`${fieldClass} pr-11 text-[#5E7180]`} />
-              <Check aria-hidden="true" className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#28734A]" />
+              <Check aria-hidden="true" className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#3D7259]" />
             </div>
-            <p className="mt-1.5 text-xs leading-5 text-[#6E879A]">Email changes require a separate verification process.</p>
+            <p className="mt-1.5 text-xs leading-5 text-[#6F5964]">Email changes require a separate verification process.</p>
           </div>
           <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
             <button type="submit" disabled={Boolean(saving)} className={`${primaryButton} shrink-0`}>{saving === "profile" ? "Saving name…" : "Save name"}</button>
@@ -274,22 +274,22 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
 
       <ScrollReveal preset="card" delay={0.12} className="min-w-0">
       <section aria-labelledby="security-heading" className="min-w-0">
-        <div className="border-b border-[#F0E5E9] pb-4">
-          <h2 id="security-heading" className="text-lg font-semibold tracking-[-0.02em] text-[#18384D]">Password & security</h2>
-          <p className="mt-1 text-sm leading-5 text-[#6E879A]">Changing your password signs you out on this browser.</p>
+        <div className="border-b border-[#E8DDE1] pb-4">
+          <h2 id="security-heading" className="text-lg font-semibold tracking-[-0.02em] text-[#30262B]">Password & security</h2>
+          <p className="mt-1 text-sm leading-5 text-[#6F5964]">Changing your password signs you out on this browser.</p>
         </div>
         <form onSubmit={changePassword} className="space-y-4 py-5">
           <div>
-            <label htmlFor="currentPassword" className="text-sm font-semibold text-[#18384D]">Current password</label>
+            <label htmlFor="currentPassword" className="text-sm font-semibold text-[#30262B]">Current password</label>
             <input id="currentPassword" name="currentPassword" type="password" autoComplete="current-password" required value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} className={fieldClass} />
           </div>
           <div>
-            <label htmlFor="newPassword" className="text-sm font-semibold text-[#18384D]">New password</label>
+            <label htmlFor="newPassword" className="text-sm font-semibold text-[#30262B]">New password</label>
             <input id="newPassword" name="newPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className={fieldClass} />
-            <p className="mt-1.5 text-xs text-[#6E879A]">Use at least 8 characters.</p>
+            <p className="mt-1.5 text-xs text-[#6F5964]">Use at least 8 characters.</p>
           </div>
           <div>
-            <label htmlFor="confirmPassword" className="text-sm font-semibold text-[#18384D]">Confirm new password</label>
+            <label htmlFor="confirmPassword" className="text-sm font-semibold text-[#30262B]">Confirm new password</label>
             <input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className={fieldClass} />
           </div>
           <div className="flex flex-col gap-3 pt-1">
@@ -303,9 +303,9 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
     <ScrollReveal preset="card" className="min-w-0">
     <section aria-labelledby="danger-zone-heading" className="flex flex-col gap-4 border-t border-[#EADDE2] pt-6 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF1F1] text-[#B8435D]" aria-hidden="true"><Trash2 className="h-4 w-4" /></span>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#F8769C]" aria-hidden="true"><Trash2 className="h-4 w-4" /></span>
         <div className="min-w-0">
-          <h2 id="danger-zone-heading" className="text-sm font-semibold text-[#A63D4C]">Delete account</h2>
+          <h2 id="danger-zone-heading" className="text-sm font-semibold text-[#30262B]">Delete account</h2>
           <p className="mt-1 max-w-[65ch] text-xs leading-5 text-[#6E6570]">Permanently removes your account, study materials, review history, and sessions. This can’t be undone.</p>
         </div>
       </div>
@@ -330,7 +330,7 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
       </>}
     >
       <p className="text-sm leading-6 text-[#5E535A]">Your account, subjects, topics, flashcards, review history, and study sessions will be permanently deleted.</p>
-      <label htmlFor="deleteAccountConfirm" className="mt-4 block text-sm font-semibold text-[#18384D]">Type DELETE to confirm</label>
+      <label htmlFor="deleteAccountConfirm" className="mt-4 block text-sm font-semibold text-[#30262B]">Type DELETE to confirm</label>
       <input id="deleteAccountConfirm" name="confirmation" value={deleteText} onChange={(event) => setDeleteText(event.target.value)} className={fieldClass} placeholder="DELETE" autoComplete="off" />
     </Modal>
   </div>;

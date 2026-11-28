@@ -38,13 +38,13 @@ const chartSwatches = [
 
 export default function DesignSystemPage() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="learner-theme min-h-screen bg-background text-foreground">
       <Navigation items={[{ label: "Home", href: "/", active: false }, { label: "Design system", href: "/design-system", active: true }]} />
       <div className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-8 sm:pt-10">
         <section className="relative isolate overflow-hidden rounded-[2rem] bg-secondary-surface px-6 py-10 sm:px-10 sm:py-14 lg:px-14" aria-labelledby="hero-heading">
           <div className="relative z-10 max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-hover">Abii design system · v1.1</p>
-            <h1 id="hero-heading" className="mt-4 max-w-[15ch] text-4xl font-extrabold leading-[1.06] tracking-[-0.045em] text-foreground sm:text-5xl lg:text-6xl">A little design. A lot of personality.</h1>
+            <h1 id="hero-heading" className="abii-type-hero-main mt-4 max-w-[15ch]">A little design. A lot of personality.</h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-muted sm:text-lg">A thoughtful visual language that makes every learning moment feel warm, simple, and unmistakably Abii.</p>
             <Link href="#palette" className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2">Explore the system <ArrowDown size={16} aria-hidden="true" /></Link>
           </div>
@@ -79,12 +79,18 @@ export default function DesignSystemPage() {
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 {typography.map(([name, hex, usage]) => <Card key={name}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-widest text-muted">{name}</p><p className="mt-4 text-2xl font-bold tracking-tight">Learn a little.</p><p className="mt-2 text-sm leading-6 text-muted">{usage}</p></div><code className="rounded-lg bg-surface-hover px-2.5 py-1.5 text-xs text-muted">{hex}</code></div></Card>)}
               </div>
+              <div className="mt-6 grid gap-4 md:grid-cols-3" aria-label="Learner hero heading scale">
+                <Card><p className="mb-2 text-xs font-semibold text-muted">Main · 36 / 24px</p><h3 className="abii-type-hero-main">Learn a little.</h3></Card>
+                <Card><p className="mb-2 text-xs font-semibold text-muted">Nested · 28 / 22px</p><h3 className="abii-type-hero-nested">Keep it moving.</h3></Card>
+                <Card><p className="mb-2 text-xs font-semibold text-muted">Compact · 24 / 20px</p><h3 className="abii-type-hero-compact">Small steps count.</h3></Card>
+              </div>
             </section>
 
             <section id="buttons" className="scroll-mt-8" aria-labelledby="buttons-heading">
               <SectionHeading eyebrow="03 · Actions" title="One clear next step" description="Filled pink is reserved for the primary action. Supporting controls stay quiet and easy to scan." id="buttons-heading" />
               <Card className="mt-6">
                 <div className="flex flex-wrap items-center gap-3"><Button>Continue</Button><Button variant="secondary">Secondary</Button><Button variant="outline">Outline</Button><Button variant="ghost">Ghost</Button><Button variant="danger">Remove</Button><Button disabled>Disabled</Button></div>
+                <p className="mt-3 text-sm leading-6 text-muted">Remove is shown with the same brand styling as other learner actions; confirmation dialogs preserve their safeguards.</p>
                 <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-border pt-5"><Button size="sm">Small</Button><Button>Default</Button><Button size="lg">Large action</Button><p className="text-xs text-muted">Hover and press the primary button to see its interaction colors.</p></div>
                 <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 border-t border-border pt-5 text-sm">
                   <label className="flex min-h-11 items-center gap-3"><input type="checkbox" defaultChecked className="abii-checkbox size-4 shrink-0" />Checked · pink fill, white check</label>

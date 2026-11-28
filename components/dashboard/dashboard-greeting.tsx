@@ -43,8 +43,8 @@ export function DashboardGreeting({ firstName, studyTimezone }: DashboardGreetin
   }, [studyTimezone]);
 
   return (
-    <p aria-live="polite" aria-atomic="true" className="text-xs font-medium text-[#2F4658] sm:text-sm">
-      {greeting}, {firstName}! <span aria-hidden="true">👋</span>
+    <p aria-live="polite" aria-atomic="true" className="text-xs font-medium text-[#30262B] sm:text-sm">
+      {greeting}, {firstName}!
     </p>
   );
 }

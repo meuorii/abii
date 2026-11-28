@@ -53,14 +53,14 @@ function BulbIcon() { return <Lightbulb className="h-4 w-4" aria-hidden="true" /
 
 function SelectionMark({ reduceMotion }: { reduceMotion: boolean }) {
   return <AnimatePresence initial={false}>
-    <m.span key="selected" initial={reduceMotion ? false : { opacity: 0, scale: 0.72 }} animate={{ opacity: 1, scale: 1 }} exit={reduceMotion ? { opacity: 0, transition: { duration: 0.01 } } : { opacity: 0, scale: 0.82, transition: { duration: 0.14 } }} transition={reduceMotion ? { duration: 0.01 } : { type: "spring", duration: 0.26, bounce: 0.16 }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FF6F96] text-white">
+    <m.span key="selected" initial={reduceMotion ? false : { opacity: 0, scale: 0.72 }} animate={{ opacity: 1, scale: 1 }} exit={reduceMotion ? { opacity: 0, transition: { duration: 0.01 } } : { opacity: 0, scale: 0.82, transition: { duration: 0.14 } }} transition={reduceMotion ? { duration: 0.01 } : { type: "spring", duration: 0.26, bounce: 0.16 }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#F8769C] text-white">
       <Check className="h-3.5 w-3.5" strokeWidth={2.8} aria-hidden="true" />
     </m.span>
   </AnimatePresence>;
 }
 
 function GradedMark({ correct, reduceMotion }: { correct: boolean; reduceMotion: boolean }) {
-  return <m.span initial={reduceMotion ? false : { opacity: 0, scale: 0.78 }} animate={{ opacity: 1, scale: 1 }} transition={reduceMotion ? { duration: 0.01 } : { type: "spring", duration: 0.28, bounce: 0.12 }} className={correct ? "text-[#2FBF71]" : "text-[#F0507F]"}>
+  return <m.span initial={reduceMotion ? false : { opacity: 0, scale: 0.78 }} animate={{ opacity: 1, scale: 1 }} transition={reduceMotion ? { duration: 0.01 } : { type: "spring", duration: 0.28, bounce: 0.12 }} className={correct ? "text-[#2FBF71]" : "text-[#F8769C]"}>
     {correct ? <CheckIcon /> : <CrossIcon />}
   </m.span>;
 }
@@ -70,28 +70,28 @@ function ProgressPanel({ total, answered, correct, incorrect, mastered, cards, r
   const pct = total ? Math.round((answered / total) * 360 / 100 * 100) : 0;
   const rows = [
     { label: "Correct", value: correct, dot: "bg-[#2FBF71]" },
-    { label: "Wrong", value: incorrect, dot: "bg-[#F0507F]" },
-    { label: "Remaining", value: remaining, dot: "bg-[#A78BFA]" },
-    { label: "Mastered cards", value: `${mastered}/${cards}`, dot: "bg-[#FF9FBA]" },
+    { label: "Wrong", value: incorrect, dot: "bg-[#F8769C]" },
+    { label: "Remaining", value: remaining, dot: "bg-[#D9547D]" },
+    { label: "Mastered cards", value: `${mastered}/${cards}`, dot: "bg-[#EC658D]" },
   ];
   return (
-    <section aria-labelledby="session-progress-title" className="rounded-2xl border border-[#E8EAF0] bg-white p-4 sm:p-5">
-      <h2 id="session-progress-title" className="text-sm font-bold text-[#153B56]">Review Progress</h2>
+    <section aria-labelledby="session-progress-title" className="rounded-2xl border border-[#E8DDE1] bg-white p-4 sm:p-5">
+      <h2 id="session-progress-title" className="text-sm font-bold text-[#30262B]">Review Progress</h2>
       <p className="sr-only">This session only. Not your long-term subject progress.</p>
       <div className="mt-3 flex items-center gap-4 lg:flex-col lg:items-stretch lg:gap-3 xl:flex-row xl:items-center">
-        <div className="relative flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-full lg:mx-auto xl:mx-0" style={{ background: `conic-gradient(#F0507F ${pct}deg, #F3E9ED 0deg)` }} role="img" aria-label={`${answered} of ${total} questions answered`}>
-          <div className="flex h-[66px] w-[66px] flex-col items-center justify-center rounded-full bg-white"><span className="text-base font-bold leading-none text-[#153B56]">{answered}/{total}</span><span className="mt-1 text-[9px] text-[#7890A4]">answered</span></div>
+        <div className="relative flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-full lg:mx-auto xl:mx-0" style={{ background: `conic-gradient(#F8769C ${pct}deg, #E8DDE1 0deg)` }} role="img" aria-label={`${answered} of ${total} questions answered`}>
+          <div className="flex h-[66px] w-[66px] flex-col items-center justify-center rounded-full bg-white"><span className="text-base font-bold leading-none text-[#30262B]">{answered}/{total}</span><span className="mt-1 text-[9px] text-[#6F5964]">answered</span></div>
         </div>
         <ul className="min-w-0 flex-1 space-y-1.5 text-xs">
           {rows.map((r) => (
-            <li key={r.label} className="flex items-center justify-between gap-3"><span className="flex items-center gap-2 text-[#557087]"><span className={`h-2 w-2 rounded-full ${r.dot}`} aria-hidden="true" />{r.label}</span><span className="font-semibold tabular-nums text-[#153B56]">{r.value}</span></li>
+            <li key={r.label} className="flex items-center justify-between gap-3"><span className="flex items-center gap-2 text-[#6F5964]"><span className={`h-2 w-2 rounded-full ${r.dot}`} aria-hidden="true" />{r.label}</span><span className="font-semibold tabular-nums text-[#30262B]">{r.value}</span></li>
           ))}
         </ul>
       </div>
-      {round > 1 && <p className="mt-3 rounded-lg bg-[#FFE8EF] px-3 py-2 text-xs font-semibold text-[#C65380]">Retry round {round}</p>}
-      <div className="mt-3 hidden items-center gap-3 rounded-xl bg-[#FFF7F9] p-3 lg:flex">
+      {round > 1 && <p className="mt-3 rounded-lg bg-[#FFE8EF] px-3 py-2 text-xs font-semibold text-[#F8769C]">Retry round {round}</p>}
+      <div className="mt-3 hidden items-center gap-3 rounded-xl bg-[#FFF9FC] p-3 lg:flex">
         <Mascot state={answered === 0 ? "welcome" : "correct"} size="sm" />
-        <p className="text-xs leading-5 text-[#6C4A58]">{answered === 0 ? `You’ve got this, ${firstName}!` : `Great start, ${firstName}! Keep going!`}</p>
+        <p className="text-xs leading-5 text-[#6F5964]">{answered === 0 ? `You’ve got this, ${firstName}!` : `Great start, ${firstName}! Keep going!`}</p>
       </div>
     </section>
   );
@@ -235,7 +235,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       <QuizCompletion session={currentSession} firstName={firstName} againBusy={againBusy} againError={againError} onAgain={restart} celebrate={celebrationSessionId === currentSession.id} />
     );
   }
-  if (!question) return <div className="m-4 rounded-2xl border border-[#E8E2E5] bg-white p-6 text-sm text-[#756B72]">This quiz session has no available question. <Link href="/review" className="font-semibold text-[#E9577D] underline">Back to Review</Link></div>;
+  if (!question) return <div className="m-4 rounded-2xl border border-[#E8DDE1] bg-white p-6 text-sm text-[#6F5964]">This quiz session has no available question. <Link href="/review" className="font-semibold text-[#F8769C] underline">Back to Review</Link></div>;
 
   const selOption = result?.selectedIndex ?? selectedOption;
   const selTruth = result?.selectedTruth ?? selectedTruth;
@@ -445,64 +445,52 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   }
 
   function optionClass(i: number) {
-    const base = "flex min-h-[52px] w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-[border-color,background-color,color] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-1";
+    const base = "flex min-h-[52px] w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-[border-color,background-color,color] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] focus-visible:ring-offset-1";
     if (result) {
-      if (i === result.correctIndex) return `${base} border-[#2FBF71] bg-[#EAF8F0] text-[#1F5E3E]`;
-      if (i === selOption) return `${base} border-[#F0507F] bg-[#FFF1F1] text-[#8B273F]`;
-      return `${base} border-[#E8E2E5] bg-white text-[#9A8C93]`;
+      if (i === result.correctIndex) return `${base} border-[#2FBF71] bg-[#EDF5EF] text-[#1F5E3E]`;
+      if (i === selOption) return `${base} border-[#B42347] bg-[#FCEDEF] text-[#8A1F36]`;
+      return `${base} border-[#E8DDE1] bg-white text-[#6F5964]`;
     }
-    return i === selOption ? `${base} border-[#FF6F96] bg-[#FFE8EF] text-[#2F2930]` : `${base} border-[#E8E2E5] bg-white text-[#2F2930] hover:border-[#F0B6C9]`;
+    return i === selOption ? `${base} border-[#F8769C] bg-[#FFE8EF] text-[#30262B]` : `${base} border-[#E8DDE1] bg-white text-[#30262B] hover:border-[#E8DDE1]`;
   }
   function letterClass(i: number) {
     const base = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold";
     if (result) {
       if (i === result.correctIndex) return `${base} bg-[#2FBF71] text-white`;
-      if (i === selOption) return `${base} bg-[#F0507F] text-white`;
-      return `${base} bg-[#F4F1F3] text-[#9A8C93]`;
+      if (i === selOption) return `${base} bg-[#F8769C] text-white`;
+      return `${base} bg-[#E8DDE1] text-[#6F5964]`;
     }
-    return i === selOption ? `${base} bg-[#FF6F96] text-white` : `${base} bg-[#F4F1F3] text-[#6C879C]`;
+    return i === selOption ? `${base} bg-[#F8769C] text-white` : `${base} bg-[#E8DDE1] text-[#6F5964]`;
   }
   function truthClass(value: boolean) {
-    const base = "flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-bold transition-[border-color,background-color,color] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-1";
+    const base = "flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-bold transition-[border-color,background-color,color] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] focus-visible:ring-offset-1";
     const correctValue = result ? (result.correct ? selTruth : !selTruth) : null;
     if (result) {
-      if (value === correctValue) return `${base} border-[#2FBF71] bg-[#EAF8F0] text-[#1F5E3E]`;
-      if (value === selTruth) return `${base} border-[#F0507F] bg-[#FFF1F1] text-[#8B273F]`;
-      return `${base} border-[#E8E2E5] bg-white text-[#9A8C93]`;
+      if (value === correctValue) return `${base} border-[#2FBF71] bg-[#EDF5EF] text-[#1F5E3E]`;
+      if (value === selTruth) return `${base} border-[#B42347] bg-[#FCEDEF] text-[#8A1F36]`;
+      return `${base} border-[#E8DDE1] bg-white text-[#6F5964]`;
     }
-    return selTruth === value ? `${base} border-[#FF6F96] bg-[#FFE8EF] text-[#2F2930]` : `${base} border-[#E8E2E5] bg-white text-[#2F2930] hover:border-[#F0B6C9]`;
+    return selTruth === value ? `${base} border-[#F8769C] bg-[#FFE8EF] text-[#30262B]` : `${base} border-[#E8DDE1] bg-white text-[#30262B] hover:border-[#E8DDE1]`;
   }
 
   return (
     <div className="space-y-3 p-4 pb-24 sm:space-y-4 sm:p-5 xl:p-6">
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-xs sm:text-sm">
-        <Link href="/review" className="shrink-0 rounded font-medium text-[#75889A] transition-colors hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Review</Link>
+        <Link href="/review" className="shrink-0 rounded font-medium text-[#75889A] transition-colors hover:text-[#EC658D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D]">Review</Link>
         <span aria-hidden="true" className="text-[#B4A5AC]">›</span>
-        {initial.subjectId ? <Link href={`/subjects/${initial.subjectId}`} className="max-w-[40vw] truncate rounded font-medium text-[#75889A] transition-colors hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">{initial.subjectName}</Link> : <span className="max-w-[40vw] truncate font-medium text-[#75889A]">{initial.subjectName}</span>}
+        {initial.subjectId ? <Link href={`/subjects/${initial.subjectId}`} className="max-w-[40vw] truncate rounded font-medium text-[#75889A] transition-colors hover:text-[#EC658D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D]">{initial.subjectName}</Link> : <span className="max-w-[40vw] truncate font-medium text-[#75889A]">{initial.subjectName}</span>}
         <span aria-hidden="true" className="text-[#B4A5AC]">›</span>
-        <span aria-current="page" className="truncate font-semibold text-[#2F2930]">{typeLabel}</span>
-        <button type="button" disabled={busy} onClick={() => hasDraft ? setExitConfirm(true) : router.push("/review")} className="ml-auto inline-flex min-h-9 shrink-0 items-center rounded-full border border-[#F1DDE4] bg-white px-3 text-[11px] font-semibold text-[#C65380] hover:bg-[#FFF7F9] disabled:opacity-50 sm:px-4 sm:text-xs">Save &amp; Exit</button>
+        <span aria-current="page" className="truncate font-semibold text-[#30262B]">{typeLabel}</span>
+        <button type="button" disabled={busy} onClick={() => hasDraft ? setExitConfirm(true) : router.push("/review")} className="ml-auto inline-flex min-h-9 shrink-0 items-center rounded-full border border-[#E8DDE1] bg-white px-3 text-[11px] font-semibold text-[#F8769C] hover:bg-[#FFF9FC] disabled:opacity-50 sm:px-4 sm:text-xs">Save &amp; Exit</button>
       </nav>
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_290px] xl:grid-cols-[minmax(0,1fr)_320px]">
         <AbiiPageHero
           variant="quiz-session"
           headingId="quiz-hero-title"
-          eyebrow={<div className="flex min-w-0 items-center gap-3">
-            <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FFE0E9] text-lg text-[#E9577D] sm:h-11 sm:w-11">{"\u25A4"}</span>
-            <div className="min-w-0">
-              <div className="break-words text-sm font-bold tracking-[-0.03em] text-[#2F2930] sm:text-xl">{initial.subjectName}</div>
-              <div className="break-words text-[11px] text-[#6E8497] sm:text-xs">{total} {total === 1 ? "question" : "questions"} &middot; {typeLabel}</div>
-            </div>
-          </div>}
-          preTitle={<div className="flex w-full max-w-[220px] min-w-0 items-center gap-2 sm:mt-2">
-            <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/90" role="progressbar" aria-label="Quiz progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPct}>
-              <div className="h-full rounded-full bg-[#F0789A] transition-[width]" style={{ width: `${progressPct}%` }} />
-            </div>
-            <span className="shrink-0 text-[11px] font-semibold tabular-nums text-[#6E8497]">{progressPct}%</span>
-          </div>}
-          title={<h1 className="text-[clamp(1.35rem,2.3vw,1.8rem)] font-bold leading-[1.1] tracking-[-0.045em] text-[#173B52] sm:mt-2">Let&apos;s review!</h1>}
-          description={<p className="max-w-xs text-xs leading-5 text-[#526F83] sm:mt-1 sm:text-sm sm:leading-6">Take your time, think it through, you&apos;ll do great!</p>}
+          eyebrow={<p className="break-words text-sm font-semibold text-[#6F5964] sm:text-base">{initial.subjectName} · {total} {total === 1 ? "question" : "questions"} · {typeLabel}</p>}
+          title={<h1 className="abii-hero-heading sm:mt-2">Let&apos;s review!</h1>}
+          description={<p className="max-w-xs text-xs leading-5 text-[#6F5964] sm:mt-1 sm:text-sm sm:leading-6">Take your time, think it through, you&apos;ll do great!</p>}
           mascotSrc="/dashboard-hero/my-subjects.png"
           mascotAlt=""
           priority
@@ -513,16 +501,22 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
           <ProgressPanel total={total} answered={answeredCount} correct={correctCount} incorrect={incorrectCount} mastered={masteredCount} cards={cardTotal} round={currentRound} firstName={firstName} />
         </div>
 
-        <section aria-labelledby="question-heading" className="order-2 min-w-0 rounded-2xl border border-[#E8EAF0] bg-white p-4 sm:p-6 lg:order-none lg:col-start-1 lg:row-start-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm text-[#6C879C]" aria-live="polite">Question <span className="font-bold text-[#153B56]">{index + 1}</span> of <span className="font-bold text-[#153B56]">{total}</span></p>
-            <span className="inline-flex items-center gap-1" aria-label={`Card mastery ${currentStreak} of ${target}`} title="Correct in a row for this card"><span className="mr-1 text-[11px] text-[#8B7C84]">Mastery</span>{Array.from({ length: target }).map((_, i) => <span key={i} className={`h-2 w-2 rounded-full ${i < currentStreak ? "bg-[#FF6F96]" : "bg-[#F3E9ED]"}`} />)}</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1DDE4] bg-[#FFF7F9] px-3 py-1 text-xs font-medium text-[#C65380]"><TypeIcon type={question.type} className="h-3.5 w-3.5" />{currentRound > 1 ? `Retry · ${questionTypeLabel(question.type)}` : questionTypeLabel(question.type)}</span>
-            {question.previouslyIncorrect === true && <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1DDE4] bg-[#FFF7F9] px-2.5 py-1 text-xs font-medium text-[#C65380]"><RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />Previously Incorrect</span>}
+        <section aria-labelledby="question-heading" className="order-2 min-w-0 rounded-2xl border border-[#E8DDE1] bg-white p-4 sm:p-6 lg:order-none lg:col-start-1 lg:row-start-2">
+          <div className="mb-4 flex max-w-sm items-center gap-3">
+            <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[#FFE8EF]" role="progressbar" aria-label="Quiz progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPct}>
+              <div className="h-full rounded-full bg-[#EC658D] transition-[width]" style={{ width: `${progressPct}%` }} />
+            </div>
+            <span className="shrink-0 text-xs font-semibold tabular-nums text-[#6F5964]">{progressPct}%</span>
           </div>
-          {roundNotice && currentRound > 1 && <p role="status" className="mt-3 rounded-xl border border-[#F1DDE4] bg-[#FFF7F9] px-3.5 py-3 text-sm text-[#6C4A58]">{roundNotice}</p>}
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm text-[#6F5964]" aria-live="polite">Question <span className="font-bold text-[#30262B]">{index + 1}</span> of <span className="font-bold text-[#30262B]">{total}</span></p>
+            <span className="inline-flex items-center gap-1" aria-label={`Card mastery ${currentStreak} of ${target}`} title="Correct in a row for this card"><span className="mr-1 text-[11px] text-[#6F5964]">Mastery</span>{Array.from({ length: target }).map((_, i) => <span key={i} className={`h-2 w-2 rounded-full ${i < currentStreak ? "bg-[#F8769C]" : "bg-[#E8DDE1]"}`} />)}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E8DDE1] bg-[#FFF9FC] px-3 py-1 text-xs font-medium text-[#F8769C]"><TypeIcon type={question.type} className="h-3.5 w-3.5" />{currentRound > 1 ? `Retry · ${questionTypeLabel(question.type)}` : questionTypeLabel(question.type)}</span>
+            {question.previouslyIncorrect === true && <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E8DDE1] bg-[#FFF9FC] px-2.5 py-1 text-xs font-medium text-[#F8769C]"><RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />Previously Incorrect</span>}
+          </div>
+          {roundNotice && currentRound > 1 && <p role="status" className="mt-3 rounded-xl border border-[#E8DDE1] bg-[#FFF9FC] px-3.5 py-3 text-sm text-[#6F5964]">{roundNotice}</p>}
 
-          <h2 id="question-heading" className="mt-5 whitespace-pre-wrap break-words text-lg font-semibold leading-snug tracking-[-0.02em] text-[#153B56] sm:text-xl"><span key={`${question.index}-${currentRound}`} className="abii-question-enter">{question.type === "true-false" ? "Is this the correct answer to the question below?" : question.prompt}</span></h2>
+          <h2 id="question-heading" className="mt-5 whitespace-pre-wrap break-words text-lg font-semibold leading-snug tracking-[-0.02em] text-[#30262B] sm:text-xl"><span key={`${question.index}-${currentRound}`} className="abii-question-enter">{question.type === "true-false" ? "Is this the correct answer to the question below?" : question.prompt}</span></h2>
           {result && gradedAnswer !== undefined && (
             <QuizAnswerFeedback
               correct={result.correct}
@@ -534,9 +528,9 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
             />
           )}
           {question.type === "true-false" && (
-            <div className="mt-3 space-y-2 rounded-xl border border-[#F1DDE4] bg-[#FFFAFC] p-4">
-              <p className="whitespace-pre-wrap break-words text-sm text-[#45647A]"><span className="font-semibold text-[#153B56]">Question: </span>{question.prompt}</p>
-              <p className="whitespace-pre-wrap break-words text-sm text-[#45647A]"><span className="font-semibold text-[#153B56]">Statement: </span>The answer is “{question.statement}”.</p>
+            <div className="mt-3 space-y-2 rounded-xl border border-[#E8DDE1] bg-[#FFF9FC] p-4">
+              <p className="whitespace-pre-wrap break-words text-sm text-[#6F5964]"><span className="font-semibold text-[#30262B]">Question: </span>{question.prompt}</p>
+              <p className="whitespace-pre-wrap break-words text-sm text-[#6F5964]"><span className="font-semibold text-[#30262B]">Statement: </span>The answer is “{question.statement}”.</p>
             </div>
           )}
 
@@ -558,11 +552,11 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
 
             {question.type === "enumeration-multiple-choice" && (
               <div role="radiogroup" aria-labelledby="question-heading" aria-describedby={error ? "quiz-answer-error" : undefined} className="space-y-2.5">
-                <p className="text-xs text-[#7890A4]">Choose the complete list. Items inside each list are shuffled.</p>
+                <p className="text-xs text-[#6F5964]">Choose the complete list. Items inside each list are shuffled.</p>
                 {(question.options ?? []).map((option, i) => (
                   <m.button key={i} ref={(element) => { optionRefs.current[i] = element; }} type="button" role="radio" aria-checked={selOption === i} tabIndex={selOption === null ? (i === 0 ? 0 : -1) : (selOption === i ? 0 : -1)} disabled={Boolean(result) || busy} onClick={() => chooseOption(i)} onKeyDown={(event) => moveRadioSelection(event, i, question.options?.length ?? 0, chooseOption, optionRefs.current)} className={`${optionClass(i)} items-start`} variants={answerCardVariants} initial={false} animate={reduceMotion ? "idle" : selOption === i ? "selected" : "idle"}>
                     <m.span className={`${letterClass(i)} mt-0.5`} animate={reduceMotion ? { scale: 1 } : selOption === i ? { scale: [1, 1.12, 1] } : { scale: 1 }} transition={{ duration: reduceMotion ? 0.01 : 0.24, ease: [0.22, 1, 0.36, 1] }}>{LETTERS[i] ?? i + 1}</m.span>
-                    <ul className="min-w-0 flex-1 list-disc space-y-0.5 pl-4 marker:text-[#E9577D]">
+                    <ul className="min-w-0 flex-1 list-disc space-y-0.5 pl-4 marker:text-[#F8769C]">
                       {option.split("\n").map((item, k) => <li key={k} className="break-words">{item}</li>)}
                     </ul>
                     {result && i === result.correctIndex && <GradedMark correct reduceMotion={reduceMotion} />}
@@ -575,12 +569,12 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
 
             {question.type === "enumeration-identification" && (
               <fieldset className="space-y-2" disabled={Boolean(result) || busy}>
-                <legend className="mb-1.5 text-sm font-semibold text-[#2F2930]">Type all {itemCount} items. Any order is accepted.</legend>
+                <legend className="mb-1.5 text-sm font-semibold text-[#30262B]">Type all {itemCount} items. Any order is accepted.</legend>
                 {Array.from({ length: result ? enumTyped.length : itemCount }, (_, i) => {
                   const state = result ? (result.itemCorrect?.[i] ? "ok" : "bad") : "idle";
                   return (
                     <div key={i} className="flex items-center gap-2">
-                      <span className="w-5 shrink-0 text-right text-xs font-semibold text-[#8B9BAA]">{i + 1}.</span>
+                      <span className="w-5 shrink-0 text-right text-xs font-semibold text-[#6F5964]">{i + 1}.</span>
                       <m.input
                         ref={(el) => { itemRefs.current[i] = el; }}
                         aria-label={`Item ${i + 1}`}
@@ -595,13 +589,13 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
                         autoCapitalize="off"
                         spellCheck={false}
                         placeholder={`Item ${i + 1}`}
-                        className={`min-h-11 w-full rounded-xl border px-3.5 text-sm outline-none transition placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20 disabled:cursor-not-allowed ${state === "ok" ? "border-[#2FBF71] bg-[#EAF8F0]" : state === "bad" ? "border-[#F0507F] bg-[#FFF1F1]" : "border-[#E8E2E5] bg-white"}`}
+                        className={`min-h-11 w-full rounded-xl border px-3.5 text-sm outline-none transition placeholder:text-[#6F5964] focus:border-[#F8769C] focus:ring-4 focus:ring-[#EC658D]/20 disabled:cursor-not-allowed ${state === "ok" ? "border-[#2FBF71] bg-[#EDF5EF]" : state === "bad" ? "border-[#B42347] bg-[#FCEDEF]" : "border-[#E8DDE1] bg-white"}`}
                       />
                     </div>
                   );
                 })}
                 {result && (result.missingItems?.length ?? 0) > 0 && (
-                  <p className="rounded-xl border border-[#F1DDE4] bg-[#FFFAFC] px-3.5 py-2.5 text-sm text-[#45647A]"><span className="font-semibold text-[#153B56]">Missing or not matched: </span>{result.missingItems?.join(", ")}</p>
+                  <p className="rounded-xl border border-[#E8DDE1] bg-[#FFF9FC] px-3.5 py-2.5 text-sm text-[#6F5964]"><span className="font-semibold text-[#30262B]">Missing or not matched: </span>{result.missingItems?.join(", ")}</p>
                 )}
               </fieldset>
             )}
@@ -620,8 +614,8 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
 
             {question.type === "identification" && (
               <div>
-                <label htmlFor="identification-answer" className="mb-1.5 block text-sm font-semibold text-[#2F2930]">Your answer</label>
-                <m.input ref={inputRef} id="identification-answer" aria-describedby={error ? "quiz-answer-error" : undefined} value={typed} onChange={(e) => { setText(e.target.value); if (error) setError(""); }} whileFocus={reduceMotion ? undefined : { scale: 1.006 }} transition={{ type: "spring", duration: 0.24, bounce: 0.08 }} disabled={Boolean(result) || busy} maxLength={500} autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="Type your answer…" className={`min-h-12 w-full rounded-xl border px-4 text-sm outline-none transition-[border-color,background-color,box-shadow] duration-200 placeholder:text-[#A79AA1] focus:border-[#E9577D] focus:ring-4 focus:ring-[#FF9FBA]/20 disabled:cursor-not-allowed ${result ? (result.correct ? "border-[#2FBF71] bg-[#EAF8F0]" : "border-[#F0507F] bg-[#FFF1F1]") : "border-[#E8E2E5] bg-white"}`} />
+                <label htmlFor="identification-answer" className="mb-1.5 block text-sm font-semibold text-[#30262B]">Your answer</label>
+                <m.input ref={inputRef} id="identification-answer" aria-describedby={error ? "quiz-answer-error" : undefined} value={typed} onChange={(e) => { setText(e.target.value); if (error) setError(""); }} whileFocus={reduceMotion ? undefined : { scale: 1.006 }} transition={{ type: "spring", duration: 0.24, bounce: 0.08 }} disabled={Boolean(result) || busy} maxLength={500} autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="Type your answer…" className={`min-h-12 w-full rounded-xl border px-4 text-sm outline-none transition-[border-color,background-color,box-shadow] duration-200 placeholder:text-[#6F5964] focus:border-[#F8769C] focus:ring-4 focus:ring-[#EC658D]/20 disabled:cursor-not-allowed ${result ? (result.correct ? "border-[#2FBF71] bg-[#EDF5EF]" : "border-[#B42347] bg-[#FCEDEF]") : "border-[#E8DDE1] bg-white"}`} />
               </div>
             )}
 
@@ -632,63 +626,63 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
             </m.div>
 
             {hintOpen && question.hint && !result && (
-              <div className="flex gap-3 rounded-xl border border-[#F1DDE4] bg-[#FFF7F9] p-4">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><BulbIcon /></span>
-                <div className="min-w-0 flex-1"><p className="text-sm font-bold text-[#2F2930]">Hint</p><p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-[#756B72]">{question.hint}</p><button type="button" onClick={() => setHintOpen(false)} className="mt-2 rounded-lg border border-[#F1DDE4] bg-white px-3 py-1.5 text-xs font-semibold text-[#C65380] hover:bg-[#FFF7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Got it</button></div>
+              <div className="flex gap-3 rounded-xl border border-[#E8DDE1] bg-[#FFF9FC] p-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#F8769C]"><BulbIcon /></span>
+                <div className="min-w-0 flex-1"><p className="text-sm font-bold text-[#30262B]">Hint</p><p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-[#6F5964]">{question.hint}</p><button type="button" onClick={() => setHintOpen(false)} className="mt-2 rounded-lg border border-[#E8DDE1] bg-white px-3 py-1.5 text-xs font-semibold text-[#F8769C] hover:bg-[#FFF9FC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D]">Got it</button></div>
               </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#F1DDE4] bg-[#FFFAFC] px-3.5 py-2.5 text-xs text-[#6C4A58]">
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#E8DDE1] bg-[#FFF9FC] px-3.5 py-2.5 text-xs text-[#6F5964]">
               <label className="flex cursor-pointer items-center gap-2 font-semibold">
-                <input type="checkbox" checked={autoNext} onChange={(e) => saveAuto(e.target.checked, autoSeconds)} className="h-4 w-4 accent-[#E9577D]" />
+                <input type="checkbox" checked={autoNext} onChange={(e) => saveAuto(e.target.checked, autoSeconds)} className="h-4 w-4 accent-[#F8769C]" />
                 Auto-next
               </label>
               <label className="flex items-center gap-2">
-                <span className="text-[#8B7C84]">after</span>
-                <select value={autoSeconds} onChange={(e) => saveAuto(autoNext, Number(e.target.value))} disabled={!autoNext} className="rounded-lg border border-[#E8E2E5] bg-white px-2 py-1 text-xs disabled:opacity-50">
+                <span className="text-[#6F5964]">after</span>
+                <select value={autoSeconds} onChange={(e) => saveAuto(autoNext, Number(e.target.value))} disabled={!autoNext} className="rounded-lg border border-[#E8DDE1] bg-white px-2 py-1 text-xs disabled:opacity-50">
                   <option value={2}>2s</option>
                   <option value={3}>3s</option>
                   <option value={5}>5s</option>
                 </select>
               </label>
-              <span className="text-[#8B7C84]">{autoNext ? "Wrong answers wait twice as long. Turn off to pause." : "Or press Next Question yourself."}</span>
+              <span className="text-[#6F5964]">{autoNext ? "Wrong answers wait twice as long. Turn off to pause." : "Or press Next Question yourself."}</span>
             </div>
 
-            {error && <p id="quiz-answer-error" role="alert" className="rounded-xl border border-[#F0C7D3] bg-[#FFF1F1] px-3.5 py-3 text-sm text-[#A43E5C]">{error}</p>}
+            {error && <p id="quiz-answer-error" role="alert" className="rounded-xl border border-[#E8DDE1] bg-[#FCEDEF] px-3.5 py-3 text-sm text-[#8A1F36]">{error}</p>}
 
             <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 {question.hint && !result && !hintOpen && (
-                  <button type="button" onClick={() => setHintOpen(true)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-[#F1DDE4] bg-[#FFF7F9] px-5 text-xs font-semibold text-[#C65380] transition hover:bg-[#FFE8EF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] sm:w-auto"><BulbIcon />Show Hint</button>
+                  <button type="button" onClick={() => setHintOpen(true)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-[#E8DDE1] bg-[#FFF9FC] px-5 text-xs font-semibold text-[#F8769C] transition hover:bg-[#FFE8EF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] sm:w-auto"><BulbIcon />Show Hint</button>
                 )}
               </div>
               {result ? (
-                <button type="button" onClick={next} disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#FF477D] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 sm:min-h-11">{busy ? "Finishing…" : `${isLast ? "Finish Round" : "Next Question"}${countdown !== null ? ` (${countdown})` : ""}`}{!busy && <span aria-hidden="true">→</span>}</button>
+                <button type="button" onClick={next} disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#F8769C] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#EC658D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 sm:min-h-11">{busy ? "Finishing…" : `${isLast ? "Finish Round" : "Next Question"}${countdown !== null ? ` (${countdown})` : ""}`}{!busy && <span aria-hidden="true">→</span>}</button>
               ) : (
-                <button type="submit" disabled={!canSubmit} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#FF477D] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">{busy ? <span role="status">Saving Your Answer…</span> : question.type === "identification" || question.type === "enumeration-identification" ? "Submit Answer" : "Check Answer"}{!busy && <span aria-hidden="true">→</span>}</button>
+                <button type="submit" disabled={!canSubmit} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#F8769C] px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-[#EC658D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">{busy ? <span role="status">Saving Your Answer…</span> : question.type === "identification" || question.type === "enumeration-identification" ? "Submit Answer" : "Check Answer"}{!busy && <span aria-hidden="true">→</span>}</button>
               )}
             </div>
           </form>
         </section>
 
-        <aside aria-labelledby="next-up-title" className="hidden rounded-2xl border border-[#E8EAF0] bg-white p-4 sm:p-5 lg:col-start-2 lg:row-start-2 lg:block">
-          <h2 id="next-up-title" className="text-sm font-bold text-[#153B56]">Next Up</h2>
+        <aside aria-labelledby="next-up-title" className="hidden rounded-2xl border border-[#E8DDE1] bg-white p-4 sm:p-5 lg:col-start-2 lg:row-start-2 lg:block">
+          <h2 id="next-up-title" className="text-sm font-bold text-[#30262B]">Next Up</h2>
           {upcoming.length === 0 ? (
-            <p className="mt-3 text-xs leading-5 text-[#7890A4]">This is your last question. Nice work!</p>
+            <p className="mt-3 text-xs leading-5 text-[#6F5964]">This is your last question. Nice work!</p>
           ) : (
             <ul className="mt-3 space-y-3">
               {upcoming.map((q) => (
                 <li key={q.index} className="flex items-center gap-3">
-                  <span className="w-4 shrink-0 text-center text-[11px] text-[#8B9BAA]">{q.index + 1}</span>
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#E9577D]"><TypeIcon type={q.type} className="h-4 w-4" /></span>
-                  <span className="min-w-0 flex-1"><span className="line-clamp-2 block text-xs font-medium leading-4 text-[#294A60]">{q.prompt}</span><span className="mt-1 inline-block rounded bg-[#F4F1F3] px-1.5 py-0.5 text-[10px] text-[#8B7C84]">{questionTypeLabel(q.type)}</span></span>
+                  <span className="w-4 shrink-0 text-center text-[11px] text-[#6F5964]">{q.index + 1}</span>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FFE8EF] text-[#F8769C]"><TypeIcon type={q.type} className="h-4 w-4" /></span>
+                  <span className="min-w-0 flex-1"><span className="line-clamp-2 block text-xs font-medium leading-4 text-[#30262B]">{q.prompt}</span><span className="mt-1 inline-block rounded bg-[#E8DDE1] px-1.5 py-0.5 text-[10px] text-[#6F5964]">{questionTypeLabel(q.type)}</span></span>
                 </li>
               ))}
             </ul>
           )}
         </aside>
       </div>
-      <Modal open={exitConfirm} onClose={() => setExitConfirm(false)} action="confirmation" title="Leave this quiz?" description="Your submitted answers are saved." footer={<><button type="button" onClick={() => setExitConfirm(false)} className={modalCancelClass}>Keep Learning</button><button type="button" onClick={() => router.push("/review")} className={modalPrimaryClass}>Exit Quiz</button></>}><p className="text-sm leading-6 text-[#756B72]">Your current unsubmitted answer will be lost. You can resume this quiz later from Continue Learning.</p></Modal>
+      <Modal open={exitConfirm} onClose={() => setExitConfirm(false)} action="confirmation" title="Leave this quiz?" description="Your submitted answers are saved." footer={<><button type="button" onClick={() => setExitConfirm(false)} className={modalCancelClass}>Keep Learning</button><button type="button" onClick={() => router.push("/review")} className={modalPrimaryClass}>Exit Quiz</button></>}><p className="text-sm leading-6 text-[#6F5964]">Your current unsubmitted answer will be lost. You can resume this quiz later from Continue Learning.</p></Modal>
     </div>
   );
 }

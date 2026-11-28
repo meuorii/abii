@@ -44,6 +44,7 @@ export function Modal({ open, onClose, action, title, description, children, foo
   const titleId = useId(); const descriptionId = useId(); const dialogRef = useRef<HTMLElement>(null); const previousFocus = useRef<HTMLElement | null>(null); const closeRef = useRef(onClose); const openRef = useRef(open); const busyRef = useRef(busy); const [mounted, setMounted] = useState(false); const [present, setPresent] = useState(open);
   const scrollRootRef = useScrollRoot();
   const [adminTheme, setAdminTheme] = useState(false);
+  const [learnerTheme, setLearnerTheme] = useState(false);
   openRef.current = open;
   busyRef.current = busy;
   useEffect(() => setMounted(true), []);
@@ -53,6 +54,7 @@ export function Modal({ open, onClose, action, title, description, children, foo
     if (!mounted || !present) return;
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setAdminTheme(Boolean(previousFocus.current?.closest(".admin-shell")));
+    setLearnerTheme(Boolean(previousFocus.current?.closest(".learner-theme")));
     const releases = [lockScroll(document.body)];
     const scrollRoot = scrollRootRef?.current;
     if (scrollRoot && scrollRoot !== document.body) releases.push(lockScroll(scrollRoot));
@@ -72,7 +74,7 @@ export function Modal({ open, onClose, action, title, description, children, foo
     };
   }, [mounted, present, scrollRootRef]);
   if (!mounted || !present) return null;
-  const modalContent = <div aria-hidden={!present} className={`abii-modal-overlay ${adminTheme ? "admin-modal-theme" : ""} fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto overscroll-contain bg-[#21151B]/40 p-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-[3px] sm:p-5 ${open ? "" : "abii-modal-overlay-out"}`} onMouseDown={(e) => { if (open && e.target === e.currentTarget && !busyRef.current) closeRef.current(); }}>
+  const modalContent = <div aria-hidden={!present} className={`abii-modal-overlay ${adminTheme ? "admin-modal-theme" : ""} ${learnerTheme ? "learner-modal-theme" : ""} fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto overscroll-contain bg-[#21151B]/40 p-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-[3px] sm:p-5 ${open ? "" : "abii-modal-overlay-out"}`} onMouseDown={(e) => { if (open && e.target === e.currentTarget && !busyRef.current) closeRef.current(); }}>
     <section ref={dialogRef} tabIndex={-1} inert={!present} role={alert ? "alertdialog" : "dialog"} aria-modal={present ? "true" : undefined} aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} className={`abii-modal-panel relative my-auto flex max-h-[min(94dvh,900px)] w-full flex-col overflow-hidden rounded-[24px] border border-[#F3E9ED] bg-white shadow-[0_24px_80px_rgba(53,28,39,0.24)] ${open ? "" : "abii-modal-panel-out"} ${size === "sm" ? "max-w-[480px]" : size === "lg" ? "max-w-[680px]" : "max-w-[570px]"}`}>
       <header className="relative min-h-[144px] shrink-0 overflow-hidden bg-secondary-surface px-6 pb-5 pt-7 sm:min-h-[168px] sm:px-7 sm:pt-7">
         <div className={`relative z-10 ${badgeDetailsHeader ? "max-w-[64%] sm:max-w-[62%]" : "max-w-[68%] sm:max-w-[62%]"}`}><h2 id={titleId} className="break-words text-[23px] font-bold leading-[1.1] tracking-[-.035em] text-foreground sm:text-[25px]">{title}</h2>{description && <p id={descriptionId} className="mt-2 max-w-[310px] break-words text-[13px] leading-[1.45] text-muted">{description}</p>}</div>
@@ -86,6 +88,6 @@ export function Modal({ open, onClose, action, title, description, children, foo
   return createPortal(modalContent, document.body);
 }
 
-export const modalCancelClass = "border border-border bg-surface text-foreground hover:bg-surface-hover disabled:opacity-50";
-export const modalPrimaryClass = "bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active disabled:cursor-wait disabled:opacity-60";
-export const modalDangerClass = "border border-error/30 bg-error-bg text-error-text hover:bg-error/15 disabled:cursor-wait disabled:opacity-60";
+export const modalCancelClass = "learner-modal-cancel border border-border bg-surface text-foreground hover:bg-surface-hover disabled:opacity-50";
+export const modalPrimaryClass = "learner-modal-primary bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active disabled:cursor-wait disabled:opacity-60";
+export const modalDangerClass = "learner-destructive-action border border-error/30 bg-error-bg text-error-text hover:bg-error/15 disabled:cursor-wait disabled:opacity-60";

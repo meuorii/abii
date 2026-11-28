@@ -14,7 +14,6 @@ import { User } from "@/models/User";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { emptyTypeProgress } from "@/lib/quiz/types";
 import { listSubjectFolders } from "@/lib/subject-folders/service";
-import { AddSubjectTrigger } from "@/components/subjects/add-subject-trigger";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 type Props={params:Promise<{folderId:string}>};
@@ -33,9 +32,8 @@ export default async function SubjectFolderPage({params}:Props){
  <AbiiPageHero
    variant="subject-folder"
    headingId="subject-folder-hero-title"
-   title={<><h1 className="break-words text-2xl font-bold text-[#2F2930]">{title}</h1><p className="mt-1 text-xs text-[#6E8497]">{subjects.length} subjects &middot; {topicCount} topics &middot; {flashcardCount} flashcards</p><h2 className="mt-5 max-w-[430px] text-3xl font-bold leading-tight tracking-tight text-[#173B52]">Your subjects,<br /><span className="text-[#E9577D]">one organized space.</span></h2></>}
-   description={<p className="mt-2 text-sm text-[#526F83]">Keep your subjects together and make every study session count.</p>}
-   actions={<AddSubjectTrigger className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#FF6F96] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2" />}
+   title={<><h1 className="abii-hero-heading break-words">{title}</h1><p className="mt-2 text-sm text-[#6F5964]">{subjects.length} subjects · {topicCount} topics · {flashcardCount} flashcards</p></>}
+   description={<p className="mt-2 text-sm text-[#6F5964]">Keep your subjects together and make every study session count.</p>}
    mascotSrc="/dashboard-hero/my-subjects.png"
    mascotAlt=""
    priority

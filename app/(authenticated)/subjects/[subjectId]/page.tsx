@@ -10,8 +10,7 @@ import { Subject } from "@/models/Subject";
 import { Topic } from "@/models/Topic";
 import { getSubjectMastery } from "@/lib/quiz/service";
 import { emptyTypeProgress } from "@/lib/quiz/types";
-import { MasteryProgressBar } from "@/components/progress/mastery-progress-bar";
-import { BookOpen, ChevronRight, ArrowRight, CircleCheck } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,9 +84,8 @@ export default async function SubjectDetailPage({ params }: PageProps) {
         <AbiiPageHero
           variant="subject-detail"
           headingId="subject-hero-title"
-          title={<><div className="flex items-center gap-3"><span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#FFE0E9] text-[#E9577D] sm:h-12 sm:w-12"><BookOpen className="h-5 w-5" /></span><div className="min-w-0"><div className="flex flex-wrap items-start gap-2"><h1 className="min-w-0 break-words text-xl font-bold tracking-[-0.04em] text-[#2F2930] sm:text-2xl">{subject.name}</h1>{cards.length > 0 && masteredCount === cards.length && <span title="Mastered" aria-label="Mastered" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#F7C6D6] bg-[#FFF0F5] px-2 py-1 text-[10px] font-bold text-[#D94675]"><CircleCheck className="h-3 w-3" />Mastered</span>}</div><p className="mt-1 text-[11px] text-[#6E8497] sm:text-xs">{topicCount} {topicCount === 1 ? "topic" : "topics"} <span className="mx-1.5">&middot;</span> {cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}</p></div></div><MasteryProgressBar className="mt-2 w-36 sm:w-48" label="Mastery" ariaLabel={`${subject.name} mastery progress`} progress={progress} /><h2 className="mt-5 max-w-[420px] text-[clamp(1.45rem,2.5vw,2rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#173B52]">One card at a time,<br /><span className="text-[#E9577D]">one step closer.</span></h2></>}
+          title={<><h1 className="abii-hero-heading break-words">{subject.name}</h1><p className="mt-2 text-sm text-[#6F5964]">{topicCount} {topicCount === 1 ? "topic" : "topics"} · {cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}{cards.length > 0 && masteredCount === cards.length ? " · Mastered" : ""}</p></>}
           description={<p className="mt-2 max-w-sm text-xs leading-5 text-[#526F83] sm:text-sm sm:leading-6">Keep practicing and build your confidence.</p>}
-          actions={<Link href={`/review?subjectId=${subject._id}`} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#F05B87] px-5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:min-h-11 sm:px-6 sm:text-sm">Study Subject <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>}
           mascotSrc="/dashboard-hero/my-subjects.png"
           mascotAlt=""
           priority

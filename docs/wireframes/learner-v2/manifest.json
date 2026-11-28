@@ -1,0 +1,1334 @@
+[
+  {
+    "file": "01-design-system/design-system-desktop.svg",
+    "title": "Design system V2",
+    "route": "Shared reference",
+    "viewport": "desktop",
+    "state": "reference",
+    "width": 1000,
+    "height": 500
+  },
+  {
+    "file": "01-design-system/design-system-mobile.svg",
+    "title": "Design system V2",
+    "route": "Shared reference",
+    "viewport": "mobile",
+    "state": "reference",
+    "width": 390,
+    "height": 700
+  },
+  {
+    "file": "02-dashboard/dashboard-desktop-skeleton.svg",
+    "title": "Dashboard",
+    "route": "/dashboard",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 1114
+  },
+  {
+    "file": "02-dashboard/dashboard-desktop.svg",
+    "title": "Dashboard",
+    "route": "/dashboard",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1114
+  },
+  {
+    "file": "02-dashboard/dashboard-mobile-skeleton.svg",
+    "title": "Dashboard",
+    "route": "/dashboard",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 1591
+  },
+  {
+    "file": "02-dashboard/dashboard-mobile.svg",
+    "title": "Dashboard",
+    "route": "/dashboard",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1591
+  },
+  {
+    "file": "02-dashboard/dashboard-states-desktop.svg",
+    "title": "Dashboard states",
+    "route": "Shared reference",
+    "viewport": "desktop",
+    "state": "reference",
+    "width": 1000,
+    "height": 599
+  },
+  {
+    "file": "02-dashboard/dashboard-states-mobile.svg",
+    "title": "Dashboard states",
+    "route": "Shared reference",
+    "viewport": "mobile",
+    "state": "reference",
+    "width": 390,
+    "height": 757
+  },
+  {
+    "file": "03-subjects/library-states-desktop.svg",
+    "title": "Study library states",
+    "route": "Shared reference",
+    "viewport": "desktop",
+    "state": "reference",
+    "width": 1000,
+    "height": 599
+  },
+  {
+    "file": "03-subjects/library-states-mobile.svg",
+    "title": "Study library states",
+    "route": "Shared reference",
+    "viewport": "mobile",
+    "state": "reference",
+    "width": 390,
+    "height": 979
+  },
+  {
+    "file": "03-subjects/my-subjects-desktop-skeleton.svg",
+    "title": "My Subjects",
+    "route": "/subjects",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 964
+  },
+  {
+    "file": "03-subjects/my-subjects-desktop.svg",
+    "title": "My Subjects",
+    "route": "/subjects",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 964
+  },
+  {
+    "file": "03-subjects/my-subjects-mobile-skeleton.svg",
+    "title": "My Subjects",
+    "route": "/subjects",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 1408
+  },
+  {
+    "file": "03-subjects/my-subjects-mobile.svg",
+    "title": "My Subjects",
+    "route": "/subjects",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1408
+  },
+  {
+    "file": "03-subjects/subject-detail-all-flashcards-desktop.svg",
+    "title": "Subject Detail · All Flashcards",
+    "route": "/subjects/[subjectId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1068
+  },
+  {
+    "file": "03-subjects/subject-detail-all-flashcards-mobile.svg",
+    "title": "Subject Detail · All Flashcards",
+    "route": "/subjects/[subjectId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1366
+  },
+  {
+    "file": "03-subjects/subject-detail-progress-desktop.svg",
+    "title": "Subject Detail · Progress",
+    "route": "/subjects/[subjectId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1068
+  },
+  {
+    "file": "03-subjects/subject-detail-progress-mobile.svg",
+    "title": "Subject Detail · Progress",
+    "route": "/subjects/[subjectId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1425
+  },
+  {
+    "file": "03-subjects/subject-detail-settings-desktop.svg",
+    "title": "Subject Detail · Settings",
+    "route": "/subjects/[subjectId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 759
+  },
+  {
+    "file": "03-subjects/subject-detail-settings-mobile.svg",
+    "title": "Subject Detail · Settings",
+    "route": "/subjects/[subjectId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1140
+  },
+  {
+    "file": "03-subjects/subject-detail-topics-desktop-skeleton.svg",
+    "title": "Subject Detail · Topics",
+    "route": "/subjects/[subjectId]",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 1008
+  },
+  {
+    "file": "03-subjects/subject-detail-topics-desktop.svg",
+    "title": "Subject Detail · Topics",
+    "route": "/subjects/[subjectId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1008
+  },
+  {
+    "file": "03-subjects/subject-detail-topics-mobile-skeleton.svg",
+    "title": "Subject Detail · Topics",
+    "route": "/subjects/[subjectId]",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 1430
+  },
+  {
+    "file": "03-subjects/subject-detail-topics-mobile.svg",
+    "title": "Subject Detail · Topics",
+    "route": "/subjects/[subjectId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1430
+  },
+  {
+    "file": "03-subjects/subject-folder-desktop-skeleton.svg",
+    "title": "Subject Folder",
+    "route": "/subjects/folders/[folderId]",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 748
+  },
+  {
+    "file": "03-subjects/subject-folder-desktop.svg",
+    "title": "Subject Folder",
+    "route": "/subjects/folders/[folderId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 748
+  },
+  {
+    "file": "03-subjects/subject-folder-mobile-skeleton.svg",
+    "title": "Subject Folder",
+    "route": "/subjects/folders/[folderId]",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 898
+  },
+  {
+    "file": "03-subjects/subject-folder-mobile.svg",
+    "title": "Subject Folder",
+    "route": "/subjects/folders/[folderId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 898
+  },
+  {
+    "file": "03-subjects/topic-detail-desktop-skeleton.svg",
+    "title": "Topic Detail",
+    "route": "/subjects/[subjectId]/topics/[topicId]",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 1102
+  },
+  {
+    "file": "03-subjects/topic-detail-desktop.svg",
+    "title": "Topic Detail",
+    "route": "/subjects/[subjectId]/topics/[topicId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1102
+  },
+  {
+    "file": "03-subjects/topic-detail-mobile-skeleton.svg",
+    "title": "Topic Detail",
+    "route": "/subjects/[subjectId]/topics/[topicId]",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 1336
+  },
+  {
+    "file": "03-subjects/topic-detail-mobile.svg",
+    "title": "Topic Detail",
+    "route": "/subjects/[subjectId]/topics/[topicId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1336
+  },
+  {
+    "file": "03-subjects/topic-folder-desktop-skeleton.svg",
+    "title": "Topic Folder",
+    "route": "/subjects/[subjectId]/folders/[folderId]",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 906
+  },
+  {
+    "file": "03-subjects/topic-folder-desktop.svg",
+    "title": "Topic Folder",
+    "route": "/subjects/[subjectId]/folders/[folderId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 906
+  },
+  {
+    "file": "03-subjects/topic-folder-mobile-skeleton.svg",
+    "title": "Topic Folder",
+    "route": "/subjects/[subjectId]/folders/[folderId]",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 954
+  },
+  {
+    "file": "03-subjects/topic-folder-mobile.svg",
+    "title": "Topic Folder",
+    "route": "/subjects/[subjectId]/folders/[folderId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 954
+  },
+  {
+    "file": "04-review/quiz-completion-desktop-skeleton.svg",
+    "title": "Quiz Completion",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 1070
+  },
+  {
+    "file": "04-review/quiz-completion-desktop.svg",
+    "title": "Quiz Completion",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1070
+  },
+  {
+    "file": "04-review/quiz-completion-mobile-skeleton.svg",
+    "title": "Quiz Completion",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 1710
+  },
+  {
+    "file": "04-review/quiz-completion-mobile.svg",
+    "title": "Quiz Completion",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1710
+  },
+  {
+    "file": "04-review/quiz-enumeration-identification-desktop.svg",
+    "title": "Quiz · Enumeration Identification",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1028
+  },
+  {
+    "file": "04-review/quiz-enumeration-identification-mobile.svg",
+    "title": "Quiz · Enumeration Identification",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1323
+  },
+  {
+    "file": "04-review/quiz-enumeration-mcq-desktop.svg",
+    "title": "Quiz · Enumeration MCQ",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1008
+  },
+  {
+    "file": "04-review/quiz-enumeration-mcq-mobile.svg",
+    "title": "Quiz · Enumeration MCQ",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1303
+  },
+  {
+    "file": "04-review/quiz-feedback-correct-desktop.svg",
+    "title": "Quiz · Correct feedback",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1138
+  },
+  {
+    "file": "04-review/quiz-feedback-correct-mobile.svg",
+    "title": "Quiz · Correct feedback",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1433
+  },
+  {
+    "file": "04-review/quiz-feedback-incorrect-desktop.svg",
+    "title": "Quiz · Incorrect feedback",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1138
+  },
+  {
+    "file": "04-review/quiz-feedback-incorrect-mobile.svg",
+    "title": "Quiz · Incorrect feedback",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1433
+  },
+  {
+    "file": "04-review/quiz-identification-desktop.svg",
+    "title": "Quiz · Identification",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 938
+  },
+  {
+    "file": "04-review/quiz-identification-mobile.svg",
+    "title": "Quiz · Identification",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1168
+  },
+  {
+    "file": "04-review/quiz-multiple-choice-desktop-skeleton.svg",
+    "title": "Quiz · Multiple Choice",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 1008
+  },
+  {
+    "file": "04-review/quiz-multiple-choice-desktop.svg",
+    "title": "Quiz · Multiple Choice",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1008
+  },
+  {
+    "file": "04-review/quiz-multiple-choice-mobile-skeleton.svg",
+    "title": "Quiz · Multiple Choice",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 1303
+  },
+  {
+    "file": "04-review/quiz-multiple-choice-mobile.svg",
+    "title": "Quiz · Multiple Choice",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1303
+  },
+  {
+    "file": "04-review/quiz-true-false-desktop.svg",
+    "title": "Quiz · True / False",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 938
+  },
+  {
+    "file": "04-review/quiz-true-false-mobile.svg",
+    "title": "Quiz · True / False",
+    "route": "/review/quiz/[sessionId]",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1168
+  },
+  {
+    "file": "04-review/review-overview-desktop-skeleton.svg",
+    "title": "Review",
+    "route": "/review",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 1234
+  },
+  {
+    "file": "04-review/review-overview-desktop.svg",
+    "title": "Review",
+    "route": "/review",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1234
+  },
+  {
+    "file": "04-review/review-overview-mobile-skeleton.svg",
+    "title": "Review",
+    "route": "/review",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 1822
+  },
+  {
+    "file": "04-review/review-overview-mobile.svg",
+    "title": "Review",
+    "route": "/review",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1822
+  },
+  {
+    "file": "04-review/review-setup-desktop-skeleton.svg",
+    "title": "Review Setup",
+    "route": "/review/setup",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 750
+  },
+  {
+    "file": "04-review/review-setup-desktop.svg",
+    "title": "Review Setup",
+    "route": "/review/setup",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 750
+  },
+  {
+    "file": "04-review/review-setup-mobile-skeleton.svg",
+    "title": "Review Setup",
+    "route": "/review/setup",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 1118
+  },
+  {
+    "file": "04-review/review-setup-mobile.svg",
+    "title": "Review Setup",
+    "route": "/review/setup",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1118
+  },
+  {
+    "file": "04-review/review-states-desktop.svg",
+    "title": "Review states",
+    "route": "Shared reference",
+    "viewport": "desktop",
+    "state": "reference",
+    "width": 1000,
+    "height": 599
+  },
+  {
+    "file": "04-review/review-states-mobile.svg",
+    "title": "Review states",
+    "route": "Shared reference",
+    "viewport": "mobile",
+    "state": "reference",
+    "width": 390,
+    "height": 979
+  },
+  {
+    "file": "05-progress/progress-desktop-skeleton.svg",
+    "title": "Progress",
+    "route": "/progress",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 1677
+  },
+  {
+    "file": "05-progress/progress-desktop.svg",
+    "title": "Progress",
+    "route": "/progress",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1677
+  },
+  {
+    "file": "05-progress/progress-mobile-skeleton.svg",
+    "title": "Progress",
+    "route": "/progress",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 2617
+  },
+  {
+    "file": "05-progress/progress-mobile.svg",
+    "title": "Progress",
+    "route": "/progress",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 2617
+  },
+  {
+    "file": "05-progress/progress-states-desktop.svg",
+    "title": "Progress states",
+    "route": "Shared reference",
+    "viewport": "desktop",
+    "state": "reference",
+    "width": 1000,
+    "height": 599
+  },
+  {
+    "file": "05-progress/progress-states-mobile.svg",
+    "title": "Progress states",
+    "route": "Shared reference",
+    "viewport": "mobile",
+    "state": "reference",
+    "width": 390,
+    "height": 757
+  },
+  {
+    "file": "06-badges/badge-states-desktop.svg",
+    "title": "Badge states",
+    "route": "Shared reference",
+    "viewport": "desktop",
+    "state": "reference",
+    "width": 1000,
+    "height": 599
+  },
+  {
+    "file": "06-badges/badge-states-mobile.svg",
+    "title": "Badge states",
+    "route": "Shared reference",
+    "viewport": "mobile",
+    "state": "reference",
+    "width": 390,
+    "height": 757
+  },
+  {
+    "file": "06-badges/badges-desktop-skeleton.svg",
+    "title": "Badges",
+    "route": "/badges",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 2046
+  },
+  {
+    "file": "06-badges/badges-desktop.svg",
+    "title": "Badges",
+    "route": "/badges",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 2046
+  },
+  {
+    "file": "06-badges/badges-mobile-skeleton.svg",
+    "title": "Badges",
+    "route": "/badges",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 2910
+  },
+  {
+    "file": "06-badges/badges-mobile.svg",
+    "title": "Badges",
+    "route": "/badges",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 2910
+  },
+  {
+    "file": "07-profile/profile-desktop-skeleton.svg",
+    "title": "Profile",
+    "route": "/profile",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 1226
+  },
+  {
+    "file": "07-profile/profile-desktop.svg",
+    "title": "Profile",
+    "route": "/profile",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1226
+  },
+  {
+    "file": "07-profile/profile-mobile-skeleton.svg",
+    "title": "Profile",
+    "route": "/profile",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 1728
+  },
+  {
+    "file": "07-profile/profile-mobile.svg",
+    "title": "Profile",
+    "route": "/profile",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1728
+  },
+  {
+    "file": "07-profile/profile-states-desktop.svg",
+    "title": "Profile states",
+    "route": "Shared reference",
+    "viewport": "desktop",
+    "state": "reference",
+    "width": 1000,
+    "height": 349
+  },
+  {
+    "file": "07-profile/profile-states-mobile.svg",
+    "title": "Profile states",
+    "route": "Shared reference",
+    "viewport": "mobile",
+    "state": "reference",
+    "width": 390,
+    "height": 535
+  },
+  {
+    "file": "07-settings/settings-desktop-skeleton.svg",
+    "title": "Settings",
+    "route": "/settings",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 1560
+  },
+  {
+    "file": "07-settings/settings-desktop.svg",
+    "title": "Settings",
+    "route": "/settings",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1560
+  },
+  {
+    "file": "07-settings/settings-mobile-skeleton.svg",
+    "title": "Settings",
+    "route": "/settings",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 2464
+  },
+  {
+    "file": "07-settings/settings-mobile.svg",
+    "title": "Settings",
+    "route": "/settings",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 2464
+  },
+  {
+    "file": "07-settings/settings-states-desktop.svg",
+    "title": "Settings states",
+    "route": "Shared reference",
+    "viewport": "desktop",
+    "state": "reference",
+    "width": 1000,
+    "height": 599
+  },
+  {
+    "file": "07-settings/settings-states-mobile.svg",
+    "title": "Settings states",
+    "route": "Shared reference",
+    "viewport": "mobile",
+    "state": "reference",
+    "width": 390,
+    "height": 757
+  },
+  {
+    "file": "08-notifications/inbox-states-desktop.svg",
+    "title": "Inbox states",
+    "route": "Shared reference",
+    "viewport": "desktop",
+    "state": "reference",
+    "width": 1000,
+    "height": 599
+  },
+  {
+    "file": "08-notifications/inbox-states-mobile.svg",
+    "title": "Inbox states",
+    "route": "Shared reference",
+    "viewport": "mobile",
+    "state": "reference",
+    "width": 390,
+    "height": 757
+  },
+  {
+    "file": "08-notifications/notification-dropdown-desktop.svg",
+    "title": "Notification dropdown / sheet",
+    "route": "Shared reference",
+    "viewport": "desktop",
+    "state": "reference",
+    "width": 1000,
+    "height": 550
+  },
+  {
+    "file": "08-notifications/notification-dropdown-mobile.svg",
+    "title": "Notification dropdown / sheet",
+    "route": "Shared reference",
+    "viewport": "mobile",
+    "state": "reference",
+    "width": 390,
+    "height": 690
+  },
+  {
+    "file": "08-notifications/notifications-desktop-skeleton.svg",
+    "title": "Notifications",
+    "route": "/notifications",
+    "viewport": "desktop",
+    "state": "skeleton",
+    "width": 1440,
+    "height": 1245
+  },
+  {
+    "file": "08-notifications/notifications-desktop.svg",
+    "title": "Notifications",
+    "route": "/notifications",
+    "viewport": "desktop",
+    "state": "default",
+    "width": 1440,
+    "height": 1245
+  },
+  {
+    "file": "08-notifications/notifications-mobile-skeleton.svg",
+    "title": "Notifications",
+    "route": "/notifications",
+    "viewport": "mobile",
+    "state": "skeleton",
+    "width": 390,
+    "height": 1615
+  },
+  {
+    "file": "08-notifications/notifications-mobile.svg",
+    "title": "Notifications",
+    "route": "/notifications",
+    "viewport": "mobile",
+    "state": "default",
+    "width": 390,
+    "height": 1615
+  },
+  {
+    "file": "09-shared-modals/badge-details-locked-desktop.svg",
+    "title": "Dedicated Otter",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 553
+  },
+  {
+    "file": "09-shared-modals/badge-details-locked-mobile.svg",
+    "title": "Dedicated Otter",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 706
+  },
+  {
+    "file": "09-shared-modals/badge-details-unlocked-desktop.svg",
+    "title": "Weekly Wonder",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 553
+  },
+  {
+    "file": "09-shared-modals/badge-details-unlocked-mobile.svg",
+    "title": "Weekly Wonder",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 706
+  },
+  {
+    "file": "09-shared-modals/clear-history-desktop.svg",
+    "title": "Clear Study History?",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 415
+  },
+  {
+    "file": "09-shared-modals/clear-history-mobile.svg",
+    "title": "Clear Study History?",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 371
+  },
+  {
+    "file": "09-shared-modals/create-folder-desktop.svg",
+    "title": "New Folder",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 510
+  },
+  {
+    "file": "09-shared-modals/create-folder-mobile.svg",
+    "title": "New Folder",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 466
+  },
+  {
+    "file": "09-shared-modals/create-subject-desktop.svg",
+    "title": "New Subject",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 389
+  },
+  {
+    "file": "09-shared-modals/create-subject-mobile.svg",
+    "title": "New Subject",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 345
+  },
+  {
+    "file": "09-shared-modals/create-topic-desktop.svg",
+    "title": "New Topic",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 389
+  },
+  {
+    "file": "09-shared-modals/create-topic-mobile.svg",
+    "title": "New Topic",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 345
+  },
+  {
+    "file": "09-shared-modals/delete-account-desktop.svg",
+    "title": "Delete Your Account?",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 492
+  },
+  {
+    "file": "09-shared-modals/delete-account-mobile.svg",
+    "title": "Delete Your Account?",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 448
+  },
+  {
+    "file": "09-shared-modals/delete-materials-desktop.svg",
+    "title": "Delete Study Materials?",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 415
+  },
+  {
+    "file": "09-shared-modals/delete-materials-mobile.svg",
+    "title": "Delete Study Materials?",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 371
+  },
+  {
+    "file": "09-shared-modals/delete-subject-desktop.svg",
+    "title": "Delete Subject?",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 485
+  },
+  {
+    "file": "09-shared-modals/delete-subject-mobile.svg",
+    "title": "Delete Subject?",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 441
+  },
+  {
+    "file": "09-shared-modals/delete-topic-migration-desktop.svg",
+    "title": "Delete This Topic?",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 552
+  },
+  {
+    "file": "09-shared-modals/delete-topic-migration-mobile.svg",
+    "title": "Delete This Topic?",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 508
+  },
+  {
+    "file": "09-shared-modals/discard-session-desktop.svg",
+    "title": "Discard Session?",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 415
+  },
+  {
+    "file": "09-shared-modals/discard-session-mobile.svg",
+    "title": "Discard Session?",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 371
+  },
+  {
+    "file": "09-shared-modals/enumeration-editor-desktop.svg",
+    "title": "Create Flashcard",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 782
+  },
+  {
+    "file": "09-shared-modals/enumeration-editor-mobile.svg",
+    "title": "Create Flashcard",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 980
+  },
+  {
+    "file": "09-shared-modals/error-state-desktop.svg",
+    "title": "New Subject",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 417
+  },
+  {
+    "file": "09-shared-modals/error-state-mobile.svg",
+    "title": "New Subject",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 373
+  },
+  {
+    "file": "09-shared-modals/featured-badge-selection-desktop.svg",
+    "title": "Choose Your Badges",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 764
+  },
+  {
+    "file": "09-shared-modals/featured-badge-selection-mobile.svg",
+    "title": "Choose Your Badges",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 920
+  },
+  {
+    "file": "09-shared-modals/logout-desktop.svg",
+    "title": "Leaving already?",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 415
+  },
+  {
+    "file": "09-shared-modals/logout-mobile.svg",
+    "title": "Leaving already?",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 371
+  },
+  {
+    "file": "09-shared-modals/move-topic-desktop.svg",
+    "title": "Move Topic",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 559
+  },
+  {
+    "file": "09-shared-modals/move-topic-mobile.svg",
+    "title": "Move Topic",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 515
+  },
+  {
+    "file": "09-shared-modals/privacy-information-desktop.svg",
+    "title": "Your Data, Your Choice",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 534
+  },
+  {
+    "file": "09-shared-modals/privacy-information-mobile.svg",
+    "title": "Your Data, Your Choice",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 490
+  },
+  {
+    "file": "09-shared-modals/profile-photo-editor-desktop.svg",
+    "title": "Edit Profile Picture",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 653
+  },
+  {
+    "file": "09-shared-modals/profile-photo-editor-mobile.svg",
+    "title": "Edit Profile Picture",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 764
+  },
+  {
+    "file": "09-shared-modals/quiz-exit-desktop.svg",
+    "title": "Exit This Quiz?",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 415
+  },
+  {
+    "file": "09-shared-modals/quiz-exit-mobile.svg",
+    "title": "Exit This Quiz?",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 371
+  },
+  {
+    "file": "09-shared-modals/remove-photo-desktop.svg",
+    "title": "Remove Profile Picture?",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 415
+  },
+  {
+    "file": "09-shared-modals/remove-photo-mobile.svg",
+    "title": "Remove Profile Picture?",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 371
+  },
+  {
+    "file": "09-shared-modals/saving-state-desktop.svg",
+    "title": "New Subject",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 417
+  },
+  {
+    "file": "09-shared-modals/saving-state-mobile.svg",
+    "title": "New Subject",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 373
+  },
+  {
+    "file": "09-shared-modals/standard-editor-desktop.svg",
+    "title": "Create Flashcard",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 707
+  },
+  {
+    "file": "09-shared-modals/standard-editor-mobile.svg",
+    "title": "Create Flashcard",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 830
+  },
+  {
+    "file": "09-shared-modals/update-subject-desktop.svg",
+    "title": "Edit Subject",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 389
+  },
+  {
+    "file": "09-shared-modals/update-subject-mobile.svg",
+    "title": "Edit Subject",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 345
+  },
+  {
+    "file": "09-shared-modals/validation-state-desktop.svg",
+    "title": "New Subject",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 417
+  },
+  {
+    "file": "09-shared-modals/validation-state-mobile.svg",
+    "title": "New Subject",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 373
+  },
+  {
+    "file": "09-shared-modals/view-flashcard-desktop.svg",
+    "title": "Flashcard Details",
+    "route": "Shared Modal",
+    "viewport": "desktop",
+    "state": "modal",
+    "width": 1000,
+    "height": 492
+  },
+  {
+    "file": "09-shared-modals/view-flashcard-mobile.svg",
+    "title": "Flashcard Details",
+    "route": "Shared Modal",
+    "viewport": "mobile",
+    "state": "modal",
+    "width": 390,
+    "height": 574
+  }
+]

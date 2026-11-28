@@ -34,10 +34,10 @@ function Statistics({ badges }: { badges: BadgePageItem[] }) {
   ];
   return <section aria-label="Achievement overview"><StaggerContainer className="grid auto-rows-fr grid-cols-1 items-stretch gap-3 min-[380px]:grid-cols-2 sm:gap-4 xl:grid-cols-4">
     {stats.map(({ label, value, icon: Icon, detail }, index) => <StaggerItem key={label} index={index} className="h-full min-w-0">
-      <div className="flex h-32 min-w-0 flex-col rounded-2xl border border-[#E8E2E5] bg-white p-3.5 sm:p-4">
-        <div className="flex min-h-8 min-w-0 items-center gap-2 text-[#D94E7B]"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#FFF0F4]"><Icon aria-hidden="true" className="h-4 w-4" /></span><p className="min-w-0 text-xs font-semibold leading-4 text-[#756B72] sm:text-sm">{label}</p></div>
-        <p className="mt-2 text-2xl font-extrabold tabular-nums leading-none text-[#183653] sm:text-3xl">{value}</p>
-        <p className="mt-auto pt-1.5 text-[11px] leading-4 text-[#8A7E85] sm:text-xs">{detail}</p>
+      <div className="flex h-32 min-w-0 flex-col rounded-2xl border border-[#E8DDE1] bg-white p-3.5 sm:p-4">
+        <div className="flex min-h-8 min-w-0 items-center gap-2 text-[#F8769C]"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#FFE8EF]"><Icon aria-hidden="true" className="h-4 w-4" /></span><p className="min-w-0 text-xs font-semibold leading-4 text-[#6F5964] sm:text-sm">{label}</p></div>
+        <p className="mt-2 text-2xl font-extrabold tabular-nums leading-none text-[#30262B] sm:text-3xl">{value}</p>
+        <p className="mt-auto pt-1.5 text-[11px] leading-4 text-[#6F5964] sm:text-xs">{detail}</p>
       </div>
     </StaggerItem>)}
   </StaggerContainer></section>;
@@ -47,27 +47,27 @@ function CollectionProgress({ badges }: { badges: BadgePageItem[] }) {
   const total = badges.length;
   const unlocked = badges.filter((badge) => badge.unlocked).length;
   const percent = total ? Math.round((unlocked / total) * 100) : 0;
-  return <section className="rounded-2xl border border-[#F3E5EA] bg-[#FFF8FA] p-4 sm:p-5" aria-labelledby="collection-progress-title">
+  return <section className="rounded-2xl border border-[#F3E5EA] bg-[#FFF9FC] p-4 sm:p-5" aria-labelledby="collection-progress-title">
     <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-      <div><h2 id="collection-progress-title" className="text-base font-bold text-[#183653] sm:text-lg">Collection Progress</h2><p className="mt-1 text-xs text-[#756B72] sm:text-sm">Every step forward adds to your collection.</p></div>
-      <p className="text-sm font-bold tabular-nums text-[#C65380]">{unlocked} of {total} badges <span className="ml-1 text-lg">{percent}%</span></p>
+      <div><h2 id="collection-progress-title" className="text-base font-bold text-[#30262B] sm:text-lg">Collection Progress</h2><p className="mt-1 text-xs text-[#6F5964] sm:text-sm">Every step forward adds to your collection.</p></div>
+      <p className="text-sm font-bold tabular-nums text-[#F8769C]">{unlocked} of {total} badges <span className="ml-1 text-lg">{percent}%</span></p>
     </div>
     <div role="progressbar" aria-label="Badge collection completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-valuetext={`${unlocked} of ${total} badges, ${percent}% complete`} className="mt-4 h-3 overflow-hidden rounded-full bg-white shadow-inner">
-      <div className="h-full rounded-full bg-[#F15D8A] transition-[width] duration-300" style={{ width: `${percent}%` }} />
+      <div className="h-full rounded-full bg-[#F8769C] transition-[width] duration-300" style={{ width: `${percent}%` }} />
     </div>
   </section>;
 }
 
 function RarityOverview({ badges }: { badges: BadgePageItem[] }) {
-  return <section aria-label="Badge rarity overview" className="rounded-2xl border border-[#E8E2E5] bg-white p-4 sm:p-5">
-    <ScrollReveal className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-base font-bold text-[#183653]">Rarity Collection</h2><p className="mt-1 text-xs text-[#756B72]">Earn badges at every rarity level.</p></div></ScrollReveal>
+  return <section aria-label="Badge rarity overview" className="rounded-2xl border border-[#E8DDE1] bg-white p-4 sm:p-5">
+    <ScrollReveal className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-base font-bold text-[#30262B]">Rarity Collection</h2><p className="mt-1 text-xs text-[#6F5964]">Earn badges at every rarity level.</p></div></ScrollReveal>
     <StaggerContainer className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3" stagger={0.1}>
       {rarityOrder.map((rarity) => {
         const group = badges.filter((badge) => badge.rarity === rarity);
         const earned = group.filter((badge) => badge.unlocked).length;
-        return <StaggerItem key={rarity} index={rarityOrder.indexOf(rarity)} className="flex min-w-0 items-center justify-between gap-1.5 rounded-xl bg-[#FFF9FB] px-2.5 py-2 sm:px-3">
+        return <StaggerItem key={rarity} index={rarityOrder.indexOf(rarity)} className="flex min-w-0 items-center justify-between gap-1.5 rounded-xl bg-[#FFF9FC] px-2.5 py-2 sm:px-3">
           <RarityIndicator rarity={rarity} size="md" />
-          <span className="shrink-0 text-xs font-bold tabular-nums text-[#657B8E]">{earned}/{group.length}</span>
+          <span className="shrink-0 text-xs font-bold tabular-nums text-[#6F5964]">{earned}/{group.length}</span>
         </StaggerItem>;
       })}
     </StaggerContainer>
@@ -117,11 +117,11 @@ export function BadgesPage({ initialData, initialError = false }: { initialData:
   const clearFilters = () => { setStatus("all"); setRarity("all"); setCategory("all"); };
 
   return <div className="space-y-5">
-    {error || !data ? <section role="alert" className="rounded-2xl border border-[#F0C7D3] bg-white p-6 sm:p-8">
-      <p className="text-xs font-bold uppercase tracking-[.16em] text-[#C65380]">A little hiccup</p>
-      <h2 className="mt-2 text-xl font-semibold text-[#2F2930]">Your achievements couldn&apos;t load.</h2>
-      <p className="mt-2 max-w-xl text-sm leading-6 text-[#756B72]">Please try again. Your earned badges and learning progress are saved to your account.</p>
-      <button type="button" disabled={retrying} onClick={() => void retry()} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#FF6F96] px-4 py-2 text-sm font-semibold text-white hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60">{retrying ? <RotateCw aria-hidden="true" className="h-4 w-4 animate-spin" /> : <RotateCw aria-hidden="true" className="h-4 w-4" />}{retrying ? "Trying again…" : "Try again"}</button>
+    {error || !data ? <section role="alert" className="rounded-2xl border border-[#E8DDE1] bg-white p-6 sm:p-8">
+      <p className="text-xs font-bold uppercase tracking-[.16em] text-[#F8769C]">A little hiccup</p>
+      <h2 className="mt-2 text-xl font-semibold text-[#30262B]">Your achievements couldn&apos;t load.</h2>
+      <p className="mt-2 max-w-xl text-sm leading-6 text-[#6F5964]">Please try again. Your earned badges and learning progress are saved to your account.</p>
+      <button type="button" disabled={retrying} onClick={() => void retry()} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#F8769C] px-4 py-2 text-sm font-semibold text-white hover:bg-[#EC658D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60">{retrying ? <RotateCw aria-hidden="true" className="h-4 w-4 animate-spin" /> : <RotateCw aria-hidden="true" className="h-4 w-4" />}{retrying ? "Trying again…" : "Try again"}</button>
     </section> : <>
       <Statistics badges={badges} />
       <ScrollReveal><CollectionProgress badges={badges} /></ScrollReveal>
@@ -129,28 +129,28 @@ export function BadgesPage({ initialData, initialError = false }: { initialData:
 
       <section aria-labelledby="badge-collection-title" className="space-y-4">
         <ScrollReveal className="flex flex-wrap items-end justify-between gap-3">
-          <div><p className="text-xs font-bold uppercase tracking-[.13em] text-[#C65380]">YOUR COLLECTION</p><h2 id="badge-collection-title" className="mt-1 text-xl font-bold text-[#183653] sm:text-2xl">Achievement Badges</h2></div>
-          <p aria-live="polite" className="text-xs font-semibold text-[#756B72]">Showing {visibleBadges.length} of {badges.length} badges</p>
+          <div><p className="text-xs font-bold uppercase tracking-[.13em] text-[#F8769C]">YOUR COLLECTION</p><h2 id="badge-collection-title" className="mt-1 text-xl font-bold text-[#30262B] sm:text-2xl">Achievement Badges</h2></div>
+          <p aria-live="polite" className="text-xs font-semibold text-[#6F5964]">Showing {visibleBadges.length} of {badges.length} badges</p>
         </ScrollReveal>
 
-        <ScrollReveal className="space-y-4 rounded-2xl border border-[#E8E2E5] bg-white p-3.5 sm:p-4">
+        <ScrollReveal className="space-y-4 rounded-2xl border border-[#E8DDE1] bg-white p-3.5 sm:p-4">
           <fieldset>
-            <legend className="mb-2 text-xs font-bold text-[#657B8E]">Status</legend>
+            <legend className="mb-2 text-xs font-bold text-[#6F5964]">Status</legend>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by badge status">
-              {(["all", "unlocked", "locked"] as const).map((value) => <button key={value} type="button" aria-pressed={status === value} onClick={() => setStatus(value)} className={`min-h-10 rounded-full border px-3.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 ${status === value ? "border-[#E9577D] bg-[#FFF0F4] text-[#B93D6B]" : "border-[#E8E2E5] bg-white text-[#657B8E] hover:bg-[#FFF9FB]"}`}>{value === "all" ? "All" : value === "unlocked" ? "Unlocked" : "Locked"}<span className="ml-1.5 tabular-nums opacity-75">{statusCounts[value]}</span></button>)}
+              {(["all", "unlocked", "locked"] as const).map((value) => <button key={value} type="button" aria-pressed={status === value} onClick={() => setStatus(value)} className={`min-h-10 rounded-full border px-3.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] focus-visible:ring-offset-2 ${status === value ? "border-[#F8769C] bg-[#FFE8EF] text-[#F8769C]" : "border-[#E8DDE1] bg-white text-[#6F5964] hover:bg-[#FFF9FC]"}`}>{value === "all" ? "All" : value === "unlocked" ? "Unlocked" : "Locked"}<span className="ml-1.5 tabular-nums opacity-75">{statusCounts[value]}</span></button>)}
             </div>
           </fieldset>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block min-w-0"><span className="mb-1.5 block text-xs font-bold text-[#657B8E]">Rarity</span><select value={rarity} onChange={(event) => setRarity(event.target.value as RarityFilter)} className="min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3 text-sm text-[#3A515F] outline-none focus:border-[#E9577D] focus:ring-2 focus:ring-[#E9577D]/20"><option value="all">All Rarities</option>{rarityOrder.map((item) => <option key={item} value={item}>{RARITY_DEFINITIONS[item].label}</option>)}</select></label>
-            <label className="block min-w-0"><span className="mb-1.5 block text-xs font-bold text-[#657B8E]">Category</span><select value={category} onChange={(event) => setCategory(event.target.value as CategoryFilter)} className="min-h-11 w-full rounded-xl border border-[#E8E2E5] bg-white px-3 text-sm text-[#3A515F] outline-none focus:border-[#E9577D] focus:ring-2 focus:ring-[#E9577D]/20"><option value="all">All Categories</option>{categoryOrder.map((item) => <option key={item} value={item}>{item === "mastery" ? "Mastery" : BADGE_CATEGORIES_METADATA[item].label}</option>)}</select></label>
+            <label className="block min-w-0"><span className="mb-1.5 block text-xs font-bold text-[#6F5964]">Rarity</span><select value={rarity} onChange={(event) => setRarity(event.target.value as RarityFilter)} className="min-h-11 w-full rounded-xl border border-[#E8DDE1] bg-white px-3 text-sm text-[#30262B] outline-none focus:border-[#F8769C] focus:ring-2 focus:ring-[#EC658D]/20"><option value="all">All Rarities</option>{rarityOrder.map((item) => <option key={item} value={item}>{RARITY_DEFINITIONS[item].label}</option>)}</select></label>
+            <label className="block min-w-0"><span className="mb-1.5 block text-xs font-bold text-[#6F5964]">Category</span><select value={category} onChange={(event) => setCategory(event.target.value as CategoryFilter)} className="min-h-11 w-full rounded-xl border border-[#E8DDE1] bg-white px-3 text-sm text-[#30262B] outline-none focus:border-[#F8769C] focus:ring-2 focus:ring-[#EC658D]/20"><option value="all">All Categories</option>{categoryOrder.map((item) => <option key={item} value={item}>{item === "mastery" ? "Mastery" : BADGE_CATEGORIES_METADATA[item].label}</option>)}</select></label>
           </div>
         </ScrollReveal>
 
         {visibleBadges.length ? <StaggerContainer stagger={0.055} className="grid min-w-0 grid-cols-1 items-stretch gap-3 min-[360px]:grid-cols-2 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
           {visibleBadges.map((badge, index) => <StaggerItem key={badge.id} index={index} className="h-full w-full min-w-0"><BadgeCard badge={badge} onSelect={(item) => setSelectedBadgeId(item.id)} /></StaggerItem>)}
-        </StaggerContainer> : <div className="rounded-2xl border border-dashed border-[#E8DDE2] bg-[#FFFAFC] px-4 py-10 text-center">
-          <h3 className="text-base font-bold text-[#183653]">No badges match these filters</h3><p className="mt-1 text-sm text-[#756B72]">Try a different status, rarity, or category.</p>
-          {hasFilters && <button type="button" onClick={clearFilters} className="mt-4 min-h-10 rounded-xl px-4 text-sm font-bold text-[#C65380] underline decoration-[#F1B9CB] underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">Clear filters</button>}
+        </StaggerContainer> : <div className="rounded-2xl border border-dashed border-[#E8DDE1] bg-[#FFF9FC] px-4 py-10 text-center">
+          <h3 className="text-base font-bold text-[#30262B]">No badges match these filters</h3><p className="mt-1 text-sm text-[#6F5964]">Try a different status, rarity, or category.</p>
+          {hasFilters && <button type="button" onClick={clearFilters} className="mt-4 min-h-10 rounded-xl px-4 text-sm font-bold text-[#F8769C] underline decoration-[#F1B9CB] underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D]">Clear filters</button>}
         </div>}
       </section>
     </>}

@@ -17,7 +17,7 @@ async function FeaturedBadgesContent({ surface, userId }: { surface: BadgeShowca
 
 function FeaturedBadgesSkeleton({ surface }: { surface: BadgeShowcaseSurface }) {
   const title = surface === "dashboard" ? "My Achievements" : "Achievement Showcase";
-  return <SkeletonRegion label={`Loading ${title}`} className="min-w-0 rounded-[18px] border border-[#F2E5EA] bg-white p-4 sm:p-5">
+  return <SkeletonRegion label={`Loading ${title}`} className="min-w-0 rounded-[18px] border border-[#E8DDE1] bg-white p-4 sm:p-5">
     <FeaturedBadgesSkeletonContent />
   </SkeletonRegion>;
 }

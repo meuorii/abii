@@ -1,43 +1,28 @@
 import Image from "next/image";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 export type AbiiHeroVariant =
-  | "dashboard"
-  | "admin"
-  | "admin-overview"
-  | "subjects"
-  | "review"
-  | "progress"
-  | "badges"
-  | "settings"
-  | "profile"
-  | "subject-detail"
-  | "subject-folder"
-  | "topic-folder"
-  | "topic-detail"
-  | "completion"
-  | "review-setup"
-  | "quiz-session";
+  | "dashboard" | "admin" | "admin-overview" | "subjects" | "review"
+  | "progress" | "badges" | "settings" | "profile" | "subject-detail"
+  | "subject-folder" | "topic-folder" | "topic-detail" | "completion"
+  | "review-setup" | "quiz-session";
 
-type VariantStyle = {
-  section: string;
-  layout: string;
-  content: string;
-  mascot: string;
-  mascotAnchor?: string;
-  mascotFrame?: string;
-  imagePosition?: string;
-  imageSizes: string;
+type AdminHeroStyle = { section: string; layout: string; content: string; mascot: string; mascotAnchor?: string; mascotFrame?: string; imageSizes: string };
+
+const headingSizeByVariant: Record<AbiiHeroVariant, "main" | "admin"> = {
+  dashboard: "main", admin: "admin", "admin-overview": "admin", subjects: "main",
+  review: "main", progress: "main", badges: "main", settings: "main", profile: "main",
+  "subject-detail": "main", "subject-folder": "main", "topic-folder": "main",
+  "topic-detail": "main", completion: "main", "review-setup": "main", "quiz-session": "main",
 };
 
-const variants: Record<AbiiHeroVariant, VariantStyle> = {
+const adminStyles: Record<"admin" | "admin-overview", AdminHeroStyle> = {
   admin: {
     section: "sm:border-[#F6DCE5]",
     layout: "sm:min-h-[248px] lg:min-h-[280px] xl:min-h-[310px]",
     content: "sm:max-w-[56%] sm:px-8 sm:py-8 lg:px-9",
     mascot: "sm:w-[40%]",
     mascotAnchor: "sm:right-[3%]",
-    // Every admin PNG has visible artwork through its bottom row.
     mascotFrame: "sm:top-3 sm:bottom-0",
     imageSizes: "(max-width: 639px) 36vw, (max-width: 1023px) 248px, 310px",
   },
@@ -50,111 +35,38 @@ const variants: Record<AbiiHeroVariant, VariantStyle> = {
     mascotFrame: "max-sm:top-0 sm:top-2 bottom-0",
     imageSizes: "(max-width: 639px) 120px, (max-width: 1023px) 220px, 280px",
   },
-  dashboard: {
-    section: "sm:rounded-[20px] sm:border-[#F6DCE5] sm:bg-[#FFF0F5]",
-    layout: "sm:min-h-[248px] lg:min-h-[254px]",
-    content: "sm:max-w-[57%] sm:px-8 sm:py-8 lg:max-w-[56%] lg:px-9",
-    mascot: "sm:w-[49%] lg:w-[48%]",
-    imagePosition: "object-[right_bottom]",
-    imageSizes: "(max-width: 639px) 31vw, (max-width: 1023px) 42vw, 520px",
-  },
-  subjects: {
-    section: "sm:rounded-[1.15rem] sm:border-[#F7DFE7] sm:bg-[#FFF0F5]",
-    layout: "sm:min-h-[238px] lg:min-h-[242px]",
-    content: "sm:max-w-[52%] sm:px-8 sm:py-8 lg:max-w-[51%] lg:px-9",
-    mascot: "sm:w-[43%] lg:w-[42%]",
-    imagePosition: "object-[right_bottom]",
-    imageSizes: "(max-width: 639px) 31vw, (max-width: 1023px) 45vw, 460px",
-  },
-  review: {
-    section: "sm:rounded-[1.4rem] sm:border-[#F5DDE5] sm:bg-[#FFF1F5]",
-    layout: "sm:min-h-[245px] lg:min-h-[265px]",
-    content: "sm:max-w-[53%] sm:px-7 sm:py-8 lg:max-w-[52%] lg:px-8",
-    mascot: "sm:w-[42%] lg:w-[40%]",
-    imageSizes: "(max-width: 639px) 31vw, (max-width: 1023px) 45vw, 440px",
-  },
-  progress: {
-    section: "sm:rounded-2xl sm:border-[#F8E6EC] sm:bg-[#FFF0F4]",
-    layout: "sm:min-h-[230px] sm:px-8 sm:py-8 xl:min-h-[250px] xl:px-10",
-    content: "sm:max-w-[57%]",
-    mascot: "sm:w-[37%] xl:w-[35%]",
-    imageSizes: "(max-width: 639px) 31vw, 440px",
-  },
-  badges: {
-    section: "sm:rounded-2xl sm:border-[#F8E6EC] sm:bg-[#FFF0F4]",
-    layout: "sm:min-h-[230px] sm:px-8 sm:py-8 xl:min-h-[250px] xl:px-10",
-    content: "sm:max-w-[57%]",
-    mascot: "sm:w-[37%] xl:w-[35%]",
-    imageSizes: "(max-width: 639px) 31vw, 440px",
-  },
-  settings: {
-    section: "sm:rounded-2xl sm:border-[#F8E4EB] sm:bg-[#FFF0F4]",
-    layout: "sm:min-h-[230px] sm:px-7 sm:py-5 lg:min-h-[248px] lg:px-8",
-    content: "sm:max-w-[55%] lg:max-w-[56%]",
-    mascot: "sm:w-[37%] lg:w-[35%]",
-    imagePosition: "object-right-bottom",
-    imageSizes: "(max-width: 639px) 31vw, (max-width: 1023px) 40vw, 390px",
-  },
-  profile: {
-    section: "sm:rounded-2xl sm:border-[#F6DCE5] sm:bg-[#FFF0F5]",
-    layout: "sm:min-h-[230px] lg:min-h-[250px]",
-    content: "sm:max-w-[59%] sm:px-8 sm:py-7 lg:max-w-[58%] lg:px-9",
-    mascot: "sm:w-[40%] lg:w-[38%]",
-    mascotAnchor: "sm:right-2 lg:right-4",
-    imageSizes: "(max-width: 639px) 31vw, (max-width: 1023px) 38vw, 240px",
-  },
-  "subject-detail": {
-    section: "sm:rounded-[1.35rem] sm:border-[#F5DDE5] sm:bg-[#FFF1F5]",
-    layout: "sm:min-h-[285px] lg:min-h-[300px]",
-    content: "sm:max-w-[57%] sm:px-7 sm:py-7 lg:max-w-[56%] lg:px-8",
-    mascot: "sm:w-[36%] lg:w-[35%]",
-    imageSizes: "(max-width: 639px) 31vw, 420px",
-  },
-  "subject-folder": {
-    section: "sm:rounded-[1.35rem] sm:border-[#F5DDE5] sm:bg-[#FFF1F5]",
-    layout: "sm:min-h-[280px]",
-    content: "sm:max-w-[58%] sm:px-8",
-    mascot: "sm:w-[37%]",
-    imageSizes: "(max-width: 639px) 31vw, 420px",
-  },
-  "topic-folder": {
-    section: "sm:rounded-[1.35rem] sm:border-[#F5DDE5] sm:bg-[#FFF1F5]",
-    layout: "sm:min-h-[285px] lg:min-h-[300px]",
-    content: "sm:max-w-[58%] sm:px-7 lg:px-8",
-    mascot: "sm:w-[37%]",
-    imageSizes: "(max-width: 639px) 31vw, 420px",
-  },
-  "topic-detail": {
-    section: "sm:rounded-[1.35rem] sm:border-[#F5DDE5] sm:bg-[#FFF1F5]",
-    layout: "sm:min-h-[285px] lg:min-h-[300px]",
-    content: "sm:max-w-[57%] sm:px-7 sm:py-8 lg:max-w-[56%] lg:px-8",
-    mascot: "sm:w-[36%] lg:w-[35%]",
-    imageSizes: "(max-width: 639px) 31vw, 420px",
-  },
-  completion: {
-    section: "bg-[linear-gradient(112deg,#FFF7F9_0%,#FFE8EF_58%,#FFDCE9_100%)] sm:rounded-[24px] sm:border-[#F8E5EC] sm:min-h-[250px] lg:min-h-[280px]",
-    layout: "sm:min-h-[250px] sm:px-8 sm:py-8 lg:min-h-[280px] lg:px-10",
-    content: "sm:max-w-[55%] lg:max-w-[54%]",
-    mascot: "sm:w-[38%] lg:w-[35%]",
-    mascotAnchor: "sm:right-5 lg:right-10",
-    mascotFrame: "sm:top-auto sm:bottom-[-0.5rem] sm:h-[85%]",
-    imageSizes: "(max-width: 639px) 31vw, (max-width: 1023px) 36vw, 420px",
-  },
-  "review-setup": {
-    section: "sm:rounded-[1.4rem] sm:border-[#F5DDE5] sm:bg-[#FFF1F5]",
-    layout: "sm:min-h-[210px]",
-    content: "sm:max-w-[55%] sm:px-8 sm:py-8",
-    mascot: "sm:w-[38%]",
-    imageSizes: "(max-width: 639px) 31vw, 380px",
-  },
-  "quiz-session": {
-    section: "sm:rounded-[1.4rem] sm:border-[#F5DDE5] sm:bg-[#FFF1F5]",
-    layout: "sm:min-h-[210px]",
-    content: "sm:max-w-[59%] sm:px-7 sm:py-6",
-    mascot: "sm:w-[38%] lg:w-[37%]",
-    imageSizes: "(max-width: 639px) 31vw, (max-width: 1023px) 38vw, 320px",
-  },
 };
+
+// Alpha bounds are measured from the approved PNGs; crop only their transparent margins.
+const mascotFrames: Record<string, { width: number; height: number; alpha: readonly [number, number, number, number]; fit?: "contain" | "cover" }> = {
+  "/dashboard-hero/dashboard.png": { width: 1402, height: 1122, alpha: [155, 97, 1187, 1122], fit: "contain" },
+  "/dashboard-hero/my-subjects.png": { width: 1122, height: 1268, alpha: [130, 84, 1056, 1268] },
+  "/dashboard-hero/review.png": { width: 1122, height: 1402, alpha: [130, 138, 1034, 1402] },
+  "/dashboard-hero/progress.png": { width: 1122, height: 1284, alpha: [43, 83, 1061, 1284] },
+  "/dashboard-hero/badges.png": { width: 1254, height: 1254, alpha: [101, 128, 1132, 1254] },
+  "/dashboard-hero/settings.png": { width: 1122, height: 1241, alpha: [125, 93, 1094, 1241] },
+  "/dashboard-hero/profile-hero.png": { width: 1122, height: 1402, alpha: [30, 104, 1089, 1402] },
+  "/dashboard-hero/complete.png": { width: 1254, height: 1191, alpha: [79, 105, 1125, 1191] },
+};
+
+export function getLearnerHeroMascotFrame(src: string) {
+  const frame = mascotFrames[src] ?? { width: 1, height: 1, alpha: [0, 0, 1, 1] as const };
+  const [left, top, right, bottom] = frame.alpha;
+  const cropWidth = right - left;
+  const cropHeight = bottom - top;
+  return {
+    width: frame.width,
+    height: frame.height,
+    aspectRatio: `${cropWidth} / ${cropHeight}`,
+    fit: frame.fit ?? "cover",
+    imageStyle: {
+      width: `${frame.width / cropWidth * 100}%`,
+      height: `${frame.height / cropHeight * 100}%`,
+      left: `${-left / cropWidth * 100}%`,
+      top: `${-top / cropHeight * 100}%`,
+    } satisfies CSSProperties,
+  };
+}
 
 export type AbiiPageHeroProps = {
   variant: AbiiHeroVariant;
@@ -165,59 +77,44 @@ export type AbiiPageHeroProps = {
   title: ReactNode;
   description?: ReactNode;
   metadata?: ReactNode;
-  actions?: ReactNode;
   mascotSrc: string;
   mascotAlt: string;
   priority?: boolean;
   className?: string;
-  decoration?: ReactNode;
 };
 
 export function AbiiPageHero({
-  variant,
-  headingId,
-  eyebrow,
-  preTitle,
-  title,
-  description,
-  metadata,
-  actions,
-  mascotSrc,
-  mascotAlt,
-  priority = false,
-  className = "",
-  decoration,
+  variant, headingId, eyebrow, preTitle, title, description, metadata,
+  mascotSrc, mascotAlt, priority = false, className = "",
 }: AbiiPageHeroProps) {
-  const style = variants[variant];
-  const hasPreTitle = variant === "quiz-session" && preTitle != null;
   const admin = variant === "admin" || variant === "admin-overview";
+  const adminVariant = variant === "admin-overview" ? "admin-overview" : "admin";
+  const style = adminStyles[adminVariant];
+  const hasPreTitle = variant === "quiz-session" && preTitle != null;
+  const frame = getLearnerHeroMascotFrame(mascotSrc);
 
   return (
     <section
       data-variant={variant}
+      data-heading-size={headingSizeByVariant[variant]}
       aria-labelledby={headingId}
-      className={`abii-page-hero relative isolate overflow-hidden rounded-[20px] border border-[#F5DDE5] bg-[#FFF0F5] ${style.section} ${className}`}
+      className={`abii-page-hero relative isolate overflow-hidden border border-[#E8DDE1] bg-[#FFE8EF] ${admin ? "rounded-[20px]" : "min-h-[180px] rounded-2xl sm:min-h-[240px] sm:rounded-[20px] lg:min-h-[280px]"} ${admin ? style.section : ""} ${className}`}
     >
-      {decoration}
-      <div className={`abii-page-hero__layout relative z-10 grid min-h-[168px] grid-cols-[minmax(0,1fr)_minmax(78px,34%)] items-stretch gap-x-2 pl-4 pr-3 pt-3.5 pb-0 min-[360px]:grid-cols-[minmax(0,1fr)_minmax(100px,38%)] sm:flex sm:items-center sm:gap-0 sm:px-0 sm:py-0 ${admin ? "" : "sm:min-h-0"} ${style.layout}`}>
-        <div className={`abii-page-hero__content relative z-10 flex min-w-0 flex-col justify-center py-3 sm:w-full ${style.content}`}>
+      <div className={`abii-page-hero__layout relative z-10 w-full ${admin ? `grid min-h-[168px] grid-cols-[minmax(0,1fr)_minmax(78px,34%)] items-stretch gap-x-2 pl-4 pr-3 pt-3.5 pb-0 min-[360px]:grid-cols-[minmax(0,1fr)_minmax(100px,38%)] sm:flex sm:min-h-0 sm:items-center sm:gap-0 sm:px-0 sm:py-0 ${style.layout}` : "grid min-h-[178px] grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-stretch gap-0 sm:min-h-[238px] lg:min-h-[278px]"}`}>
+        <div className={`abii-page-hero__content relative z-10 flex min-w-0 flex-col justify-center ${admin ? `py-3 sm:w-full ${style.content}` : "max-w-full py-4 pl-4 pr-7 sm:py-6 sm:pl-6 sm:pr-8 lg:py-8 lg:pl-8 lg:pr-8"}`}>
           {eyebrow != null && <div className="abii-page-hero__eyebrow abii-enter min-w-0">{eyebrow}</div>}
           {preTitle != null && <div className={`abii-page-hero__pre-title ${hasPreTitle ? "abii-enter-1" : "abii-enter-3"} min-w-0 break-words`}>{preTitle}</div>}
           <div id={headingId} className={`abii-page-hero__title abii-enter ${hasPreTitle ? "abii-enter-2" : "abii-enter-1"} min-w-0 break-words`}>{title}</div>
           {description != null && <div className={`abii-page-hero__description abii-enter ${hasPreTitle ? "abii-enter-3" : "abii-enter-2"} min-w-0 break-words`}>{description}</div>}
           {metadata != null && <div className="abii-page-hero__metadata abii-enter abii-enter-3 min-w-0 break-words">{metadata}</div>}
-          {actions != null && <div className="abii-page-hero__actions abii-enter abii-enter-4 min-w-0">{actions}</div>}
         </div>
-        <div className={`abii-page-hero__mascot abii-enter-art pointer-events-none relative col-start-2 row-start-1 flex min-w-0 items-end justify-center ${admin ? "max-sm:min-h-[154px] min-[360px]:max-sm:min-h-[158px]" : "min-h-[154px] min-[360px]:min-h-[158px] sm:min-h-0"} sm:absolute ${style.mascotAnchor ?? "sm:right-0"} sm:col-auto sm:row-auto sm:items-end ${style.mascotFrame ? "" : "sm:top-0 sm:bottom-0"} ${style.mascot} ${style.mascotFrame ?? ""}`}>
-          <Image
-            src={mascotSrc}
-            alt={mascotAlt}
-            fill
-            priority={priority}
-            sizes={style.imageSizes}
-            className={`object-contain object-bottom ${style.imagePosition ?? ""}`}
-          />
-        </div>
+        {admin ? <div className={`abii-page-hero__mascot abii-enter-art pointer-events-none relative col-start-2 row-start-1 flex min-h-0 min-w-0 items-end justify-center max-sm:min-h-[154px] min-[360px]:max-sm:min-h-[158px] sm:absolute ${style.mascotAnchor ?? "sm:right-0"} sm:col-auto sm:row-auto sm:items-end ${style.mascot} ${style.mascotFrame ? "" : "sm:top-0 sm:bottom-0"} ${style.mascotFrame ?? ""}`}>
+          <Image src={mascotSrc} alt={mascotAlt} fill priority={priority} sizes={style.imageSizes} className="object-contain object-bottom" />
+        </div> : <div className="abii-page-hero__mascot pointer-events-none absolute inset-y-0 left-[60%] right-3 flex items-end justify-end sm:right-6 lg:right-8">
+          <div className="abii-page-hero__mascot-motion abii-enter-art relative h-[88%] w-auto max-w-full overflow-hidden sm:h-[90%] sm:max-w-none" style={{ aspectRatio: frame.aspectRatio }}>
+            <Image src={mascotSrc} alt={mascotAlt} width={frame.width} height={frame.height} priority={priority} sizes="(max-width: 639px) 40vw, 420px" className={`absolute max-w-none ${frame.fit === "contain" ? "object-contain" : "object-cover"} object-bottom`} style={frame.imageStyle} />
+          </div>
+        </div>}
       </div>
     </section>
   );

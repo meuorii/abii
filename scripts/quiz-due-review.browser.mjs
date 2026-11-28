@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { mkdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import net from "node:net";
@@ -89,6 +90,27 @@ test("browser completes Due Review with persisted retry rounds and does not rest
     await page.getByRole("button", { name: /Start Review/ }).click();
     await page.waitForURL(/\/review\/quiz\/[a-f\d]+/i);
     await page.getByText("What is the due answer?").waitFor();
+    const quizHero = page.locator(".abii-page-hero");
+    assert.equal(await quizHero.evaluate((element) => getComputedStyle(element).backgroundColor), "rgb(255, 232, 239)");
+    assert.equal(await quizHero.locator("button, a, input, [role='progressbar'], svg").count(), 0);
+    assert.equal(await page.getByRole("progressbar", { name: "Quiz progress" }).count(), 1, "quiz progress remains available outside the hero");
+    await quizHero.locator("img").waitFor({ state: "visible" });
+    await mkdir("docs/ABII_V2/evidence", { recursive: true });
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      const heroMetrics = await quizHero.evaluate((element) => {
+        const heading = element.querySelector(".abii-hero-heading");
+        const mascot = element.querySelector(".abii-page-hero__mascot-motion");
+        const style = getComputedStyle(heading);
+        const bounds = mascot.getBoundingClientRect();
+        return { fontSize: Number.parseFloat(style.fontSize), fontFamily: style.fontFamily, mascotHeight: bounds.height, heroHeight: element.getBoundingClientRect().height };
+      });
+      assert.equal(heroMetrics.fontSize, width === 390 ? 24 : 40, `quiz hero heading scale at ${width}px`);
+      assert.match(heroMetrics.fontFamily, /Onest/i);
+      assert.ok(heroMetrics.mascotHeight >= heroMetrics.heroHeight * (width === 390 ? 0.84 : 0.87), `quiz mascot visible frame should fill the hero at ${width}px`);
+      await page.evaluate(async () => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
+      await page.locator(".abii-page-hero").screenshot({ path: `docs/ABII_V2/evidence/hero-final-quiz-session-${width}.png` });
+    }
 
     for (let round = 1; round <= 3; round += 1) {
       const answer = page.getByRole("textbox", { name: "Your answer" });
@@ -108,6 +130,24 @@ test("browser completes Due Review with persisted retry rounds and does not rest
     const decoration = confetti.last();
     assert.equal(await decoration.evaluate((element) => getComputedStyle(element).pointerEvents), "none");
     assert.equal(await ReviewRecord.countDocuments({ userId: user._id, flashcardId: dueCard._id }), 3);
+    const completionHero = page.locator(".abii-page-hero");
+    assert.equal(await completionHero.evaluate((element) => getComputedStyle(element).backgroundColor), "rgb(255, 232, 239)");
+    assert.equal(await completionHero.locator("button, a, input, [role='progressbar'], svg").count(), 0);
+    assert.equal(await page.getByRole("button", { name: "Review Again" }).isVisible(), true, "Review Again remains accessible outside the completion hero");
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      const heroMetrics = await completionHero.evaluate((element) => {
+        const heading = element.querySelector(".abii-hero-heading");
+        const mascot = element.querySelector(".abii-page-hero__mascot-motion");
+        const style = getComputedStyle(heading);
+        return { fontSize: Number.parseFloat(style.fontSize), fontFamily: style.fontFamily, mascotHeight: mascot.getBoundingClientRect().height, heroHeight: element.getBoundingClientRect().height };
+      });
+      assert.equal(heroMetrics.fontSize, width === 390 ? 24 : 40, `completion hero heading scale at ${width}px`);
+      assert.match(heroMetrics.fontFamily, /Onest/i);
+      assert.ok(heroMetrics.mascotHeight >= heroMetrics.heroHeight * (width === 390 ? 0.84 : 0.87), `completion mascot visible frame should fill the hero at ${width}px`);
+      await page.evaluate(async () => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
+      await page.locator(".abii-page-hero").screenshot({ path: `docs/ABII_V2/evidence/hero-final-quiz-completion-${width}.png` });
+    }
 
     const staleDueResponse = page.waitForResponse((response) => response.url().includes("/api/quiz/start") && response.status() === 422);
     await page.getByRole("button", { name: "Review Again" }).click();
@@ -116,11 +156,12 @@ test("browser completes Due Review with persisted retry rounds and does not rest
     assert.deepEqual(pageErrors, [], "browser execution should not produce uncaught page errors");
     assert.equal(await ReviewRecord.countDocuments({ userId: user._id, flashcardId: dueCard._id }), 3);
 
-    const reducedCard = await Flashcard.create({ userId: user._id, subjectId: subject._id, question: "Reduced motion prompt", answer: "Calm" });
+    const reducedSubject = await Subject.create({ userId: user._id, name: "Reduced Motion Subject" });
+    const reducedCard = await Flashcard.create({ userId: user._id, subjectId: reducedSubject._id, question: "Reduced motion prompt", answer: "Calm" });
     const reducedContext = await browser.newContext({ reducedMotion: "reduce" });
     await reducedContext.addCookies([{ name: "abii_session", value: token, url: baseURL, httpOnly: true, sameSite: "Strict" }]);
     const reducedPage = await reducedContext.newPage();
-    await reducedPage.goto(`${baseURL}/review/setup?reviewFilter=due`, { waitUntil: "load", timeout: 90_000 });
+    await reducedPage.goto(`${baseURL}/review/setup?subjectId=${reducedSubject._id}`, { waitUntil: "load", timeout: 90_000 });
     await reducedPage.getByRole("radio", { name: /question.*Identification Recall and type/ }).click();
     await reducedPage.getByRole("button", { name: /Start Review/ }).click();
     await reducedPage.waitForURL(/\/review\/quiz\/[a-f\d]+/i);

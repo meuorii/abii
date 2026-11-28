@@ -37,6 +37,22 @@ test("page and badge loaders share primitives without client-side motion or inde
   assert.doesNotMatch(page + study + badges, /animate-pulse|motion-safe:animate-pulse/);
 });
 
+test("learner hero skeletons share the rendered hero's responsive dimensions and mascot alpha crop", async () => {
+  const [hero, main, study] = await Promise.all([
+    readFile(`${root}/components/ui/abii-page-hero.tsx`, "utf8"),
+    readFile(`${root}/components/ui/main-page-skeletons.tsx`, "utf8"),
+    readFile(`${root}/components/ui/study-page-skeletons.tsx`, "utf8"),
+  ]);
+  assert.match(hero, /export function getLearnerHeroMascotFrame/);
+  assert.match(hero, /min-h-\[180px\].*sm:min-h-\[240px\].*lg:min-h-\[280px\]/);
+  assert.match(hero, /left-\[60%\].*right-3.*sm:right-6.*lg:right-8/);
+  assert.match(main, /getLearnerHeroMascotFrame\(src\)/);
+  assert.match(study, /getLearnerHeroMascotFrame\(src\)/);
+  assert.match(study, /HeroMascotSkeleton src="\/dashboard-hero\/complete\.png"/);
+  assert.match(main, /frame\.fit === "contain" \? "object-contain object-bottom" : "object-cover object-bottom"/);
+  assert.match(study, /frame\.fit === "contain" \? "object-contain object-bottom" : "object-cover object-bottom"/);
+});
+
 function assertSectionOrder(source: string, component: string, sections: string[]) {
   const start = source.indexOf(`export function ${component}`);
   assert.notEqual(start, -1, `${component} exists`);
@@ -159,7 +175,7 @@ test("Badge catalog loading quantity follows the fixed product catalog, not unlo
 test("nested study skeletons mirror their route content order without inventing collections", async () => {
   const source = await readFile(`${root}/components/ui/study-page-skeletons.tsx`, "utf8");
   assertSectionOrder(source, "SubjectDetailSkeleton", ["breadcrumb", "hero", "tabs", "topic-folders", "topics"]);
-  assert.match(source, /data-skeleton-section="overview"/);
+  assert.doesNotMatch(source.match(/function StudyHero[\s\S]*?function Breadcrumb/)?.[0] ?? "", /overview|progressbar|rounded-xl bg-\[#FFE8EF\]/);
   assertSectionOrder(source, "SubjectFolderDetailSkeleton", ["breadcrumb", "hero", "subject-controls", "subjects"]);
   assertSectionOrder(source, "TopicFolderDetailSkeleton", ["breadcrumb", "hero", "topic-actions", "topics"]);
   assertSectionOrder(source, "TopicDetailSkeleton", ["breadcrumb", "hero", "mastery", "flashcard-controls", "flashcards", "review-actions"]);

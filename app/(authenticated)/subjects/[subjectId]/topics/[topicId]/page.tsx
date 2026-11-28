@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AbiiPageHero } from "@/components/ui/abii-page-hero";
 import { notFound, redirect } from "next/navigation";
 import { isValidObjectId } from "mongoose";
-import { ChevronRight, FolderOpen } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { TopicDetailClient } from "@/components/subjects/topic-detail-client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -47,8 +47,7 @@ export default async function TopicPage({ params }: Props) {
       <AbiiPageHero
         variant="topic-detail"
         headingId="topic-hero-title"
-        eyebrow={<span aria-hidden="true" className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFE0E9] text-[#E9577D] sm:h-12 sm:w-12"><FolderOpen className="h-5 w-5" /></span>}
-        title={<><h1 className="mt-3 break-words text-[clamp(1.45rem,4vw,2.25rem)] font-bold leading-[1.12] tracking-[-.04em] text-[#173B52]">{topic.name}</h1><p className="mt-2 break-words text-sm text-[#6E8497]">{subject.name}</p></>}
+        title={<><h1 className="abii-hero-heading break-words">{topic.name}</h1><p className="mt-2 break-words text-sm text-[#6F5964]">{subject.name}</p></>}
         description={topic.description ? <p className="mt-3 max-w-xl break-words text-sm leading-6 text-[#526F83]">{topic.description}</p> : undefined}
         metadata={<p className="mt-4 text-sm font-semibold text-[#C65380]">{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}</p>}
         mascotSrc="/dashboard-hero/my-subjects.png"

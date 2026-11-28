@@ -75,9 +75,9 @@ export default async function SubjectsPage() {
         <AbiiPageHero
           variant="subjects"
           headingId="subjects-hero-title"
-          eyebrow={<p className="text-sm font-semibold tracking-[-0.01em] text-[#24445A] sm:text-[15px]">Hello, {firstName}! <span aria-hidden="true">👋</span></p>}
-          title={<h1 className="mt-2.5 text-[clamp(1.85rem,3vw,2.55rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#18384D]">Your subjects,<br />your <span className="text-[#F06491]">progress.</span></h1>}
-          description={<p className="mt-3 max-w-[390px] text-[13px] leading-[1.65] text-[#557187] sm:text-[15px] sm:leading-[1.6]">Organize your flashcards, review regularly,<br className="hidden lg:block" /> and make it happen!</p>}
+          eyebrow={<p className="text-sm font-semibold tracking-[-0.01em] text-[#24445A] sm:text-[15px]">Hello, {firstName}!</p>}
+          title={<h1 className="abii-hero-heading">Your subjects,<br />your <span className="abii-hero-emphasis">progress.</span></h1>}
+          description={<p className="max-w-[460px]">Keep your subjects and topics together so each study session is easy to find.</p>}
           mascotSrc="/dashboard-hero/my-subjects.png"
           mascotAlt="Abii the pink otter holding a book"
           priority

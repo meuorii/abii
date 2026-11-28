@@ -177,14 +177,12 @@ export default async function ReviewPage({ searchParams }: PageProps) {
         <AbiiPageHero
           variant="review"
           headingId="review-hero-title"
-          eyebrow={<p className="text-sm font-semibold text-[#C65380]">Keep going, {firstName}! <span aria-hidden="true">👋</span></p>}
-          title={<h1 className="mt-3 text-[clamp(1.65rem,3vw,2.35rem)] font-bold leading-[1.12] tracking-[-0.045em] text-[#173B55]">Review your cards<br />and make them <span className="text-[#E9577D]">stick!</span></h1>}
-          description={<p className="mt-3 max-w-sm text-xs leading-5 text-[#45647A] sm:text-sm sm:leading-6">A little review today helps you remember more tomorrow.</p>}
-          actions={<Link href="/review/setup" className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-full bg-[#FF477D] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:-translate-y-0.5 hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2 sm:min-h-11 sm:px-6">Start Review <span aria-hidden="true">→</span></Link>}
+          eyebrow={<p className="text-sm font-semibold text-[#C65380]">Keep going, {firstName}!</p>}
+          title={<h1 className="abii-hero-heading">Review your cards<br />and make them <span className="abii-hero-emphasis">stick!</span></h1>}
+          description={<p className="max-w-[500px]">Revisit what you’ve learned to strengthen recall and spot what needs more practice.</p>}
           mascotSrc="/dashboard-hero/review.png"
           mascotAlt=""
           priority
-          decoration={<div aria-hidden="true" className="pointer-events-none absolute -bottom-14 right-[-1rem] h-36 w-44 rounded-full bg-[#FFE2EB]/80" />}
         />
 
         {loadFailed ? <ReviewLoadError /> : (

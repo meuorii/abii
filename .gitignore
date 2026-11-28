@@ -6,6 +6,10 @@ dist/
 coverage/
 *.tsbuildinfo
 next-env.d.ts
+.playwright/
+test-results/
+playwright-report/
+playwright/.auth/
 .env
 .env.local
 .env.*.local

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { mkdirSync } from "node:fs";
 import net from "node:net";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import mongoose from "mongoose";
@@ -40,27 +40,46 @@ async function waitForVisiblePageHeading(page) {
 }
 
 async function waitForRouteContent(page) {
-  await page.locator('main [role="status"][aria-label^="Loading "]').waitFor({ state: "detached" });
+  await page.waitForFunction(() => !document.querySelector('main [role="status"][aria-label^="Loading "]'), null, { timeout: 45_000 });
 }
 
-async function revealScrollableContent(page) {
-  await page.evaluate(async () => {
-    const root = document.querySelector("main[data-authenticated-motion]");
-    if (!root) return;
-    const step = Math.max(240, Math.floor(root.clientHeight * 0.75));
-    for (let top = 0; top < root.scrollHeight; top += step) {
-      root.scrollTop = top;
-      await new Promise((resolve) => setTimeout(resolve, 80));
-    }
-    root.scrollTop = 0;
-  });
-  await page.waitForFunction(() => Array.from(document.querySelectorAll(".abii-motion-reveal")).every((element) => Number.parseFloat(getComputedStyle(element).opacity) >= 0.99), null, { timeout: 10_000 }).catch(async (error) => {
-    const hidden = await page.locator(".abii-motion-reveal").evaluateAll((elements) => elements.filter((element) => Number.parseFloat(getComputedStyle(element).opacity) < 0.99).map((element) => {
-      const bounds = element.getBoundingClientRect();
-      return { text: element.textContent?.trim().slice(0, 90), opacity: getComputedStyle(element).opacity, transform: getComputedStyle(element).transform, top: Math.round(bounds.top), height: Math.round(bounds.height), className: element.className };
-    }));
-    throw new Error(`ScrollReveal content remained hidden after a full root scroll: ${JSON.stringify(hidden)}` , { cause: error });
-  });
+async function revealScrollableContent(page, evidenceKey = "scroll-reveal") {
+  const reveals = page.locator("main .abii-motion-reveal");
+  const count = await reveals.count();
+  for (let index = 0; index < count; index += 1) {
+    const target = reveals.nth(index);
+    await target.evaluate((element) => {
+      const root = element.closest("main[data-authenticated-motion]");
+      if (!root) throw new Error("Authenticated scroll root was not found");
+      const rootBounds = root.getBoundingClientRect();
+      const targetBounds = element.getBoundingClientRect();
+      const top = root.scrollTop + targetBounds.top - rootBounds.top - root.clientHeight * 0.45;
+      root.scrollTo({ top, behavior: "instant" });
+    });
+    const handle = await target.elementHandle();
+    await page.waitForFunction((element) => Number.parseFloat(getComputedStyle(element).opacity) >= 0.99, handle, { timeout: 10_000 });
+  }
+  await page.evaluate(() => document.querySelector("main[data-authenticated-motion]")?.scrollTo({ top: 0, behavior: "instant" }));
+  try {
+    await page.waitForFunction(() => Array.from(document.querySelectorAll("main .abii-motion-reveal")).every((element) => Number.parseFloat(getComputedStyle(element).opacity) >= 0.99), null, { timeout: 10_000 });
+  } catch (error) {
+    const diagnostic = await page.evaluate(() => {
+      const root = document.querySelector("main[data-authenticated-motion]");
+      const target = Array.from(document.querySelectorAll("main .abii-motion-reveal")).find((element) => Number.parseFloat(getComputedStyle(element).opacity) < 0.99);
+      const rootBox = root?.getBoundingClientRect();
+      const targetBox = target?.getBoundingClientRect();
+      return {
+        viewport: { width: innerWidth, height: innerHeight },
+        root: root && rootBox ? { top: rootBox.top, bottom: rootBox.bottom, clientHeight: root.clientHeight, scrollHeight: root.scrollHeight, scrollTop: root.scrollTop } : null,
+        target: target && targetBox ? { text: target.textContent?.trim().slice(0, 90), opacity: getComputedStyle(target).opacity, transform: getComputedStyle(target).transform, top: targetBox.top, height: targetBox.height, className: target.className } : null,
+        loadingRegions: Array.from(document.querySelectorAll('main [role="status"][aria-label^="Loading "]')).map((element) => element.getAttribute("aria-label")),
+      };
+    });
+    mkdirSync("docs/ABII_V2/evidence", { recursive: true });
+    const screenshot = `docs/ABII_V2/evidence/${evidenceKey}-failure.png`;
+    await page.screenshot({ path: screenshot, fullPage: true, caret: "initial" }).catch(() => {});
+    throw new Error(`ScrollReveal content remained hidden after targeted scrolling: ${JSON.stringify({ diagnostic, screenshot })}`, { cause: error });
+  }
 }
 
 test("authenticated routes remain accessible and fit the responsive viewport matrix", { timeout: 540_000 }, async () => {
@@ -72,6 +91,7 @@ test("authenticated routes remain accessible and fit the responsive viewport mat
   let browser;
   let serverOutput = "";
   try {
+    mkdirSync("docs/ABII_V2/evidence", { recursive: true });
     process.env.MONGODB_URI = mongo.getUri("abii_authenticated_ux_browser_test");
     await mongoose.connect(process.env.MONGODB_URI);
     const user = await User.create({ name: "UX Browser Learner", email: "phase-five@example.invalid", passwordHash: "test-hash", emailVerifiedAt: new Date() });
@@ -215,8 +235,8 @@ test("authenticated routes remain accessible and fit the responsive viewport mat
             }
           }
           if ([390, 1440].includes(width)) {
-            await revealScrollableContent(page);
-            await page.screenshot({ path: join(tmpdir(), `abii-layout-after-${route.slice(1)}-${width}.png`), fullPage: true, caret: "initial" });
+            await revealScrollableContent(page, `scroll-reveal-${route.slice(1)}-${width}`);
+            await page.screenshot({ path: join("docs/ABII_V2/evidence", `layout-${route.slice(1)}-${width}.png`), fullPage: true, caret: "initial" });
           }
         }
         if (width < 1024) await page.getByRole("navigation", { name: "Mobile bottom navigation" }).waitFor({ state: "visible" });
@@ -228,17 +248,28 @@ test("authenticated routes remain accessible and fit the responsive viewport mat
           }));
           assert.ok(targetSizes.every((size) => size.width >= 44 && size.height >= 44), `mobile navigation touch targets at ${width}px: ${JSON.stringify(targetSizes)}`);
         }
-        if (route === `/subjects/${subjectId}` && width === 320) await page.screenshot({ path: join(tmpdir(), "abii-phase5-subject-320.png"), caret: "initial" });
+        if (route === `/subjects/${subjectId}` && width === 320) await page.screenshot({ path: join("docs/ABII_V2/evidence", "subject-detail-320.png"), caret: "initial" });
         if (route === "/progress" && width === 768) {
-          await revealScrollableContent(page);
-          await page.screenshot({ path: join(tmpdir(), "abii-phase5-progress-768.png"), caret: "initial" });
+          await revealScrollableContent(page, "progress-768");
+          await page.screenshot({ path: join("docs/ABII_V2/evidence", "progress-768.png"), caret: "initial" });
         }
       }
       if (width === 1440) {
         await page.goto(`${baseURL}/dashboard`, { waitUntil: "domcontentloaded" });
         await page.locator("main h1").first().waitFor({ state: "visible" });
       await waitForVisiblePageHeading(page);
-        await page.screenshot({ path: join(tmpdir(), "abii-phase5-dashboard-1440.png"), caret: "initial" });
+        await page.screenshot({ path: join("docs/ABII_V2/evidence", "dashboard-1440.png"), caret: "initial" });
+      }
+    }
+
+    for (const width of [1920, 2560]) {
+      await page.setViewportSize({ width, height: 1000 });
+      for (const route of ["/dashboard", "/subjects", "/review", "/progress", "/badges"]) {
+        await page.goto(`${baseURL}${route}`, { waitUntil: "domcontentloaded" });
+        await waitForRouteContent(page);
+        await waitForVisiblePageHeading(page);
+        const overflow = await page.evaluate(() => ({ document: document.documentElement.scrollWidth - innerWidth, main: document.querySelector("main[data-authenticated-motion]").scrollWidth - document.querySelector("main[data-authenticated-motion]").clientWidth }));
+        assert.ok(overflow.document <= 1 && overflow.main <= 1, `${route} at ${width}px overflow: ${JSON.stringify(overflow)}`);
       }
     }
 
@@ -300,7 +331,7 @@ test("authenticated routes remain accessible and fit the responsive viewport mat
     await page.keyboard.press("Tab");
     assert.equal(await dialogButtons.first().evaluate((element) => element === document.activeElement), true, "Tab should wrap to the first control");
     await page.waitForFunction(() => !document.getAnimations().some((animation) => animation.playState === "running"));
-    await page.screenshot({ path: join(tmpdir(), "abii-phase5-modal-390.png"), fullPage: true, caret: "initial" });
+    await page.screenshot({ path: join("docs/ABII_V2/evidence", "learner-modal-390.png"), fullPage: true, caret: "initial" });
     await page.keyboard.press("Escape");
     await dialog.waitFor({ state: "detached" });
     assert.equal(await main.evaluate((element) => element.scrollTop), modalScrollTop, "closing a modal should restore the underlying scroll offset");

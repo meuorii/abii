@@ -1,6 +1,6 @@
 # Abii Design System v1.1 — Official Visual Standards
 
-This document is the implementation reference for Abii’s visual language. The `/design-system` route is the working component showcase. Use this specification for future UI work across the landing page, learner application, and admin dashboard while respecting any dashboard-specific scoped theme.
+This document is the implementation reference for Abii’s visual language. The `/design-system` route is the working component showcase. The Phase 01 learner palette is scoped to the authenticated learner workspace; Admin keeps its own theme and public pages remain outside that learner scope.
 
 ## 1. Design intent
 
@@ -45,7 +45,7 @@ Use the 60–30–10 balance as a visual guideline. It describes relative visual
 | --- | --- | --- | --- |
 | Success | `#5C947A` | `#EDF5EF` | `#3D7259` |
 | Warning | `#B28A54` | `#FBF3E7` | `#8A683B` |
-| Error / destructive | `#C76F7D` | `#FCECEF` | `#A94D61` |
+| Error | `#B42347` | `#FCEDEF` | `#8A1F36` |
 
 Semantic color should always be paired with a clear label, icon, or explanatory message. Do not use these colors for decoration.
 
@@ -73,7 +73,7 @@ Semantic color should always be paired with a clear label, icon, or explanatory 
 - Secondary: `#FFE8EF` surface and `#F8769C` text/icons; hover uses `#FFF1F5` with `#EC658D` text; pressed uses `#FFE8EF` with `#D9547D` text.
 - Outline: white surface, `#E8DDE1` border, and `#F8769C` text/icons; hover uses `#FFF1F5`, pink border, and `#EC658D` text; pressed uses `#FFE8EF` and `#D9547D` text.
 - Ghost: transparent at rest with `#F8769C` text/icons; hover uses `#FFF1F5` with `#EC658D` text; pressed uses `#FFE8EF` with `#D9547D` text.
-- Danger actions retain semantic error background and text; do not make destructive actions look like brand actions.
+- Destructive actions keep semantic intent in code but use brand outline/ghost styling at entry points and brand primary styling for explicit confirmations. Semantic error colors are reserved for actual error feedback.
 - Checkboxes use a white unchecked surface with a neutral border. Checked state uses a solid `#F8769C` fill and a white checkmark. Keep hover border, visible focus ring, and a distinct disabled state.
 - Disabled controls should be visibly inactive and should not respond to pointer input. All interactive controls need a visible keyboard focus state, useful hit area, and clear accessible name.
 
@@ -102,7 +102,7 @@ White text on `#F8769C` and `#F8769C` text on white or pale blush surfaces are a
 - Empty states explain what is absent and, when useful, provide a next action. The mascot can add personality without replacing the message.
 - Errors should state what happened and offer a recovery path when one exists.
 - Toasts use semantic status palettes, a status label/icon, and readable message text. They pause when users interact with them and provide a dismiss control.
-- Dialogs use a blush header, white content surface, clear title and description, visible focus, keyboard dismissal when safe, and a deliberate action hierarchy. Destructive dialogs use semantic error styling.
+- Dialogs use a blush header, white content surface, clear title and description, visible focus, keyboard dismissal when safe, and a deliberate action hierarchy. Destructive confirmations use brand primary styling while retaining their alert semantics and safeguards.
 
 ## 9. Mascot and imagery
 
@@ -120,7 +120,7 @@ White text on `#F8769C` and `#F8769C` text on white or pale blush surfaces are a
 
 ## 11. CSS and Tailwind implementation
 
-The tokens are defined in `app/globals.css` and exposed as Tailwind v4 color utilities. Prefer semantic utilities in components rather than raw hex values:
+The base tokens are defined in `app/globals.css` and exposed as Tailwind v4 color utilities. Authenticated learner routes use `.learner-theme` and learner modal portals use a matching scoped theme so Admin and public pages keep their current styling. Prefer semantic utilities in components rather than raw hex values:
 
 ```tsx
 import { Button, buttonClassNames } from "@/components/ui/button";
@@ -184,3 +184,21 @@ The admin dashboard uses `.admin-shell` scoped values that match Design System v
 ## 14. Reference page
 
 Visit `/design-system` to inspect the final palette, typography, button states, cards, form validation, semantic feedback, mascot states, flashcards, progress, loading and empty states, toasts, and dialogs. Interactive examples are functional and safe to explore; they do not submit data.
+
+## 15. Abii V2 learner foundation (Phase 01)
+
+- Follow the approved 60–30–10 hierarchy: main workspace `#FFF9FC`, blush support and hero `#FFE8EF`, and brand accent `#F8769C`. The outer learner frame is `#FFF4F8`; cards are white with `#E8DDE1` borders.
+- Learner headings and body use `#30262B`; secondary copy uses `#6F5964`. Keep the existing Onest typeface. Every learner hero variant shares one heading scale: 40px desktop, 32px tablet, 24px mobile; weight 700; line-height 1.15/1.15/1.2; letter-spacing -0.03em/-0.025em/-0.02em. Eyebrows are 14px desktop/tablet and 12px mobile at weight 500. Descriptions are 16px desktop, 14px tablet, and 13px mobile at weight 400 and line-height 1.5. Brand emphasis inherits the same heading scale. All learner hero variants use `#FFE8EF` with `#E8DDE1` borders. Admin and public scopes retain separate typography.
+- All authenticated learner hero sections must use a solid #FFE8EF background and contain only informational text and the official Abii mascot. Action buttons, decorative header icons, icon containers, gradients, decorative shapes, and graphical progress widgets must remain outside the hero.
+- The shared learner hero minimum heights are 180px mobile, 240px tablet, and 280px desktop. Radius is 16px mobile and 20px above; content padding is 16px mobile, 24px tablet, and 32px desktop. Text and mascot use a shared 60/40 layout; the official mascot is bottom-right with 12/24/32px right inset and is sized from its visible alpha bounds so transparent PNG margins do not shrink the artwork. Target visible mascot height is about 85–90% on mobile and 88–90% above; width is constrained to prevent overlap. Longer content expands the hero naturally rather than clipping.
+- Learner typography tokens live in `.learner-theme` in `app/globals.css`: eyebrow 14px / 12px at weight 600; descriptions 16px / 14px at weight 400; section headings 20px / 18px at weight 600; card headings 16px at weight 600; statistics 28px / 24px at weight 700; body and button labels 14px; form labels 14px at weight 500; helper text 12px. Use unitless line heights and allow content to wrap.
+- Primary buttons use `#F8769C` with white text, `#EC658D` hover, and `#D9547D` pressed. Secondary, outline, and ghost variants use approved blush and neutral surfaces. Disabled actions remain visibly inactive.
+- All learner destructive entry points use brand outline or ghost appearances. Explicit delete, remove, clear, and discard confirmations use brand primary styling. Preserve danger intent internally and retain existing confirmation text, typed confirmation, focus, pending guards, server validation, authorization, transactions, and errors. Admin consumers retain their existing appearance.
+- Success uses `#5C947A` / `#EDF5EF` / `#3D7259`; warning uses `#B28A54` / `#FBF3E7` / `#8A6B3B`; error uses `#B42347` / `#FCEDEF` / `#8A1F36`. Preserve official badge artwork and rarity treatment.
+- Analytical charts use `#F8769C`, `#EC658D`, and `#D9547D`, with `#FFE8EF` fills, `#6F5964` labels, and `#E8DDE1` guides. Keep series distinguishable by labels, patterns, and line styles.
+- Keep existing animation definitions, wrappers, triggers, timings, easing, stagger, and reduced-motion behavior unchanged. Preserve page geometry, skeleton parity, and scroll ownership until the relevant phase.
+- Avatar fallback uses the user's initial on an approved blush surface with brand accents; preserve uploaded profile images and their crop behavior.
+- For future learner layout work, use a 12-column desktop grid and a 4-column mobile grid, 24px desktop / 16px mobile page insets, and 16px / 12px gaps. Let content wrap naturally, avoid fixed-height clipping, preserve the established scroll owner, and maintain usable touch targets.
+- White text on `#F8769C` is explicitly approved, but does not meet WCAG AA for normal-sized text. Do not claim conformance or silently substitute another brand color.
+- Approved learner references are under `docs/wireframes/learner-v2/`. Inspect only the SVGs for the current phase; never modify the approved reference package without explicit authorization.
+- Use the root Playwright Test suite for learner browser regression: `npm run test:e2e:phase1`. It owns a loopback-only memory database and synthetic fixtures. The completed validation matrix and screenshot paths are indexed in `docs/ABII_V2_IMPLEMENTATION_LOG.md`.

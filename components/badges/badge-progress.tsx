@@ -11,11 +11,11 @@ export function BadgeProgress({ badge, compact = false }: { badge: BadgePageItem
   return (
     <div className="min-w-0">
       <div className="flex min-w-0 items-start justify-between gap-2">
-        <p className={`${compact ? "text-[11px]" : "text-sm"} min-w-0 flex-1 break-words leading-5 text-[#756B72]`}>{badge.unlocked ? "Requirement completed" : badge.progressLabel}</p>
-        {!compact && <span className="shrink-0 text-xs font-bold tabular-nums text-[#657B8E]">{Math.round(value)}%</span>}
+        <p className={`${compact ? "text-[11px]" : "text-sm"} min-w-0 flex-1 break-words leading-5 text-[#6F5964]`}>{badge.unlocked ? "Requirement completed" : badge.progressLabel}</p>
+        {!compact && <span className="shrink-0 text-xs font-bold tabular-nums text-[#6F5964]">{Math.round(value)}%</span>}
       </div>
-      <div role="progressbar" aria-label={`${badge.name} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value)} aria-valuetext={badge.unlocked ? "Requirement completed" : badge.progressLabel} className={`mt-2 overflow-hidden rounded-full bg-[#F4EDF0] ${compact ? "h-1.5" : "h-2.5"}`}>
-        <div className="h-full rounded-full bg-[#F15D8A] transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${value}%` }} />
+      <div role="progressbar" aria-label={`${badge.name} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value)} aria-valuetext={badge.unlocked ? "Requirement completed" : badge.progressLabel} className={`mt-2 overflow-hidden rounded-full bg-[#E8DDE1] ${compact ? "h-1.5" : "h-2.5"}`}>
+        <div className="h-full rounded-full bg-[#F8769C] transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${value}%` }} />
       </div>
     </div>
   );

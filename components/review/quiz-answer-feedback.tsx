@@ -28,7 +28,7 @@ export function QuizAnswerFeedback({ correct, answer, answerText, longAnswer, ex
       aria-atomic="true"
       className={`quiz-answer-feedback quiz-answer-feedback-enter relative mt-4 grid min-h-[138px] min-w-0 grid-cols-[40%_minmax(0,1fr)] items-stretch gap-1.5 overflow-hidden rounded-[13px] border px-3 py-3 md:min-h-[176px] md:grid-cols-[minmax(130px,30%)_minmax(0,1fr)] md:gap-4 md:px-5 md:py-4 ${correct ? "quiz-answer-feedback-correct" : "quiz-answer-feedback-incorrect"}`}
     >
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[6px] ${correct ? "bg-[#22C77A]" : "bg-[#F05272]"}`} />
+      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[6px] ${correct ? "bg-[#5C947A]" : "bg-[#B42347]"}`} />
       <div aria-hidden="true" className={`answer-feedback-mascot relative -mb-3 flex min-h-[112px] min-w-0 items-end justify-center md:-mb-4 md:min-h-[142px] ${correct ? "answer-feedback-mascot-correct" : "answer-feedback-mascot-incorrect"}`}>
         <Image
           src={mascot}
@@ -41,12 +41,12 @@ export function QuizAnswerFeedback({ correct, answer, answerText, longAnswer, ex
       </div>
 
       <div className="relative z-10 min-w-0 self-center py-1 pr-0.5 md:py-0 md:pr-2">
-        <h3 className={`flex min-w-0 items-center gap-1.5 text-[16px] font-bold leading-tight tracking-[-0.025em] md:gap-2.5 md:text-[22px] lg:text-2xl ${correct ? "text-[#20AE68]" : "text-[#D94A67]"}`}>
+        <h3 className={`flex min-w-0 items-center gap-1.5 text-[16px] font-bold leading-tight tracking-[-0.025em] md:gap-2.5 md:text-[22px] lg:text-2xl ${correct ? "text-[#3D7259]" : "text-[#8A1F36]"}`}>
           <Icon className="h-6 w-6 shrink-0 md:h-9 md:w-9" strokeWidth={2.3} aria-hidden="true" />
           <span>{heading}</span>
         </h3>
 
-        <div className="mt-1.5 min-w-0 break-words text-[12px] leading-[1.45] text-[#2F2930] md:mt-2.5 md:text-sm lg:text-[15px]">
+        <div className="mt-1.5 min-w-0 break-words text-[12px] leading-[1.45] text-[#30262B] md:mt-2.5 md:text-sm lg:text-[15px]">
           <p className="break-words">
             {correct ? "That's right! The correct answer is " : "Good try! The correct answer is "}
             {items ? null : <strong className="font-bold">&apos;{expanded || !longAnswer ? answer : preview}&apos;</strong>}
@@ -66,7 +66,7 @@ export function QuizAnswerFeedback({ correct, answer, answerText, longAnswer, ex
             type="button"
             onClick={onToggleExpanded}
             aria-expanded={expanded}
-            className={`mt-1.5 inline-flex min-h-8 items-center gap-1 rounded text-xs font-semibold underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${correct ? "text-[#168A52] focus-visible:ring-[#22C77A]" : "text-[#B83F5A] focus-visible:ring-[#F05272]"}`}
+            className={`mt-1.5 inline-flex min-h-8 items-center gap-1 rounded text-xs font-semibold underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${correct ? "text-[#3D7259] focus-visible:ring-[#5C947A]" : "text-[#8A1F36] focus-visible:ring-[#B42347]"}`}
           >
             {expanded ? "Show less" : "Show full answer"}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} aria-hidden="true" />

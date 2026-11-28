@@ -296,8 +296,13 @@ test("admin routes fail closed, require real MFA, and render the protected works
     const page = await context.newPage();
     const pageErrors = [];
     const networkErrors = [];
+    let expectedSettingsFailure = false;
     page.on("pageerror", error => pageErrors.push(`${error.message} at ${new URL(page.url()).pathname}: ${error.stack ?? "no stack"}`));
-    page.on("console", message => { if (message.type() === "error") pageErrors.push(`${message.text()} at ${new URL(page.url()).pathname}`); });
+    page.on("console", message => {
+      if (message.type() === "error" && !(expectedSettingsFailure && message.text().includes("503 (Service Unavailable)"))) {
+        pageErrors.push(`${message.text()} at ${new URL(page.url()).pathname}`);
+      }
+    });
     page.on("requestfailed", request => networkErrors.push(`${request.method()} ${new URL(request.url()).pathname}: ${request.failure()?.errorText ?? "failed"}`));
     page.on("response", response => { if (response.status() >= 400 && /_next|admin\/announcements|api\/admin/.test(response.url())) networkErrors.push(`${response.status()} ${new URL(response.url()).pathname}`); });
     const post = (path, data) => context.request.post(base + path, { data, headers: { Origin: base } });
@@ -938,8 +943,10 @@ test("admin routes fail closed, require real MFA, and render the protected works
         }
         await route.continue();
       });
+      expectedSettingsFailure = true;
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.getByText("Settings fixture unavailable.").waitFor();
+      expectedSettingsFailure = false;
       await page.getByRole("button", { name: "Retry loading settings" }).click();
       await page.getByRole("heading", { name: "Administrator Settings" }).waitFor();
       await page.unrouteAll({ behavior: "wait" });
