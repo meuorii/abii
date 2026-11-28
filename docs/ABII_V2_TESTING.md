@@ -32,6 +32,8 @@ Current Phase 01 specs cover computed learner surfaces and button states, destru
 
 Phase 02 adds `npx playwright test tests/e2e/dashboard-v2.spec.ts` for populated and new-learner Dashboard states, 320/390/768/1024/1440/1920px overflow and layout checks, review route intent, and representative learner modal footer, pink confirmation, and Escape behavior. The existing memory fixture seeds a separate empty learner for genuine zero-data coverage. Focused badge persistence, badge route, due-review, and skeleton regression results are recorded in the implementation log.
 
+Phase 03 adds `npx playwright test tests/e2e/subjects-v2.spec.ts`. It covers all five Subjects routes at desktop and mobile sizes, independent route statistics, owner/subject scope, all four Subject Details tabs, moving a subject between unfiled and folder collections, topic discoverability through expansion/search/sorting/tab changes, zero-card topics, review destinations, Standard and Enumeration editor layouts, locked Topic Detail context, subject-level topic selection, visible modal button labels, protected deletion confirmation, and narrow/tablet toolbar overflow. Screenshots use only the isolated synthetic fixture and are saved under `docs/ABII_V2/evidence/phase03-`.
+
 ## Artifacts
 
 - Failure screenshots, traces, videos, and HTML reports: `test-results/` and `playwright-report/` (ignored by Git).

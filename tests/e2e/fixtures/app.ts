@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { test as base, expect, type Page } from "@playwright/test";
 
-export type FixtureData = { baseURL: string; token: string; emptyToken: string; subjectId: string; topicId: string; folderId: string; subjectFolderId: string };
+export type FixtureData = { baseURL: string; token: string; emptyToken: string; subjectId: string; topicId: string; folderId: string; subjectFolderId: string; subjectFolderTwoId: string; unfiledSubjectId: string; secondSubjectId: string; unfiledTopicId: string; emptyTopicId: string; standardCardId: string };
 type AppFixture = { learnerPage: Page };
 
 export async function readFixture(): Promise<FixtureData> {

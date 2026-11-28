@@ -14,6 +14,7 @@ import { SubjectFolder } from "../../../models/SubjectFolder.ts";
 import { Folder } from "../../../models/Folder.ts";
 import { Topic } from "../../../models/Topic.ts";
 import { Flashcard } from "../../../models/Flashcard.ts";
+import { ReviewRecord } from "../../../models/ReviewRecord.ts";
 
 const port = Number(process.env.ABII_PLAYWRIGHT_PORT ?? 4174);
 const baseURL = "http://127.0.0.1:" + port;
@@ -59,9 +60,20 @@ try {
   const emptyUser = await User.create({ name: "New Phase Two Learner", email: "phase2-empty@example.invalid", passwordHash: "fixture-only", emailVerifiedAt: new Date() });
   const subjectFolder = await SubjectFolder.create({ userId: user._id, name: "Biology", normalizedName: "biology", position: 0 });
   const subject = await Subject.create({ userId: user._id, subjectFolderId: subjectFolder._id, name: "Long Synthetic Biology Subject Name for Responsive Testing" });
+  const subjectFolderTwo = await SubjectFolder.create({ userId: user._id, name: "Earth Studies", normalizedName: "earth studies", position: 1 });
+  const unfiledSubject = await Subject.create({ userId: user._id, name: "Unfiled Chemistry" });
+  const secondSubject = await Subject.create({ userId: user._id, subjectFolderId: subjectFolderTwo._id, name: "Earth Science" });
   const folder = await Folder.create({ userId: user._id, subjectId: subject._id, name: "Cellular Biology" });
   const topic = await Topic.create({ userId: user._id, subjectId: subject._id, folderId: folder._id, name: "Long Synthetic Topic Name for Hero Wrapping Checks" });
-  await Flashcard.create({ userId: user._id, subjectId: subject._id, topicId: topic._id, question: "What is the basic unit of life?", answer: "The cell." });
+  const unfiledTopic = await Topic.create({ userId: user._id, subjectId: subject._id, name: "Unfiled Cell Biology" });
+  const unfiledSubjectTopic = await Topic.create({ userId: user._id, subjectId: unfiledSubject._id, name: "Chemical Bonds" });
+  const emptyTopic = await Topic.create({ userId: user._id, subjectId: secondSubject._id, name: "Empty Practice Topic" });
+  const standardCard = await Flashcard.create({ userId: user._id, subjectId: subject._id, topicId: topic._id, question: "What is the basic unit of life?", answer: "The cell." });
+  await Flashcard.create({ userId: user._id, subjectId: subject._id, topicId: topic._id, flashcardType: "items", question: "Name two cell structures.", answer: "Nucleus\nMembrane" });
+  await Flashcard.create({ userId: user._id, subjectId: subject._id, topicId: unfiledTopic._id, question: "What surrounds a cell?", answer: "The cell membrane." });
+  const crossSubjectCard = await Flashcard.create({ userId: user._id, subjectId: secondSubject._id, topicId: null, question: "What is a tectonic plate?", answer: "A moving piece of lithosphere." });
+  await Flashcard.create({ userId: user._id, subjectId: unfiledSubject._id, topicId: unfiledSubjectTopic._id, question: "What is an ionic bond?", answer: "An electrostatic attraction." });
+  await ReviewRecord.create({ userId: user._id, flashcardId: crossSubjectCard._id, result: "correct", questionType: "identification", reviewedAt: new Date(), nextReviewAt: new Date(Date.now() + 86_400_000) });
   const token = await new SignJWT({ sv: user.sessionVersion ?? 0 })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(String(user._id))
@@ -80,7 +92,7 @@ try {
     .sign(new TextEncoder().encode(secret));
   await mongoose.disconnect();
   await mkdir(dirname(fixturePath), { recursive: true });
-  await writeFile(fixturePath, JSON.stringify({ baseURL, token, emptyToken, subjectId: String(subject._id), topicId: String(topic._id), folderId: String(folder._id), subjectFolderId: String(subjectFolder._id) }), "utf8");
+  await writeFile(fixturePath, JSON.stringify({ baseURL, token, emptyToken, subjectId: String(subject._id), topicId: String(topic._id), folderId: String(folder._id), subjectFolderId: String(subjectFolder._id), subjectFolderTwoId: String(subjectFolderTwo._id), unfiledSubjectId: String(unfiledSubject._id), secondSubjectId: String(secondSubject._id), unfiledTopicId: String(unfiledTopic._id), emptyTopicId: String(emptyTopic._id), standardCardId: String(standardCard._id) }), "utf8");
 
   const isolatedEnv = {
     ...process.env,

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AbiiPageHero } from "@/components/ui/abii-page-hero";
-import { SubjectsClient, type SubjectItem } from "@/components/subjects/subjects-client";
+import type { SubjectItem } from "@/components/subjects/subjects-client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Flashcard } from "@/models/Flashcard";
@@ -13,6 +13,8 @@ import { emptyTypeProgress } from "@/lib/quiz/types";
 import { SubjectFolder } from "@/models/SubjectFolder";
 import { SubjectFoldersOverview, type SubjectFolderSummary } from "@/components/subjects/subject-folders-overview";
 import { listSubjectFolders } from "@/lib/subject-folders/service";
+import { StudyStatistics } from "@/components/subjects/study-statistics";
+import { Folder, BookOpen, Layers3, CreditCard } from "lucide-react";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,23 +39,25 @@ export default async function SubjectsPage() {
   let preferredLayout: "grid" | "list" = "grid";
   let folderSummaries: SubjectFolderSummary[] = [];
   let unfiledCount = 0;
+  let totals = { folders: 0, subjects: 0, topics: 0, flashcards: 0 };
 
   try {
     await connectToDatabase();
     const userId = user._id;
-    const [folderDocs,userSettings] = await Promise.all([
-      SubjectFolder.find({ userId }).select("_id").limit(1).lean(),
+    const [folderCount, userSettings, totalSubjects, totalTopics, totalFlashcards] = await Promise.all([
+      SubjectFolder.countDocuments({ userId }),
       User.findById(userId).select("settings.subjectLayout").lean(),
+      Subject.countDocuments({ userId }), Topic.countDocuments({ userId }), Flashcard.countDocuments({ userId }),
     ]);
+    totals = { folders: folderCount, subjects: totalSubjects, topics: totalTopics, flashcards: totalFlashcards };
     preferredLayout = userSettings?.settings?.subjectLayout === "list" ? "list" : "grid";
-    if(folderDocs.length){
-      [folderSummaries,unfiledCount]=await Promise.all([
-        listSubjectFolders(String(userId)),
-        Subject.countDocuments({userId,$or:[{subjectFolderId:null},{subjectFolderId:{$exists:false}}]}),
-      ]);
-    }else{
+    [folderSummaries, unfiledCount] = await Promise.all([
+      listSubjectFolders(String(userId)),
+      Subject.countDocuments({ userId, $or: [{ subjectFolderId: null }, { subjectFolderId: { $exists: false } }] }),
+    ]);
+    {
       const [subjectDocs,cards,topics,mastery]=await Promise.all([
-        Subject.find({userId}).select("_id name").sort({name:1}).lean(),
+        Subject.find({userId,$or:[{subjectFolderId:null},{subjectFolderId:{$exists:false}}]}).select("_id name").sort({name:1}).lean(),
         Flashcard.aggregate<{_id:typeof userId;count:number}>([{$match:{userId}},{$group:{_id:"$subjectId",count:{$sum:1}}}]),
         Topic.aggregate<{_id:typeof userId;count:number}>([{$match:{userId}},{$group:{_id:"$subjectId",count:{$sum:1}}}]),
         getSubjectMastery(userId),
@@ -82,7 +86,15 @@ export default async function SubjectsPage() {
           mascotAlt="Abii the pink otter holding a book"
           priority
         />
-        {loadFailed ? <SubjectLoadError /> : folderSummaries.length ? <SubjectFoldersOverview initialFolders={folderSummaries} initialUnfiledCount={unfiledCount} /> : <SubjectsClient initialSubjects={subjects} initialLayout={preferredLayout} />}
+        {loadFailed ? <SubjectLoadError /> : <>
+          <StudyStatistics label="Study library totals" columns={4} items={[
+            { label: "Folders", value: totals.folders, icon: Folder },
+            { label: "Subjects", value: totals.subjects, icon: BookOpen },
+            { label: "Topics", value: totals.topics, icon: Layers3 },
+            { label: "Flashcards", value: totals.flashcards, icon: CreditCard },
+          ]} />
+          <SubjectFoldersOverview initialFolders={folderSummaries} initialUnfiledCount={unfiledCount} initialUnfiledSubjects={subjects} initialLayout={preferredLayout} />
+        </>}
       </div>
     
   );

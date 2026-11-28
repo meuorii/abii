@@ -28,7 +28,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
   const subject = await Subject.findOne({ _id: subjectId, userId: user._id }).select("_id name").lean();
   if (!subject) notFound();
 
-  const mastery = await getSubjectMastery(user._id);
+  const mastery = await getSubjectMastery(user._id, [subject._id]);
   const [topicDocs, cards] = await Promise.all([
     Topic.find({ userId: user._id, subjectId: subject._id }).select("_id name").sort({ position: 1, _id: 1 }).lean(),
     Flashcard.find({ userId: user._id, subjectId: subject._id }).select("_id topicId flashcardType question answer hint createdAt")
@@ -42,7 +42,6 @@ export default async function SubjectDetailPage({ params }: PageProps) {
   const correctCount = masteryStats?.correct ?? 0;
   const wrongCount = masteryStats?.incorrect ?? 0;
   const masteredCount = masteryStats?.mastered ?? 0;
-  const topicCount = topicDocs.length;
   const typeMastery = mastery.byTypeBySubject.get(String(subject._id)) ?? emptyTypeProgress();
   const progress = masteryStats?.progress ?? 0;
 
@@ -60,7 +59,10 @@ export default async function SubjectDetailPage({ params }: PageProps) {
     progress,
     correctCount,
     wrongCount,
-    topics: topicDocs.map((topic) => ({ id: String(topic._id), name: topic.name })),
+    topics: topicDocs.map((topic) => {
+      const topicStats = mastery.byTopic.get(String(topic._id));
+      return { id: String(topic._id), name: topic.name, progress: topicStats?.progress ?? 0, mastered: topicStats?.mastered ?? 0, total: topicStats?.total ?? 0 };
+    }),
     cards: cards.map((card) => ({
       id: String(card._id),
       topicId: card.topicId ? String(card.topicId) : null,
@@ -84,7 +86,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
         <AbiiPageHero
           variant="subject-detail"
           headingId="subject-hero-title"
-          title={<><h1 className="abii-hero-heading break-words">{subject.name}</h1><p className="abii-hero-subheading break-words">{topicCount} {topicCount === 1 ? "topic" : "topics"} · {cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}{cards.length > 0 && masteredCount === cards.length ? " · Mastered" : ""}</p></>}
+          title={<h1 className="abii-hero-heading break-words">{subject.name}</h1>}
           description={<p className="max-w-sm">Keep practicing and build your confidence.</p>}
           mascotSrc="/dashboard-hero/my-subjects.png"
           mascotAlt=""

@@ -10,6 +10,7 @@ import { Folder } from "@/models/Folder";
 import { Topic } from "@/models/Topic";
 import { Flashcard } from "@/models/Flashcard";
 import { ChevronRight } from "lucide-react";
+import { StudyStatistics } from "@/components/subjects/study-statistics";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,12 +37,13 @@ export default async function FolderDetailPage({ params }: PageProps) {
     <AbiiPageHero
       variant="topic-folder"
       headingId="topic-folder-hero-title"
-      title={<><h1 className="abii-hero-heading break-words">{title}</h1><p className="abii-hero-subheading break-words">{topicCount} {topicCount === 1 ? "topic" : "topics"} · {flashcardCount} {flashcardCount === 1 ? "flashcard" : "flashcards"}</p></>}
+      title={<h1 className="abii-hero-heading break-words">{title}</h1>}
       description={<p className="max-w-sm">{subject.name} · Keep your topics organized and ready for your next study session.</p>}
       mascotSrc="/dashboard-hero/my-subjects.png"
       mascotAlt=""
       priority
     />
+    <StudyStatistics label="Topic folder statistics" columns={2} items={[{ label: "Total Topics", value: topicCount }, { label: "Total Flashcards", value: flashcardCount }]} />
     <TopicsSection subjectId={String(subject._id)} folderId={unfiled ? "unfiled" : String(folder!._id)} />
   </div>;
 }

@@ -37,6 +37,10 @@ type SubjectsClientProps = {
   initialLayout: SubjectLayout;
   subjectFolderId?: string | null;
   subjectFolders?: SubjectFolderSummary[];
+  embedded?: boolean;
+  queryOverride?: string;
+  onClearSearch?: () => void;
+  folderDetail?: boolean;
 };
 
 export function AddSubjectModal({ onClose, onCreated, subjectFolderId, subjectFolders=[] }: { onClose: () => void; onCreated: (subject: SubjectItem) => void; subjectFolderId?: string | null; subjectFolders?:SubjectFolderSummary[] }) {
@@ -115,7 +119,7 @@ function TypeMasteryIndicators({ mastery }: { mastery: TypeProgress }) {
   );
 }
 
-export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId, subjectFolders=[] }: SubjectsClientProps) {
+export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId, subjectFolders=[], embedded=false, queryOverride, onClearSearch, folderDetail=false }: SubjectsClientProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [subjects, setSubjects] = useState<SubjectItem[]>(initialSubjects);
@@ -127,13 +131,14 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
   const [moving,setMoving]=useState<SubjectItem|null>(null);
   const [destination,setDestination]=useState("");
   const [movingBusy,setMovingBusy]=useState(false);
+  useEffect(() => setSubjects(initialSubjects), [initialSubjects]);
   useEffect(()=>{const open=()=>setIsModalOpen(true);window.addEventListener("abii:open-add-subject",open);return()=>window.removeEventListener("abii:open-add-subject",open);},[]);
 
   const filteredSubjects = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = (queryOverride ?? query).trim().toLowerCase();
     if (!normalizedQuery) return subjects;
     return subjects.filter((subject) => subject.name.toLowerCase().includes(normalizedQuery));
-  }, [subjects, query]);
+  }, [subjects, query, queryOverride]);
 
   function handleCreated(subject: SubjectItem) {
     if((subject.subjectFolderId??null)!==(subjectFolderId??null))return;
@@ -155,6 +160,7 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
   return (
     <>
       <ScrollReveal><section aria-label="Manage subjects" className="space-y-5">
+        {!embedded && !folderDetail && <>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-bold tracking-tight text-foreground">All subjects</h2>
@@ -180,8 +186,8 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
           </p>
         ) : null}
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="relative block min-w-0 flex-1">
+        <div className={`grid min-w-0 gap-3 ${folderDetail ? "grid-cols-1 sm:grid-cols-12" : "grid-cols-1 sm:grid-cols-12"}`}>
+          <label className={`relative block min-w-0 flex-1 ${folderDetail ? "sm:col-span-9" : "sm:col-span-12"}`}>
             <span className="sr-only">Search subjects</span>
             <Search aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <input
@@ -191,22 +197,23 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
               className="min-h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary-hover/10"
             />
           </label>
-
+          {folderDetail && <button type="button" onClick={() => setIsModalOpen(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover sm:col-span-3"><Plus className="h-4 w-4"/>New Subject</button>}
         </div>
+        </>}
 
         {filteredSubjects.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-surface px-5 py-12 text-center sm:px-8">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary-surface text-2xl text-primary" aria-hidden="true"><BookOpen className="h-7 w-7" /></div>
           <h3 className="mt-4 text-base font-bold text-foreground">
-              {query.trim() ? "No Matches Found" : "Your Study Space Starts Here"}
+              {(queryOverride ?? query).trim() ? "No Matches Found" : "Your Study Space Starts Here"}
             </h3>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">
-              {query.trim()
+              {(queryOverride ?? query).trim()
                 ? "Try a different keyword or clear your search to see all subjects."
                 : "Create your first subject to organize your topics and flashcards."}
             </p>
-            {query.trim() ? (
-              <button type="button" onClick={() => setQuery("")} className="mt-4 text-sm font-semibold text-primary hover:underline">
+            {(queryOverride ?? query).trim() ? (
+              <button type="button" onClick={() => onClearSearch ? onClearSearch() : setQuery("")} className="mt-4 text-sm font-semibold text-primary hover:underline">
                 Clear Search
               </button>
             ) : (

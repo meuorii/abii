@@ -17,6 +17,11 @@ function Panel({ className = "", children }: { className?: string; children?: Re
   return <SkeletonCard className={className}>{children}</SkeletonCard>;
 }
 
+function StudyStatisticsSkeleton({ count, label, variant }: { count: 2 | 3 | 4; label: string; variant?: "topic-detail" }) {
+  const grid = variant === "topic-detail" ? "grid-cols-2 lg:grid-cols-4" : count === 2 ? "grid-cols-2" : count === 3 ? "grid-cols-3 max-[380px]:grid-cols-2 sm:grid-cols-3" : "grid-cols-2 sm:grid-cols-4";
+  return <section data-skeleton-section="statistics" aria-label={label} aria-hidden="true" className={`grid ${grid} gap-3 ${variant === "topic-detail" ? "lg:gap-4" : "sm:gap-4"}`}>{Array.from({ length: count }, (_, index) => variant === "topic-detail" ? <Panel key={index} className="h-full min-w-0 rounded-2xl p-3 sm:p-4"><div className="flex h-full min-w-0 flex-col"><div className="flex min-h-8 items-center justify-between gap-2"><Bar className="h-3 w-24 max-w-full"/><Bar className={`shrink-0 rounded-full ${index === 3 ? "h-8 w-8" : "h-4 w-4"}`}/></div><Bar className="mt-2 h-7 w-14 max-w-full"/>{index === 3 ? <><Bar className="mt-1 h-3 w-20 max-w-full"/><Bar className="mt-2 h-2 w-full rounded-full"/><div className="mt-2 flex flex-wrap gap-1">{[0, 1, 2, 3].map(mode => <Bar key={mode} className="h-6 w-6 rounded-full"/>)}</div></> : <Bar className="mt-1 h-3 w-28 max-w-full"/>}</div></Panel> : <Panel key={index} className="flex min-h-[88px] min-w-0 items-center gap-3 p-3 sm:min-h-28 sm:p-4"><Bar className="h-10 w-10 shrink-0 rounded-xl bg-secondary-surface"/><div className="min-w-0 flex-1 space-y-2"><Bar className="h-3 w-16 max-w-full"/><Bar className="h-6 w-12 max-w-full"/></div></Panel>)}</section>;
+}
+
 function StudyHero({ kind = "detail" }: { kind?: "detail" | "folder" | "topic" }) {
   return <section data-skeleton-section="hero" aria-hidden="true" className="relative isolate grid min-h-[180px] grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-stretch overflow-hidden rounded-2xl border border-border bg-secondary-surface sm:min-h-[240px] sm:rounded-[20px] lg:min-h-[280px]">
     <div className="relative z-10 flex min-w-0 flex-col justify-center py-4 pl-4 pr-7 sm:py-6 sm:pl-6 sm:pr-8 lg:py-8 lg:pl-8">
@@ -39,7 +44,7 @@ export function SubjectDetailSkeleton() {
   return <div className="min-w-0 space-y-3 sm:space-y-4">
     <Breadcrumb count={2} />
     <StudyHero />
-    <section data-skeleton-section="overview" aria-hidden="true" className="rounded-2xl border border-border bg-surface p-4"><Bar className="h-3 w-40" /><Bar className="mt-3 h-2 w-full max-w-[320px] rounded-full" /><div className="mt-3 flex gap-2"><Bar className="h-6 w-20 rounded-full" /><Bar className="h-6 w-20 rounded-full" /></div></section>
+    <StudyStatisticsSkeleton count={4} label="Loading subject statistics" />
     <div data-skeleton-section="tabs" aria-hidden="true" className="flex min-w-0 gap-1 overflow-hidden border-b border-border">{[0, 1, 2, 3].map((tab) => <Bar key={tab} className="h-11 w-24 shrink-0 rounded-none" />)}</div>
     <section data-skeleton-section="topic-folders" aria-hidden="true" className="space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div className="space-y-2"><Bar className="h-5 w-28" /><Bar className="h-4 w-72 max-w-[80vw]" /></div><div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto"><Bar className="h-11 w-full rounded-xl sm:w-32" /><Bar className="h-11 w-full rounded-xl sm:w-32" /></div></div>
@@ -57,6 +62,7 @@ export function SubjectFolderDetailSkeleton() {
   return <div className="min-w-0 space-y-5">
     <Breadcrumb count={2} />
     <StudyHero kind="folder" />
+    <StudyStatisticsSkeleton count={3} label="Loading subject folder statistics" />
     <section data-skeleton-section="subject-controls" aria-hidden="true" className="space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div className="space-y-2"><Bar className="h-5 w-32" /><Bar className="h-4 w-72 max-w-[80vw]" /></div><div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto"><Bar className="h-11 w-full rounded-xl sm:w-32" /><Bar className="h-11 w-full rounded-xl sm:w-32" /></div></div>
       <Bar className="h-11 w-full max-w-xl rounded-xl" />
@@ -70,6 +76,7 @@ export function TopicFolderDetailSkeleton() {
   return <div className="min-w-0 space-y-4">
     <Breadcrumb count={3} />
     <StudyHero kind="topic" />
+    <StudyStatisticsSkeleton count={2} label="Loading topic folder statistics" />
     <section data-skeleton-section="topic-actions" aria-hidden="true" className="space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0 space-y-2"><Bar className="h-5 w-28" /><Bar className="h-4 w-72 max-w-[80vw]" /></div><Bar className="h-11 w-36 rounded-xl" /></div>
       <Bar className="h-11 w-full rounded-xl" />
@@ -82,13 +89,13 @@ export function TopicDetailSkeleton() {
   return <div className="min-w-0 space-y-5">
     <Breadcrumb count={3} />
     <StudyHero kind="topic" />
-    <section data-skeleton-section="mastery" aria-hidden="true" className="rounded-2xl border border-border bg-surface p-4 sm:p-5"><div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"><div><Bar className="h-3 w-full rounded-full" /><div className="mt-2 flex justify-between"><Bar className="h-3 w-20" /><Bar className="h-3 w-10" /></div></div><div className="space-y-2 sm:min-w-44"><Bar className="h-3 w-36 max-w-full" /><Bar className="h-3 w-40 max-w-full" /></div></div><div className="mt-3 flex flex-wrap gap-1">{[0, 1, 2, 3].map((item) => <Bar key={item} className="h-6 w-16 rounded-full" />)}</div></section>
+    <StudyStatisticsSkeleton count={4} label="Loading topic statistics" variant="topic-detail" />
     <section data-skeleton-section="flashcard-controls" aria-hidden="true" className="min-w-0 space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3"><div className="space-y-2"><Bar className="h-5 w-32" /><Bar className="h-4 w-60 max-w-[70vw]" /></div><Bar className="h-11 w-36 rounded-xl" /></div>
-      <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_190px]"><Bar className="h-11 w-full rounded-xl" /><Bar className="h-11 w-full rounded-xl" /></div>
+      <Bar className="h-5 w-32" />
+      <div className="grid min-w-0 grid-cols-4 gap-3 sm:grid-cols-12"><Bar className="col-span-4 h-11 w-full rounded-xl sm:col-span-6"/><Bar className="col-span-2 h-11 w-full rounded-xl sm:col-span-3"/><Bar className="col-span-2 h-11 w-full rounded-xl sm:col-span-3"/></div>
+      <div className="flex flex-wrap gap-2"><Bar className="h-10 w-20 rounded-full"/><Bar className="h-10 w-24 rounded-full"/><Bar className="h-10 w-28 rounded-full"/></div>
     </section>
     <section data-skeleton-section="flashcards" aria-hidden="true"><UnknownCollectionPlaceholder className="min-h-32 rounded-2xl border border-border bg-surface p-4 sm:p-5" /></section>
-    <section data-skeleton-section="review-actions" aria-hidden="true" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background p-4"><div className="min-w-0 space-y-2"><Bar className="h-4 w-32" /><Bar className="h-4 w-64 max-w-[70vw]" /></div><div className="flex flex-wrap gap-2"><Bar className="h-10 w-36 rounded-xl" /><Bar className="h-10 w-32 rounded-xl" /></div></section>
   </div>;
 }
 

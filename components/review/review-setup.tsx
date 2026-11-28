@@ -40,11 +40,11 @@ export function TypeIcon({ type, className = "h-6 w-6" }: { type: QuizMode | imp
 }
 
 /** Completion pills for every mode that applies to at least one card. */
-export function MasteryPills({ progress, size = "sm", className = "flex flex-wrap gap-1" }: { progress: TypeProgress; size?: "sm" | "md"; className?: string }) {
+export function MasteryPills({ progress, size = "sm", className = "flex flex-wrap gap-1", showUnavailable = false }: { progress: TypeProgress; size?: "sm" | "md"; className?: string; showUnavailable?: boolean }) {
   const dims = size === "md" ? "h-9 min-w-9 px-2 text-sm" : "h-7 min-w-7 px-2 text-[11px]";
   return (
     <span className={className} aria-label="Question type completion">
-      {QUIZ_MODES.filter((mode) => (progress?.[mode]?.total ?? 0) > 0).map((mode) => {
+      {QUIZ_MODES.filter((mode) => showUnavailable || (progress?.[mode]?.total ?? 0) > 0).map((mode) => {
         // Newly created subjects may not have saved progress for every quiz mode yet.
         const { done, total } = progress?.[mode] ?? { done: 0, total: 0 };
         const complete = done === total;

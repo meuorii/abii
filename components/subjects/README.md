@@ -1,5 +1,26 @@
 # Subjects and Topics UI
 
+Phase 03 shares a responsive study-statistics component across the subject
+library, subject folder, subject detail, topic folder, and topic detail routes.
+The library totals cover all owned subjects and cards, including unfiled
+subjects; folder and detail metrics remain scoped to their current owner and
+collection. The subject detail Progress tab reports review history for that
+subject and shows mastery per topic.
+
+Subject and topic detail pages expose search, sorting/filtering, and create
+actions within their relevant collection. Standard and Enumeration flashcards
+retain their existing storage format and editor behavior; the shared editor
+uses a responsive field layout. The page skeletons mirror the live statistics
+and collection hierarchy.
+
+My Subjects displays persisted folders under Collections and actual unfiled
+subject cards in a separate section. Topic folders start expanded while
+remaining collapsible, so assigned and unfiled topics are discoverable without
+changing server data. Topic Detail keeps mastery modes and supplementary counts
+inside its fourth statistic card; its editor locks topic context for both new
+and edited cards. Subject-level editing continues to allow topic selection and
+reassignment.
+
 Subject Details opens on Topics. Its All Flashcards, Progress, and Settings
 sections remain available. Subject cards show database Topic counts and totals;
 mastery comes from `getSubjectMastery()`.

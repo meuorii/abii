@@ -49,7 +49,6 @@ export default async function TopicPage({ params }: Props) {
         headingId="topic-hero-title"
         title={<><h1 className="abii-hero-heading break-words">{topic.name}</h1><p className="abii-hero-subheading break-words">{subject.name}</p></>}
         description={topic.description ? <p className="max-w-xl break-words">{topic.description}</p> : undefined}
-        metadata={<p>{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}</p>}
         mascotSrc="/dashboard-hero/my-subjects.png"
         mascotAlt=""
         priority
