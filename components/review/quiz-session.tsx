@@ -53,14 +53,14 @@ function BulbIcon() { return <Lightbulb className="h-4 w-4" aria-hidden="true" /
 
 function SelectionMark({ reduceMotion }: { reduceMotion: boolean }) {
   return <AnimatePresence initial={false}>
-    <m.span key="selected" initial={reduceMotion ? false : { opacity: 0, scale: 0.72 }} animate={{ opacity: 1, scale: 1 }} exit={reduceMotion ? { opacity: 0, transition: { duration: 0.01 } } : { opacity: 0, scale: 0.82, transition: { duration: 0.14 } }} transition={reduceMotion ? { duration: 0.01 } : { type: "spring", duration: 0.26, bounce: 0.16 }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-white">
+    <m.span key="selected" initial={reduceMotion ? false : { opacity: 0, scale: 0.72 }} animate={{ opacity: 1, scale: 1 }} exit={reduceMotion ? { opacity: 0, transition: { duration: 0.01 } } : { opacity: 0, scale: 0.82, transition: { duration: 0.14 } }} transition={reduceMotion ? { duration: 0.01 } : { type: "spring", duration: 0.26, bounce: 0.16 }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
       <Check className="h-3.5 w-3.5" strokeWidth={2.8} aria-hidden="true" />
     </m.span>
   </AnimatePresence>;
 }
 
 function GradedMark({ correct, reduceMotion }: { correct: boolean; reduceMotion: boolean }) {
-  return <m.span initial={reduceMotion ? false : { opacity: 0, scale: 0.78 }} animate={{ opacity: 1, scale: 1 }} transition={reduceMotion ? { duration: 0.01 } : { type: "spring", duration: 0.28, bounce: 0.12 }} className={correct ? "text-[#2FBF71]" : "text-primary"}>
+  return <m.span initial={reduceMotion ? false : { opacity: 0, scale: 0.78 }} animate={{ opacity: 1, scale: 1 }} transition={reduceMotion ? { duration: 0.01 } : { type: "spring", duration: 0.28, bounce: 0.12 }} className={correct ? "text-success" : "text-primary"}>
     {correct ? <CheckIcon /> : <CrossIcon />}
   </m.span>;
 }
@@ -69,18 +69,18 @@ function ProgressPanel({ total, answered, correct, incorrect, mastered, cards, r
   const remaining = total - answered;
   const pct = total ? Math.round((answered / total) * 360 / 100 * 100) : 0;
   const rows = [
-    { label: "Correct", value: correct, dot: "bg-[#2FBF71]" },
+    { label: "Correct", value: correct, dot: "bg-success" },
     { label: "Wrong", value: incorrect, dot: "bg-primary" },
     { label: "Remaining", value: remaining, dot: "bg-primary-active" },
     { label: "Mastered cards", value: `${mastered}/${cards}`, dot: "bg-primary" },
   ];
   return (
-    <section aria-labelledby="session-progress-title" className="rounded-2xl border border-border bg-white p-4 sm:p-5">
+    <section aria-labelledby="session-progress-title" className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
       <h2 id="session-progress-title" className="text-sm font-bold text-foreground">Review Progress</h2>
       <p className="sr-only">This session only. Not your long-term subject progress.</p>
       <div className="mt-3 flex items-center gap-4 lg:flex-col lg:items-stretch lg:gap-3 xl:flex-row xl:items-center">
-        <div className="relative flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-full lg:mx-auto xl:mx-0" style={{ background: `conic-gradient(#F8769C ${pct}deg, #E8DDE1 0deg)` }} role="img" aria-label={`${answered} of ${total} questions answered`}>
-          <div className="flex h-[66px] w-[66px] flex-col items-center justify-center rounded-full bg-white"><span className="text-base font-bold leading-none text-foreground">{answered}/{total}</span><span className="mt-1 text-[9px] text-muted">answered</span></div>
+        <div className="relative flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-full lg:mx-auto xl:mx-0" style={{ background: `conic-gradient(var(--primary) ${pct}deg, var(--border) 0deg)` }} role="img" aria-label={`${answered} of ${total} questions answered`}>
+          <div className="flex h-[66px] w-[66px] flex-col items-center justify-center rounded-full bg-surface"><span className="text-base font-bold leading-none text-foreground">{answered}/{total}</span><span className="mt-1 text-[9px] text-muted">answered</span></div>
         </div>
         <ul className="min-w-0 flex-1 space-y-1.5 text-xs">
           {rows.map((r) => (
@@ -235,7 +235,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
       <QuizCompletion session={currentSession} firstName={firstName} againBusy={againBusy} againError={againError} onAgain={restart} celebrate={celebrationSessionId === currentSession.id} />
     );
   }
-  if (!question) return <div className="m-4 rounded-2xl border border-border bg-white p-6 text-sm text-muted">This quiz session has no available question. <Link href="/review" className="font-semibold text-primary underline">Back to Review</Link></div>;
+  if (!question) return <div className="m-4 rounded-2xl border border-border bg-surface p-6 text-sm text-muted">This quiz session has no available question. <Link href="/review" className="font-semibold text-primary underline">Back to Review</Link></div>;
 
   const selOption = result?.selectedIndex ?? selectedOption;
   const selTruth = result?.selectedTruth ?? selectedTruth;
@@ -447,50 +447,50 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
   function optionClass(i: number) {
     const base = "flex min-h-[52px] w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-[border-color,background-color,color] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-1";
     if (result) {
-      if (i === result.correctIndex) return `${base} border-[#2FBF71] bg-success-bg text-[#1F5E3E]`;
-      if (i === selOption) return `${base} border-[#B42347] bg-error-bg text-error-text`;
-      return `${base} border-border bg-white text-muted`;
+      if (i === result.correctIndex) return `${base} border-success bg-success-bg text-success-text`;
+      if (i === selOption) return `${base} border-error bg-error-bg text-error-text`;
+      return `${base} border-border bg-surface text-muted`;
     }
-    return i === selOption ? `${base} border-primary bg-secondary-surface text-foreground` : `${base} border-border bg-white text-foreground hover:border-border`;
+    return i === selOption ? `${base} border-primary bg-secondary-surface text-foreground` : `${base} border-border bg-surface text-foreground hover:border-border`;
   }
   function letterClass(i: number) {
     const base = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold";
     if (result) {
-      if (i === result.correctIndex) return `${base} bg-[#2FBF71] text-white`;
-      if (i === selOption) return `${base} bg-primary text-white`;
+      if (i === result.correctIndex) return `${base} bg-success text-primary-foreground`;
+      if (i === selOption) return `${base} bg-primary text-primary-foreground`;
       return `${base} bg-border text-muted`;
     }
-    return i === selOption ? `${base} bg-primary text-white` : `${base} bg-border text-muted`;
+    return i === selOption ? `${base} bg-primary text-primary-foreground` : `${base} bg-border text-muted`;
   }
   function truthClass(value: boolean) {
     const base = "flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-bold transition-[border-color,background-color,color] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-1";
     const correctValue = result ? (result.correct ? selTruth : !selTruth) : null;
     if (result) {
-      if (value === correctValue) return `${base} border-[#2FBF71] bg-success-bg text-[#1F5E3E]`;
-      if (value === selTruth) return `${base} border-[#B42347] bg-error-bg text-error-text`;
-      return `${base} border-border bg-white text-muted`;
+      if (value === correctValue) return `${base} border-success bg-success-bg text-success-text`;
+      if (value === selTruth) return `${base} border-error bg-error-bg text-error-text`;
+      return `${base} border-border bg-surface text-muted`;
     }
-    return selTruth === value ? `${base} border-primary bg-secondary-surface text-foreground` : `${base} border-border bg-white text-foreground hover:border-border`;
+    return selTruth === value ? `${base} border-primary bg-secondary-surface text-foreground` : `${base} border-border bg-surface text-foreground hover:border-border`;
   }
 
   return (
     <div className="space-y-3 p-4 pb-24 sm:space-y-4 sm:p-5 xl:p-6">
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-xs sm:text-sm">
-        <Link href="/review" className="shrink-0 rounded font-medium text-[#75889A] transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover">Review</Link>
-        <span aria-hidden="true" className="text-[#B4A5AC]">›</span>
-        {initial.subjectId ? <Link href={`/subjects/${initial.subjectId}`} className="max-w-[40vw] truncate rounded font-medium text-[#75889A] transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover">{initial.subjectName}</Link> : <span className="max-w-[40vw] truncate font-medium text-[#75889A]">{initial.subjectName}</span>}
-        <span aria-hidden="true" className="text-[#B4A5AC]">›</span>
+        <Link href="/review" className="shrink-0 rounded font-medium text-muted transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover">Review</Link>
+        <span aria-hidden="true" className="text-muted">›</span>
+        {initial.subjectId ? <Link href={`/subjects/${initial.subjectId}`} className="max-w-[40vw] truncate rounded font-medium text-muted transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover">{initial.subjectName}</Link> : <span className="max-w-[40vw] truncate font-medium text-muted">{initial.subjectName}</span>}
+        <span aria-hidden="true" className="text-muted">›</span>
         <span aria-current="page" className="truncate font-semibold text-foreground">{typeLabel}</span>
-        <button type="button" disabled={busy} onClick={() => hasDraft ? setExitConfirm(true) : router.push("/review")} className="ml-auto inline-flex min-h-9 shrink-0 items-center rounded-full border border-border bg-white px-3 text-[11px] font-semibold text-primary hover:bg-background disabled:opacity-50 sm:px-4 sm:text-xs">Save &amp; Exit</button>
+        <button type="button" disabled={busy} onClick={() => hasDraft ? setExitConfirm(true) : router.push("/review")} className="ml-auto inline-flex min-h-9 shrink-0 items-center rounded-full border border-border bg-surface px-3 text-[11px] font-semibold text-primary hover:bg-background disabled:opacity-50 sm:px-4 sm:text-xs">Save &amp; Exit</button>
       </nav>
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_290px] xl:grid-cols-[minmax(0,1fr)_320px]">
         <AbiiPageHero
           variant="quiz-session"
           headingId="quiz-hero-title"
-          eyebrow={<p className="break-words text-sm font-semibold text-muted sm:text-base">{initial.subjectName} · {total} {total === 1 ? "question" : "questions"} · {typeLabel}</p>}
-          title={<h1 className="abii-hero-heading sm:mt-2">Let&apos;s review!</h1>}
-          description={<p className="max-w-xs text-xs leading-5 text-muted sm:mt-1 sm:text-sm sm:leading-6">Take your time, think it through, you&apos;ll do great!</p>}
+          eyebrow={<p className="break-words">{initial.subjectName} · {total} {total === 1 ? "question" : "questions"} · {typeLabel}</p>}
+          title={<h1 className="abii-hero-heading">Let&apos;s review!</h1>}
+          description={<p className="max-w-xs">Take your time, think it through, you&apos;ll do great!</p>}
           mascotSrc="/dashboard-hero/my-subjects.png"
           mascotAlt=""
           priority
@@ -501,7 +501,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
           <ProgressPanel total={total} answered={answeredCount} correct={correctCount} incorrect={incorrectCount} mastered={masteredCount} cards={cardTotal} round={currentRound} firstName={firstName} />
         </div>
 
-        <section aria-labelledby="question-heading" className="order-2 min-w-0 rounded-2xl border border-border bg-white p-4 sm:p-6 lg:order-none lg:col-start-1 lg:row-start-2">
+        <section aria-labelledby="question-heading" className="order-2 min-w-0 rounded-2xl border border-border bg-surface p-4 sm:p-6 lg:order-none lg:col-start-1 lg:row-start-2">
           <div className="mb-4 flex max-w-sm items-center gap-3">
             <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-secondary-surface" role="progressbar" aria-label="Quiz progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPct}>
               <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${progressPct}%` }} />
@@ -589,7 +589,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
                         autoCapitalize="off"
                         spellCheck={false}
                         placeholder={`Item ${i + 1}`}
-                        className={`min-h-11 w-full rounded-xl border px-3.5 text-sm outline-none transition placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary-hover/20 disabled:cursor-not-allowed ${state === "ok" ? "border-[#2FBF71] bg-success-bg" : state === "bad" ? "border-[#B42347] bg-error-bg" : "border-border bg-white"}`}
+                        className={`min-h-11 w-full rounded-xl border px-3.5 text-sm outline-none transition placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary-hover/20 disabled:cursor-not-allowed ${state === "ok" ? "border-success bg-success-bg" : state === "bad" ? "border-error bg-error-bg" : "border-border bg-surface"}`}
                       />
                     </div>
                   );
@@ -615,7 +615,7 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
             {question.type === "identification" && (
               <div>
                 <label htmlFor="identification-answer" className="mb-1.5 block text-sm font-semibold text-foreground">Your answer</label>
-                <m.input ref={inputRef} id="identification-answer" aria-describedby={error ? "quiz-answer-error" : undefined} value={typed} onChange={(e) => { setText(e.target.value); if (error) setError(""); }} whileFocus={reduceMotion ? undefined : { scale: 1.006 }} transition={{ type: "spring", duration: 0.24, bounce: 0.08 }} disabled={Boolean(result) || busy} maxLength={500} autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="Type your answer…" className={`min-h-12 w-full rounded-xl border px-4 text-sm outline-none transition-[border-color,background-color,box-shadow] duration-200 placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary-hover/20 disabled:cursor-not-allowed ${result ? (result.correct ? "border-[#2FBF71] bg-success-bg" : "border-[#B42347] bg-error-bg") : "border-border bg-white"}`} />
+                <m.input ref={inputRef} id="identification-answer" aria-describedby={error ? "quiz-answer-error" : undefined} value={typed} onChange={(e) => { setText(e.target.value); if (error) setError(""); }} whileFocus={reduceMotion ? undefined : { scale: 1.006 }} transition={{ type: "spring", duration: 0.24, bounce: 0.08 }} disabled={Boolean(result) || busy} maxLength={500} autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="Type your answer…" className={`min-h-12 w-full rounded-xl border px-4 text-sm outline-none transition-[border-color,background-color,box-shadow] duration-200 placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary-hover/20 disabled:cursor-not-allowed ${result ? (result.correct ? "border-success bg-success-bg" : "border-error bg-error-bg") : "border-border bg-surface"}`} />
               </div>
             )}
 
@@ -628,18 +628,18 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
             {hintOpen && question.hint && !result && (
               <div className="flex gap-3 rounded-xl border border-border bg-background p-4">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary-surface text-primary"><BulbIcon /></span>
-                <div className="min-w-0 flex-1"><p className="text-sm font-bold text-foreground">Hint</p><p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-muted">{question.hint}</p><button type="button" onClick={() => setHintOpen(false)} className="mt-2 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-primary hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover">Got it</button></div>
+                <div className="min-w-0 flex-1"><p className="text-sm font-bold text-foreground">Hint</p><p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-muted">{question.hint}</p><button type="button" onClick={() => setHintOpen(false)} className="mt-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-primary hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover">Got it</button></div>
               </div>
             )}
 
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs text-muted">
               <label className="flex cursor-pointer items-center gap-2 font-semibold">
-                <input type="checkbox" checked={autoNext} onChange={(e) => saveAuto(e.target.checked, autoSeconds)} className="h-4 w-4 accent-[#F8769C]" />
+                <input type="checkbox" checked={autoNext} onChange={(e) => saveAuto(e.target.checked, autoSeconds)} className="h-4 w-4 accent-primary" />
                 Auto-next
               </label>
               <label className="flex items-center gap-2">
                 <span className="text-muted">after</span>
-                <select value={autoSeconds} onChange={(e) => saveAuto(autoNext, Number(e.target.value))} disabled={!autoNext} className="rounded-lg border border-border bg-white px-2 py-1 text-xs disabled:opacity-50">
+                <select value={autoSeconds} onChange={(e) => saveAuto(autoNext, Number(e.target.value))} disabled={!autoNext} className="rounded-lg border border-border bg-surface px-2 py-1 text-xs disabled:opacity-50">
                   <option value={2}>2s</option>
                   <option value={3}>3s</option>
                   <option value={5}>5s</option>
@@ -657,15 +657,15 @@ export function QuizSession({ initial, firstName }: { initial: PublicSession; fi
                 )}
               </div>
               {result ? (
-                <button type="button" onClick={next} disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 sm:min-h-11">{busy ? "Finishing…" : `${isLast ? "Finish Round" : "Next Question"}${countdown !== null ? ` (${countdown})` : ""}`}{!busy && <span aria-hidden="true">→</span>}</button>
+                <button type="button" onClick={next} disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-semibold text-primary-foreground shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 sm:min-h-11">{busy ? "Finishing…" : `${isLast ? "Finish Round" : "Next Question"}${countdown !== null ? ` (${countdown})` : ""}`}{!busy && <span aria-hidden="true">→</span>}</button>
               ) : (
-                <button type="submit" disabled={!canSubmit} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">{busy ? <span role="status">Saving Your Answer…</span> : question.type === "identification" || question.type === "enumeration-identification" ? "Submit Answer" : "Check Answer"}{!busy && <span aria-hidden="true">→</span>}</button>
+                <button type="submit" disabled={!canSubmit} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-semibold text-primary-foreground shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">{busy ? <span role="status">Saving Your Answer…</span> : question.type === "identification" || question.type === "enumeration-identification" ? "Submit Answer" : "Check Answer"}{!busy && <span aria-hidden="true">→</span>}</button>
               )}
             </div>
           </form>
         </section>
 
-        <aside aria-labelledby="next-up-title" className="hidden rounded-2xl border border-border bg-white p-4 sm:p-5 lg:col-start-2 lg:row-start-2 lg:block">
+        <aside aria-labelledby="next-up-title" className="hidden rounded-2xl border border-border bg-surface p-4 sm:p-5 lg:col-start-2 lg:row-start-2 lg:block">
           <h2 id="next-up-title" className="text-sm font-bold text-foreground">Next Up</h2>
           {upcoming.length === 0 ? (
             <p className="mt-3 text-xs leading-5 text-muted">This is your last question. Nice work!</p>

@@ -54,6 +54,7 @@ test("@phase2 learner destructive modal keeps responsive footer geometry and dis
   await waitForLearnerRoute(learnerPage, "/settings");
   const trigger = learnerPage.getByRole("button", { name: "Clear", exact: true });
   await trigger.scrollIntoViewIfNeeded();
+  await learnerPage.waitForLoadState("networkidle");
   await trigger.click();
   let dialog = learnerPage.getByRole("alertdialog", { name: "Clear Study History?" });
   await expect(dialog).toBeVisible();

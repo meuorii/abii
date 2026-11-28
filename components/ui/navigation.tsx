@@ -14,7 +14,7 @@ type NavigationProps = {
 
 export function Navigation({ brand = "abii", items = defaultItems }: NavigationProps) {
   return (
-    <header className="border-b border-border bg-white">
+    <header className="border-b border-border bg-surface">
       <nav
         aria-label="Main navigation"
         className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8"

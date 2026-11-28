@@ -33,13 +33,13 @@ export function BadgeDetailsModal({ badge, onClose }: { badge: BadgePageItem | n
       description={badge.unlocked ? "An achievement you've earned on your learning journey." : "Discover what it takes to earn this achievement."}
     >
       <div className="space-y-5 sm:space-y-6">
-        <div className="relative mx-auto flex w-full max-w-[340px] flex-col items-center overflow-hidden rounded-2xl bg-[radial-gradient(ellipse_at_50%_38%,#FFFFFF_0%,#FFF9FC_38%,#FFE8EF_100%)] px-4 py-4 sm:py-5">
-          <span aria-hidden="true" className="pointer-events-none absolute left-1/2 top-5 h-28 w-28 -translate-x-1/2 rounded-full bg-white/80 blur-2xl sm:top-6 sm:h-36 sm:w-36" />
+        <div className="relative mx-auto flex w-full max-w-[340px] flex-col items-center overflow-hidden rounded-2xl bg-[radial-gradient(ellipse_at_50%_38%,var(--surface)_0%,var(--background)_38%,var(--secondary-surface)_100%)] px-4 py-4 sm:py-5">
+          <span aria-hidden="true" className="pointer-events-none absolute left-1/2 top-5 h-28 w-28 -translate-x-1/2 rounded-full bg-surface/80 blur-2xl sm:top-6 sm:h-36 sm:w-36" />
           <div className="abii-enter-art relative z-10 h-28 w-28 sm:h-36 sm:w-36 lg:h-40 lg:w-40">
             <BadgeImage badgeId={badge.id} unlocked={badge.unlocked} alt={`${badge.name} ${badge.unlocked ? "unlocked" : "locked"} badge`} className="h-full w-full" priority />
           </div>
           <div className="abii-enter abii-enter-1 relative z-10 mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${badge.unlocked ? "bg-success-bg text-[#327858]" : "bg-white/90 text-[#655A61]"}`}>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${badge.unlocked ? "bg-success-bg text-success-text" : "bg-surface/90 text-muted"}`}>
               <StatusIcon aria-hidden="true" className="h-3.5 w-3.5" />
               {badge.unlocked ? "Unlocked" : "Locked"}
             </span>
@@ -60,7 +60,7 @@ export function BadgeDetailsModal({ badge, onClose }: { badge: BadgePageItem | n
 
         {badge.historicalNote && !badge.unlocked && <p className="abii-enter abii-enter-3 rounded-xl bg-background px-3.5 py-3 text-sm leading-[1.55] text-muted">{badge.historicalNote}</p>}
 
-        {badge.unlocked ? <div role="status" className="abii-enter abii-enter-4 flex items-start gap-2.5 rounded-xl bg-[#F2FAF5] px-3.5 py-3 text-sm leading-[1.55] text-[#327858]">
+        {badge.unlocked ? <div role="status" className="abii-enter abii-enter-4 flex items-start gap-2.5 rounded-xl bg-success-bg px-3.5 py-3 text-sm leading-[1.55] text-success-text">
           <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
           <p><span className="font-semibold">Achievement completed.</span> Permanently added to your collection.</p>
         </div> : <section aria-labelledby="badge-progress-heading" className="abii-enter abii-enter-4 border-t border-border pt-4">

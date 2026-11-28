@@ -140,24 +140,6 @@
 .admin-loading-refined { --skeleton-base: #E8DDE1; --skeleton-highlight: rgb(255 255 255 / 48%); --skeleton-surface: #FFF1F5; --skeleton-border: #E8DDE1; }
 .admin-shell .admin-overview-workspace [data-overview-feature] { background-color: var(--overview-pink); }
 .admin-shell .admin-page-hero { border-color: var(--admin-border); background-color: var(--admin-secondary); }
-.abii-checkbox {
-  appearance: none;
-  border: 1px solid var(--border);
-  border-radius: 0.25rem;
-  background-color: var(--surface);
-  transition: border-color 120ms ease, background-color 120ms ease;
-}
-.abii-checkbox:hover { border-color: var(--primary); }
-.abii-checkbox:checked {
-  border-color: var(--primary);
-  background-color: var(--primary);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m3.5 8.5 3 3 6-7' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 12px 12px;
-}
-.abii-checkbox:focus-visible { outline: 2px solid var(--primary-hover); outline-offset: 2px; }
-.abii-checkbox:disabled { cursor: not-allowed; opacity: 0.55; }
 @media (min-width: 640px) and (max-width: 1599.98px) {
   .admin-page-hero .abii-page-hero__layout { display: grid; grid-template-columns: minmax(0, 1fr) 32%; align-items: stretch; }
   .admin-page-hero .abii-page-hero__content { width: auto; max-width: none; }
@@ -237,23 +219,12 @@
 
 .abii-volume-slider {
   --volume-progress: 0%;
-  appearance: none;
-  -webkit-appearance: none;
-  height: 24px;
-  margin-top: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  touch-action: pan-x;
 }
-.abii-volume-slider:focus-visible { outline: 2px solid #e9577d; outline-offset: 3px; border-radius: 999px; }
-.abii-volume-slider:disabled { cursor: not-allowed; opacity: .6; }
 .abii-volume-slider::-webkit-slider-runnable-track {
   height: 8px;
-  border: 1px solid #f1d7e0;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: linear-gradient(to right, #e9577d 0%, #e9577d var(--volume-progress), #fff  var(--volume-progress), #fff 100%);
+  background: linear-gradient(to right, var(--primary) 0%, var(--primary) var(--volume-progress), var(--surface) var(--volume-progress), var(--surface) 100%);
 }
 .abii-volume-slider::-webkit-slider-thumb {
   width: 18px;
@@ -261,25 +232,25 @@
   margin-top: -6px;
   appearance: none;
   -webkit-appearance: none;
-  border: 2px solid #fff;
+  border: 2px solid var(--surface);
   border-radius: 50%;
-  background: #e9577d;
-  box-shadow: 0 0 0 1px #e9577d, 0 1px 3px rgb(24 56 77 / 18%);
+  background: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary), 0 1px 3px rgb(24 56 77 / 18%);
 }
 .abii-volume-slider::-moz-range-track {
   height: 8px;
-  border: 1px solid #f1d7e0;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface);
 }
-.abii-volume-slider::-moz-range-progress { height: 8px; border: 1px solid #e9577d; border-radius: 999px; background: #e9577d; }
+.abii-volume-slider::-moz-range-progress { height: 8px; border: 1px solid var(--primary); border-radius: 999px; background: var(--primary); }
 .abii-volume-slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
-  border: 2px solid #fff;
+  border: 2px solid var(--surface);
   border-radius: 50%;
-  background: #e9577d;
-  box-shadow: 0 0 0 1px #e9577d, 0 1px 3px rgb(24 56 77 / 18%);
+  background: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary), 0 1px 3px rgb(24 56 77 / 18%);
 }
 @media (prefers-reduced-motion: no-preference) {
   .abii-volume-slider::-webkit-slider-thumb { transition: box-shadow 120ms ease; }
@@ -378,54 +349,6 @@
 @media (max-width: 359px) {
   .auth-brand-copy { padding: 16px; }
   .auth-form-panel { padding-inline: 16px; }
-}
-
-.quiz-answer-feedback-correct {
-  border-color: #5C947A;
-  background-color: #EDF5EF;
-}
-
-.quiz-answer-feedback-incorrect {
-  border-color: #B42347;
-  background-color: #FCEDEF;
-}
-
-@media (max-width: 767px) {
-  .answer-feedback-mascot-image {
-    width: 124px;
-    max-width: none;
-  }
-
-  /* The wrong mascot has substantially wider transparent side margins. */
-  .answer-feedback-mascot-incorrect .answer-feedback-mascot-image {
-    width: 153px;
-  }
-}
-
-@media (max-width: 359px) {
-  .answer-feedback-mascot-image {
-    width: 108px;
-  }
-
-  .answer-feedback-mascot-incorrect .answer-feedback-mascot-image {
-    width: 133px;
-  }
-}
-
-.quiz-answer-feedback::after {
-  position: absolute;
-  right: -36px;
-  bottom: -76px;
-  width: 230px;
-  height: 145px;
-  border-radius: 50% 50% 0 0;
-  background: color-mix(in srgb, #5C947A 4%, transparent);
-  content: "";
-  pointer-events: none;
-}
-
-.quiz-answer-feedback-incorrect::after {
-  background: color-mix(in srgb, #B42347 4%, transparent);
 }
 
 .quiz-answer-feedback-enter { animation: quiz-answer-feedback-in 200ms ease-out both; }
@@ -826,171 +749,6 @@ summary {
 }
 
 
-.abii-toast-stack {
-  position: fixed;
-  z-index: 1200;
-  top: max(24px, env(safe-area-inset-top));
-  right: max(24px, env(safe-area-inset-right));
-  display: flex;
-  width: min(580px, calc(100vw - 48px));
-  flex-direction: column;
-  gap: 16px;
-  pointer-events: none;
-}
-
-.abii-toast {
-  --toast-bg: var(--secondary-surface);
-  --toast-accent: var(--primary);
-  --toast-label: var(--foreground);
-  position: relative;
-  isolation: isolate;
-  min-height: 166px;
-  padding: 25px 65px 24px 190px;
-  pointer-events: auto;
-  filter: drop-shadow(0 12px 23px rgba(87, 56, 70, 0.13));
-}
-
-.abii-toast-surface {
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.92);
-  border-radius: 29px;
-  background: var(--toast-bg);
-  box-shadow: inset 0 0 0 1px rgba(234, 216, 224, 0.48);
-}
-
-.abii-toast-surface::before,
-.abii-toast-surface::after {
-  position: absolute;
-  z-index: 0;
-  right: -5%;
-  bottom: -60%;
-  width: 70%;
-  height: 115%;
-  border-radius: 48% 52% 0 0 / 53% 49% 0 0;
-  background: color-mix(in srgb, var(--toast-accent) 5%, transparent);
-  content: "";
-  transform: rotate(-9deg);
-}
-
-.abii-toast-surface::after {
-  right: 26%;
-  bottom: -82%;
-  width: 50%;
-  background: color-mix(in srgb, var(--toast-accent) 3.5%, transparent);
-  transform: rotate(11deg);
-}
-
-.abii-toast-accent {
-  position: absolute;
-  z-index: 1;
-  inset: 0 auto 0 0;
-  width: 6px;
-  border-radius: 29px 0 0 29px;
-  background: var(--toast-accent);
-}
-
-.abii-toast-mascot {
-  position: absolute;
-  z-index: 2;
-  bottom: 0;
-  left: 13px;
-  width: 170px;
-  height: calc(100% + 20px);
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.abii-toast-copy {
-  position: relative;
-  z-index: 2;
-  min-width: 0;
-  padding-top: 5px;
-}
-
-.abii-toast-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--toast-label);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.045em;
-  line-height: 1.25;
-}
-
-.abii-toast-label svg { flex: none; }
-
-.abii-toast-title {
-  margin: 11px 0 0;
-  color: var(--foreground);
-  font-size: 20px;
-  font-weight: 750;
-  letter-spacing: -0.025em;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
-.abii-toast-message {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
-.abii-toast-dismiss {
-  position: absolute;
-  z-index: 3;
-  top: 17px;
-  right: 17px;
-  display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--toast-accent) 7%, white);
-  color: #746f76;
-  cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease;
-}
-
-.abii-toast-dismiss:hover { background: color-mix(in srgb, var(--toast-accent) 15%, white); color: #4f4850; }
-.abii-toast-dismiss:focus-visible { outline: 2px solid var(--toast-label); outline-offset: 2px; }
-
-.abii-toast-action {
-  margin-top: 10px;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  color: var(--toast-label);
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
-.abii-toast-progress {
-  position: absolute;
-  z-index: 4;
-  right: 29px;
-  bottom: 0;
-  left: 190px;
-  height: 2px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--toast-accent) 22%, transparent);
-  transform: scaleX(1);
-  transform-origin: left center;
-  animation: abii-toast-progress var(--toast-duration) linear forwards;
-  animation-play-state: var(--toast-progress-state);
-}
-
 .abii-toast-enter { animation: abii-toast-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .abii-toast-exit { animation: abii-toast-out 200ms ease-in both; }
 
@@ -1004,32 +762,10 @@ summary {
 }
 @keyframes abii-toast-progress { to { transform: scaleX(0); } }
 
-@media (max-width: 640px) {
-  .abii-toast-stack {
-    top: max(12px, env(safe-area-inset-top));
-    right: max(12px, env(safe-area-inset-right));
-    width: calc(100vw - max(24px, env(safe-area-inset-left)) - max(24px, env(safe-area-inset-right)));
-    gap: 12px;
-  }
-  .abii-toast { min-height: 126px; padding: 17px 49px 17px 118px; }
-  .abii-toast-surface { border-radius: 23px; }
-  .abii-toast-accent { border-radius: 23px 0 0 23px; }
-  .abii-toast-mascot { left: 4px; width: 111px; height: calc(100% + 12px); }
-  .abii-toast-copy { padding-top: 2px; }
-  .abii-toast-label { gap: 6px; font-size: 11px; }
-  .abii-toast-label svg { width: 15px; height: 15px; }
-  .abii-toast-title { margin-top: 8px; font-size: 17px; }
-  .abii-toast-message { margin-top: 6px; font-size: 12px; line-height: 1.4; }
-  .abii-toast-dismiss { top: 9px; right: 9px; width: 44px; height: 44px; }
-  .abii-toast-dismiss svg { width: 21px; height: 21px; }
-  .abii-toast-progress { right: 23px; left: 118px; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .abii-toast-enter,
-  .abii-toast-exit,
+  .abii-toast-exit { animation: none; }
   .abii-toast-progress { animation: none; }
-  .abii-toast-dismiss { transition: none; }
 }
 
 @keyframes abii-modal-overlay-in { from { opacity: 0; } to { opacity: 1; } }

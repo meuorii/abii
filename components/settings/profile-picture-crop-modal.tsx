@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPoi
 import { ImagePlus, Minus, Plus, RotateCcw } from "lucide-react";
 import { Modal, modalCancelClass, modalPrimaryClass } from "@/components/ui/modal";
 import { ModalButtonContent } from "@/components/ui/modal-button-content";
+import { rangeInputClassName } from "@/components/ui/range-input";
 import { boundCrop, clamp, sourceCrop, wheelZoom, zoomAt, type CropState, type Point } from "./crop-geometry";
 import { bindCropViewport } from "./crop-viewport";
 
@@ -196,25 +197,25 @@ export function ProfilePictureCropModal({ file, onClose, onSave }: { file: File;
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img ref={imageRef} src={objectUrl || undefined} alt="Selected photo to crop" draggable={false} onLoad={(event) => { setDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }); cropRef.current = { zoom: 1, offset: { x: 0, y: 0 } }; setZoom(1); setOffset({ x: 0, y: 0 }); setPreviewError(""); }} onError={() => { const message = "This image could not be decoded. Choose another JPG, PNG, or WebP file."; setError(message); setPreviewError(message); }} className="origin-center pointer-events-none absolute left-1/2 top-1/2 max-w-none" style={{ width: fitWidth, height: fitHeight, transform }} />
           <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-            <div className="absolute inset-0 bg-[#30262B]/35" style={{ maskImage: "radial-gradient(circle at center, transparent 49.7%, black 50.2%)" }} />
-            <div className="absolute inset-[1px] rounded-full border-2 border-white/95 shadow-[0_0_0_1px_rgba(24,56,77,.15)]" />
+            <div className="absolute inset-0 bg-foreground/35" style={{ maskImage: "radial-gradient(circle at center, transparent 49.7%, black 50.2%)" }} />
+            <div className="absolute inset-[1px] rounded-full border-2 border-surface/95 shadow-[0_0_0_1px_rgba(24,56,77,.15)]" />
           </div>
           {!dimensions.width && <div className="absolute inset-0 grid place-items-center text-xs text-muted"><ImagePlus className="mr-2 inline h-4 w-4" />Preparing photo…</div>}
         </div>
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between text-xs font-semibold text-muted"><label htmlFor="profilePhotoZoom">Zoom</label><span>{zoom.toFixed(1)}×</span></div>
-          <div className="flex items-center gap-3"><button type="button" aria-label="Zoom out" disabled={busy || zoom <= 1} onClick={() => updateZoom(zoom - 0.1)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-white text-primary disabled:opacity-40"><Minus className="h-4 w-4" /></button><input id="profilePhotoZoom" aria-label="Zoom" type="range" min="1" max="3" step="0.01" value={zoom} disabled={busy || !dimensions.width} onChange={(event) => updateZoom(Number(event.target.value))} className="abii-volume-slider min-w-0 flex-1" style={{ "--volume-progress": `${percentage}%` } as React.CSSProperties} /><button type="button" aria-label="Zoom in" disabled={busy || zoom >= 3} onClick={() => updateZoom(zoom + 0.1)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-white text-primary disabled:opacity-40"><Plus className="h-4 w-4" /></button></div>
+          <div className="flex items-center gap-3"><button type="button" aria-label="Zoom out" disabled={busy || zoom <= 1} onClick={() => updateZoom(zoom - 0.1)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface text-primary disabled:opacity-40"><Minus className="h-4 w-4" /></button><input id="profilePhotoZoom" aria-label="Zoom" type="range" min="1" max="3" step="0.01" value={zoom} disabled={busy || !dimensions.width} onChange={(event) => updateZoom(Number(event.target.value))} className={`${rangeInputClassName} min-w-0 flex-1`} style={{ "--volume-progress": `${percentage}%` } as React.CSSProperties} /><button type="button" aria-label="Zoom in" disabled={busy || zoom >= 3} onClick={() => updateZoom(zoom + 0.1)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface text-primary disabled:opacity-40"><Plus className="h-4 w-4" /></button></div>
           <p className="mt-2 text-[11px] text-muted">Scroll or pinch with two fingers to zoom. Drag to reposition, or use the arrow keys.</p>
         </div>
       </div>
       <section aria-labelledby="profile-preview-label" className="flex items-center gap-3 rounded-xl border border-border bg-background p-3 sm:flex-col sm:gap-2 sm:py-4">
         <div id="profile-preview-label" className="text-xs font-semibold text-foreground">Profile Preview</div>
-        <div className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-full border-2 border-white bg-secondary-surface shadow-[0_0_0_1px_#E8DDE1]">
+        <div className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-full border-2 border-surface bg-secondary-surface shadow-[0_0_0_1px_var(--border)]">
           <canvas ref={previewCanvasRef} width={176} height={176} role="img" aria-label="Circular profile photo preview" className="h-full w-full rounded-full object-cover" />
           {!dimensions.width && !previewError && <span className="absolute inset-0 grid place-items-center px-1 text-center text-[10px] text-muted">Loading preview…</span>}
           {previewError && <span role="alert" className="absolute inset-0 grid place-items-center bg-background px-2 text-center text-[10px] leading-4 text-error-text">Preview unavailable</span>}
         </div>
-        <button type="button" disabled={busy} onClick={() => { pointers.current.clear(); gesture.current = null; setDragging(false); commit({ zoom: 1, offset: { x: 0, y: 0 } }); setError(""); }} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-primary hover:bg-white disabled:opacity-50 sm:mt-1"><RotateCcw className="h-3.5 w-3.5" />Reset</button>
+        <button type="button" disabled={busy} onClick={() => { pointers.current.clear(); gesture.current = null; setDragging(false); commit({ zoom: 1, offset: { x: 0, y: 0 } }); setError(""); }} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-primary hover:bg-surface disabled:opacity-50 sm:mt-1"><RotateCcw className="h-3.5 w-3.5" />Reset</button>
       </section>
     </div>
     <p className="mt-3 text-[11px] text-muted">Source: JPG, PNG, or WebP · up to 15 MB and 20 megapixels. Saved crop: square JPEG · up to 1 MB.</p>

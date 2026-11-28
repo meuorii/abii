@@ -21,6 +21,7 @@
     "test:admin-users": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-users.test.ts",
     "test:admin-analytics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/admin-analytics.test.ts",
     "test:skeleton": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/skeleton-system.test.ts",
+    "test:style-compliance": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/learner-style-compliance.test.ts",
     "test:skeleton:browser": "node scripts/skeleton-system.browser.mjs",
     "test:skeleton:routes": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/skeleton-routes.browser.mjs",
     "test:progress-analytics": "node --conditions=react-server --import ./scripts/register-typescript.mjs --test scripts/progress-analytics.test.ts",

@@ -30,7 +30,7 @@ export function NotificationItem({ notification, compact = false, busy = false, 
   const Icon = NOTIFICATION_PRESENTATION[notification.type].icon;
   return (
     <article className={`notification-item flex min-w-0 items-start gap-3 px-3 py-3.5 sm:px-4 ${notification.readAt ? "bg-surface" : "bg-background"}`}>
-      <span aria-hidden="true" className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] ${notification.readAt ? "bg-border text-[#738291]" : "bg-secondary-surface text-primary"}`}>
+      <span aria-hidden="true" className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] ${notification.readAt ? "bg-border text-muted" : "bg-secondary-surface text-primary"}`}>
         <Icon className="h-[17px] w-[17px]" strokeWidth={1.9} />
       </span>
       {notification.target ? (

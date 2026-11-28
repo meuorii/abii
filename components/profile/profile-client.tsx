@@ -13,10 +13,10 @@ import { useToast } from "@/components/ui/toast-provider";
 
 type InitialUser = { name: string; email: string; profileImage: string; memberSince: string | null };
 
-const fieldClass = "mt-1.5 min-h-11 w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-secondary-surface";
-const primaryButton = "inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryButton = "inline-flex min-h-10 items-center justify-center rounded-xl border border-border bg-white px-3.5 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-background active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
-const dangerButton = "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border bg-white px-3.5 py-2 text-sm font-semibold text-primary transition-colors hover:bg-surface-hover active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+const fieldClass = "mt-1.5 min-h-11 w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-secondary-surface";
+const primaryButton = "inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+const secondaryButton = "inline-flex min-h-10 items-center justify-center rounded-xl border border-border bg-surface px-3.5 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-background active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+const dangerButton = "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2 text-sm font-semibold text-primary transition-colors hover:bg-surface-hover active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
 async function request(url: string, method: string, body?: unknown) {
   const response = await fetch(url, {
@@ -203,11 +203,11 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
   const initial = name.trim().charAt(0).toUpperCase() || "A";
 
   return <div className="mx-auto w-full min-w-0 max-w-[1500px] space-y-7 px-4 py-7 sm:space-y-9 sm:px-6 sm:py-9 xl:px-6">
-    <AbiiPageHero variant="profile" title={<h1 className="abii-hero-heading">Your Profile, Your Space.</h1>} description={<p className="mt-2 max-w-[48ch]">Manage your personal details, update your profile photo, and keep your Abii account secure.</p>} mascotSrc="/dashboard-hero/profile-hero.png" mascotAlt="Abii the pink otter smiling and waving" />
+    <AbiiPageHero variant="profile" title={<h1 className="abii-hero-heading">Your Profile, Your Space.</h1>} description={<p className="max-w-[48ch]">Manage your personal details, update your profile photo, and keep your Abii account secure.</p>} mascotSrc="/dashboard-hero/profile-hero.png" mascotAlt="Abii the pink otter smiling and waving" />
 
     <ScrollReveal preset="card" delay={0.12}>
     <section aria-label="Account overview" className="flex min-w-0 flex-col gap-5 rounded-2xl border border-border bg-background p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-6">
-      <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-secondary-surface text-2xl font-bold text-primary shadow-[0_2px_10px_rgba(47,41,48,0.08)]">
+      <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-surface bg-secondary-surface text-2xl font-bold text-primary shadow-[0_2px_10px_rgba(47,41,48,0.08)]">
         {profileImage ? <Image key={profileImage} src={profileImage} alt={`${name || "Account"} profile photo`} fill sizes="72px" unoptimized className="object-cover" /> : initial}
       </div>
       <div className="min-w-0 flex-1">
@@ -215,7 +215,7 @@ export function ProfileClient({ initialUser }: { initialUser: InitialUser }) {
         <p className="mt-1 break-all text-sm text-muted">{email}</p>
       </div>
       <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#276944]">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-xs font-semibold text-success-text">
           <ShieldCheck aria-hidden="true" className="h-4 w-4" /> Verified account
         </span>
         {initialUser.memberSince && <p className="text-xs text-muted">Member since {initialUser.memberSince}</p>}

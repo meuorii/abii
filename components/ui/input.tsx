@@ -1,7 +1,7 @@
 import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 const inputClasses = [
-  "w-full rounded-xl border border-border bg-white px-3.5 py-3 text-sm text-foreground",
+  "w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-sm text-foreground",
   "placeholder:text-muted/80",
   "transition-colors",
   "focus:border-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/30",

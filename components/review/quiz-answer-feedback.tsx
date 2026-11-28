@@ -26,9 +26,9 @@ export function QuizAnswerFeedback({ correct, answer, answerText, longAnswer, ex
       role="status"
       aria-live="polite"
       aria-atomic="true"
-      className={`quiz-answer-feedback quiz-answer-feedback-enter relative mt-4 grid min-h-[138px] min-w-0 grid-cols-[40%_minmax(0,1fr)] items-stretch gap-1.5 overflow-hidden rounded-[13px] border px-3 py-3 md:min-h-[176px] md:grid-cols-[minmax(130px,30%)_minmax(0,1fr)] md:gap-4 md:px-5 md:py-4 ${correct ? "quiz-answer-feedback-correct" : "quiz-answer-feedback-incorrect"}`}
+      className={`quiz-answer-feedback quiz-answer-feedback-enter relative mt-4 grid min-h-[138px] min-w-0 grid-cols-[40%_minmax(0,1fr)] items-stretch gap-1.5 overflow-hidden rounded-[13px] border px-3 py-3 after:absolute after:-right-9 after:-bottom-[76px] after:h-[145px] after:w-[230px] after:rounded-[50%_50%_0_0] after:content-[''] after:pointer-events-none md:min-h-[176px] md:grid-cols-[minmax(130px,30%)_minmax(0,1fr)] md:gap-4 md:px-5 md:py-4 ${correct ? "border-success bg-success-bg after:bg-success/5" : "border-error bg-error-bg after:bg-error/5"}`}
     >
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[6px] ${correct ? "bg-[#5C947A]" : "bg-[#B42347]"}`} />
+      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[6px] ${correct ? "bg-success" : "bg-error"}`} />
       <div aria-hidden="true" className={`answer-feedback-mascot relative -mb-3 flex min-h-[112px] min-w-0 items-end justify-center md:-mb-4 md:min-h-[142px] ${correct ? "answer-feedback-mascot-correct" : "answer-feedback-mascot-incorrect"}`}>
         <Image
           src={mascot}
@@ -36,7 +36,7 @@ export function QuizAnswerFeedback({ correct, answer, answerText, longAnswer, ex
           width={1254}
           height={correct ? 1102 : 1151}
           sizes="(max-width: 767px) 40vw, (max-width: 1023px) 30vw, 210px"
-          className="answer-feedback-mascot-image relative h-auto max-w-full shrink-0 object-contain object-bottom md:aspect-square md:w-full md:max-w-[190px]"
+          className={`answer-feedback-mascot-image relative h-auto max-w-full shrink-0 object-contain object-bottom max-md:max-w-none max-md:w-[124px] md:aspect-square md:w-full md:max-w-[190px] ${correct ? "max-[359px]:w-[108px]" : "max-md:w-[153px] max-[359px]:w-[133px]"}`}
         />
       </div>
 
@@ -66,7 +66,7 @@ export function QuizAnswerFeedback({ correct, answer, answerText, longAnswer, ex
             type="button"
             onClick={onToggleExpanded}
             aria-expanded={expanded}
-            className={`mt-1.5 inline-flex min-h-8 items-center gap-1 rounded text-xs font-semibold underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${correct ? "text-success-text focus-visible:ring-[#5C947A]" : "text-error-text focus-visible:ring-[#B42347]"}`}
+            className={`mt-1.5 inline-flex min-h-8 items-center gap-1 rounded text-xs font-semibold underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${correct ? "text-success-text focus-visible:ring-success" : "text-error-text focus-visible:ring-error"}`}
           >
             {expanded ? "Show less" : "Show full answer"}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} aria-hidden="true" />

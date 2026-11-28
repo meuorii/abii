@@ -553,6 +553,25 @@ test("admin routes fail closed, require real MFA, and render the protected works
       }
     }
 
+    if (process.env.ABII_TEST_ADMIN_CHECKBOX_ONLY === "1" && focusedTargets.length === 1 && focusedTargets[0] === "settings") {
+      const screenshotDir = process.env.ABII_ADMIN_SCREENSHOTS;
+      assert.ok(screenshotDir, "focused Admin checkbox verification needs an evidence directory");
+      mkdirSync(screenshotDir, { recursive: true });
+      const checkbox = page.getByLabel("Warn before this session expires");
+      await checkbox.check();
+      const checkboxStyle = await checkbox.evaluate(element => {
+        const base = getComputedStyle(element), mark = getComputedStyle(element, "::after");
+        return { background: base.backgroundColor, border: base.borderTopColor, radius: base.borderTopLeftRadius,
+          easing: base.transitionTimingFunction, mark: mark.content, markRight: mark.borderRightColor, markBottom: mark.borderBottomColor };
+      });
+      assert.deepEqual(checkboxStyle, { background: "rgb(248, 118, 156)", border: "rgb(248, 118, 156)", radius: "4px",
+        easing: "ease", mark: '""', markRight: "rgb(255, 255, 255)", markBottom: "rgb(255, 255, 255)" });
+      await page.evaluate(() => Promise.all(document.getAnimations().filter(animation => Number.isFinite(animation.effect?.getComputedTiming().endTime)).map(animation => animation.finished.catch(() => undefined))));
+      await page.screenshot({ path: join(screenshotDir, "admin-settings-checkbox-1440.png"), fullPage: true });
+      assert.deepEqual(pageErrors, []);
+      return;
+    }
+
     if (process.env.ABII_TEST_ADMIN_LAYOUT_ONLY === "1" && focusedTargets.includes("performance")) {
       await metrics.deleteMany({});
       await jobs.deleteMany({});

@@ -1,0 +1,2 @@
+/** Shared native range control utilities; track/thumb details remain in globals for browser pseudo-elements. */
+export const rangeInputClassName = "abii-volume-slider h-6 appearance-none cursor-pointer touch-pan-x bg-transparent p-0 focus-visible:rounded-full focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-primary-hover disabled:cursor-not-allowed disabled:opacity-60";

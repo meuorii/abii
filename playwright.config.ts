@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = Number(process.env.ABII_PLAYWRIGHT_PORT ?? 4174);
+const baseURL = `http://127.0.0.1:${port}`;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: "**/*.spec.ts",
@@ -12,7 +15,7 @@ export default defineConfig({
   outputDir: "test-results",
   use: {
     ...devices["Desktop Chrome"],
-    baseURL: "http://127.0.0.1:4174",
+    baseURL,
     headless: true,
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
@@ -21,7 +24,8 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: "node --conditions=react-server --import ./scripts/register-typescript.mjs ./tests/e2e/fixtures/server.mjs",
-    url: "http://127.0.0.1:4174/login",
+    url: `${baseURL}/login`,
+    env: { ABII_PLAYWRIGHT_PORT: String(port) },
     reuseExistingServer: false,
     timeout: 180_000,
     stdout: "pipe",

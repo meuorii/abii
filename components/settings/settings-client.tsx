@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal, modalCancelClass, modalDangerClass } from "@/components/ui/modal";
 import { ModalButtonContent } from "@/components/ui/modal-button-content";
+import { rangeInputClassName } from "@/components/ui/range-input";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { SlidersHorizontal, ShieldCheck, Grid2X2, List, Download, Clock3, Layers3, Volume2, Play, BellRing } from "lucide-react";
 import { NotificationPreferences } from "@/components/notifications/notification-preferences";
@@ -17,13 +18,13 @@ type NoticeKey = "preferences" | "export" | "history" | "materials";
 type NoticeMap = Partial<Record<NoticeKey, Notice>>;
 const defaultPreferences: Preferences = { targetSubjects: 5, defaultLandingPage: "/dashboard", subjectLayout: "grid", studyTimezone: "UTC" };
 
-const inputClass = "mt-1.5 min-h-11 w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-secondary-surface";
-const buttonClass = "inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryButton = "inline-flex min-h-10 items-center justify-center rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover disabled:opacity-60";
-const dangerButton = "inline-flex min-h-10 items-center justify-center rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-primary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover disabled:opacity-60";
+const inputClass = "mt-1.5 min-h-11 w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-secondary-surface";
+const buttonClass = "inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+const secondaryButton = "inline-flex min-h-10 items-center justify-center rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover disabled:opacity-60";
+const dangerButton = "inline-flex min-h-10 items-center justify-center rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-primary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover disabled:opacity-60";
 
 function SectionCard({ icon, title, description, children, delay = 0 }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode; delay?: number }) {
-  return <ScrollReveal delay={delay}><section className="min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_2px_10px_rgba(47,41,48,0.025)] sm:p-5"><div className="flex items-start gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-surface text-xl text-primary" aria-hidden="true">{icon}</span><div className="min-w-0 pt-0.5"><h2 className="text-[16px] font-semibold tracking-[-0.02em] text-foreground">{title}</h2><p className="mt-1 text-xs leading-5 text-muted sm:text-[13px]">{description}</p></div></div><div className="mt-4">{children}</div></section></ScrollReveal>;
+  return <ScrollReveal delay={delay}><section className="min-w-0 rounded-2xl border border-border bg-surface p-4 shadow-[0_2px_10px_rgba(47,41,48,0.025)] sm:p-5"><div className="flex items-start gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-surface text-xl text-primary" aria-hidden="true">{icon}</span><div className="min-w-0 pt-0.5"><h2 className="text-[16px] font-semibold tracking-[-0.02em] text-foreground">{title}</h2><p className="mt-1 text-xs leading-5 text-muted sm:text-[13px]">{description}</p></div></div><div className="mt-4">{children}</div></section></ScrollReveal>;
 }
 function InlineNotice({ notice }: { notice: Notice }) { if (!notice) return null; return <p role={notice.kind === "error" ? "alert" : "status"} className={`mt-3 rounded-xl px-3.5 py-2.5 text-sm ${notice.kind === "error" ? "bg-error-bg text-error-text" : "bg-success-bg text-success-text"}`}>{notice.text}</p>; }
 
@@ -88,7 +89,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
       variant="settings"
       headingId="settings-hero-title"
       title={<h1 className="abii-hero-heading">Make Abii Feel Like Yours</h1>}
-      description={<p className="mt-2 max-w-[390px] text-[12px] leading-[1.6] text-muted sm:mt-3 sm:text-sm">Set your study preferences and manage your saved learning data.</p>}
+      description={<p className="max-w-[390px]">Set your study preferences and manage your saved learning data.</p>}
       mascotSrc="/dashboard-hero/settings.png"
       mascotAlt="Abii holding a settings gear"
       priority
@@ -114,11 +115,11 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-3">
                   <div><p className="text-sm font-semibold text-foreground">Quiz Sound Effects</p><p className="mt-1 text-xs leading-5 text-muted">Adjust the sound feedback you hear during reviews.</p></div>
-                  <button type="button" role="switch" aria-checked={soundEnabled} aria-label={`Quiz Sound Effects: Sound ${soundEnabled ? "On" : "Off"}`} onClick={() => updateSoundEnabled(!soundEnabled)} className={`relative h-7 w-12 shrink-0 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 ${soundEnabled ? "bg-primary" : "bg-border"}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${soundEnabled ? "left-6" : "left-1"}`} /></button>
+                  <button type="button" role="switch" aria-checked={soundEnabled} aria-label={`Quiz Sound Effects: Sound ${soundEnabled ? "On" : "Off"}`} onClick={() => updateSoundEnabled(!soundEnabled)} className={`relative h-7 w-12 shrink-0 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 ${soundEnabled ? "bg-primary" : "bg-border"}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-surface shadow-sm transition-all ${soundEnabled ? "left-6" : "left-1"}`} /></button>
                 </div>
                 <p className="mt-2 text-xs font-medium text-muted" aria-live="polite">Sound {soundEnabled ? "On" : "Off"}</p>
                 <label htmlFor="quizSoundVolume" className="mt-3 flex items-center justify-between gap-3 text-xs font-medium text-muted"><span>Volume</span><span>{soundVolume}%</span></label>
-                <input id="quizSoundVolume" aria-label="Volume" aria-valuetext={`${soundVolume}%`} type="range" min={0} max={100} value={soundVolume} onChange={(event) => updateSoundVolume(Number(event.target.value))} className="abii-volume-slider mt-1.5 w-full" style={{ "--volume-progress": `${soundVolume}%` } as React.CSSProperties} />
+                <input id="quizSoundVolume" aria-label="Volume" aria-valuetext={`${soundVolume}%`} type="range" min={0} max={100} value={soundVolume} onChange={(event) => updateSoundVolume(Number(event.target.value))} className={`${rangeInputClassName} mt-1.5 w-full`} style={{ "--volume-progress": `${soundVolume}%` } as React.CSSProperties} />
                 <div className="mt-3 flex flex-wrap gap-2">
                   {([ ["correct", "Preview Correct"], ["wrong", "Preview Wrong"], ["complete", "Preview Complete"] ] as const).map(([kind, label]) => <button key={kind} type="button" onClick={() => playAbiiSound(kind)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-primary transition hover:bg-secondary-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-1"><Play className="h-3 w-3" aria-hidden="true" />{label}</button>)}
                 </div>
@@ -135,7 +136,7 @@ export function SettingsClient({ initialUser }: { initialUser: InitialUser }) {
 
       <div className="min-w-0 space-y-4 sm:space-y-5">
         <SectionCard icon={<ShieldCheck className="h-5 w-5"/>} title="Data & Privacy" description="Export a copy of supported study data or manage your saved materials and history." delay={0.12}>
-          <div className="divide-y divide-[#E8DDE1] rounded-xl border border-border px-3.5 sm:px-4">
+          <div className="divide-y divide-border rounded-xl border border-border px-3.5 sm:px-4">
             <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary-surface text-lg text-primary"><Download className="h-5 w-5"/></span><div><p className="text-sm font-semibold text-foreground">Export Study Data</p><p className="mt-1 text-xs leading-5 text-muted">Download your subjects, flashcards, progress, and study history.</p></div></div><button type="button" disabled={saving !== ""} onClick={() => void runAction("export", "/api/data/export", "GET", undefined, true)} className={secondaryButton}>{saving === "export" ? "Preparing Download…" : "Export"}</button></div>
             <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary-surface text-lg text-primary"><Clock3 className="h-5 w-5"/></span><div><p className="text-sm font-semibold text-foreground">Clear Study History</p><p className="mt-1 text-xs leading-5 text-muted">Remove review records and completed-session history. Your subjects and flashcards stay.</p></div></div><button type="button" disabled={saving !== ""} onClick={() => setConfirmAction("history")} className={dangerButton}>{saving === "history" ? "Clearing Study History…" : "Clear"}</button></div>
             <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary-surface text-lg text-primary"><Layers3 className="h-5 w-5"/></span><div><p className="text-sm font-semibold text-foreground">Delete Study Materials</p><p className="mt-1 text-xs leading-5 text-muted">Delete your subjects, topics, flashcards, and related study history while keeping your account.</p></div></div><button type="button" disabled={saving !== ""} onClick={() => setConfirmAction("materials")} className={dangerButton}>{saving === "materials" ? "Deleting Study Materials…" : "Delete"}</button></div>

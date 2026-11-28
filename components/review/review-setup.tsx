@@ -49,7 +49,7 @@ export function MasteryPills({ progress, size = "sm", className = "flex flex-wra
         const { done, total } = progress?.[mode] ?? { done: 0, total: 0 };
         const complete = done === total;
         return (
-          <span key={mode} title={`${QUIZ_TYPE_LABELS[mode]}: ${done}/${total} cards complete`} aria-label={`${QUIZ_TYPE_LABELS[mode]} ${complete ? "complete" : "not complete"}: ${done}/${total}`} className={`inline-flex ${dims} items-center justify-center rounded-full border font-bold ${complete ? "border-border bg-secondary-surface text-primary" : "border-[#E7E7EB] bg-border text-[#A0A0AA]"}`}>
+          <span key={mode} title={`${QUIZ_TYPE_LABELS[mode]}: ${done}/${total} cards complete`} aria-label={`${QUIZ_TYPE_LABELS[mode]} ${complete ? "complete" : "not complete"}: ${done}/${total}`} className={`inline-flex ${dims} items-center justify-center rounded-full border font-bold ${complete ? "border-border bg-secondary-surface text-primary" : "border-border bg-border text-muted"}`}>
             <TypeIcon type={mode} className="h-3.5 w-3.5" />
           </span>
         );
@@ -125,9 +125,9 @@ export function ReviewSetup({ firstName, subjects, allEligible, allDueEligible =
     <AbiiPageHero
       variant="review-setup"
       headingId="setup-hero-title"
-      eyebrow={<p className="text-sm font-semibold text-primary">Ready, {firstName}?</p>}
-      title={<h1 className="abii-hero-heading mt-2">Let’s <span className="abii-hero-emphasis">review!</span></h1>}
-      description={<p className="mt-2 max-w-sm text-xs leading-5 text-muted sm:text-sm sm:leading-6">Choose which flashcards to practice and a review mode. Available modes depend on the questions and answers in your library.</p>}
+      eyebrow={<p>Ready, {firstName}?</p>}
+      title={<h1 className="abii-hero-heading">Let’s <span className="abii-hero-emphasis">review!</span></h1>}
+      description={<p className="max-w-sm">Choose which flashcards to practice and a review mode. Available modes depend on the questions and answers in your library.</p>}
       mascotSrc="/dashboard-hero/my-subjects.png"
       mascotAlt=""
       priority
@@ -138,10 +138,10 @@ export function ReviewSetup({ firstName, subjects, allEligible, allDueEligible =
     return (
       <div className="space-y-5 p-4 sm:p-6 xl:p-7">
         {hero}
-        <section role="alert" className="rounded-2xl border border-border bg-white p-6">
+        <section role="alert" className="rounded-2xl border border-border bg-surface p-6">
           <h2 className="text-lg font-semibold text-foreground">Your review options couldn’t load.</h2>
           <p className="mt-2 text-sm leading-6 text-muted">Please check your connection and try again. Your study data hasn’t been changed.</p>
-          <Link href="/review/setup" className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2">Try again</Link>
+          <Link href="/review/setup" className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2">Try again</Link>
         </section>
       </div>
     );
@@ -155,7 +155,7 @@ export function ReviewSetup({ firstName, subjects, allEligible, allDueEligible =
           <div className="relative mx-auto h-28 w-28"><Image src="/mascot/empty.png" alt="Abii is ready when you are" fill sizes="112px" className="object-contain" /></div>
           <h2 className="mt-2 text-lg font-bold text-foreground">{subjects.length === 0 ? "Create a subject to start reviewing." : "Add flashcards to start reviewing."}</h2>
           <p className="mx-auto mt-1.5 max-w-sm text-sm leading-6 text-muted">Quizzes are built from your own flashcards, so add some questions and answers first.</p>
-          <Link href="/subjects" className="mt-4 inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2">Go to My Subjects</Link>
+          <Link href="/subjects" className="mt-4 inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2">Go to My Subjects</Link>
         </section>
       </div>
     );
@@ -164,29 +164,29 @@ export function ReviewSetup({ firstName, subjects, allEligible, allDueEligible =
   return (
     <div className="space-y-5 p-4 pb-24 sm:p-6 xl:p-7">
       <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs sm:text-sm">
-        <Link href="/review" className="rounded font-medium text-[#75889A] transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover">Review</Link>
-        <span aria-hidden="true" className="text-[#B4A5AC]">›</span>
+        <Link href="/review" className="rounded font-medium text-muted transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover">Review</Link>
+        <span aria-hidden="true" className="text-muted">›</span>
         <span aria-current="page" className="font-semibold text-foreground">New quiz</span>
       </nav>
       {hero}
 
-      <fieldset className="rounded-2xl border border-border bg-white p-4 sm:p-5">
+      <fieldset className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
         <legend id="choose-review-filter" className="text-base font-bold tracking-tight text-foreground">What would you like to practice?</legend>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          {([ ["all", "All available cards", "Practice every eligible flashcard in your selected scope."], ["due", "Due Review", "Practice only cards with no schedule or a review due now."] ] as const).map(([value, label, description]) => <label key={value} className={`flex min-h-[76px] cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 ${reviewFilter === value ? "border-primary bg-secondary-surface" : "border-border hover:border-border"}`}><input type="radio" name="reviewFilter" value={value} checked={reviewFilter === value} onChange={() => { setReviewFilter(value); setError(""); }} className="mt-0.5 h-4 w-4 shrink-0 accent-[#F8769C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover" /><span><span className="block text-sm font-bold text-foreground">{label}</span><span className="mt-1 block text-xs leading-5 text-muted">{description}</span></span></label>)}
+          {([ ["all", "All available cards", "Practice every eligible flashcard in your selected scope."], ["due", "Due Review", "Practice only cards with no schedule or a review due now."] ] as const).map(([value, label, description]) => <label key={value} className={`flex min-h-[76px] cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 ${reviewFilter === value ? "border-primary bg-secondary-surface" : "border-border hover:border-border"}`}><input type="radio" name="reviewFilter" value={value} checked={reviewFilter === value} onChange={() => { setReviewFilter(value); setError(""); }} className="mt-0.5 h-4 w-4 shrink-0 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover" /><span><span className="block text-sm font-bold text-foreground">{label}</span><span className="mt-1 block text-xs leading-5 text-muted">{description}</span></span></label>)}
         </div>
       </fieldset>
 
-      {reviewFilter === "due" && dueCardsInScope === 0 && <p role="status" className="rounded-xl border border-[#DDEFE5] bg-[#F7FCF9] px-4 py-3 text-sm text-[#527C68]">No flashcards are currently due in this scope. Your saved review schedule will be checked again when you start.</p>}
+      {reviewFilter === "due" && dueCardsInScope === 0 && <p role="status" className="rounded-xl border border-success bg-success-bg px-4 py-3 text-sm text-success-text">No flashcards are currently due in this scope. Your saved review schedule will be checked again when you start.</p>}
 
       <ScrollReveal><section aria-labelledby="choose-scope" className="space-y-3">
         <h2 id="choose-scope" className="text-base font-bold tracking-tight text-foreground sm:text-lg"><span className="mr-2 text-primary">1</span>Choose review scope</h2>
         <div role="radiogroup" aria-labelledby="choose-scope" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {([ ["all", "All Subjects and Topics", Layers3], ["subject", "Specific Subject", BookOpen], ["topic", "Specific Topic", FolderOpen] ] as const).map(([value, label, Icon], index) => <StaggerItem key={value} index={index}><button type="button" role="radio" aria-checked={scope === value} onClick={() => { setScope(value); setError(""); }} className={`flex min-h-16 min-w-0 w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 ${scope === value ? "border-primary bg-secondary-surface shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-border bg-white hover:border-border"}`}><span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary-surface text-primary"><Icon className="h-5 w-5"/></span><span className="min-w-0 text-sm font-bold text-foreground">{label}</span></button></StaggerItem>)}
+          {([ ["all", "All Subjects and Topics", Layers3], ["subject", "Specific Subject", BookOpen], ["topic", "Specific Topic", FolderOpen] ] as const).map(([value, label, Icon], index) => <StaggerItem key={value} index={index}><button type="button" role="radio" aria-checked={scope === value} onClick={() => { setScope(value); setError(""); }} className={`flex min-h-16 min-w-0 w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 ${scope === value ? "border-primary bg-secondary-surface shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-border bg-surface hover:border-border"}`}><span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary-surface text-primary"><Icon className="h-5 w-5"/></span><span className="min-w-0 text-sm font-bold text-foreground">{label}</span></button></StaggerItem>)}
         </div>
         {scope !== "all" && <div className={`grid min-w-0 gap-3 ${scope === "topic" ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
-          <label className="block text-sm font-semibold text-foreground">Subject<select value={subjectId} onChange={(event) => { setSubjectId(event.target.value); setTopicId(""); setError(""); }} className="mt-1.5 min-h-11 w-full rounded-xl border border-border bg-white px-3 text-sm font-normal text-foreground focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary-hover/15"><option value="">Choose a subject…</option>{subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select></label>
-          {scope === "topic" && <label className="block text-sm font-semibold text-foreground">Topic<select value={topicId} onChange={(event) => { setTopicId(event.target.value); setError(""); }} disabled={!selectedSubject || selectedSubject.topics.length === 0} className="mt-1.5 min-h-11 w-full rounded-xl border border-border bg-white px-3 text-sm font-normal text-foreground disabled:bg-border focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary-hover/15"><option value="">{!selectedSubject ? "Choose a subject first" : selectedSubject.topics.length ? "Choose a topic…" : "This subject has no topics yet"}</option>{selectedSubject?.topics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name} · {topic.flashcardCount} cards</option>)}</select>{selectedSubject && selectedSubject.topics.length === 0 && <Link href={`/subjects/${selectedSubject.id}`} className="mt-2 inline-flex text-xs font-semibold text-primary underline underline-offset-2">Create a topic in this subject</Link>}</label>}
+          <label className="block text-sm font-semibold text-foreground">Subject<select value={subjectId} onChange={(event) => { setSubjectId(event.target.value); setTopicId(""); setError(""); }} className="mt-1.5 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm font-normal text-foreground focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary-hover/15"><option value="">Choose a subject…</option>{subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select></label>
+          {scope === "topic" && <label className="block text-sm font-semibold text-foreground">Topic<select value={topicId} onChange={(event) => { setTopicId(event.target.value); setError(""); }} disabled={!selectedSubject || selectedSubject.topics.length === 0} className="mt-1.5 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm font-normal text-foreground disabled:bg-border focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary-hover/15"><option value="">{!selectedSubject ? "Choose a subject first" : selectedSubject.topics.length ? "Choose a topic…" : "This subject has no topics yet"}</option>{selectedSubject?.topics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name} · {topic.flashcardCount} cards</option>)}</select>{selectedSubject && selectedSubject.topics.length === 0 && <Link href={`/subjects/${selectedSubject.id}`} className="mt-2 inline-flex text-xs font-semibold text-primary underline underline-offset-2">Create a topic in this subject</Link>}</label>}
         </div>}
         <p className="text-xs leading-5 text-muted">{scope === "all" ? `${totalCards} flashcards across ${subjects.length} subjects. Eligible questions can draw distractors from your full study library.` : scope === "subject" ? selectedSubject ? `${selectedSubject.flashcardCount} flashcards in ${selectedSubject.name}, across all its topics.` : "Choose a subject to see its eligible questions." : selectedTopic ? `${selectedTopic.flashcardCount} flashcards in ${selectedTopic.name}.` : "Choose a subject and topic to continue."}</p>
         {scope === "all" && <MasteryProgressBar label="Overall Mastery" ariaLabel="Overall mastery progress" progress={allProgress} />}
@@ -197,21 +197,21 @@ export function ReviewSetup({ firstName, subjects, allEligible, allDueEligible =
       </section></ScrollReveal>
       <ScrollReveal><section aria-labelledby="choose-type">
         <h2 id="choose-type" className="text-base font-bold tracking-tight text-foreground sm:text-lg"><span className="mr-2 text-primary">2</span>Choose a quiz type</h2>
-        <p className="mt-1 text-xs leading-5 text-muted">Each question type, including Mixed / Random, has its own 3-correct-answer streak. Complete every type that applies to a card, plus Random, to earn the <span className="font-semibold text-[#207A4B]">Mastered</span> indicator.</p>
+        <p className="mt-1 text-xs leading-5 text-muted">Each question type, including Mixed / Random, has its own 3-correct-answer streak. Complete every type that applies to a card, plus Random, to earn the <span className="font-semibold text-success-text">Mastered</span> indicator.</p>
         <div role="radiogroup" aria-labelledby="choose-type" className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {QUIZ_MODES.map((t, index) => {
             const selected = type === t;
             const n = counts ? counts[t] : null;
             return (
-              <StaggerItem key={t} index={index}><button type="button" role="radio" aria-checked={selected} onClick={() => { setType(t); setError(""); if (hasRequiredScope && counts && counts[t] === 0) toast({ kind: "error", title: "No eligible flashcards", message: `There are no cards ready for ${QUIZ_TYPE_LABELS[t]} in ${scopeLabel ?? "this scope"}. Choose another quiz type or update your flashcards.` }); }} className={`flex h-full min-h-[132px] min-w-0 w-full flex-col items-start gap-3 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 ${selected ? "border-primary bg-secondary-surface shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-border bg-white hover:border-border"}`}>
+              <StaggerItem key={t} index={index}><button type="button" role="radio" aria-checked={selected} onClick={() => { setType(t); setError(""); if (hasRequiredScope && counts && counts[t] === 0) toast({ kind: "error", title: "No eligible flashcards", message: `There are no cards ready for ${QUIZ_TYPE_LABELS[t]} in ${scopeLabel ?? "this scope"}. Choose another quiz type or update your flashcards.` }); }} className={`flex h-full min-h-[132px] min-w-0 w-full flex-col items-start gap-3 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 ${selected ? "border-primary bg-secondary-surface shadow-[0_4px_14px_rgba(233,87,125,0.1)]" : "border-border bg-surface hover:border-border"}`}>
                 <span className="flex w-full items-center justify-between">
-                  <span className={`flex h-11 w-11 items-center justify-center rounded-full ${selected ? "bg-primary text-white" : "bg-secondary-surface text-primary"}`}><TypeIcon type={t} /></span>
+                  <span className={`flex h-11 w-11 items-center justify-center rounded-full ${selected ? "bg-primary text-primary-foreground" : "bg-secondary-surface text-primary"}`}><TypeIcon type={t} /></span>
                   <span className="flex flex-wrap items-center justify-end gap-1.5">
-                    {n !== null && <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${n > 0 ? "bg-white text-primary" : "bg-border text-muted"}`}>{n} {n === 1 ? "question" : "questions"}</span>}
+                    {n !== null && <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${n > 0 ? "bg-surface text-primary" : "bg-border text-muted"}`}>{n} {n === 1 ? "question" : "questions"}</span>}
                     {scope !== "topic" && (() => {
                       const progress = scope === "all" ? allTypeMastery[t] : selectedSubject?.typeMastery[t];
                       const isComplete = Boolean(progress && progress.total > 0 && progress.done === progress.total);
-                      return <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isComplete ? "bg-secondary-surface text-primary" : "bg-border text-[#A0A0AA]"}`}>{isComplete ? "✓" : "○"}</span>;
+                      return <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isComplete ? "bg-secondary-surface text-primary" : "bg-border text-muted"}`}>{isComplete ? "✓" : "○"}</span>;
                     })()}
                   </span>
                 </span>
@@ -237,8 +237,8 @@ export function ReviewSetup({ firstName, subjects, allEligible, allDueEligible =
               <p role="alert" className="mt-1 text-sm leading-6 text-error-text">{reviewFilter === "due" ? dueCardsInScope === 0 ? "No flashcards are currently due in this scope. Try All available cards or check back when the next review is due." : `${dueCardsInScope} card${dueCardsInScope === 1 ? " is" : "s are"} due, but none can make a ${QUIZ_TYPE_LABELS[type]} question in this scope. Choose another mode or use All available cards.` : `No eligible flashcards for ${QUIZ_TYPE_LABELS[type]} in ${scopeLabel}. ${unavailableReason(type)}`} <Link href={selectedSubject ? `/subjects/${selectedSubject.id}` : "/subjects"} className="font-semibold underline underline-offset-2">{reviewFilter === "due" ? "Review your study library" : "Add or update flashcards"}</Link>.</p>
             )}            {error && <p role="alert" className="mt-2 text-sm text-error-text">{error}</p>}
           </div>
-          <button type="button" onClick={start} disabled={!canStart} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">
-            {starting ? <span role="status" className="inline-flex items-center gap-2"><span className="sr-only">Preparing Your Review…</span><span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/50 border-t-white motion-reduce:animate-none" />Preparing Your Review…</span> : <>Start Review <span aria-hidden="true">→</span></>}
+          <button type="button" onClick={start} disabled={!canStart} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-semibold text-primary-foreground shadow-[0_4px_10px_rgba(233,87,125,0.14)] transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11">
+            {starting ? <span role="status" className="inline-flex items-center gap-2"><span className="sr-only">Preparing Your Review…</span><span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-surface/50 border-t-white motion-reduce:animate-none" />Preparing Your Review…</span> : <>Start Review <span aria-hidden="true">→</span></>}
           </button>
         </div>
       </section></ScrollReveal>

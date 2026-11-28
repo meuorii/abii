@@ -137,7 +137,7 @@ export function NotificationBell() {
         {error && <div className="m-3 rounded-xl bg-error-bg px-3 py-2.5 text-xs leading-5 text-error-text" role="alert"><p>{error}</p><button type="button" onClick={() => void loadRecent()} className="mt-1 font-semibold underline underline-offset-2">Try again</button></div>}
         {loading ? <div role="status" aria-label="Loading recent notifications" aria-busy="true" className="space-y-3 p-4"><span className="sr-only">Loading notifications…</span>{Array.from({ length: 3 }, (_, index) => <div key={index} aria-hidden="true" className="flex gap-3"><span className="abii-skeleton h-9 w-9 shrink-0 rounded-xl"/><span className="min-w-0 flex-1 space-y-2"><span className="abii-skeleton block h-3 w-2/3 rounded"/><span className="abii-skeleton block h-3 w-full rounded"/></span></div>)}</div>
           : !error && notifications.length === 0 ? <div className="px-5 py-8 text-center"><p className="text-sm font-semibold text-foreground">All caught up!</p><p className="mx-auto mt-1 max-w-[28ch] text-xs leading-5 text-muted">Nothing new right now. Abii will keep your learning updates here.</p></div>
-            : !error && <div className="divide-y divide-[#E8DDE1]">{notifications.map((notification) => <NotificationItem key={notification.id} notification={notification} compact busy={busyId === notification.id} onOpen={(item) => void markRead(item, Boolean(item.target))} onMarkRead={(item) => void markRead(item, false)} />)}</div>}
+            : !error && <div className="divide-y divide-border">{notifications.map((notification) => <NotificationItem key={notification.id} notification={notification} compact busy={busyId === notification.id} onOpen={(item) => void markRead(item, Boolean(item.target))} onMarkRead={(item) => void markRead(item, false)} />)}</div>}
       </div>
       <footer className="shrink-0 border-t border-border p-2"><Link href="/notifications" onClick={() => setOpen(false)} aria-label="View all notifications" className="flex min-h-10 items-center justify-center rounded-xl text-sm font-semibold text-primary transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover">View all notifications</Link></footer>
     </section>, document.body) : null;
@@ -145,7 +145,7 @@ export function NotificationBell() {
   return <>
     <button ref={triggerRef} type="button" aria-label={accessibleLabel} aria-expanded={open} aria-controls="notification-popover" onClick={() => { window.dispatchEvent(new Event("abii:close-profile-menu")); setOpen((current) => !current); }} className="relative flex h-10 w-10 items-center justify-center rounded-full text-muted transition-colors hover:bg-secondary-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover">
       <Bell aria-hidden="true" className="h-[19px] w-[19px]" />
-      {countLabel && <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 flex min-h-[17px] min-w-[17px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-white ring-2 ring-white">{countLabel}</span>}
+      {countLabel && <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 flex min-h-[17px] min-w-[17px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-primary-foreground ring-2 ring-white">{countLabel}</span>}
     </button>
     {panel ?? <span id="notification-popover" className="sr-only" />}
   </>;

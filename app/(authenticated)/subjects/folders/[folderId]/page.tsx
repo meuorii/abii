@@ -28,12 +28,12 @@ export default async function SubjectFolderPage({params}:Props){
  const subjects:SubjectItem[]=docs.map(s=>{const id=String(s._id),m=mastery.bySubject.get(id);return{id,name:s.name,topicCount:topicCounts.get(id)??0,flashcardCount:cardCounts.get(id)??0,usableCount:m?.usable??0,masteredCount:m?.mastered??0,completedRequirements:m?.completedRequirements??0,totalRequirements:m?.totalRequirements??0,typeMastery:mastery.byTypeBySubject.get(id)??emptyTypeProgress(),progress:m?.progress??0};});
  const topicCount=topics.reduce((sum,row)=>sum+row.count,0),flashcardCount=cards.reduce((sum,row)=>sum+row.count,0);
  const title=folder?.name??"Unfiled Subjects";
- return <div className="space-y-5 p-4 pb-24 sm:p-6 xl:p-7"><nav aria-label="Breadcrumb" className="abii-enter abii-enter-1 flex min-w-0 items-center gap-2 text-sm"><Link href="/subjects" className="shrink-0 text-[#75889A] hover:text-[#E9577D]">My Subjects</Link><ChevronRight className="h-4 w-4 shrink-0 text-[#B4A5AC]"/><span aria-current="page" className="truncate font-semibold text-[#2F2930]">{title}</span></nav>
+ return <div className="space-y-5 p-4 pb-24 sm:p-6 xl:p-7"><nav aria-label="Breadcrumb" className="abii-enter abii-enter-1 flex min-w-0 items-center gap-2 text-sm"><Link href="/subjects" className="shrink-0 text-muted hover:text-primary-hover">My Subjects</Link><ChevronRight className="h-4 w-4 shrink-0 text-muted"/><span aria-current="page" className="truncate font-semibold text-foreground">{title}</span></nav>
  <AbiiPageHero
    variant="subject-folder"
    headingId="subject-folder-hero-title"
-   title={<><h1 className="abii-hero-heading break-words">{title}</h1><p className="mt-2 text-sm text-[#6F5964]">{subjects.length} subjects · {topicCount} topics · {flashcardCount} flashcards</p></>}
-   description={<p className="mt-2 text-sm text-[#6F5964]">Keep your subjects together and make every study session count.</p>}
+   title={<><h1 className="abii-hero-heading break-words">{title}</h1><p className="abii-hero-subheading break-words">{subjects.length} subjects · {topicCount} topics · {flashcardCount} flashcards</p></>}
+   description={<p>Keep your subjects together and make every study session count.</p>}
    mascotSrc="/dashboard-hero/my-subjects.png"
    mascotAlt=""
    priority

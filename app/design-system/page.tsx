@@ -11,6 +11,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { ToastShowcase } from "@/components/ui/toast-showcase";
 import { ModalShowcase } from "@/components/ui/modal-showcase";
 import { adminChartColors } from "@/components/admin/chart-colors";
+import { checkboxClassName } from "@/components/ui/checkbox";
 
 const colorGroups = [
   { title: "Foundation · 60%", note: "Warm page backgrounds lead; the frame color is a supporting structural neutral.", colors: [["Main background", "#FFF9FC"], ["Dashboard outer frame", "#FFF4F8"], ["Card surface", "#FFFFFF"], ["Border / divider", "#E8DDE1"]] },
@@ -93,8 +94,8 @@ export default function DesignSystemPage() {
                 <p className="mt-3 text-sm leading-6 text-muted">Remove is shown with the same brand styling as other learner actions; confirmation dialogs preserve their safeguards.</p>
                 <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-border pt-5"><Button size="sm">Small</Button><Button>Default</Button><Button size="lg">Large action</Button><p className="text-xs text-muted">Hover and press the primary button to see its interaction colors.</p></div>
                 <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 border-t border-border pt-5 text-sm">
-                  <label className="flex min-h-11 items-center gap-3"><input type="checkbox" defaultChecked className="abii-checkbox size-4 shrink-0" />Checked · pink fill, white check</label>
-                  <label className="flex min-h-11 items-center gap-3"><input type="checkbox" className="abii-checkbox size-4 shrink-0" />Unchecked · white fill, neutral border</label>
+                  <label className="flex min-h-11 items-center gap-3"><input type="checkbox" defaultChecked className={`${checkboxClassName} size-4 shrink-0`} />Checked · pink fill, white check</label>
+                  <label className="flex min-h-11 items-center gap-3"><input type="checkbox" className={`${checkboxClassName} size-4 shrink-0`} />Unchecked · white fill, neutral border</label>
                 </div>
               </Card>
               <p className="mt-3 text-sm leading-6 text-muted">White text on #F8769C is the approved visual treatment. It does not meet WCAG AA contrast for normal-sized text; this is a documented palette limitation.</p>

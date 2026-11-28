@@ -7,7 +7,7 @@ import type { QuizReactionKind } from "@/lib/quiz/reactions";
 const styles: Record<QuizReactionKind, { Icon: typeof Sparkles; className: string }> = {
   selection: { Icon: Sparkles, className: "border-border bg-background text-primary" },
   typing: { Icon: Lightbulb, className: "border-border bg-background text-primary" },
-  correct: { Icon: Check, className: "border-[#5C947A] bg-success-bg text-success-text" },
+  correct: { Icon: Check, className: "border-success bg-success-bg text-success-text" },
   incorrect: { Icon: X, className: "border-border bg-error-bg text-error-text" },
 };
 

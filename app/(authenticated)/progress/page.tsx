@@ -143,8 +143,8 @@ export default async function ProgressPage() {
         <AbiiPageHero
           variant="progress"
           headingId="progress-hero-title"
-          title={<><h1 className="abii-hero-heading">Your Learning Journey</h1><p className="abii-hero-heading abii-hero-emphasis">Looks Great!</p></>}
-          description={<p className="mt-3 max-w-md text-sm leading-6 text-[#58718B] sm:text-base sm:leading-7">You&apos;re making steady progress! Keep going and let&apos;s reach your next goal!</p>}
+          title={<><h1 className="abii-hero-heading">Your Learning Journey</h1><p className="abii-hero-subheading">Looks Great!</p></>}
+          description={<p className="max-w-md">You&apos;re making steady progress! Keep going and let&apos;s reach your next goal!</p>}
           mascotSrc="/dashboard-hero/progress.png"
           mascotAlt="Abii cheering you on"
           priority

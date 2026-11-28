@@ -22,11 +22,11 @@ type ReviewRecordRow = {
 
 function ReviewLoadError() {
   return (
-    <section role="alert" className="rounded-2xl border border-[#F0C7D3] bg-white p-6 sm:p-8">
-      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#C65380]">A little hiccup</p>
-      <h2 className="mt-2 text-xl font-semibold text-[#2F2930]">Your review overview couldn’t load.</h2>
-      <p className="mt-2 text-sm leading-6 text-[#756B72]">Please check your connection and try again. Your study data hasn’t been changed.</p>
-      <Link href="/review" className="mt-5 inline-flex min-h-10 items-center rounded-xl bg-[#FF6F96] px-4 py-2 text-sm font-semibold text-white hover:bg-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] focus-visible:ring-offset-2">Try again</Link>
+    <section role="alert" className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">A little hiccup</p>
+      <h2 className="mt-2 text-xl font-semibold text-foreground">Your review overview couldn’t load.</h2>
+      <p className="mt-2 text-sm leading-6 text-muted">Please check your connection and try again. Your study data hasn’t been changed.</p>
+      <Link href="/review" className="mt-5 inline-flex min-h-10 items-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2">Try again</Link>
     </section>
   );
 }
@@ -177,7 +177,7 @@ export default async function ReviewPage({ searchParams }: PageProps) {
         <AbiiPageHero
           variant="review"
           headingId="review-hero-title"
-          eyebrow={<p className="text-sm font-semibold text-[#C65380]">Keep going, {firstName}!</p>}
+          eyebrow={<p>Keep going, {firstName}!</p>}
           title={<h1 className="abii-hero-heading">Review your cards<br />and make them <span className="abii-hero-emphasis">stick!</span></h1>}
           description={<p className="max-w-[500px]">Revisit what you’ve learned to strengthen recall and spot what needs more practice.</p>}
           mascotSrc="/dashboard-hero/review.png"

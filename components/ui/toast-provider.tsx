@@ -123,7 +123,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="abii-toast-stack" aria-label="Notifications">
+      <div className="abii-toast-stack fixed right-[max(24px,env(safe-area-inset-right))] top-[max(24px,env(safe-area-inset-top))] z-[1200] flex w-[min(580px,calc(100vw-48px))] flex-col gap-4 pointer-events-none max-sm:right-[max(12px,env(safe-area-inset-right))] max-sm:top-[max(12px,env(safe-area-inset-top))] max-sm:w-[calc(100vw_-_max(24px,env(safe-area-inset-left))_-_max(24px,env(safe-area-inset-right)))] max-sm:gap-3" aria-label="Notifications">
         {items.map((item) => <ToastCard key={item.id} item={item} onDismiss={close} onPause={pause} onResume={resume} />)}
       </div>
     </ToastContext.Provider>

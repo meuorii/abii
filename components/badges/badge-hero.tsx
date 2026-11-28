@@ -5,9 +5,9 @@ export function BadgeHero() {
     <AbiiPageHero
       variant="badges"
       headingId="badges-hero-title"
-      eyebrow={<p className="text-xs font-extrabold tracking-[.13em] text-primary">YOUR ACHIEVEMENTS</p>}
-      title={<h1 className="abii-hero-heading mt-2 max-w-[620px]">Every Milestone Matters!</h1>}
-      description={<p className="mt-3 max-w-[480px] text-sm leading-6 text-[#58718B] sm:text-base sm:leading-7">Celebrate your progress, collect achievements, and discover how far your learning journey has come.</p>}
+      eyebrow={<p>YOUR ACHIEVEMENTS</p>}
+      title={<h1 className="abii-hero-heading max-w-[620px]">Every Milestone Matters!</h1>}
+      description={<p className="max-w-[480px]">Celebrate your progress, collect achievements, and discover how far your learning journey has come.</p>}
       mascotSrc="/dashboard-hero/badges.png"
       mascotAlt="Abii celebrating your learning achievements"
       priority

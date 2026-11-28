@@ -60,10 +60,10 @@ export function AddSubjectModal({ onClose, onCreated, subjectFolderId, subjectFo
  }
  return <Modal open onClose={onClose} action="create" title="Create a Subject" description="Give your subject a name to keep your topics and flashcards organized." busy={saving} footer={<><button type="button" onClick={onClose} disabled={saving} className={modalCancelClass}>Cancel</button><button type="submit" form="create-subject-form" disabled={saving} aria-busy={saving} className={modalPrimaryClass}><ModalButtonContent loading={saving} label="Create Subject" loadingLabel="Creating Subject…" /></button></>}>
   <form id="create-subject-form" onSubmit={handleSubmit} className="space-y-3">
-   <label htmlFor="subject-name" className="block text-[13px] font-semibold text-foreground">Subject Name <span className="text-[#F04469]">*</span></label>
-   <input id="subject-name" required maxLength={100} value={name} onChange={event => { setName(event.target.value); setError(""); }} aria-invalid={Boolean(error)} aria-describedby={error ? "create-subject-error" : undefined} placeholder="e.g. Data Structures and Algorithms" className="min-h-12 w-full rounded-xl border border-border bg-white px-4 text-sm text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary-hover/15"/>
+   <label htmlFor="subject-name" className="block text-[13px] font-semibold text-foreground">Subject Name <span className="text-error">*</span></label>
+   <input id="subject-name" required maxLength={100} value={name} onChange={event => { setName(event.target.value); setError(""); }} aria-invalid={Boolean(error)} aria-describedby={error ? "create-subject-error" : undefined} placeholder="e.g. Data Structures and Algorithms" className="min-h-12 w-full rounded-xl border border-border bg-surface px-4 text-sm text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary-hover/15"/>
    <label htmlFor="subject-folder-select" className="block text-[13px] font-semibold text-foreground">Subject Folder (Optional)</label>
-   <select id="subject-folder-select" value={selectedFolder} onChange={event => setSelectedFolder(event.target.value)} className="min-h-12 w-full rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary-hover/10"><option value="">Unfiled Subjects</option>{subjectFolders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select>
+   <select id="subject-folder-select" value={selectedFolder} onChange={event => setSelectedFolder(event.target.value)} className="min-h-12 w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary-hover/10"><option value="">Unfiled Subjects</option>{subjectFolders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select>
    {error && <p id="create-subject-error" role="alert" className="text-sm text-error-text">{error}</p>}
   </form>
  </Modal>;
@@ -163,11 +163,11 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
             </p>
           </div>
           <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
-          {subjectFolderId===undefined&&<button type="button" onClick={()=>setCreateFolderOpen(true)} className="inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-border bg-white px-2.5 py-2.5 text-xs font-semibold text-primary hover:bg-background sm:w-auto sm:px-4 sm:text-sm"><Plus className="h-4 w-4 shrink-0"/>New Folder</button>}
+          {subjectFolderId===undefined&&<button type="button" onClick={()=>setCreateFolderOpen(true)} className="inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-border bg-surface px-2.5 py-2.5 text-xs font-semibold text-primary hover:bg-background sm:w-auto sm:px-4 sm:text-sm"><Plus className="h-4 w-4 shrink-0"/>New Folder</button>}
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className={`inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-2.5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 sm:w-auto sm:px-4 sm:text-sm ${subjectFolderId === undefined ? "" : "col-span-2 sm:col-span-1"}`}
+            className={`inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-2.5 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 sm:w-auto sm:px-4 sm:text-sm ${subjectFolderId === undefined ? "" : "col-span-2 sm:col-span-1"}`}
           >
             <Plus aria-hidden="true" className="h-4 w-4 shrink-0" />
             Add subject
@@ -175,7 +175,7 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
         </div>
 
         {notice ? (
-          <p role="status" className="rounded-xl border border-[#5C947A] bg-success-bg px-4 py-3 text-sm font-medium text-success-text">
+          <p role="status" className="rounded-xl border border-success bg-success-bg px-4 py-3 text-sm font-medium text-success-text">
             {notice}
           </p>
         ) : null}
@@ -188,14 +188,14 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search subjects..."
-              className="min-h-11 w-full rounded-xl border border-border bg-white pl-10 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary-hover/10"
+              className="min-h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary-hover/10"
             />
           </label>
 
         </div>
 
         {filteredSubjects.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-white px-5 py-12 text-center sm:px-8">
+          <div className="rounded-2xl border border-dashed border-border bg-surface px-5 py-12 text-center sm:px-8">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary-surface text-2xl text-primary" aria-hidden="true"><BookOpen className="h-7 w-7" /></div>
           <h3 className="mt-4 text-base font-bold text-foreground">
               {query.trim() ? "No Matches Found" : "Your Study Space Starts Here"}
@@ -206,11 +206,11 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
                 : "Create your first subject to organize your topics and flashcards."}
             </p>
             {query.trim() ? (
-              <button type="button" onClick={() => setQuery("")} className="mt-4 text-sm font-semibold text-[#D94F7B] hover:underline">
+              <button type="button" onClick={() => setQuery("")} className="mt-4 text-sm font-semibold text-primary hover:underline">
                 Clear Search
               </button>
             ) : (
-              <button type="button" onClick={() => setIsModalOpen(true)} className="mt-4 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover">
+              <button type="button" onClick={() => setIsModalOpen(true)} className="mt-4 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
                 Create Your First Subject
               </button>
             )}
@@ -220,7 +220,7 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
             {filteredSubjects.map((subject, index) => (
               <StaggerItem key={subject.id} index={index}>
               <article
-                className={`group block rounded-2xl border border-border bg-white transition duration-200 hover:-translate-y-0.5 hover:border-border hover:shadow-[0_8px_28px_rgba(92,49,66,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 ${
+                className={`group block rounded-2xl border border-border bg-surface transition duration-200 hover:-translate-y-0.5 hover:border-border hover:shadow-[0_8px_28px_rgba(92,49,66,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover focus-visible:ring-offset-2 ${
                   layout === "grid" ? "p-5 sm:p-6" : "p-4 sm:flex sm:items-center sm:gap-5 sm:p-5"
                 }`}
               >
@@ -232,7 +232,7 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
                       {subject.topicCount} {subject.topicCount === 1 ? "topic" : "topics"} <span aria-hidden="true">·</span> {subject.flashcardCount} {subject.flashcardCount === 1 ? "flashcard" : "flashcards"}
                     </p>
                   </div>
-                  <Link href={"/subjects/"+subject.id} aria-label={"View "+subject.name} className="mt-1 rounded text-[#B5A7AE] hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover"><ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link>
+                  <Link href={"/subjects/"+subject.id} aria-label={"View "+subject.name} className="mt-1 rounded text-muted hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover"><ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link>
                 </div>
 
                 <div className={`${layout === "grid" ? "mt-4" : "mt-4 sm:mt-0 sm:w-[42%] sm:max-w-xs"}`}>
@@ -250,7 +250,7 @@ export function SubjectsClient({ initialSubjects, initialLayout, subjectFolderId
         <AddSubjectModal subjectFolderId={subjectFolderId} subjectFolders={subjectFolders} onClose={() => setIsModalOpen(false)} onCreated={handleCreated} />
       ) : null}
       {createFolderOpen&&<SubjectFolderCreateModal onClose={()=>setCreateFolderOpen(false)} onCreated={()=>setCreateFolderOpen(false)}/>}
-      {moving&&<Modal open onClose={()=>!movingBusy&&setMoving(null)} action="update" title="Move Subject" description="Choose where you'd like to organize this subject." busy={movingBusy} footer={<><button type="button" disabled={movingBusy} onClick={()=>setMoving(null)} className={modalCancelClass}>Cancel</button><button type="button" disabled={movingBusy||destination===(subjectFolderId??"")} onClick={moveSubject} className={modalPrimaryClass}><ModalButtonContent loading={movingBusy} label="Move Subject" loadingLabel="Moving Subject…" /></button></>}><div className="space-y-3"><p className="font-semibold text-foreground">{moving.name}</p><p className="text-sm text-muted">Current folder: {subjectFolderId?subjectFolders.find(f=>f.id===subjectFolderId)?.name??"Current folder":"Unfiled Subjects"}</p><label htmlFor="move-subject-destination" className="block text-sm font-semibold">Destination Folder</label><select id="move-subject-destination" value={destination} onChange={e=>setDestination(e.target.value)} className="min-h-11 w-full rounded-xl border border-border bg-white px-3 text-sm outline-none focus:border-primary"><option value="">Unfiled Subjects</option>{subjectFolders.map(folder=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></div></Modal>}
+      {moving&&<Modal open onClose={()=>!movingBusy&&setMoving(null)} action="update" title="Move Subject" description="Choose where you'd like to organize this subject." busy={movingBusy} footer={<><button type="button" disabled={movingBusy} onClick={()=>setMoving(null)} className={modalCancelClass}>Cancel</button><button type="button" disabled={movingBusy||destination===(subjectFolderId??"")} onClick={moveSubject} className={modalPrimaryClass}><ModalButtonContent loading={movingBusy} label="Move Subject" loadingLabel="Moving Subject…" /></button></>}><div className="space-y-3"><p className="font-semibold text-foreground">{moving.name}</p><p className="text-sm text-muted">Current folder: {subjectFolderId?subjectFolders.find(f=>f.id===subjectFolderId)?.name??"Current folder":"Unfiled Subjects"}</p><label htmlFor="move-subject-destination" className="block text-sm font-semibold">Destination Folder</label><select id="move-subject-destination" value={destination} onChange={e=>setDestination(e.target.value)} className="min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm outline-none focus:border-primary"><option value="">Unfiled Subjects</option>{subjectFolders.map(folder=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></div></Modal>}
     </>
   );
 }

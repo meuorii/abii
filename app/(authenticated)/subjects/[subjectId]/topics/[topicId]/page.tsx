@@ -38,18 +38,18 @@ export default async function TopicPage({ params }: Props) {
   return (
     <div className="min-w-0 space-y-5 p-4 pb-24 sm:p-6 xl:p-7">
       <nav aria-label="Breadcrumb" className="abii-enter abii-enter-1 flex min-w-0 flex-wrap items-center gap-2 text-xs sm:text-sm">
-        <Link href="/subjects" className="font-medium text-[#71869A] hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">My Subjects</Link>
-        <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[#B4A5AC]"/>
-        <Link href={`/subjects/${subject._id}`} className="max-w-[40vw] truncate font-medium text-[#71869A] hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D]">{subject.name}</Link>
-        <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[#B4A5AC]"/>
-        <span aria-current="page" className="max-w-[38vw] truncate font-semibold text-[#153B56]">{topic.name}</span>
+        <Link href="/subjects" className="font-medium text-muted hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover">My Subjects</Link>
+        <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-muted"/>
+        <Link href={`/subjects/${subject._id}`} className="max-w-[40vw] truncate font-medium text-muted hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover">{subject.name}</Link>
+        <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-muted"/>
+        <span aria-current="page" className="max-w-[38vw] truncate font-semibold text-foreground">{topic.name}</span>
       </nav>
       <AbiiPageHero
         variant="topic-detail"
         headingId="topic-hero-title"
-        title={<><h1 className="abii-hero-heading break-words">{topic.name}</h1><p className="mt-2 break-words text-sm text-[#6F5964]">{subject.name}</p></>}
-        description={topic.description ? <p className="mt-3 max-w-xl break-words text-sm leading-6 text-[#526F83]">{topic.description}</p> : undefined}
-        metadata={<p className="mt-4 text-sm font-semibold text-[#C65380]">{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}</p>}
+        title={<><h1 className="abii-hero-heading break-words">{topic.name}</h1><p className="abii-hero-subheading break-words">{subject.name}</p></>}
+        description={topic.description ? <p className="max-w-xl break-words">{topic.description}</p> : undefined}
+        metadata={<p>{cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}</p>}
         mascotSrc="/dashboard-hero/my-subjects.png"
         mascotAlt=""
         priority

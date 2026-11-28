@@ -32,12 +32,12 @@ export default async function FolderDetailPage({ params }: PageProps) {
   const [topicCount, flashcardCount] = await Promise.all([Topic.countDocuments(topicFilter), Flashcard.countDocuments({ userId: user._id, subjectId: subject._id, topicId: { $in: topicIds } })]);
   const title = folder?.name ?? "Unfiled Topics";
   return <div className="space-y-4 p-4 pb-24 sm:p-5 xl:p-6">
-    <nav aria-label="Breadcrumb" className="abii-enter abii-enter-1 flex min-w-0 items-center gap-1.5 overflow-hidden text-xs sm:gap-2 sm:text-sm"><Link href="/subjects" className="shrink-0 text-[#75889A] hover:text-[#E9577D]">My Subjects</Link><ChevronRight className="h-4 w-4 shrink-0 text-[#B4A5AC]"/><Link href={`/subjects/${subject._id}`} title={subject.name} className="min-w-0 truncate text-[#75889A] hover:text-[#E9577D]">{subject.name}</Link><ChevronRight className="h-4 w-4 shrink-0 text-[#B4A5AC]"/><span aria-current="page" className="min-w-0 truncate font-semibold text-[#2F2930]">{title}</span></nav>
+    <nav aria-label="Breadcrumb" className="abii-enter abii-enter-1 flex min-w-0 items-center gap-1.5 overflow-hidden text-xs sm:gap-2 sm:text-sm"><Link href="/subjects" className="shrink-0 text-muted hover:text-primary-hover">My Subjects</Link><ChevronRight className="h-4 w-4 shrink-0 text-muted"/><Link href={`/subjects/${subject._id}`} title={subject.name} className="min-w-0 truncate text-muted hover:text-primary-hover">{subject.name}</Link><ChevronRight className="h-4 w-4 shrink-0 text-muted"/><span aria-current="page" className="min-w-0 truncate font-semibold text-foreground">{title}</span></nav>
     <AbiiPageHero
       variant="topic-folder"
       headingId="topic-folder-hero-title"
-      title={<><h1 className="abii-hero-heading break-words">{title}</h1><p className="mt-2 text-sm text-[#6F5964]">{topicCount} {topicCount === 1 ? "topic" : "topics"} · {flashcardCount} {flashcardCount === 1 ? "flashcard" : "flashcards"}</p></>}
-      description={<p className="mt-2 max-w-sm text-sm leading-6 text-[#6F5964]">{subject.name} · Keep your topics organized and ready for your next study session.</p>}
+      title={<><h1 className="abii-hero-heading break-words">{title}</h1><p className="abii-hero-subheading break-words">{topicCount} {topicCount === 1 ? "topic" : "topics"} · {flashcardCount} {flashcardCount === 1 ? "flashcard" : "flashcards"}</p></>}
+      description={<p className="max-w-sm">{subject.name} · Keep your topics organized and ready for your next study session.</p>}
       mascotSrc="/dashboard-hero/my-subjects.png"
       mascotAlt=""
       priority

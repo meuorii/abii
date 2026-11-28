@@ -1,5 +1,7 @@
 # Abii V2 browser testing
 
+Run `npm run test:style-compliance` for the reusable learner source styling check. It reports file and line for hardcoded utility colors, legacy aliases, static inline presentation, learner CSS Modules, and prohibited global component selectors; it also verifies detection with an invalid synthetic snippet.
+
 ## Phase 01 Playwright Test
 
 The reusable Chromium runner uses `@playwright/test` and the existing `playwright` browser library, both pinned to 1.65.0. Install the dependency with `npm install`; install Chromium with `npx playwright install chromium`.
@@ -16,7 +18,9 @@ Configuration is in `playwright.config.ts`: one Chromium worker, zero retries, h
 
 ## Fixture isolation
 
-`tests/e2e/fixtures/server.mjs` starts a loopback-bound `MongoMemoryServer`, asserts its host and dedicated database name before seeding synthetic learner and study data, signs a short-lived test-only learner session, and launches its own Next.js process on port 4174. The test server overrides the database URI, authentication secret, Admin UI flag, email provider keys, Cloudinary keys, scheduler secrets, and delivery settings. Admin routes stay disabled in this fixture. The cookie and fixture IDs are written under ignored `.playwright/fixture.json` and regenerated on every run.
+`tests/e2e/fixtures/server.mjs` starts a loopback-bound `MongoMemoryServer`, asserts its host and dedicated database name before seeding synthetic learner and study data, signs a short-lived test-only learner session, and launches its own Next.js process. `playwright.config.ts` and the server share `ABII_PLAYWRIGHT_PORT` (default `4174`) for the browser base URL and readiness check. Check the requested loopback port before starting Playwright; set `ABII_PLAYWRIGHT_PORT` to an available alternative if needed. The test server overrides the database URI, authentication secret, Admin UI flag, email provider keys, Cloudinary keys, scheduler secrets, and delivery settings. Admin routes stay disabled in this fixture. The cookie and fixture IDs are written under ignored `.playwright/fixture.json` and regenerated on every run.
+
+For example, to use a free alternative port in PowerShell: `$env:ABII_PLAYWRIGHT_PORT = '4175'; npx playwright test tests/e2e/design-system.spec.ts; Remove-Item Env:ABII_PLAYWRIGHT_PORT`.
 
 The browser tests never connect to `.env.local` databases, use real learner or Admin accounts, send notification/email deliveries, or reuse an arbitrary server. Do not add authentication bypasses to application code. Use the existing isolated Admin browser suite for Admin session, route, and theme checks.
 

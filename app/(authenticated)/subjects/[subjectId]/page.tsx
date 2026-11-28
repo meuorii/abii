@@ -76,16 +76,16 @@ export default async function SubjectDetailPage({ params }: PageProps) {
     
       <div className="space-y-3 p-4 pb-24 sm:space-y-4 sm:p-5 sm:pb-24 xl:p-6">
         <nav aria-label="Breadcrumb" className="abii-enter abii-enter-1 flex items-center gap-2 text-xs sm:text-sm">
-          <Link href="/subjects" className="font-medium text-[#75889A] transition-colors hover:text-[#E9577D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E9577D] rounded">My Subjects</Link>
-          <ChevronRight aria-hidden="true" className="h-4 w-4 text-[#B4A5AC]" />
-          <span aria-current="page" className="max-w-[55vw] truncate font-semibold text-[#2F2930]">{subject.name}</span>
+          <Link href="/subjects" className="font-medium text-muted transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover rounded">My Subjects</Link>
+          <ChevronRight aria-hidden="true" className="h-4 w-4 text-muted" />
+          <span aria-current="page" className="max-w-[55vw] truncate font-semibold text-foreground">{subject.name}</span>
         </nav>
 
         <AbiiPageHero
           variant="subject-detail"
           headingId="subject-hero-title"
-          title={<><h1 className="abii-hero-heading break-words">{subject.name}</h1><p className="mt-2 text-sm text-[#6F5964]">{topicCount} {topicCount === 1 ? "topic" : "topics"} · {cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}{cards.length > 0 && masteredCount === cards.length ? " · Mastered" : ""}</p></>}
-          description={<p className="mt-2 max-w-sm text-xs leading-5 text-[#526F83] sm:text-sm sm:leading-6">Keep practicing and build your confidence.</p>}
+          title={<><h1 className="abii-hero-heading break-words">{subject.name}</h1><p className="abii-hero-subheading break-words">{topicCount} {topicCount === 1 ? "topic" : "topics"} · {cards.length} {cards.length === 1 ? "flashcard" : "flashcards"}{cards.length > 0 && masteredCount === cards.length ? " · Mastered" : ""}</p></>}
+          description={<p className="max-w-sm">Keep practicing and build your confidence.</p>}
           mascotSrc="/dashboard-hero/my-subjects.png"
           mascotAlt=""
           priority
