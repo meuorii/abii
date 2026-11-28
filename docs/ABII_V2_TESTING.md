@@ -26,6 +26,8 @@ Each V2 phase should add focused E2E checks for changed routes and shared compon
 
 Current Phase 01 specs cover computed learner surfaces and button states, destructive modal styling and focus restoration, hero typography roles, long subject/topic title wrapping, the Progress 768px reveal, normal/reduced motion visibility, responsive widths from 320px through 2560px, public/auth/learner scope isolation, and the notification dropdown.
 
+Phase 02 adds `npx playwright test tests/e2e/dashboard-v2.spec.ts` for populated and new-learner Dashboard states, 320/390/768/1024/1440/1920px overflow and layout checks, review route intent, and representative learner modal footer, pink confirmation, and Escape behavior. The existing memory fixture seeds a separate empty learner for genuine zero-data coverage. Focused badge persistence, badge route, due-review, and skeleton regression results are recorded in the implementation log.
+
 ## Artifacts
 
 - Failure screenshots, traces, videos, and HTML reports: `test-results/` and `playwright-report/` (ignored by Git).

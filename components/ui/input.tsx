@@ -5,7 +5,7 @@ const inputClasses = [
   "placeholder:text-muted/80",
   "transition-colors",
   "focus:border-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/30",
-  "disabled:cursor-not-allowed disabled:bg-pink-soft disabled:opacity-70",
+  "disabled:cursor-not-allowed disabled:bg-surface-hover disabled:opacity-70",
 ].join(" ");
 
 type TextInputProps = InputHTMLAttributes<HTMLInputElement> & {

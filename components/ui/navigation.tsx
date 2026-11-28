@@ -19,9 +19,9 @@ export function Navigation({ brand = "abii", items = defaultItems }: NavigationP
         aria-label="Main navigation"
         className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8"
       >
-        <Link href="/" className="flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-active">
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-pink-card text-pink-active" aria-hidden="true"><Sparkles className="h-5 w-5" /></span>
-          <span className="font-brand text-xl text-foreground">{brand}<span className="text-pink-primary">.</span></span>
+        <Link href="/" className="flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary-surface text-primary" aria-hidden="true"><Sparkles className="h-5 w-5" /></span>
+          <span className="font-brand text-xl text-foreground">{brand}<span className="text-primary">.</span></span>
         </Link>
         <div className="flex flex-wrap items-center gap-1">
           {items.map((item) => (
@@ -31,7 +31,7 @@ export function Navigation({ brand = "abii", items = defaultItems }: NavigationP
               aria-current={item.active ? "page" : undefined}
               className={[
                 "rounded-xl px-3 py-2 text-sm font-semibold transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-active",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 item.active
                   ? "bg-surface-selected text-primary-hover"
                   : "text-muted hover:bg-surface-hover hover:text-foreground",

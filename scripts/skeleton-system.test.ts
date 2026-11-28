@@ -75,7 +75,7 @@ function assertSectionOrder(source: string, component: string, sections: string[
 
 test("main page skeletons follow each real page's primary section order", async () => {
   const source = await readFile(`${root}/components/ui/main-page-skeletons.tsx`, "utf8");
-  assertSectionOrder(source, "DashboardSkeleton", ["hero", "overall-mastery", "due-review", "study-streak", "subjects", "featured-badges", "quick-actions"]);
+  assertSectionOrder(source, "DashboardSkeleton", ["hero", "statistics", "due-review", "weekly-activity", "subjects", "featured-badges"]);
   assertSectionOrder(source, "SubjectsSkeleton", ["hero", "subject-controls", "subject-grid"]);
   assertSectionOrder(source, "ReviewSkeleton", ["hero", "review-overview", "recent-subjects", "review-by-topic", "review-progress"]);
   assertSectionOrder(source, "ProgressSkeleton", ["hero", "summary", "featured-badges", "study-activity", "subject-performance", "topic-mastery", "needs-more-practice", "recent-sessions"]);

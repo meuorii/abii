@@ -7,6 +7,7 @@ const examples: { action: ModalAction; title: string; description: string }[] = 
   { action: "view", title: "Flashcard details", description: "Review the saved question, answer, and hint." },
   { action: "update", title: "Update this subject", description: "Make changes to keep your study space up to date." },
   { action: "delete", title: "Delete this subject?", description: "This action cannot be undone." },
+  { action: "confirmation", title: "Save these changes?", description: "Confirm before continuing." },
   { action: "logout", title: "Leaving already?", description: "Are you sure you want to log out of Abii?" },
   { action: "information", title: "Your data, your choice", description: "A clear explanation of your available data controls." },
 ];

@@ -98,15 +98,15 @@ export function AbiiPageHero({
       data-variant={variant}
       data-heading-size={headingSizeByVariant[variant]}
       aria-labelledby={headingId}
-      className={`abii-page-hero relative isolate overflow-hidden border border-[#E8DDE1] bg-[#FFE8EF] ${admin ? "rounded-[20px]" : "min-h-[180px] rounded-2xl sm:min-h-[240px] sm:rounded-[20px] lg:min-h-[280px]"} ${admin ? style.section : ""} ${className}`}
+      className={`abii-page-hero relative isolate overflow-hidden border border-border bg-secondary-surface font-sans ${admin ? "rounded-[20px]" : "min-h-[180px] rounded-2xl sm:min-h-[240px] sm:rounded-[20px] lg:min-h-[280px]"} ${admin ? style.section : ""} ${className}`}
     >
       <div className={`abii-page-hero__layout relative z-10 w-full ${admin ? `grid min-h-[168px] grid-cols-[minmax(0,1fr)_minmax(78px,34%)] items-stretch gap-x-2 pl-4 pr-3 pt-3.5 pb-0 min-[360px]:grid-cols-[minmax(0,1fr)_minmax(100px,38%)] sm:flex sm:min-h-0 sm:items-center sm:gap-0 sm:px-0 sm:py-0 ${style.layout}` : "grid min-h-[178px] grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-stretch gap-0 sm:min-h-[238px] lg:min-h-[278px]"}`}>
-        <div className={`abii-page-hero__content relative z-10 flex min-w-0 flex-col justify-center ${admin ? `py-3 sm:w-full ${style.content}` : "max-w-full py-4 pl-4 pr-7 sm:py-6 sm:pl-6 sm:pr-8 lg:py-8 lg:pl-8 lg:pr-8"}`}>
-          {eyebrow != null && <div className="abii-page-hero__eyebrow abii-enter min-w-0">{eyebrow}</div>}
-          {preTitle != null && <div className={`abii-page-hero__pre-title ${hasPreTitle ? "abii-enter-1" : "abii-enter-3"} min-w-0 break-words`}>{preTitle}</div>}
-          <div id={headingId} className={`abii-page-hero__title abii-enter ${hasPreTitle ? "abii-enter-2" : "abii-enter-1"} min-w-0 break-words`}>{title}</div>
-          {description != null && <div className={`abii-page-hero__description abii-enter ${hasPreTitle ? "abii-enter-3" : "abii-enter-2"} min-w-0 break-words`}>{description}</div>}
-          {metadata != null && <div className="abii-page-hero__metadata abii-enter abii-enter-3 min-w-0 break-words">{metadata}</div>}
+        <div className={`abii-page-hero__content relative z-10 flex min-w-0 flex-col justify-center ${admin ? `gap-2 sm:gap-3 py-3 sm:w-full ${style.content}` : "gap-2 py-4 pl-4 pr-7 sm:gap-3 sm:py-6 sm:pl-6 sm:pr-8 lg:py-8 lg:pl-8 lg:pr-8"}`}>
+          {eyebrow != null && <div className="abii-page-hero__eyebrow abii-enter min-w-0 text-xs font-medium leading-[1.35] text-muted sm:text-sm [&>*]:my-0 [&>*]:text-muted">{eyebrow}</div>}
+          {preTitle != null && <div className={`abii-page-hero__pre-title ${hasPreTitle ? "abii-enter-1" : "abii-enter-3"} min-w-0 break-words text-sm leading-[1.55] text-foreground`}>{preTitle}</div>}
+          <div id={headingId} className={`abii-page-hero__title abii-enter ${hasPreTitle ? "abii-enter-2" : "abii-enter-1"} flex min-w-0 flex-col gap-1.5 break-words sm:block text-foreground [&>*]:my-0 [&_.abii-hero-heading]:text-balance [&_.abii-hero-heading]:text-2xl [&_.abii-hero-heading]:font-bold [&_.abii-hero-heading]:leading-[1.2] [&_.abii-hero-heading]:tracking-[-0.02em] [&_.abii-hero-heading]:text-foreground [&_.abii-hero-emphasis]:text-primary sm:[&_.abii-hero-heading]:text-[2rem] sm:[&_.abii-hero-heading]:leading-[1.15] sm:[&_.abii-hero-heading]:tracking-[-0.025em] lg:[&_.abii-hero-heading]:text-[2.5rem] lg:[&_.abii-hero-heading]:tracking-[-0.03em]`}>{title}</div>
+          {description != null && <div className={`abii-page-hero__description abii-enter ${hasPreTitle ? "abii-enter-3" : "abii-enter-2"} min-w-0 break-words text-[13px] font-normal leading-[1.5] text-muted sm:text-sm lg:text-base [&>*]:my-0 [&>*]:text-muted`}>{description}</div>}
+          {metadata != null && <div className="abii-page-hero__metadata abii-enter abii-enter-3 min-w-0 break-words text-xs font-medium leading-[1.4] text-muted [&>*]:text-muted">{metadata}</div>}
         </div>
         {admin ? <div className={`abii-page-hero__mascot abii-enter-art pointer-events-none relative col-start-2 row-start-1 flex min-h-0 min-w-0 items-end justify-center max-sm:min-h-[154px] min-[360px]:max-sm:min-h-[158px] sm:absolute ${style.mascotAnchor ?? "sm:right-0"} sm:col-auto sm:row-auto sm:items-end ${style.mascot} ${style.mascotFrame ? "" : "sm:top-0 sm:bottom-0"} ${style.mascotFrame ?? ""}`}>
           <Image src={mascotSrc} alt={mascotAlt} fill priority={priority} sizes={style.imageSizes} className="object-contain object-bottom" />

@@ -115,7 +115,7 @@ test("@phase1 learner heroes share the global responsive surface and dimensions"
       expect(metrics.alphaOffset.right).toBeLessThanOrEqual(2);
       expect(metrics.alphaOffset.bottom).toBeGreaterThanOrEqual(-2);
       expect(metrics.alphaOffset.bottom).toBeLessThanOrEqual(2);
-      if (route === "/dashboard") await expect(learnerPage.locator("main section[aria-labelledby='quick-actions-heading'] a[href='/review']")).toBeVisible();
+      if (route === "/dashboard") await expect(learnerPage.locator("main a[href^='/review/setup']").first()).toBeVisible();
       if (route === "/review") await expect(learnerPage.getByRole("link", { name: "Start a new review" })).toBeVisible();
       if (route.startsWith(`/subjects/folders/`)) await expect(learnerPage.getByRole("button", { name: /Add subject/i }).first()).toBeVisible();
       if (route === `/subjects/${fixture.subjectId}`) await expect(learnerPage.getByRole("link", { name: /Study Subject/ })).toBeVisible();

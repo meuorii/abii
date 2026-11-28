@@ -88,3 +88,34 @@ Fresh hero screenshots use the `refined-` prefix in `docs/ABII_V2/evidence/`, in
 - `npm run typecheck` — passed. `npm run lint` — passed with three existing warnings in `components/app-shell.tsx`, `lib/mongodb.ts`, and `lib/quiz/normalize.ts`. `git diff --check` — passed; only line-ending normalization notices were emitted.
 - New, visually reviewed evidence: `hero-final-dashboard-390.png`, `hero-final-dashboard-1440.png`, `hero-final-subjects-390.png`, `hero-final-subjects-1440.png`, `hero-final-quiz-session-390.png`, and `hero-final-quiz-completion-1440.png`. Additional learner route and quiz captures use the same `hero-final-` prefix. Earlier `refined-` evidence is retained unchanged.
 - No wireframes or source artwork were modified. No Admin/public changes, deployment, commit, or Phase 02 work was included.
+
+## 2026-11-28 — Phase 02 Dashboard and unified modal foundation
+
+- Kept the existing authenticated shell, independent content scrolling, navigation, motion providers, and finalized shared hero intact; the shell already met the approved boundaries, so no competing shell or navigation rewrite was needed.
+- Replaced the old Dashboard mastery panel, streak card, and Quick Actions block with four independent statistics and the ordered study-first panels. Desktop paired panels use 8/4 columns from 1280px; they remain stacked through tablet widths. Mobile statistics use 2×2. The Dashboard skeleton follows the same order and geometry.
+- Statistics reuse existing server data: owner-scoped `Subject.find` results for subject count; `getSubjectMastery(...).cardSummaries.length` for Standard plus Enumeration flashcards (answer items excluded); `mastery.overall.progress` for established overall mastery; and `currentConsecutiveDayStreak` with the saved normalized study timezone. Existing backend data was sufficient; no data contract or calculation changed.
+- Today's Review preserves `/review/setup?reviewFilter=due` for due cards and `/review/setup` for custom review. Caught-up and no-card states provide appropriate guidance and links. Weekly Activity is a separate rolling seven-day panel. Subjects display a four-item preview while the count uses all owned subjects. Dashboard Featured Badges keeps three stable slots without changing Progress selection or persistence.
+- Enhanced the existing `Modal` with learner-only responsive content grid and footer rules for equal dual actions, a full-width single action, and stacked narrow-screen actions. The seven-action type, mascot mapping, focus handling, keyboard/outside dismissal, busy guard, scroll locking, and entrance/exit animation definitions remain. The showcase includes the confirmation variant. Admin styling is isolated from the new learner classes.
+- Added a second, empty synthetic learner only to the isolated Playwright fixture.
+
+### Phase 02 validation
+
+- `npx playwright test tests/e2e/dashboard-v2.spec.ts` — passed **4/4**, covering 320/390/768/1024/1440/1920px, horizontal overflow, four independent stats, section order, due/custom navigation, genuine empty account, pink destructive confirmation, and Escape dismissal. The modal test was then rerun in isolation and passed **1/1**, adding the existing create-subject form dialog at desktop and mobile sizes with equal footer button widths.
+- Focused badge persistence, badge route, and due-review regression scripts — passed **4/4**.
+- `npm run test:skeleton` — passed **18/18**.
+- `npm run typecheck` — passed. `npm run lint` — passed with three pre-existing warnings in `components/app-shell.tsx`, `lib/mongodb.ts`, and `lib/quiz/normalize.ts`.
+- `npm run build` — passed once, compiling and generating all 44 static pages; it reported the same three lint warnings.
+- `git diff --check` — passed; Git emitted only line-ending normalization notices.
+- Visually inspected evidence after animations completed: `dashboard-v2-1440.png`, `dashboard-v2-1440-lower.png`, `dashboard-v2-390.png`, `dashboard-v2-empty-state.png`, `dashboard-v2-empty-state-lower.png`, `shared-form-modal-v2-desktop.png`, `shared-form-modal-v2-390.png`, `shared-modal-v2-desktop.png`, `shared-modal-v2-390.png`, and `shared-modal-v2-destructive.png` in `docs/ABII_V2/evidence/`.
+- No animation source or timing, Admin source, official asset, hero implementation, wireframe, learning calculation, or production data was changed. A separate Admin browser run and per-action modal interaction matrix were not repeated in this phase; existing action branches were preserved, and a representative destructive modal was verified.
+
+Phase 02 is Complete. Phase 03 remains Not Started. No deployment, commit, or push was performed.
+
+### Phase 02 — design system and Tailwind continuation
+
+- Standardized learner shared chrome and mobile navigation on semantic color utilities; the default Abii wordmark, avatar fallback, and active nav use `text-primary`, while active nav uses `bg-secondary-surface`.
+- Moved learner hero typography/spacing and modal grid/disabled/danger presentation into Tailwind utilities. Removed the corresponding ordinary learner selector groups from `app/globals.css`; kept Admin scopes, global tokens, and protected motion rules.
+- Added permanent Tailwind and semantic branding requirements to `AGENTS.md` and the design-system guide. Updated stale dashboard route assertions to target the current review setup links.
+- `npm run test:skeleton` passed 18/18; `npm run typecheck` passed; `npm run lint` passed with the three existing warnings; focused `tests/e2e/design-system.spec.ts` passed 3/3, including computed wordmark, active/inactive nav, hero palette, action states, and destructive confirmation. `git diff --check` passed. The current dashboard screenshot was reviewed at `docs/ABII_V2/evidence/refined-dashboard-1440.png`.
+- The production build passed, generating all 44 static pages. The workspace's existing `.next` folder rejects writes under its Windows permissions, so the build used a temporary `.next-phase02` output setting, which was reverted after the build. Next reported the existing `jose` Edge Runtime notices and the same three lint warnings.
+- Remaining work for strict compliance: a broad learner audit still finds legacy literal colors in a handful of learner, badge, progress, and skeleton components, and the shared checkbox styling remains in the global stylesheet because it also serves Admin. Phase 02 is therefore **Partially Complete** pending those items and their regressions. Phase 03 remains Not Started. No deployment, commit, or push was performed.

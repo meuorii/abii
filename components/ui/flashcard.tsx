@@ -18,8 +18,8 @@ export function Flashcard({
 }: FlashcardProps) {
   return (
     <Card className="overflow-hidden border-border bg-surface" padding="none">
-      <div className="border-b border-border bg-pink-soft px-5 py-3">
-        <span className="text-xs font-bold uppercase tracking-[0.12em] text-pink-active">
+      <div className="border-b border-border bg-surface-hover px-5 py-3">
+        <span className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
           {subject}
         </span>
       </div>
@@ -29,7 +29,7 @@ export function Flashcard({
           <p className="text-lg font-bold leading-7 text-foreground">{question}</p>
         </div>
         {hint ? (
-          <div className="rounded-xl bg-pink-soft px-4 py-3 text-sm leading-6 text-muted">
+          <div className="rounded-xl bg-surface-hover px-4 py-3 text-sm leading-6 text-muted">
             <span className="font-semibold text-primary-hover">Hint: </span>{hint}
           </div>
         ) : null}

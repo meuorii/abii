@@ -17,7 +17,7 @@ const variantClasses: Record<ButtonVariant, string> = {
     "border border-border bg-surface text-primary hover:border-primary hover:bg-surface-hover hover:text-primary-hover active:bg-secondary-surface active:text-primary-active",
   ghost:
     "bg-transparent text-primary hover:bg-surface-hover hover:text-primary-hover active:bg-secondary-surface active:text-primary-active",
-  danger: "learner-danger-action border border-error/30 bg-error-bg text-error-text hover:bg-error/15",
+  danger: "border border-error/30 bg-error-bg text-error-text hover:bg-error/15 [.learner-theme_&]:border-primary [.learner-theme_&]:bg-primary [.learner-theme_&]:text-primary-foreground [.learner-theme_&]:hover:bg-primary-hover [.learner-theme_&]:active:bg-primary-active [.learner-theme_&]:disabled:border-border [.learner-theme_&]:disabled:bg-border [.learner-theme_&]:disabled:text-muted",
 };
 
 export function buttonClassNames({ variant = "primary", size = "md", className = "" }: {

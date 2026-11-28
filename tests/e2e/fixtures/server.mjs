@@ -56,6 +56,7 @@ try {
   process.env.MONGODB_URI = mongoUri;
   await mongoose.connect(mongoUri);
   const user = await User.create({ name: "Phase One Learner", email: "phase1-learner@example.invalid", passwordHash: "fixture-only", emailVerifiedAt: new Date() });
+  const emptyUser = await User.create({ name: "New Phase Two Learner", email: "phase2-empty@example.invalid", passwordHash: "fixture-only", emailVerifiedAt: new Date() });
   const subjectFolder = await SubjectFolder.create({ userId: user._id, name: "Biology", normalizedName: "biology", position: 0 });
   const subject = await Subject.create({ userId: user._id, subjectFolderId: subjectFolder._id, name: "Long Synthetic Biology Subject Name for Responsive Testing" });
   const folder = await Folder.create({ userId: user._id, subjectId: subject._id, name: "Cellular Biology" });
@@ -69,9 +70,17 @@ try {
     .setIssuer(SESSION_ISSUER)
     .setAudience(SESSION_AUDIENCE)
     .sign(new TextEncoder().encode(secret));
+  const emptyToken = await new SignJWT({ sv: emptyUser.sessionVersion ?? 0 })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(String(emptyUser._id))
+    .setIssuedAt()
+    .setExpirationTime("20m")
+    .setIssuer(SESSION_ISSUER)
+    .setAudience(SESSION_AUDIENCE)
+    .sign(new TextEncoder().encode(secret));
   await mongoose.disconnect();
   await mkdir(dirname(fixturePath), { recursive: true });
-  await writeFile(fixturePath, JSON.stringify({ baseURL, token, subjectId: String(subject._id), topicId: String(topic._id), folderId: String(folder._id), subjectFolderId: String(subjectFolder._id) }), "utf8");
+  await writeFile(fixturePath, JSON.stringify({ baseURL, token, emptyToken, subjectId: String(subject._id), topicId: String(topic._id), folderId: String(folder._id), subjectFolderId: String(subjectFolder._id) }), "utf8");
 
   const isolatedEnv = {
     ...process.env,

@@ -39,34 +39,34 @@ export function BadgeDetailsModal({ badge, onClose }: { badge: BadgePageItem | n
             <BadgeImage badgeId={badge.id} unlocked={badge.unlocked} alt={`${badge.name} ${badge.unlocked ? "unlocked" : "locked"} badge`} className="h-full w-full" priority />
           </div>
           <div className="abii-enter abii-enter-1 relative z-10 mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${badge.unlocked ? "bg-[#EDF5EF] text-[#327858]" : "bg-white/90 text-[#655A61]"}`}>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${badge.unlocked ? "bg-success-bg text-[#327858]" : "bg-white/90 text-[#655A61]"}`}>
               <StatusIcon aria-hidden="true" className="h-3.5 w-3.5" />
               {badge.unlocked ? "Unlocked" : "Locked"}
             </span>
             <RarityIndicator rarity={badge.rarity} size="md" />
           </div>
-          {date && <p className="relative z-10 mt-2 text-sm text-[#6F5964]"><time dateTime={date.dateTime}>Earned {date.label}</time></p>}
+          {date && <p className="relative z-10 mt-2 text-sm text-muted"><time dateTime={date.dateTime}>Earned {date.label}</time></p>}
         </div>
 
         <section className="abii-enter abii-enter-2" aria-labelledby="badge-about-heading">
-          <h3 id="badge-about-heading" className="text-sm font-semibold text-[#30262B]">About This Achievement</h3>
-          <p className="mt-1.5 break-words text-sm leading-[1.6] text-[#6F5964]">{badge.description}</p>
+          <h3 id="badge-about-heading" className="text-sm font-semibold text-foreground">About This Achievement</h3>
+          <p className="mt-1.5 break-words text-sm leading-[1.6] text-muted">{badge.description}</p>
         </section>
 
-        <section className="abii-enter abii-enter-3 border-t border-[#E8DDE1] pt-4" aria-labelledby="badge-requirement-heading">
-          <h3 id="badge-requirement-heading" className="text-sm font-semibold text-[#30262B]">{badge.unlocked ? "How You Earned It" : "How to Unlock"}</h3>
-          <p className="mt-1.5 break-words text-sm leading-[1.6] text-[#6F5964]">{badge.instructions}</p>
+        <section className="abii-enter abii-enter-3 border-t border-border pt-4" aria-labelledby="badge-requirement-heading">
+          <h3 id="badge-requirement-heading" className="text-sm font-semibold text-foreground">{badge.unlocked ? "How You Earned It" : "How to Unlock"}</h3>
+          <p className="mt-1.5 break-words text-sm leading-[1.6] text-muted">{badge.instructions}</p>
         </section>
 
-        {badge.historicalNote && !badge.unlocked && <p className="abii-enter abii-enter-3 rounded-xl bg-[#FFF9FC] px-3.5 py-3 text-sm leading-[1.55] text-[#6F5964]">{badge.historicalNote}</p>}
+        {badge.historicalNote && !badge.unlocked && <p className="abii-enter abii-enter-3 rounded-xl bg-background px-3.5 py-3 text-sm leading-[1.55] text-muted">{badge.historicalNote}</p>}
 
         {badge.unlocked ? <div role="status" className="abii-enter abii-enter-4 flex items-start gap-2.5 rounded-xl bg-[#F2FAF5] px-3.5 py-3 text-sm leading-[1.55] text-[#327858]">
           <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
           <p><span className="font-semibold">Achievement completed.</span> Permanently added to your collection.</p>
-        </div> : <section aria-labelledby="badge-progress-heading" className="abii-enter abii-enter-4 border-t border-[#E8DDE1] pt-4">
-          <h3 id="badge-progress-heading" className="text-sm font-semibold text-[#30262B]">Your Progress</h3>
+        </div> : <section aria-labelledby="badge-progress-heading" className="abii-enter abii-enter-4 border-t border-border pt-4">
+          <h3 id="badge-progress-heading" className="text-sm font-semibold text-foreground">Your Progress</h3>
           <div className="mt-2.5"><BadgeProgress badge={badge} /></div>
-          <p className="mt-2.5 break-words text-sm leading-[1.55] text-[#6F5964]">{remainingRequirement(badge)}</p>
+          <p className="mt-2.5 break-words text-sm leading-[1.55] text-muted">{remainingRequirement(badge)}</p>
         </section>}
       </div>
     </Modal>

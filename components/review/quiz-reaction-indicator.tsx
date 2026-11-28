@@ -5,10 +5,10 @@ import { Check, Lightbulb, Sparkles, X } from "lucide-react";
 import type { QuizReactionKind } from "@/lib/quiz/reactions";
 
 const styles: Record<QuizReactionKind, { Icon: typeof Sparkles; className: string }> = {
-  selection: { Icon: Sparkles, className: "border-[#E8DDE1] bg-[#FFF9FC] text-[#F8769C]" },
-  typing: { Icon: Lightbulb, className: "border-[#E8DDE1] bg-[#FFF9FC] text-[#F8769C]" },
-  correct: { Icon: Check, className: "border-[#5C947A] bg-[#EDF5EF] text-[#3D7259]" },
-  incorrect: { Icon: X, className: "border-[#E8DDE1] bg-[#FCEDEF] text-[#8A1F36]" },
+  selection: { Icon: Sparkles, className: "border-border bg-background text-primary" },
+  typing: { Icon: Lightbulb, className: "border-border bg-background text-primary" },
+  correct: { Icon: Check, className: "border-[#5C947A] bg-success-bg text-success-text" },
+  incorrect: { Icon: X, className: "border-border bg-error-bg text-error-text" },
 };
 
 export function QuizReactionIndicator({ reaction }: { reaction: { kind: QuizReactionKind; message: string } | null }) {

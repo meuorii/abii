@@ -14,6 +14,11 @@ test("@phase1 learner surfaces use the approved computed palette and type tokens
       frame: style(".learner-theme", "backgroundColor"),
       workspace: style(".learner-theme > div", "backgroundColor"),
       header: style(".learner-theme header", "backgroundColor"),
+      wordmark: style(".learner-theme .font-brand", "color"),
+      activeNav: style(".learner-theme aside nav a[aria-current='page']", "color"),
+      activeNavIcon: style(".learner-theme aside nav a[aria-current='page'] svg", "color"),
+      activeNavBackground: style(".learner-theme aside nav a[aria-current='page']", "backgroundColor"),
+      inactiveNav: style(".learner-theme aside nav a:not([aria-current='page'])", "color"),
       hero: style(".abii-page-hero", "backgroundColor"),
       heroBorder: style(".abii-page-hero", "borderTopColor"),
       heroText: style(".abii-hero-heading", "color"),
@@ -24,11 +29,13 @@ test("@phase1 learner surfaces use the approved computed palette and type tokens
   });
   expect(styles).toMatchObject({
     frame: "rgb(255, 244, 248)", workspace: "rgb(255, 249, 252)", header: "rgb(255, 249, 252)",
+    wordmark: "rgb(248, 118, 156)", activeNav: "rgb(248, 118, 156)", activeNavIcon: "rgb(248, 118, 156)",
+    activeNavBackground: "rgb(255, 232, 239)", inactiveNav: "rgb(111, 89, 100)",
     hero: "rgb(255, 232, 239)", heroBorder: "rgb(232, 221, 225)", heroText: "rgb(48, 38, 43)",
     secondaryText: "rgb(111, 89, 100)", card: "rgb(255, 255, 255)",
   });
   expect(styles.heroFont).toContain("Onest");
-  await expect(learnerPage.locator("main section[aria-labelledby='quick-actions-heading'] a[href='/review']")).toBeVisible();
+  await expect(learnerPage.locator("main a[href^='/review/setup']").first()).toBeVisible();
   await mkdir("docs/ABII_V2/evidence", { recursive: true });
   await learnerPage.screenshot({ path: "docs/ABII_V2/evidence/refined-dashboard-1440.png", fullPage: true });
 });

@@ -10,7 +10,7 @@ export function RarityIndicator({ rarity, size = "sm", className = "" }: { rarit
   return (
     <span className={`inline-flex min-w-0 shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap ${className}`}>
       <Image src={definition.medalImage} width={dimensions} height={dimensions} alt="" aria-hidden="true" sizes={`${dimensions}px`} className={`${imageSize} shrink-0 object-contain`} />
-      <span className={`${textSize} shrink-0 whitespace-nowrap font-semibold leading-4 text-[#756B72]`}>{definition.label}</span>
+      <span className={`${textSize} shrink-0 whitespace-nowrap font-semibold leading-4 text-muted`}>{definition.label}</span>
     </span>
   );
 }

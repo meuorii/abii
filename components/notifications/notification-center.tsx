@@ -36,7 +36,7 @@ function getDateLabel(value: string, timezone: string, now: Date): string {
 function EmptyState({ filter }: { filter: NotificationFilter }) {
   const title = filter === "unread" ? "No unread notifications" : "All caught up!";
   const message = filter === "unread" ? "You’ve read everything here." : filter === "all" ? "Nothing new right now. Abii will keep your learning updates here." : `No ${filter} notifications yet.`;
-  return <div className="flex min-h-[250px] flex-col items-center justify-center px-5 py-10 text-center"><span aria-hidden="true" className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFE8EF] text-[#F8769C]"><Bell className="h-6 w-6" strokeWidth={1.8}/></span><h2 className="text-base font-semibold text-[#30262B]">{title}</h2><p className="mt-1 max-w-[34ch] text-sm leading-6 text-[#6F5964]">{message}</p></div>;
+  return <div className="flex min-h-[250px] flex-col items-center justify-center px-5 py-10 text-center"><span aria-hidden="true" className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary-surface text-primary"><Bell className="h-6 w-6" strokeWidth={1.8}/></span><h2 className="text-base font-semibold text-foreground">{title}</h2><p className="mt-1 max-w-[34ch] text-sm leading-6 text-muted">{message}</p></div>;
 }
 
 function ListSkeleton() {
@@ -148,28 +148,28 @@ export function NotificationCenter() {
 
   const badgeCount = formatUnreadCount(unreadCount);
   return <div className="mx-auto w-full min-w-0 space-y-5 p-4 sm:space-y-6 sm:p-6 xl:px-6 xl:py-7">
-    <header className="flex min-w-0 items-center gap-4 rounded-2xl border border-[#E8DDE1] bg-[#FFF9FC] px-4 py-5 sm:px-6 sm:py-6">
-      <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-white text-[#F8769C] shadow-[0_2px_8px_rgba(47,41,48,0.05)]"><Bell className="h-5 w-5" strokeWidth={1.9}/></span>
-      <div className="min-w-0 flex-1"><h1 className="text-[23px] font-bold leading-tight tracking-[-0.035em] text-[#30262B] sm:text-[27px]">Your Notifications</h1><p className="mt-1 text-sm leading-5 text-[#6F5964]">Learning updates and reminders, all in one place.</p></div>
-      {unreadCount !== null && unreadCount > 0 && <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#F8769C]">{badgeCount} unread</span>}
+    <header className="flex min-w-0 items-center gap-4 rounded-2xl border border-border bg-background px-4 py-5 sm:px-6 sm:py-6">
+      <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-white text-primary shadow-[0_2px_8px_rgba(47,41,48,0.05)]"><Bell className="h-5 w-5" strokeWidth={1.9}/></span>
+      <div className="min-w-0 flex-1"><h1 className="text-[23px] font-bold leading-tight tracking-[-0.035em] text-foreground sm:text-[27px]">Your Notifications</h1><p className="mt-1 text-sm leading-5 text-muted">Learning updates and reminders, all in one place.</p></div>
+      {unreadCount !== null && unreadCount > 0 && <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-primary">{badgeCount} unread</span>}
     </header>
 
-    <section aria-label="Notification history" className="overflow-hidden rounded-2xl border border-[#E8DDE1] bg-white">
-      <div className="flex flex-col gap-3 border-b border-[#E8DDE1] px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+    <section aria-label="Notification history" className="overflow-hidden rounded-2xl border border-border bg-white">
+      <div className="flex flex-col gap-3 border-b border-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
         <div role="group" aria-label="Notification filters" className="flex min-w-0 gap-1 overflow-x-auto pb-0.5">
-          {NOTIFICATION_FILTERS.map((option) => <button key={option.id} type="button" aria-pressed={filter === option.id} onClick={() => setFilter(option.id)} className={`min-h-10 shrink-0 rounded-xl px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] ${filter === option.id ? "bg-[#FFE8EF] text-[#F8769C]" : "text-[#6F5964] hover:bg-[#FFF9FC]"}`}>{option.label}</button>)}
+          {NOTIFICATION_FILTERS.map((option) => <button key={option.id} type="button" aria-pressed={filter === option.id} onClick={() => setFilter(option.id)} className={`min-h-10 shrink-0 rounded-xl px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover ${filter === option.id ? "bg-secondary-surface text-primary" : "text-muted hover:bg-background"}`}>{option.label}</button>)}
         </div>
         <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
-          <span className="text-xs tabular-nums text-[#6F5964]">{unreadCount === null ? "" : `${unreadCount} unread`}</span>
-          {unreadCount !== null && unreadCount > 0 && <button type="button" disabled={savingAll} onClick={() => void markAll()} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-xs font-semibold text-[#F8769C] hover:bg-[#FFF1F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] disabled:opacity-50"><CheckCheck className="h-4 w-4" aria-hidden="true"/>{savingAll ? "Updating…" : "Mark all as read"}</button>}
+          <span className="text-xs tabular-nums text-muted">{unreadCount === null ? "" : `${unreadCount} unread`}</span>
+          {unreadCount !== null && unreadCount > 0 && <button type="button" disabled={savingAll} onClick={() => void markAll()} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-xs font-semibold text-primary hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover disabled:opacity-50"><CheckCheck className="h-4 w-4" aria-hidden="true"/>{savingAll ? "Updating…" : "Mark all as read"}</button>}
         </div>
       </div>
 
-      {loading ? <ListSkeleton/> : error ? <div className="px-5 py-12 text-center"><p role="alert" className="text-sm text-[#8A1F36]">{error}</p><button type="button" onClick={() => void loadPage(filter)} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#E8DDE1] px-3 text-sm font-semibold text-[#F8769C] hover:bg-[#FFF9FC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D]"><RefreshCw className="h-4 w-4" aria-hidden="true"/>Try again</button></div>
+      {loading ? <ListSkeleton/> : error ? <div className="px-5 py-12 text-center"><p role="alert" className="text-sm text-error-text">{error}</p><button type="button" onClick={() => void loadPage(filter)} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-border px-3 text-sm font-semibold text-primary hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover"><RefreshCw className="h-4 w-4" aria-hidden="true"/>Try again</button></div>
         : items.length === 0 ? <EmptyState filter={filter}/>
-          : <div>{groupedItems.map(([label, rows]) => <section key={label} aria-label={label}><h2 className="border-b border-[#E8DDE1] bg-[#FFF9FC] px-4 py-2.5 text-xs font-semibold text-[#6F5964]">{label}</h2><div className="divide-y divide-[#E8DDE1]">{rows.map((notification) => <NotificationItem key={notification.id} notification={notification} busy={busyId === notification.id} onOpen={(item) => void openNotification(item)} onMarkRead={(item) => void markRead(item)}/>)}</div></section>)}</div>}
-      {moreError && <div role="alert" className="mx-4 my-3 rounded-xl bg-[#FCEDEF] px-3 py-2.5 text-sm text-[#8A1F36]">{moreError}</div>}
-      {hasMore && !loading && !error && <div className="border-t border-[#E8DDE1] px-4 py-3 text-center"><button type="button" disabled={loadingMore || !cursor} onClick={() => cursor && void loadPage(filter, true, cursor)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#E8DDE1] bg-white px-4 text-sm font-semibold text-[#536A7D] transition-colors hover:bg-[#FFF9FC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC658D] disabled:opacity-60">{loadingMore ? <><span aria-hidden="true" className="abii-skeleton h-3 w-3 rounded-full"/>Loading more</> : "Load more"}</button></div>}
+          : <div>{groupedItems.map(([label, rows]) => <section key={label} aria-label={label}><h2 className="border-b border-border bg-background px-4 py-2.5 text-xs font-semibold text-muted">{label}</h2><div className="divide-y divide-[#E8DDE1]">{rows.map((notification) => <NotificationItem key={notification.id} notification={notification} busy={busyId === notification.id} onOpen={(item) => void openNotification(item)} onMarkRead={(item) => void markRead(item)}/>)}</div></section>)}</div>}
+      {moreError && <div role="alert" className="mx-4 my-3 rounded-xl bg-error-bg px-3 py-2.5 text-sm text-error-text">{moreError}</div>}
+      {hasMore && !loading && !error && <div className="border-t border-border px-4 py-3 text-center"><button type="button" disabled={loadingMore || !cursor} onClick={() => cursor && void loadPage(filter, true, cursor)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-muted transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-hover disabled:opacity-60">{loadingMore ? <><span aria-hidden="true" className="abii-skeleton h-3 w-3 rounded-full"/>Loading more</> : "Load more"}</button></div>}
     </section>
   </div>;
 }
